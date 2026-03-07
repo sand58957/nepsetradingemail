@@ -1,0 +1,87 @@
+version: "3.8"
+
+x-db-credentials: &db-credentials
+  POSTGRES_USER: &db-user ${DB_USER:-listmonk}
+  POSTGRES_PASSWORD: &db-password ${DB_PASSWORD:-listmonk_secret_pwd}
+  POSTGRES_DB: &db-name ${DB_NAME:-listmonk}
+
+services:
+  # Nginx reverse proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: listmonk_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - app
+    networks:
+      - listmonk
+
+  # Certbot for SSL certificates
+  certbot:
+    image: certbot/certbot
+    container_name: listmonk_certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot:rw
+      - ./certbot/conf:/etc/letsencrypt:rw
+
+  # Listmonk app
+  app:
+    image: listmonk/listmonk:latest
+    container_name: listmonk_app
+    restart: unless-stopped
+    expose:
+      - "9000"
+    networks:
+      - listmonk
+    hostname: nepalfillings.com
+    depends_on:
+      - db
+    command: [sh, -c, "./listmonk --install --idempotent --yes --config '' && ./listmonk --upgrade --yes --config '' && ./listmonk --config ''"]
+    environment:
+      LISTMONK_app__address: 0.0.0.0:9000
+      LISTMONK_db__user: *db-user
+      LISTMONK_db__password: *db-password
+      LISTMONK_db__database: *db-name
+      LISTMONK_db__host: db
+      LISTMONK_db__port: 5432
+      LISTMONK_db__ssl_mode: disable
+      LISTMONK_db__max_open: 25
+      LISTMONK_db__max_idle: 25
+      LISTMONK_db__max_lifetime: 300s
+      TZ: Asia/Kathmandu
+      LISTMONK_ADMIN_USER: ${LISTMONK_ADMIN_USER:-admin}
+      LISTMONK_ADMIN_PASSWORD: ${LISTMONK_ADMIN_PASSWORD:-admin123}
+    volumes:
+      - ./uploads:/listmonk/uploads:rw
+
+  # Postgres database
+  db:
+    image: postgres:17-alpine
+    container_name: listmonk_db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - listmonk
+    environment:
+      <<: *db-credentials
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U listmonk"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    volumes:
+      - listmonk-data:/var/lib/postgresql/data
+
+networks:
+  listmonk:
+
+volumes:
+  listmonk-data:
