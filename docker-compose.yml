@@ -1,0 +1,134 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nepse_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+      - backend
+      - listmonk
+    networks:
+      - nepse
+
+  certbot:
+    image: certbot/certbot
+    container_name: nepse_certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot:rw
+      - ./certbot/conf:/etc/letsencrypt:rw
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nepse_frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=https://nepalfillings.com/api
+      - NEXTAUTH_URL=https://nepalfillings.com
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    networks:
+      - nepse
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nepse_backend
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      - PORT=8080
+      - DATABASE_URL=postgres://${DB_USER:-listmonk}:${DB_PASSWORD}@db:5432/${DB_NAME:-listmonk}?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - LISTMONK_API_URL=http://listmonk:9000/api
+      - LISTMONK_ADMIN_USER=${LISTMONK_ADMIN_USER:-admin}
+      - LISTMONK_ADMIN_PASSWORD=${LISTMONK_ADMIN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      listmonk:
+        condition: service_started
+    networks:
+      - nepse
+
+  listmonk:
+    image: listmonk/listmonk:latest
+    container_name: nepse_listmonk
+    restart: unless-stopped
+    expose:
+      - "9000"
+    command: >
+      sh -c "./listmonk --install --idempotent --yes --config '' &&
+             ./listmonk --upgrade --yes --config '' &&
+             ./listmonk --config ''"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - LISTMONK_app__address=0.0.0.0:9000
+      - LISTMONK_db__host=db
+      - LISTMONK_db__port=5432
+      - LISTMONK_db__user=${DB_USER:-listmonk}
+      - LISTMONK_db__password=${DB_PASSWORD}
+      - LISTMONK_db__database=${DB_NAME:-listmonk}
+      - LISTMONK_db__ssl_mode=disable
+      - LISTMONK_app__admin_username=${LISTMONK_ADMIN_USER:-admin}
+      - LISTMONK_app__admin_password=${LISTMONK_ADMIN_PASSWORD}
+    volumes:
+      - listmonk-uploads:/listmonk/uploads
+    networks:
+      - nepse
+
+  db:
+    image: postgres:17-alpine
+    container_name: nepse_db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER:-listmonk}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME:-listmonk}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-listmonk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - nepse
+
+  redis:
+    image: redis:7-alpine
+    container_name: nepse_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    expose:
+      - "6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - nepse
+
+networks:
+  nepse:
+
+volumes:
+  pgdata:
+  redisdata:
+  listmonk-uploads:
