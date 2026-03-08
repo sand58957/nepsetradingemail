@@ -58,6 +58,22 @@ func JWTAuth(jwtSecret string) echo.MiddlewareFunc {
 	}
 }
 
+// RequireRole returns middleware that checks if the authenticated user
+// has one of the allowed roles. Must be used AFTER JWTAuth middleware.
+func RequireRole(allowedRoles ...string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			userRole := GetUserRole(c)
+			for _, role := range allowedRoles {
+				if userRole == role {
+					return next(c)
+				}
+			}
+			return response.Forbidden(c, "You do not have permission to access this resource")
+		}
+	}
+}
+
 func GetUserID(c echo.Context) int {
 	id, ok := c.Get("user_id").(int)
 	if !ok {

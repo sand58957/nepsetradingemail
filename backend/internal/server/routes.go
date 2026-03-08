@@ -14,7 +14,7 @@ func (s *Server) RegisterRoutes() {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(s.DB, s.Config)
 	dashboardHandler := handlers.NewDashboardHandler(s.LM)
-	subscriberHandler := handlers.NewSubscriberHandler(s.LM)
+	subscriberHandler := handlers.NewSubscriberHandler(s.LM, s.DB)
 	campaignHandler := handlers.NewCampaignHandler(s.LM)
 	listHandler := handlers.NewListHandler(s.LM)
 	templateHandler := handlers.NewTemplateHandler(s.LM)
@@ -43,24 +43,41 @@ func (s *Server) RegisterRoutes() {
 	// Public form submission
 	api.POST("/forms/:id/submit", formHandler.Submit)
 
-	// Protected routes
+	// ==============================================================
+	// Public routes (no auth required)
+	// ==============================================================
+	api.GET("/campaigns/archive", campaignHandler.ListArchive)
+	api.GET("/campaigns/archive/:id", campaignHandler.GetArchive)
+
+	// ==============================================================
+	// Protected routes — all authenticated users (admin, user, subscriber)
+	// ==============================================================
 	protected := api.Group("")
 	protected.Use(middleware.JWTAuth(s.Config.JWTSecret))
 
 	// Dashboard
 	protected.GET("/dashboard/stats", dashboardHandler.GetStats)
 
-	// Profile
+	// Profile (any authenticated user)
 	protected.GET("/profile", authHandler.GetProfile)
 	protected.PUT("/profile", authHandler.UpdateProfile)
 
-	// API Keys
-	protected.GET("/keys", authHandler.ListAPIKeys)
-	protected.POST("/keys", authHandler.CreateAPIKey)
-	protected.DELETE("/keys/:id", authHandler.DeleteAPIKey)
+	// Subscriber self-service (any authenticated user can manage their own subscriptions)
+	subscriber := protected.Group("/subscriber")
+	subscriber.GET("/subscriptions", subscriberHandler.MySubscriptions)
+	subscriber.PUT("/subscriptions", subscriberHandler.UpdateSubscriptions)
+	subscriber.GET("/preferences", subscriberHandler.MyPreferences)
+	subscriber.PUT("/preferences", subscriberHandler.UpdatePreferences)
 
-	// Subscribers
-	subscribers := protected.Group("/subscribers")
+	// ==============================================================
+	// Staff routes — admin + user roles (email marketing features)
+	// ==============================================================
+	staff := api.Group("")
+	staff.Use(middleware.JWTAuth(s.Config.JWTSecret))
+	staff.Use(middleware.RequireRole("admin", "user"))
+
+	// Subscribers management
+	subscribers := staff.Group("/subscribers")
 	subscribers.GET("", subscriberHandler.List)
 	subscribers.GET("/:id", subscriberHandler.Get)
 	subscribers.POST("", subscriberHandler.Create)
@@ -72,7 +89,7 @@ func (s *Server) RegisterRoutes() {
 	subscribers.POST("/import", subscriberHandler.Import)
 
 	// Campaigns
-	campaigns := protected.Group("/campaigns")
+	campaigns := staff.Group("/campaigns")
 	campaigns.GET("", campaignHandler.List)
 	campaigns.GET("/running/stats", campaignHandler.GetRunning)
 	campaigns.GET("/:id", campaignHandler.Get)
@@ -85,7 +102,7 @@ func (s *Server) RegisterRoutes() {
 	campaigns.GET("/:id/stats", campaignHandler.GetStats)
 
 	// Lists
-	lists := protected.Group("/lists")
+	lists := staff.Group("/lists")
 	lists.GET("", listHandler.List)
 	lists.GET("/:id", listHandler.Get)
 	lists.POST("", listHandler.Create)
@@ -93,7 +110,7 @@ func (s *Server) RegisterRoutes() {
 	lists.DELETE("/:id", listHandler.Delete)
 
 	// Templates
-	templates := protected.Group("/templates")
+	templates := staff.Group("/templates")
 	templates.GET("", templateHandler.List)
 	templates.GET("/:id", templateHandler.Get)
 	templates.POST("", templateHandler.Create)
@@ -103,21 +120,48 @@ func (s *Server) RegisterRoutes() {
 	templates.PUT("/:id/default", templateHandler.SetDefault)
 
 	// Media
-	media := protected.Group("/media")
+	media := staff.Group("/media")
 	media.GET("", mediaHandler.List)
 	media.GET("/:id", mediaHandler.Get)
 	media.POST("", mediaHandler.Upload)
 	media.DELETE("/:id", mediaHandler.Delete)
 
+	// Analytics
+	analytics := staff.Group("/analytics")
+	analytics.GET("/overview", analyticsHandler.GetOverview)
+	analytics.GET("/campaigns/:id", analyticsHandler.GetCampaignAnalytics)
+	analytics.GET("/lists", analyticsHandler.GetListAnalytics)
+
+	// ==============================================================
+	// Admin-only routes — full platform control
+	// ==============================================================
+	admin := api.Group("")
+	admin.Use(middleware.JWTAuth(s.Config.JWTSecret))
+	admin.Use(middleware.RequireRole("admin"))
+
+	// User Management
+	users := admin.Group("/users")
+	users.GET("", authHandler.ListUsers)
+	users.GET("/:id", authHandler.GetUser)
+	users.POST("", authHandler.CreateUser)
+	users.PUT("/:id", authHandler.UpdateUser)
+	users.DELETE("/:id", authHandler.DeleteUser)
+	users.PUT("/:id/role", authHandler.UpdateUserRole)
+
+	// API Keys
+	admin.GET("/keys", authHandler.ListAPIKeys)
+	admin.POST("/keys", authHandler.CreateAPIKey)
+	admin.DELETE("/keys/:id", authHandler.DeleteAPIKey)
+
 	// Settings
-	settings := protected.Group("/settings")
+	settings := admin.Group("/settings")
 	settings.GET("", settingsHandler.Get)
 	settings.PUT("", settingsHandler.Update)
 	settings.POST("/smtp/test", settingsHandler.TestSMTP)
 	settings.GET("/logs", settingsHandler.GetLogs)
 
 	// Automations
-	automations := protected.Group("/automations")
+	automations := admin.Group("/automations")
 	automations.GET("", automationHandler.List)
 	automations.GET("/:id", automationHandler.Get)
 	automations.POST("", automationHandler.Create)
@@ -127,18 +171,12 @@ func (s *Server) RegisterRoutes() {
 	automations.GET("/:id/logs", automationHandler.GetLogs)
 
 	// Forms
-	forms := protected.Group("/forms")
+	forms := admin.Group("/forms")
 	forms.GET("", formHandler.List)
 	forms.GET("/:id", formHandler.Get)
 	forms.POST("", formHandler.Create)
 	forms.PUT("/:id", formHandler.Update)
 	forms.DELETE("/:id", formHandler.Delete)
-
-	// Analytics
-	analytics := protected.Group("/analytics")
-	analytics.GET("/overview", analyticsHandler.GetOverview)
-	analytics.GET("/campaigns/:id", analyticsHandler.GetCampaignAnalytics)
-	analytics.GET("/lists", analyticsHandler.GetListAnalytics)
 
 	// 404 handler
 	s.Echo.RouteNotFound("/*", func(c echo.Context) error {

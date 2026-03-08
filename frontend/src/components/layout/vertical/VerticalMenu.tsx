@@ -32,6 +32,7 @@ type RenderExpandIconProps = {
 type Props = {
   dictionary: Awaited<ReturnType<typeof getDictionary>>
   scrollMenu: (container: any, isPerfectScrollbar: boolean) => void
+  role: string
 }
 
 const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) => (
@@ -40,7 +41,7 @@ const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) =
   </StyledVerticalNavExpandIcon>
 )
 
-const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
+const VerticalMenu = ({ dictionary, scrollMenu, role }: Props) => {
   // Hooks
   const theme = useTheme()
   const verticalNavOptions = useVerticalNav()
@@ -49,6 +50,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
   // Vars
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
   const { lang: locale } = params
+  const isAdmin = role === 'admin'
 
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
 
@@ -76,7 +78,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           Dashboard
         </MenuItem>
 
-        {/* Email Marketing Section */}
+        {/* Email Marketing Section — visible to admin + user */}
         <MenuSection label='Email Marketing'>
           <SubMenu label='Subscribers' icon={<i className='tabler-users' />}>
             <MenuItem href={`/${locale}/subscribers/list`}>All Subscribers</MenuItem>
@@ -97,25 +99,30 @@ const VerticalMenu = ({ dictionary, scrollMenu }: Props) => {
           </MenuItem>
         </MenuSection>
 
-        {/* Automation & Analytics */}
+        {/* Analytics — visible to admin + user */}
         <MenuSection label='Insights'>
           <MenuItem href={`/${locale}/analytics`} icon={<i className='tabler-chart-bar' />}>
             Analytics
           </MenuItem>
-          <MenuItem href={`/${locale}/automations/list`} icon={<i className='tabler-robot' />}>
-            Automations
-          </MenuItem>
-          <MenuItem href={`/${locale}/forms/list`} icon={<i className='tabler-forms' />}>
-            Forms
-          </MenuItem>
         </MenuSection>
 
-        {/* Settings */}
-        <MenuSection label='Configuration'>
-          <MenuItem href={`/${locale}/settings`} icon={<i className='tabler-settings' />}>
-            Settings
-          </MenuItem>
-        </MenuSection>
+        {/* Admin-only section */}
+        {isAdmin && (
+          <MenuSection label='Administration'>
+            <MenuItem href={`/${locale}/admin/users`} icon={<i className='tabler-users-group' />}>
+              User Management
+            </MenuItem>
+            <MenuItem href={`/${locale}/automations/list`} icon={<i className='tabler-robot' />}>
+              Automations
+            </MenuItem>
+            <MenuItem href={`/${locale}/forms/list`} icon={<i className='tabler-forms' />}>
+              Forms
+            </MenuItem>
+            <MenuItem href={`/${locale}/settings`} icon={<i className='tabler-settings' />}>
+              Settings
+            </MenuItem>
+          </MenuSection>
+        )}
       </Menu>
     </ScrollWrapper>
   )

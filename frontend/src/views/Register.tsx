@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 
 // MUI Imports
 import useMediaQuery from '@mui/material/useMediaQuery'
@@ -13,13 +13,12 @@ import { styled, useTheme } from '@mui/material/styles'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
-import Checkbox from '@mui/material/Checkbox'
 import Button from '@mui/material/Button'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Divider from '@mui/material/Divider'
+import Alert from '@mui/material/Alert'
 
 // Third-party Imports
 import classnames from 'classnames'
+import { signIn } from 'next-auth/react'
 
 // Type Imports
 import type { SystemMode } from '@core/types'
@@ -63,6 +62,12 @@ const MaskImg = styled('img')({
 const Register = ({ mode }: { mode: SystemMode }) => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   // Vars
   const darkImg = '/images/pages/auth-mask-dark.png'
@@ -74,6 +79,7 @@ const Register = ({ mode }: { mode: SystemMode }) => {
 
   // Hooks
   const { lang: locale } = useParams()
+  const router = useRouter()
   const { settings } = useSettings()
   const theme = useTheme()
   const hidden = useMediaQuery(theme.breakpoints.down('md'))
@@ -88,6 +94,58 @@ const Register = ({ mode }: { mode: SystemMode }) => {
   )
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (!name || !email || !password) {
+      setError('All fields are required')
+
+      return
+    }
+
+    try {
+      setLoading(true)
+
+      // Call the Go backend register endpoint
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api'
+
+      const res = await fetch(`${apiUrl}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Registration failed')
+      }
+
+      setSuccess('Account created! Signing you in...')
+
+      // Auto-login via NextAuth
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false
+      })
+
+      if (result?.ok) {
+        // Subscriber role → redirect to portal
+        router.push(getLocalizedUrl('/portal', locale as Locale))
+      } else {
+        // If auto-login fails, redirect to login page
+        router.push(getLocalizedUrl('/login', locale as Locale))
+      }
+    } catch (err: any) {
+      setError(err.message || 'Registration failed')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className='flex bs-full justify-center'>
@@ -111,17 +169,41 @@ const Register = ({ mode }: { mode: SystemMode }) => {
         </Link>
         <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
           <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>Adventure starts here 🚀</Typography>
-            <Typography>Make your app management easy and fun!</Typography>
+            <Typography variant='h4'>Create your account</Typography>
+            <Typography>Subscribe to Nepal Fillings email newsletters</Typography>
           </div>
-          <form noValidate autoComplete='off' onSubmit={e => e.preventDefault()} className='flex flex-col gap-6'>
-            <CustomTextField autoFocus fullWidth label='Username' placeholder='Enter your username' />
-            <CustomTextField fullWidth label='Email' placeholder='Enter your email' />
+
+          {error && (
+            <Alert severity='error' onClose={() => setError('')}>
+              {error}
+            </Alert>
+          )}
+          {success && <Alert severity='success'>{success}</Alert>}
+
+          <form noValidate autoComplete='off' onSubmit={handleSubmit} className='flex flex-col gap-6'>
+            <CustomTextField
+              autoFocus
+              fullWidth
+              label='Full Name'
+              placeholder='Enter your name'
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+            <CustomTextField
+              fullWidth
+              label='Email'
+              placeholder='Enter your email'
+              type='email'
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
             <CustomTextField
               fullWidth
               label='Password'
-              placeholder='············'
+              placeholder='Create a password'
               type={isPasswordShown ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
               slotProps={{
                 input: {
                   endAdornment: (
@@ -134,40 +216,14 @@ const Register = ({ mode }: { mode: SystemMode }) => {
                 }
               }}
             />
-            <FormControlLabel
-              control={<Checkbox />}
-              label={
-                <>
-                  <span>I agree to </span>
-                  <Link className='text-primary' href='/' onClick={e => e.preventDefault()}>
-                    privacy policy & terms
-                  </Link>
-                </>
-              }
-            />
-            <Button fullWidth variant='contained' type='submit'>
-              Sign Up
+            <Button fullWidth variant='contained' type='submit' disabled={loading}>
+              {loading ? 'Creating account...' : 'Sign Up'}
             </Button>
             <div className='flex justify-center items-center flex-wrap gap-2'>
               <Typography>Already have an account?</Typography>
               <Typography component={Link} href={getLocalizedUrl('/login', locale as Locale)} color='primary.main'>
                 Sign in instead
               </Typography>
-            </div>
-            <Divider className='gap-2'>or</Divider>
-            <div className='flex justify-center items-center gap-1.5'>
-              <IconButton className='text-facebook' size='small'>
-                <i className='tabler-brand-facebook-filled' />
-              </IconButton>
-              <IconButton className='text-twitter' size='small'>
-                <i className='tabler-brand-twitter-filled' />
-              </IconButton>
-              <IconButton className='text-textPrimary' size='small'>
-                <i className='tabler-brand-github-filled' />
-              </IconButton>
-              <IconButton className='text-error' size='small'>
-                <i className='tabler-brand-google-filled' />
-              </IconButton>
             </div>
           </form>
         </div>

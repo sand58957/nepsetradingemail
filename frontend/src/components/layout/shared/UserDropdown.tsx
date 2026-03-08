@@ -20,6 +20,7 @@ import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import MenuItem from '@mui/material/MenuItem'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
 
 // Third-party Imports
 import { signOut, useSession } from 'next-auth/react'
@@ -32,6 +33,7 @@ import { useSettings } from '@core/hooks/useSettings'
 
 // Util Imports
 import { getLocalizedUrl } from '@/utils/i18n'
+import { getRoleLabel, getRoleColor } from '@/utils/roles'
 
 // Styled component for badge content
 const BadgeContentSpan = styled('span')({
@@ -122,9 +124,18 @@ const UserDropdown = () => {
                   <div className='flex items-center plb-2 pli-6 gap-2' tabIndex={-1}>
                     <Avatar alt={session?.user?.name || ''} src={session?.user?.image || ''} />
                     <div className='flex items-start flex-col'>
-                      <Typography className='font-medium' color='text.primary'>
-                        {session?.user?.name || ''}
-                      </Typography>
+                      <div className='flex items-center gap-2'>
+                        <Typography className='font-medium' color='text.primary'>
+                          {session?.user?.name || ''}
+                        </Typography>
+                        <Chip
+                          label={getRoleLabel(session?.role || '')}
+                          color={getRoleColor(session?.role || '')}
+                          size='small'
+                          variant='tonal'
+                          sx={{ height: 20, fontSize: '0.7rem' }}
+                        />
+                      </div>
                       <Typography variant='caption'>{session?.user?.email || ''}</Typography>
                     </div>
                   </div>
@@ -133,18 +144,12 @@ const UserDropdown = () => {
                     <i className='tabler-user' />
                     <Typography color='text.primary'>My Profile</Typography>
                   </MenuItem>
-                  <MenuItem className='mli-2 gap-3' onClick={e => handleDropdownClose(e, '/pages/account-settings')}>
-                    <i className='tabler-settings' />
-                    <Typography color='text.primary'>Settings</Typography>
-                  </MenuItem>
-                  <MenuItem className='mli-2 gap-3' onClick={e => handleDropdownClose(e, '/pages/pricing')}>
-                    <i className='tabler-currency-dollar' />
-                    <Typography color='text.primary'>Pricing</Typography>
-                  </MenuItem>
-                  <MenuItem className='mli-2 gap-3' onClick={e => handleDropdownClose(e, '/pages/faq')}>
-                    <i className='tabler-help-circle' />
-                    <Typography color='text.primary'>FAQ</Typography>
-                  </MenuItem>
+                  {session?.role === 'admin' && (
+                    <MenuItem className='mli-2 gap-3' onClick={e => handleDropdownClose(e, '/settings')}>
+                      <i className='tabler-settings' />
+                      <Typography color='text.primary'>Settings</Typography>
+                    </MenuItem>
+                  )}
                   <div className='flex items-center plb-2 pli-3'>
                     <Button
                       fullWidth

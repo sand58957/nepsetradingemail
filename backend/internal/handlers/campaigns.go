@@ -170,3 +170,102 @@ func (h *CampaignHandler) GetRunning(c echo.Context) error {
 
 	return c.JSONBlob(statusCode, data)
 }
+
+// ============================================================
+// Campaign Archive (Public — no auth required)
+// ============================================================
+
+// ListArchive returns a list of finished campaigns for public viewing
+func (h *CampaignHandler) ListArchive(c echo.Context) error {
+	params := map[string]string{
+		"status":   "finished",
+		"order_by": "created_at",
+		"order":    "DESC",
+	}
+	if v := c.QueryParam("page"); v != "" {
+		params["page"] = v
+	}
+	if v := c.QueryParam("per_page"); v != "" {
+		params["per_page"] = v
+	}
+
+	data, statusCode, err := h.lm.Get("/campaigns", params)
+	if err != nil {
+		return response.InternalError(c, "Failed to fetch campaign archive")
+	}
+
+	if statusCode >= 400 {
+		return c.JSONBlob(statusCode, data)
+	}
+
+	// Parse and strip sensitive data — only return public-safe fields
+	var result struct {
+		Data struct {
+			Results []json.RawMessage `json:"results"`
+			Total   int               `json:"total"`
+			Page    int               `json:"page"`
+			PerPage int               `json:"per_page"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return c.JSONBlob(statusCode, data)
+	}
+
+	return response.Success(c, map[string]interface{}{
+		"results":  result.Data.Results,
+		"total":    result.Data.Total,
+		"page":     result.Data.Page,
+		"per_page": result.Data.PerPage,
+	})
+}
+
+// GetArchive returns a single finished campaign's rendered HTML for public viewing
+func (h *CampaignHandler) GetArchive(c echo.Context) error {
+	id := c.Param("id")
+
+	// Get campaign details to verify it's finished
+	campaignData, statusCode, err := h.lm.Get(fmt.Sprintf("/campaigns/%s", id), nil)
+	if err != nil {
+		return response.InternalError(c, "Failed to fetch campaign")
+	}
+
+	if statusCode >= 400 {
+		return c.JSONBlob(statusCode, campaignData)
+	}
+
+	// Verify campaign is finished (public access only for finished campaigns)
+	var campaign struct {
+		Data struct {
+			Status string `json:"status"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(campaignData, &campaign); err != nil {
+		return response.InternalError(c, "Failed to parse campaign data")
+	}
+
+	if campaign.Data.Status != "finished" {
+		return response.NotFound(c, "Campaign not found in archive")
+	}
+
+	// Get the campaign preview (rendered HTML)
+	previewData, previewStatus, err := h.lm.Get(fmt.Sprintf("/campaigns/%s/preview", id), nil)
+	if err != nil {
+		return response.InternalError(c, "Failed to fetch campaign preview")
+	}
+
+	if previewStatus >= 200 && previewStatus < 300 {
+		var previewResult struct {
+			Data struct {
+				Body string `json:"body"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(previewData, &previewResult); err == nil && previewResult.Data.Body != "" {
+			return response.Success(c, map[string]interface{}{
+				"html":     previewResult.Data.Body,
+				"campaign": json.RawMessage(campaignData),
+			})
+		}
+	}
+
+	return c.JSONBlob(previewStatus, previewData)
+}

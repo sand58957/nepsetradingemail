@@ -43,14 +43,17 @@ api.interceptors.response.use(
     if (error.response) {
       const { status } = error.response
 
-      if (status === 401 || status === 403) {
-        // Clear stored token
+      if (status === 401) {
+        // Token expired or invalid — clear and redirect to login
         if (typeof window !== 'undefined') {
           localStorage.removeItem('jwt_token')
           document.cookie = 'jwt_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-
-          // Redirect to login page
           window.location.href = '/login'
+        }
+      } else if (status === 403) {
+        // Insufficient permissions — redirect to not authorized page
+        if (typeof window !== 'undefined') {
+          window.location.href = '/pages/misc/401-not-authorized'
         }
       }
     }

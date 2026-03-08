@@ -1,16 +1,20 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type User struct {
-	ID           int       `json:"id" db:"id"`
-	Email        string    `json:"email" db:"email"`
-	PasswordHash string    `json:"-" db:"password_hash"`
-	Name         string    `json:"name" db:"name"`
-	Role         string    `json:"role" db:"role"`
-	IsActive     bool      `json:"is_active" db:"is_active"`
-	CreatedAt    time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+	ID           int             `json:"id" db:"id"`
+	Email        string          `json:"email" db:"email"`
+	PasswordHash string          `json:"-" db:"password_hash"`
+	Name         string          `json:"name" db:"name"`
+	Role         string          `json:"role" db:"role"`
+	IsActive     bool            `json:"is_active" db:"is_active"`
+	Preferences  json.RawMessage `json:"preferences,omitempty" db:"preferences"`
+	CreatedAt    time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 type APIKey struct {
@@ -48,4 +52,24 @@ type TokenClaims struct {
 	Email  string `json:"email"`
 	Role   string `json:"role"`
 	Type   string `json:"type"` // "access" or "refresh"
+}
+
+// Admin user management request types
+
+type CreateUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Name     string `json:"name"`
+	Role     string `json:"role"` // "admin", "user", or "subscriber"
+}
+
+type UpdateUserRequest struct {
+	Name     string `json:"name,omitempty"`
+	Email    string `json:"email,omitempty"`
+	IsActive *bool  `json:"is_active,omitempty"`
+	Password string `json:"password,omitempty"`
+}
+
+type UpdateRoleRequest struct {
+	Role string `json:"role"`
 }
