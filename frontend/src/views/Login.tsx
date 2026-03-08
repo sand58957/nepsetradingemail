@@ -13,11 +13,7 @@ import { styled, useTheme } from '@mui/material/styles'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
-import Checkbox from '@mui/material/Checkbox'
 import Button from '@mui/material/Button'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Divider from '@mui/material/Divider'
-import Alert from '@mui/material/Alert'
 
 // Third-party Imports
 import { signIn } from 'next-auth/react'
@@ -35,9 +31,6 @@ import type { Locale } from '@/configs/i18n'
 // Component Imports
 import Logo from '@components/layout/shared/Logo'
 import CustomTextField from '@core/components/mui/TextField'
-
-// Config Imports
-import themeConfig from '@configs/themeConfig'
 
 // Hook Imports
 import { useImageVariant } from '@core/hooks/useImageVariant'
@@ -114,8 +107,8 @@ const Login = ({ mode }: { mode: SystemMode }) => {
   } = useForm<FormData>({
     resolver: valibotResolver(schema),
     defaultValues: {
-      email: 'admin@vuexy.com',
-      password: 'admin'
+      email: '',
+      password: ''
     }
   })
 
@@ -137,15 +130,36 @@ const Login = ({ mode }: { mode: SystemMode }) => {
     })
 
     if (res && res.ok && res.error === null) {
-      // Vars
-      const redirectURL = searchParams.get('redirectTo') ?? '/'
+      // Get the session to determine role-based redirect
+      const redirectTo = searchParams.get('redirectTo')
 
-      router.replace(getLocalizedUrl(redirectURL, locale as Locale))
+      if (redirectTo) {
+        router.replace(getLocalizedUrl(redirectTo, locale as Locale))
+      } else {
+        // Fetch session to get role for redirect
+        try {
+          const sessionRes = await fetch('/api/auth/session')
+          const session = await sessionRes.json()
+          const role = session?.role || 'subscriber'
+
+          if (role === 'subscriber') {
+            router.replace(getLocalizedUrl('/portal', locale as Locale))
+          } else {
+            router.replace(getLocalizedUrl('/dashboards/email-marketing', locale as Locale))
+          }
+        } catch {
+          router.replace(getLocalizedUrl('/dashboards/email-marketing', locale as Locale))
+        }
+      }
     } else {
       if (res?.error) {
-        const error = JSON.parse(res.error)
+        try {
+          const error = JSON.parse(res.error)
 
-        setErrorState(error)
+          setErrorState(error)
+        } catch {
+          setErrorState({ message: [res.error || 'Login failed. Please check your credentials.'] })
+        }
       }
     }
   }
@@ -169,15 +183,9 @@ const Login = ({ mode }: { mode: SystemMode }) => {
         </div>
         <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
           <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>{`Welcome to ${themeConfig.templateName}! 👋🏻`}</Typography>
-            <Typography>Please sign-in to your account and start the adventure</Typography>
+            <Typography variant='h4'>Welcome to Nepal Fillings!</Typography>
+            <Typography>Please sign in to your account</Typography>
           </div>
-          <Alert icon={false} className='bg-[var(--mui-palette-primary-lightOpacity)]'>
-            <Typography variant='body2' color='primary.main'>
-              Email: <span className='font-medium'>admin@vuexy.com</span> / Pass:{' '}
-              <span className='font-medium'>admin</span>
-            </Typography>
-          </Alert>
           <form
             noValidate
             autoComplete='off'
@@ -243,17 +251,6 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                 />
               )}
             />
-            <div className='flex justify-between items-center gap-x-3 gap-y-1 flex-wrap'>
-              <FormControlLabel control={<Checkbox defaultChecked />} label='Remember me' />
-              <Typography
-                className='text-end'
-                color='primary.main'
-                component={Link}
-                href={getLocalizedUrl('/forgot-password', locale as Locale)}
-              >
-                Forgot password?
-              </Typography>
-            </div>
             <Button fullWidth variant='contained' type='submit'>
               Login
             </Button>
@@ -263,16 +260,6 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                 Create an account
               </Typography>
             </div>
-            <Divider className='gap-2'>or</Divider>
-            <Button
-              color='secondary'
-              className='self-center text-textPrimary'
-              startIcon={<img src='/images/logos/google.png' alt='Google' width={22} />}
-              sx={{ '& .MuiButton-startIcon': { marginInlineEnd: 3 } }}
-              onClick={() => signIn('google')}
-            >
-              Sign in with Google
-            </Button>
           </form>
         </div>
       </div>
