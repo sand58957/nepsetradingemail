@@ -15,8 +15,10 @@ COPY . .
 RUN npx prisma generate --schema=src/prisma/schema.prisma
 RUN npx tsx src/assets/iconify-icons/bundle-icons-css.ts
 
-# Build Next.js
+# Build Next.js with public env vars inlined at build time
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_URL=https://nepalfillings.com/api
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN pnpm build
 
 FROM node:20-alpine AS runner
