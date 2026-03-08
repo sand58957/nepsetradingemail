@@ -127,7 +127,7 @@ const SubscriberProfileView = () => {
         <CardHeader title='Profile Information' />
         <CardContent>
           <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 label='Full Name'
                 fullWidth
@@ -135,7 +135,7 @@ const SubscriberProfileView = () => {
                 onChange={e => setProfile({ ...profile, name: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 label='Email Address'
                 fullWidth
@@ -144,7 +144,7 @@ const SubscriberProfileView = () => {
                 onChange={e => setProfile({ ...profile, email: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Button variant='contained' onClick={handleSaveProfile} disabled={saving}>
                 {saving ? 'Saving...' : 'Update Profile'}
               </Button>

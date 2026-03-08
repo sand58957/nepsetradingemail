@@ -85,7 +85,7 @@ const CampaignArchiveList = () => {
       ) : (
         <Grid container spacing={3}>
           {campaigns.map(campaign => (
-            <Grid item xs={12} sm={6} key={campaign.id}>
+            <Grid size={{ xs: 12, sm: 6 }} key={campaign.id}>
               <Card>
                 <CardActionArea
                   onClick={() =>

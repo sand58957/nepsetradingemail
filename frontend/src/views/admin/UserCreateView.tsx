@@ -93,7 +93,7 @@ const UserCreateView = () => {
 
         <form onSubmit={handleSubmit}>
           <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 label='Full Name'
                 fullWidth
@@ -102,7 +102,7 @@ const UserCreateView = () => {
                 onChange={e => setForm({ ...form, name: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 label='Email Address'
                 fullWidth
@@ -112,7 +112,7 @@ const UserCreateView = () => {
                 onChange={e => setForm({ ...form, email: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 label='Password'
                 fullWidth
@@ -122,7 +122,7 @@ const UserCreateView = () => {
                 onChange={e => setForm({ ...form, password: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select value={form.role} label='Role' onChange={e => setForm({ ...form, role: e.target.value })}>
@@ -132,7 +132,7 @@ const UserCreateView = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Box className='flex gap-4'>
                 <Button type='submit' variant='contained' disabled={loading} startIcon={<i className='tabler-check' />}>
                   {loading ? 'Creating...' : 'Create User'}

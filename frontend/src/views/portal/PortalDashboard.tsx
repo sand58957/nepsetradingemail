@@ -67,7 +67,7 @@ const PortalDashboard = () => {
 
       {/* Quick Stats */}
       <Grid container spacing={4}>
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Card>
             <CardContent className='text-center p-6'>
               <i className='tabler-mail text-4xl mb-2 text-primary' />
@@ -83,7 +83,7 @@ const PortalDashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Card>
             <CardContent className='text-center p-6'>
               <i className='tabler-archive text-4xl mb-2 text-primary' />
