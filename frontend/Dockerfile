@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 
 # Run postinstall steps manually (prisma generate + icon build)
-RUN npx prisma generate
+RUN npx prisma generate --schema=src/prisma/schema.prisma
 RUN npx tsx src/assets/iconify-icons/bundle-icons-css.ts
 
 # Build Next.js
