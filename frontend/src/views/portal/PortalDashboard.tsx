@@ -28,10 +28,15 @@ const PortalDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const subData = await portalService.getSubscriptions()
+        // Only fetch subscriptions for subscriber role — admin/staff don't have portal access
+        const role = (session as any)?.role
 
-        if (subData?.data?.lists) {
-          setSubscriptionCount(subData.data.lists.length)
+        if (role === 'subscriber') {
+          const subData = await portalService.getSubscriptions()
+
+          if (subData?.data?.lists) {
+            setSubscriptionCount(subData.data.lists.length)
+          }
         }
       } catch {
         // Ignore errors — subscriber may not exist in Listmonk yet
@@ -40,8 +45,8 @@ const PortalDashboard = () => {
       }
     }
 
-    fetchData()
-  }, [])
+    if (session) fetchData()
+  }, [session])
 
   if (loading) {
     return (

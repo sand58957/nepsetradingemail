@@ -65,11 +65,10 @@ api.interceptors.response.use(
         if (typeof window !== 'undefined') {
           window.location.href = '/login'
         }
-      } else if (status === 403) {
-        if (typeof window !== 'undefined') {
-          window.location.href = '/pages/misc/401-not-authorized'
-        }
       }
+
+      // 403 — let individual components handle permission errors gracefully
+      // (e.g. admin viewing subscriber-only portal endpoints)
     }
 
     return Promise.reject(error)
