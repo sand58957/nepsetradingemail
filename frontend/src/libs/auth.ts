@@ -26,17 +26,13 @@ export const authOptions: NextAuthOptions = {
        */
       credentials: {},
       async authorize(credentials) {
-        /*
-         * You need to provide your own logic here that takes the credentials submitted and returns either
-         * an object representing a user or value that is false/null if the credentials are invalid.
-         * For e.g. return { id: 1, name: 'J Smith', email: 'jsmith@example.com' }
-         * You can also use the `req` object to obtain additional parameters (i.e., the request IP address)
-         */
         const { email, password } = credentials as { email: string; password: string }
 
         try {
-          // ** Login API Call to match the user credentials and receive user data in response along with his role
-          const res = await fetch(`${process.env.API_URL}/login`, {
+          // Call Go backend login endpoint directly (server-side, Docker internal network)
+          const apiUrl = process.env.API_URL || 'http://backend:8080/api/auth'
+
+          const res = await fetch(`${apiUrl}/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -47,16 +43,21 @@ export const authOptions: NextAuthOptions = {
           const data = await res.json()
 
           if (res.status === 401) {
-            throw new Error(JSON.stringify(data))
+            throw new Error(JSON.stringify({ message: [data.message || 'Invalid email or password'] }))
           }
 
-          if (res.status === 200) {
-            /*
-             * Please unset all the sensitive information of the user either from API response or before returning
-             * user data below. Below return statement will set the user object in the token and the same is set in
-             * the session which will be accessible all over the app.
-             */
-            return data
+          if (res.status === 200 && data.success) {
+            // Go backend returns: { success, data: { access_token, refresh_token, user: {...} } }
+            const user = data.data.user
+
+            return {
+              id: String(user.id),
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              accessToken: data.data.access_token,
+              image: '/images/avatars/1.png'
+            }
           }
 
           return null
@@ -106,19 +107,18 @@ export const authOptions: NextAuthOptions = {
      */
     async jwt({ token, user }) {
       if (user) {
-        /*
-         * For adding custom parameters to user in session, we first need to add those parameters
-         * in token which then will be available in the `session()` callback
-         */
         token.name = user.name
+        token.role = (user as any).role
+        token.accessToken = (user as any).accessToken
       }
 
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        // ** Add custom params to user in session which are added in `jwt()` callback via `token` parameter
         session.user.name = token.name
+        ;(session as any).role = token.role
+        ;(session as any).accessToken = token.accessToken
       }
 
       return session

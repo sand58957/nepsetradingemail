@@ -33,6 +33,7 @@ services:
     expose:
       - "3000"
     environment:
+      - API_URL=http://backend:8080/api/auth
       - NEXT_PUBLIC_API_URL=https://nepalfillings.com/api
       - NEXTAUTH_URL=https://nepalfillings.com
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
