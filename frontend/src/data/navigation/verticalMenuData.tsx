@@ -56,8 +56,8 @@ const verticalMenuData = (dictionary: Awaited<ReturnType<typeof getDictionary>>)
         href: '/templates/list'
       },
       {
-        label: 'Media Manager',
-        icon: 'tabler-photo',
+        label: 'File Manager',
+        icon: 'tabler-folders',
         href: '/media'
       },
       {

@@ -1,8 +1,8 @@
 // Component Imports
-import MediaGallery from '@views/email/media/MediaGallery'
+import FileManagerPage from '@views/email/media/FileManagerPage'
 
 const MediaPage = () => {
-  return <MediaGallery />
+  return <FileManagerPage />
 }
 
 export default MediaPage

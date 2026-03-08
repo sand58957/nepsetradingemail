@@ -1,10 +1,11 @@
 'use client'
 
 // React Imports
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 
 // Next Imports
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -23,6 +24,14 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Tooltip from '@mui/material/Tooltip'
 import LinearProgress from '@mui/material/LinearProgress'
+import CircularProgress from '@mui/material/CircularProgress'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogActions from '@mui/material/DialogActions'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -31,7 +40,6 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
@@ -40,6 +48,9 @@ import { rankItem } from '@tanstack/match-sorter-utils'
 
 // Type Imports
 import type { Campaign, CampaignStatus } from '@/types/email'
+
+// Service Imports
+import campaignService from '@/services/campaigns'
 
 // Styles Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -67,57 +78,119 @@ const statusColorMap: Record<CampaignStatus, 'default' | 'success' | 'primary' |
 
 const columnHelper = createColumnHelper<CampaignWithAction>()
 
-// Mock data
-const mockCampaigns: CampaignWithAction[] = [
-  {
-    id: 1, uuid: '1', name: 'March Newsletter', subject: 'Monthly Update', from_email: 'news@company.com',
-    status: 'finished', type: 'regular', tags: ['newsletter'], content_type: 'richtext', body: '', altbody: '',
-    send_at: null, started_at: '2026-03-01T10:00:00Z', to_send: 5420, sent: 5420, lists: [],
-    views: 2340, clicks: 567, bounces: 23, created_at: '2026-02-28T09:00:00Z', updated_at: '2026-03-01T12:00:00Z'
-  },
-  {
-    id: 2, uuid: '2', name: 'Product Launch', subject: 'New Product Alert', from_email: 'hello@company.com',
-    status: 'running', type: 'regular', tags: ['product'], content_type: 'richtext', body: '', altbody: '',
-    send_at: null, started_at: '2026-03-08T08:00:00Z', to_send: 8350, sent: 4200, lists: [],
-    views: 1890, clicks: 342, bounces: 12, created_at: '2026-03-07T14:00:00Z', updated_at: '2026-03-08T08:30:00Z'
-  },
-  {
-    id: 3, uuid: '3', name: 'Weekly Tips', subject: 'Top 5 Tips', from_email: 'tips@company.com',
-    status: 'draft', type: 'regular', tags: ['tips'], content_type: 'richtext', body: '', altbody: '',
-    send_at: null, started_at: null, to_send: 0, sent: 0, lists: [],
-    views: 0, clicks: 0, bounces: 0, created_at: '2026-03-06T11:00:00Z', updated_at: '2026-03-06T11:00:00Z'
-  },
-  {
-    id: 4, uuid: '4', name: 'Flash Sale', subject: '50% Off Today Only!', from_email: 'deals@company.com',
-    status: 'scheduled', type: 'regular', tags: ['promo'], content_type: 'richtext', body: '', altbody: '',
-    send_at: '2026-03-15T09:00:00Z', started_at: null, to_send: 12000, sent: 0, lists: [],
-    views: 0, clicks: 0, bounces: 0, created_at: '2026-03-05T16:00:00Z', updated_at: '2026-03-05T16:30:00Z'
-  },
-  {
-    id: 5, uuid: '5', name: 'Welcome Series', subject: 'Welcome!', from_email: 'welcome@company.com',
-    status: 'finished', type: 'regular', tags: ['onboarding'], content_type: 'richtext', body: '', altbody: '',
-    send_at: null, started_at: '2026-02-20T07:00:00Z', to_send: 1230, sent: 1230, lists: [],
-    views: 984, clicks: 246, bounces: 5, created_at: '2026-02-19T15:00:00Z', updated_at: '2026-02-20T09:00:00Z'
-  },
-  {
-    id: 6, uuid: '6', name: 'Feature Update', subject: 'New Features This Month', from_email: 'product@company.com',
-    status: 'paused', type: 'regular', tags: ['product'], content_type: 'richtext', body: '', altbody: '',
-    send_at: null, started_at: '2026-03-03T10:00:00Z', to_send: 6800, sent: 3400, lists: [],
-    views: 1200, clicks: 180, bounces: 15, created_at: '2026-03-02T09:00:00Z', updated_at: '2026-03-03T11:00:00Z'
-  }
-]
-
 const CampaignListTable = () => {
+  const router = useRouter()
+
+  // Data state
+  const [campaigns, setCampaigns] = useState<CampaignWithAction[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  // Filter/pagination state
   const [globalFilter, setGlobalFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+
+  // UI state
   const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null)
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
+  })
 
-  const filteredData = useMemo(() => {
-    if (statusFilter === 'all') return mockCampaigns
+  // Debounced search
+  const [searchTerm, setSearchTerm] = useState('')
 
-    return mockCampaigns.filter(c => c.status === statusFilter)
-  }, [statusFilter])
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setGlobalFilter(searchTerm)
+      setPage(0)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Fetch campaigns from API
+  const fetchCampaigns = useCallback(async () => {
+    setLoading(true)
+
+    try {
+      let query = ''
+
+      if (statusFilter !== 'all') {
+        query = `campaigns.status = '${statusFilter}'`
+      }
+
+      if (globalFilter) {
+        const searchQuery = `campaigns.name ILIKE '%${globalFilter}%' OR campaigns.subject ILIKE '%${globalFilter}%'`
+
+        query = query ? `(${query}) AND (${searchQuery})` : searchQuery
+      }
+
+      const response = await campaignService.getAll({
+        page: page + 1,
+        per_page: rowsPerPage,
+        query: query || undefined,
+        order_by: 'created_at',
+        order: 'desc'
+      })
+
+      setCampaigns(response.data?.results || [])
+      setTotalCount(response.data?.total || 0)
+    } catch {
+      console.error('Failed to fetch campaigns')
+      setSnackbar({ open: true, message: 'Failed to fetch campaigns', severity: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }, [page, rowsPerPage, statusFilter, globalFilter])
+
+  useEffect(() => {
+    fetchCampaigns()
+  }, [fetchCampaigns])
+
+  // Delete campaign
+  const handleDelete = async () => {
+    if (!deletingId) return
+
+    try {
+      await campaignService.delete(deletingId)
+      setSnackbar({ open: true, message: 'Campaign deleted successfully', severity: 'success' })
+      setDeleteDialogOpen(false)
+      setDeletingId(null)
+      fetchCampaigns()
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to delete campaign', severity: 'error' })
+    }
+  }
+
+  // Duplicate campaign
+  const handleDuplicate = async (id: number) => {
+    try {
+      const response = await campaignService.getById(id)
+      const original = response.data
+
+      await campaignService.create({
+        name: `${original.name} (Copy)`,
+        subject: original.subject,
+        from_email: original.from_email,
+        type: original.type,
+        content_type: original.content_type,
+        body: original.body,
+        altbody: original.altbody,
+        lists: original.lists?.map((l: any) => l.id) || [],
+        tags: original.tags
+      })
+
+      setSnackbar({ open: true, message: 'Campaign duplicated successfully', severity: 'success' })
+      fetchCampaigns()
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to duplicate campaign', severity: 'error' })
+    }
+  }
 
   const columns = useMemo<ColumnDef<CampaignWithAction, any>[]>(
     () => [
@@ -125,7 +198,11 @@ const CampaignListTable = () => {
         header: 'Campaign',
         cell: ({ row }) => (
           <div className='flex flex-col'>
-            <Typography className='font-medium' color='text.primary'>
+            <Typography
+              className='font-medium cursor-pointer hover:underline'
+              color='text.primary'
+              onClick={() => router.push(`/campaigns/${row.original.id}`)}
+            >
               {row.original.name}
             </Typography>
             <Typography variant='body2' color='text.secondary'>
@@ -220,13 +297,8 @@ const CampaignListTable = () => {
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
             <Tooltip title='Edit'>
-              <IconButton size='small'>
+              <IconButton size='small' onClick={() => router.push(`/campaigns/${row.original.id}`)}>
                 <i className='tabler-pencil text-[22px] text-textSecondary' />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title='Preview'>
-              <IconButton size='small'>
-                <i className='tabler-eye text-[22px] text-textSecondary' />
               </IconButton>
             </Tooltip>
             <Tooltip title='More'>
@@ -244,11 +316,11 @@ const CampaignListTable = () => {
         )
       })
     ],
-    []
+    [router]
   )
 
   const table = useReactTable({
-    data: filteredData,
+    data: campaigns,
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
@@ -261,12 +333,8 @@ const CampaignListTable = () => {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 10
-      }
-    }
+    manualPagination: true,
+    pageCount: Math.ceil(totalCount / rowsPerPage)
   })
 
   return (
@@ -289,8 +357,8 @@ const CampaignListTable = () => {
           <TextField
             size='small'
             placeholder='Search campaigns...'
-            value={globalFilter ?? ''}
-            onChange={e => setGlobalFilter(e.target.value)}
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             className='max-sm:is-full'
             InputProps={{
               startAdornment: (
@@ -302,7 +370,14 @@ const CampaignListTable = () => {
           />
           <FormControl size='small' className='min-is-[150px]'>
             <InputLabel>Status</InputLabel>
-            <Select value={statusFilter} label='Status' onChange={e => setStatusFilter(e.target.value)}>
+            <Select
+              value={statusFilter}
+              label='Status'
+              onChange={e => {
+                setStatusFilter(e.target.value)
+                setPage(0)
+              }}
+            >
               <MenuItem value='all'>All</MenuItem>
               <MenuItem value='draft'>Draft</MenuItem>
               <MenuItem value='running'>Running</MenuItem>
@@ -313,62 +388,77 @@ const CampaignListTable = () => {
             </Select>
           </FormControl>
         </div>
-        <div className='overflow-x-auto'>
-          <table className={tableStyles.table}>
-            <thead>
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id}>
-                      {header.isPlaceholder ? null : (
-                        <div
-                          className={classnames({
-                            'flex items-center': header.column.getIsSorted(),
-                            'cursor-pointer select-none': header.column.getCanSort()
-                          })}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {{
-                            asc: <i className='tabler-chevron-up text-xl' />,
-                            desc: <i className='tabler-chevron-down text-xl' />
-                          }[header.column.getIsSorted() as string] ?? null}
-                        </div>
-                      )}
-                    </th>
+
+        {loading ? (
+          <div className='flex justify-center items-center py-16'>
+            <CircularProgress size={32} />
+            <Typography className='ml-3' color='text.secondary'>Loading campaigns...</Typography>
+          </div>
+        ) : (
+          <>
+            <div className='overflow-x-auto'>
+              <table className={tableStyles.table}>
+                <thead>
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map(header => (
+                        <th key={header.id}>
+                          {header.isPlaceholder ? null : (
+                            <div
+                              className={classnames({
+                                'flex items-center': header.column.getIsSorted(),
+                                'cursor-pointer select-none': header.column.getCanSort()
+                              })}
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {{
+                                asc: <i className='tabler-chevron-up text-xl' />,
+                                desc: <i className='tabler-chevron-down text-xl' />
+                              }[header.column.getIsSorted() as string] ?? null}
+                            </div>
+                          )}
+                        </th>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-              ))}
-            </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tbody>
-                <tr>
-                  <td colSpan={table.getVisibleLeafColumns().length} className='text-center'>
-                    No campaigns found
-                  </td>
-                </tr>
-              </tbody>
-            ) : (
-              <tbody>
-                {table.getRowModel().rows.map(row => (
-                  <tr key={row.id}>
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                </thead>
+                {campaigns.length === 0 ? (
+                  <tbody>
+                    <tr>
+                      <td colSpan={table.getVisibleLeafColumns().length} className='text-center'>
+                        <Typography color='text.secondary' className='py-8'>
+                          No campaigns found. Create your first campaign to get started.
+                        </Typography>
+                      </td>
+                    </tr>
+                  </tbody>
+                ) : (
+                  <tbody>
+                    {table.getRowModel().rows.map(row => (
+                      <tr key={row.id}>
+                        {row.getVisibleCells().map(cell => (
+                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                        ))}
+                      </tr>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            )}
-          </table>
-        </div>
-        <TablePagination
-          component='div'
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          onPageChange={(_, page) => table.setPageIndex(page)}
-          onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
-        />
+                  </tbody>
+                )}
+              </table>
+            </div>
+            <TablePagination
+              component='div'
+              count={totalCount}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={(_, newPage) => setPage(newPage)}
+              onRowsPerPageChange={e => {
+                setRowsPerPage(Number(e.target.value))
+                setPage(0)
+              }}
+            />
+          </>
+        )}
       </Card>
 
       {/* Action Menu */}
@@ -377,16 +467,53 @@ const CampaignListTable = () => {
         open={Boolean(actionMenuAnchor)}
         onClose={() => setActionMenuAnchor(null)}
       >
-        <MenuItem onClick={() => setActionMenuAnchor(null)}>
+        <MenuItem onClick={() => {
+          if (selectedCampaignId) handleDuplicate(selectedCampaignId)
+          setActionMenuAnchor(null)
+        }}>
           <i className='tabler-copy text-[18px] mie-2' /> Duplicate
         </MenuItem>
-        <MenuItem onClick={() => setActionMenuAnchor(null)}>
-          <i className='tabler-send text-[18px] mie-2' /> Send Test
-        </MenuItem>
-        <MenuItem onClick={() => setActionMenuAnchor(null)} className='text-error'>
+        <MenuItem onClick={() => {
+          setActionMenuAnchor(null)
+
+          if (selectedCampaignId) {
+            setDeletingId(selectedCampaignId)
+            setDeleteDialogOpen(true)
+          }
+        }} className='text-error'>
           <i className='tabler-trash text-[18px] mie-2' /> Delete
         </MenuItem>
       </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Campaign</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this campaign? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='secondary'>Cancel</Button>
+          <Button onClick={handleDelete} color='error' variant='contained'>Delete</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant='filled'
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   )
 }

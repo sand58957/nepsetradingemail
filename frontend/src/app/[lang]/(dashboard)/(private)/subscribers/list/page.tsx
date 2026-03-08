@@ -1,8 +1,8 @@
 // Component Imports
-import SubscriberListTable from '@views/email/subscribers/SubscriberListTable'
+import SubscriberPage from '@views/email/subscribers/SubscriberPage'
 
 const SubscriberListPage = () => {
-  return <SubscriberListTable />
+  return <SubscriberPage />
 }
 
 export default SubscriberListPage

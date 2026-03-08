@@ -1,0 +1,56 @@
+# Local development — only DB + Redis + Listmonk
+# Usage: docker compose -f docker-compose.local.yml up -d
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: nepse_local_db
+    environment:
+      POSTGRES_USER: listmonk
+      POSTGRES_PASSWORD: listmonk
+      POSTGRES_DB: listmonk
+    ports:
+      - "5433:5432"
+    volumes:
+      - local_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U listmonk"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nepse_local_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - local_redisdata:/data
+
+  listmonk:
+    image: listmonk/listmonk:v3.0.0
+    container_name: nepse_local_listmonk
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - LISTMONK_app__address=0.0.0.0:9000
+      - LISTMONK_app__admin_username=admin
+      - LISTMONK_app__admin_password=admin
+      - LISTMONK_db__host=db
+      - LISTMONK_db__port=5432
+      - LISTMONK_db__user=listmonk
+      - LISTMONK_db__password=listmonk
+      - LISTMONK_db__database=listmonk
+      - LISTMONK_db__ssl_mode=disable
+    ports:
+      - "9000:9000"
+    volumes:
+      - local_listmonk_uploads:/listmonk/uploads
+    command: >
+      sh -c "yes | ./listmonk --install && yes | ./listmonk --upgrade && ./listmonk"
+
+volumes:
+  local_pgdata:
+  local_redisdata:
+  local_listmonk_uploads:

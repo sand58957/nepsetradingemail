@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -22,6 +22,11 @@ import DialogActions from '@mui/material/DialogActions'
 import Grid from '@mui/material/Grid'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
+import CircularProgress from '@mui/material/CircularProgress'
+import Alert from '@mui/material/Alert'
+import Snackbar from '@mui/material/Snackbar'
+import Checkbox from '@mui/material/Checkbox'
+import Autocomplete from '@mui/material/Autocomplete'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -30,15 +35,17 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import { rankItem } from '@tanstack/match-sorter-utils'
 
 // Type Imports
-import type { Subscriber, SubscriberStatus } from '@/types/email'
+import type { Subscriber, SubscriberStatus, List } from '@/types/email'
+
+// Service Imports
+import subscriberService from '@/services/subscribers'
+import listService from '@/services/lists'
 
 // Styles Imports
 import tableStyles from '@core/styles/table.module.css'
@@ -71,125 +78,151 @@ const statusColorMap: Record<
 // Column helper
 const columnHelper = createColumnHelper<SubscriberWithAction>()
 
-// Mock data
-const mockSubscribers: SubscriberWithAction[] = [
-  {
-    id: 1,
-    uuid: 'a1b2c3',
-    email: 'john.doe@example.com',
-    name: 'John Doe',
-    status: 'enabled',
-    lists: [
-      { id: 1, uuid: 'l1', name: 'Newsletter', type: 'public', optin: 'double', tags: [], description: '', subscriber_count: 500, created_at: '', updated_at: '' }
-    ],
-    attribs: {},
-    created_at: '2026-01-15T10:00:00Z',
-    updated_at: '2026-01-15T10:00:00Z'
-  },
-  {
-    id: 2,
-    uuid: 'd4e5f6',
-    email: 'jane.smith@example.com',
-    name: 'Jane Smith',
-    status: 'enabled',
-    lists: [
-      { id: 1, uuid: 'l1', name: 'Newsletter', type: 'public', optin: 'double', tags: [], description: '', subscriber_count: 500, created_at: '', updated_at: '' },
-      { id: 2, uuid: 'l2', name: 'Product Updates', type: 'public', optin: 'single', tags: [], description: '', subscriber_count: 300, created_at: '', updated_at: '' }
-    ],
-    attribs: {},
-    created_at: '2026-01-20T14:00:00Z',
-    updated_at: '2026-02-01T09:00:00Z'
-  },
-  {
-    id: 3,
-    uuid: 'g7h8i9',
-    email: 'bob.wilson@example.com',
-    name: 'Bob Wilson',
-    status: 'unsubscribed',
-    lists: [],
-    attribs: {},
-    created_at: '2025-12-10T08:00:00Z',
-    updated_at: '2026-02-15T11:00:00Z'
-  },
-  {
-    id: 4,
-    uuid: 'j1k2l3',
-    email: 'alice.johnson@example.com',
-    name: 'Alice Johnson',
-    status: 'enabled',
-    lists: [
-      { id: 2, uuid: 'l2', name: 'Product Updates', type: 'public', optin: 'single', tags: [], description: '', subscriber_count: 300, created_at: '', updated_at: '' }
-    ],
-    attribs: {},
-    created_at: '2026-02-05T16:00:00Z',
-    updated_at: '2026-02-05T16:00:00Z'
-  },
-  {
-    id: 5,
-    uuid: 'm4n5o6',
-    email: 'charlie.brown@example.com',
-    name: 'Charlie Brown',
-    status: 'blocklisted',
-    lists: [],
-    attribs: {},
-    created_at: '2025-11-20T12:00:00Z',
-    updated_at: '2026-01-10T09:00:00Z'
-  },
-  {
-    id: 6,
-    uuid: 'p7q8r9',
-    email: 'diana.prince@example.com',
-    name: 'Diana Prince',
-    status: 'unconfirmed',
-    lists: [
-      { id: 1, uuid: 'l1', name: 'Newsletter', type: 'public', optin: 'double', tags: [], description: '', subscriber_count: 500, created_at: '', updated_at: '' }
-    ],
-    attribs: {},
-    created_at: '2026-03-01T07:00:00Z',
-    updated_at: '2026-03-01T07:00:00Z'
-  },
-  {
-    id: 7,
-    uuid: 's1t2u3',
-    email: 'edward.stark@example.com',
-    name: 'Edward Stark',
-    status: 'enabled',
-    lists: [
-      { id: 1, uuid: 'l1', name: 'Newsletter', type: 'public', optin: 'double', tags: [], description: '', subscriber_count: 500, created_at: '', updated_at: '' },
-      { id: 2, uuid: 'l2', name: 'Product Updates', type: 'public', optin: 'single', tags: [], description: '', subscriber_count: 300, created_at: '', updated_at: '' }
-    ],
-    attribs: {},
-    created_at: '2026-02-18T13:00:00Z',
-    updated_at: '2026-02-18T13:00:00Z'
-  },
-  {
-    id: 8,
-    uuid: 'v4w5x6',
-    email: 'fiona.green@example.com',
-    name: 'Fiona Green',
-    status: 'enabled',
-    lists: [
-      { id: 1, uuid: 'l1', name: 'Newsletter', type: 'public', optin: 'double', tags: [], description: '', subscriber_count: 500, created_at: '', updated_at: '' }
-    ],
-    attribs: {},
-    created_at: '2026-02-25T10:00:00Z',
-    updated_at: '2026-02-25T10:00:00Z'
-  }
-]
-
 const SubscriberListTable = () => {
   // States
-  const [globalFilter, setGlobalFilter] = useState('')
+  const [subscribers, setSubscribers] = useState<SubscriberWithAction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [totalCount, setTotalCount] = useState(0)
+  const [page, setPage] = useState(0)
+  const [perPage, setPerPage] = useState(10)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchDebounce, setSearchDebounce] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [newSubscriber, setNewSubscriber] = useState({ name: '', email: '', status: 'enabled' as SubscriberStatus })
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [subscriberToDelete, setSubscriberToDelete] = useState<SubscriberWithAction | null>(null)
+  const [newSubscriber, setNewSubscriber] = useState({
+    name: '',
+    email: '',
+    status: 'enabled' as SubscriberStatus,
+    lists: [] as number[]
+  })
 
-  // Filter data based on status
-  const filteredData = useMemo(() => {
-    if (statusFilter === 'all') return mockSubscribers
+  // Available lists for the Add dialog
+  const [availableLists, setAvailableLists] = useState<List[]>([])
 
-    return mockSubscribers.filter(sub => sub.status === statusFilter)
-  }, [statusFilter])
+  // Snackbar
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
+
+  const [submitting, setSubmitting] = useState(false)
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchDebounce(searchQuery)
+      setPage(0)
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Fetch subscribers from the API
+  const fetchSubscribers = useCallback(async () => {
+    setLoading(true)
+
+    try {
+      const params: Record<string, any> = {
+        page: page + 1,
+        per_page: perPage
+      }
+
+      if (searchDebounce) {
+        params.query = `subscribers.name ILIKE '%${searchDebounce}%' OR subscribers.email ILIKE '%${searchDebounce}%'`
+      }
+
+      if (statusFilter !== 'all') {
+        const statusQuery = `subscribers.status = '${statusFilter}'`
+        params.query = params.query ? `(${params.query}) AND ${statusQuery}` : statusQuery
+      }
+
+      const response = await subscriberService.getAll(params)
+
+      setSubscribers(response.data?.results || [])
+      setTotalCount(response.data?.total || 0)
+    } catch (error) {
+      console.error('Failed to fetch subscribers:', error)
+      setSnackbar({ open: true, message: 'Failed to fetch subscribers', severity: 'error' })
+      setSubscribers([])
+      setTotalCount(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [page, perPage, searchDebounce, statusFilter])
+
+  // Fetch on mount and when params change
+  useEffect(() => {
+    fetchSubscribers()
+  }, [fetchSubscribers])
+
+  // Fetch available lists for add dialog
+  useEffect(() => {
+    const fetchLists = async () => {
+      try {
+        const response = await listService.getAll({ per_page: 100 })
+        setAvailableLists(response.data?.results || [])
+      } catch {
+        console.error('Failed to fetch lists')
+      }
+    }
+
+    fetchLists()
+  }, [])
+
+  // Handle add subscriber
+  const handleAddSubscriber = async () => {
+    if (!newSubscriber.email) {
+      setSnackbar({ open: true, message: 'Email is required', severity: 'error' })
+
+      return
+    }
+
+    setSubmitting(true)
+
+    try {
+      await subscriberService.create({
+        name: newSubscriber.name,
+        email: newSubscriber.email,
+        status: newSubscriber.status,
+        lists: newSubscriber.lists
+      })
+
+      setSnackbar({ open: true, message: 'Subscriber added successfully', severity: 'success' })
+      setAddDialogOpen(false)
+      setNewSubscriber({ name: '', email: '', status: 'enabled', lists: [] })
+      fetchSubscribers()
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Failed to add subscriber'
+      setSnackbar({ open: true, message: msg, severity: 'error' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handle delete subscriber
+  const handleDeleteSubscriber = async () => {
+    if (!subscriberToDelete) return
+
+    setSubmitting(true)
+
+    try {
+      await subscriberService.delete(subscriberToDelete.id)
+      setSnackbar({ open: true, message: 'Subscriber deleted successfully', severity: 'success' })
+      setDeleteDialogOpen(false)
+      setSubscriberToDelete(null)
+      fetchSubscribers()
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Failed to delete subscriber'
+      setSnackbar({ open: true, message: msg, severity: 'error' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const columns = useMemo<ColumnDef<SubscriberWithAction, any>[]>(
     () => [
@@ -198,7 +231,7 @@ const SubscriberListTable = () => {
         cell: ({ row }) => (
           <div className='flex flex-col'>
             <Typography className='font-medium' color='text.primary'>
-              {row.original.name}
+              {row.original.name || '-'}
             </Typography>
           </div>
         )
@@ -222,7 +255,7 @@ const SubscriberListTable = () => {
         header: 'Lists',
         cell: ({ row }) => (
           <div className='flex gap-1 flex-wrap'>
-            {row.original.lists.length > 0 ? (
+            {row.original.lists && row.original.lists.length > 0 ? (
               row.original.lists.map(list => (
                 <Chip key={list.id} label={list.name} size='small' variant='outlined' />
               ))
@@ -251,13 +284,21 @@ const SubscriberListTable = () => {
         header: 'Actions',
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
-            <IconButton size='small'>
+            <IconButton
+              size='small'
+              href={`subscribers/${row.original.id}`}
+              title='View details'
+            >
               <i className='tabler-eye text-[22px] text-textSecondary' />
             </IconButton>
-            <IconButton size='small'>
-              <i className='tabler-pencil text-[22px] text-textSecondary' />
-            </IconButton>
-            <IconButton size='small'>
+            <IconButton
+              size='small'
+              title='Delete'
+              onClick={() => {
+                setSubscriberToDelete(row.original)
+                setDeleteDialogOpen(true)
+              }}
+            >
               <i className='tabler-trash text-[22px] text-textSecondary' />
             </IconButton>
           </div>
@@ -268,38 +309,23 @@ const SubscriberListTable = () => {
   )
 
   const table = useReactTable({
-    data: filteredData,
+    data: subscribers,
     columns,
     filterFns: {
       fuzzy: fuzzyFilter
     },
-    state: {
-      globalFilter
-    },
-    globalFilterFn: fuzzyFilter,
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 10
-      }
-    }
+    manualPagination: true,
+    pageCount: Math.ceil(totalCount / perPage)
   })
-
-  const handleAddSubscriber = () => {
-    // In a real app, this would call the API
-    setAddDialogOpen(false)
-    setNewSubscriber({ name: '', email: '', status: 'enabled' })
-  }
 
   return (
     <>
       <Card>
         <CardHeader
           title='Subscribers'
+          subheader={!loading ? `${totalCount} total subscribers` : undefined}
           action={
             <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => setAddDialogOpen(true)}>
               Add Subscriber
@@ -310,8 +336,8 @@ const SubscriberListTable = () => {
           <TextField
             size='small'
             placeholder='Search subscribers...'
-            value={globalFilter ?? ''}
-            onChange={e => setGlobalFilter(e.target.value)}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
             className='max-sm:is-full'
             InputProps={{
               startAdornment: (
@@ -323,13 +349,21 @@ const SubscriberListTable = () => {
           />
           <FormControl size='small' className='min-is-[150px]'>
             <InputLabel>Status</InputLabel>
-            <Select value={statusFilter} label='Status' onChange={e => setStatusFilter(e.target.value)}>
+            <Select
+              value={statusFilter}
+              label='Status'
+              onChange={e => {
+                setStatusFilter(e.target.value)
+                setPage(0)
+              }}
+            >
               <MenuItem value='all'>All</MenuItem>
               <MenuItem value='enabled'>Enabled</MenuItem>
               <MenuItem value='disabled'>Disabled</MenuItem>
               <MenuItem value='blocklisted'>Blocklisted</MenuItem>
-              <MenuItem value='unconfirmed'>Unconfirmed</MenuItem>
-              <MenuItem value='unsubscribed'>Unsubscribed</MenuItem>
+              {/* Uncomment below if using Listmonk v4+ which supports these statuses */}
+              {/* <MenuItem value='unconfirmed'>Unconfirmed</MenuItem> */}
+              {/* <MenuItem value='unsubscribed'>Unsubscribed</MenuItem> */}
             </Select>
           </FormControl>
         </div>
@@ -360,11 +394,26 @@ const SubscriberListTable = () => {
                 </tr>
               ))}
             </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
+            {loading ? (
               <tbody>
                 <tr>
                   <td colSpan={table.getVisibleLeafColumns().length} className='text-center'>
-                    No subscribers found
+                    <div className='flex justify-center items-center py-8'>
+                      <CircularProgress size={32} />
+                      <Typography className='ml-3' color='text.secondary'>
+                        Loading subscribers...
+                      </Typography>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            ) : table.getRowModel().rows.length === 0 ? (
+              <tbody>
+                <tr>
+                  <td colSpan={table.getVisibleLeafColumns().length} className='text-center'>
+                    <div className='py-8'>
+                      <Typography color='text.secondary'>No subscribers found</Typography>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -383,11 +432,14 @@ const SubscriberListTable = () => {
         </div>
         <TablePagination
           component='div'
-          count={table.getFilteredRowModel().rows.length}
-          rowsPerPage={table.getState().pagination.pageSize}
-          page={table.getState().pagination.pageIndex}
-          onPageChange={(_, page) => table.setPageIndex(page)}
-          onRowsPerPageChange={e => table.setPageSize(Number(e.target.value))}
+          count={totalCount}
+          rowsPerPage={perPage}
+          page={page}
+          onPageChange={(_, newPage) => setPage(newPage)}
+          onRowsPerPageChange={e => {
+            setPerPage(Number(e.target.value))
+            setPage(0)
+          }}
         />
       </Card>
 
@@ -409,6 +461,7 @@ const SubscriberListTable = () => {
                 fullWidth
                 label='Email'
                 type='email'
+                required
                 value={newSubscriber.email}
                 onChange={e => setNewSubscriber({ ...newSubscriber, email: e.target.value })}
               />
@@ -427,17 +480,69 @@ const SubscriberListTable = () => {
                 </Select>
               </FormControl>
             </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Autocomplete
+                multiple
+                options={availableLists}
+                getOptionLabel={option => option.name}
+                value={availableLists.filter(l => newSubscriber.lists.includes(l.id))}
+                onChange={(_, selected) => setNewSubscriber({ ...newSubscriber, lists: selected.map(l => l.id) })}
+                disableCloseOnSelect
+                renderOption={(props, option, { selected }) => (
+                  <li {...props} key={option.id}>
+                    <Checkbox checked={selected} className='mr-2' />
+                    {option.name}
+                  </li>
+                )}
+                renderInput={params => <TextField {...params} label='Lists' placeholder='Select lists...' />}
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)} color='secondary'>
+          <Button onClick={() => setAddDialogOpen(false)} color='secondary' disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={handleAddSubscriber} variant='contained'>
-            Add Subscriber
+          <Button onClick={handleAddSubscriber} variant='contained' disabled={submitting}>
+            {submitting ? <CircularProgress size={20} /> : 'Add Subscriber'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth='xs' fullWidth>
+        <DialogTitle>Delete Subscriber</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete <strong>{subscriberToDelete?.name || subscriberToDelete?.email}</strong>?
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='secondary' disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteSubscriber} variant='contained' color='error' disabled={submitting}>
+            {submitting ? <CircularProgress size={20} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant='filled'
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   )
 }

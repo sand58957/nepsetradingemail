@@ -106,13 +106,45 @@ export interface MediaItem {
   uuid: string
   filename: string
   content_type: string
-  thumb_url: string
+  thumb_url: string | null
   url: string
   created_at: string
+  meta?: {
+    width?: number
+    height?: number
+  }
 }
 
 export interface MediaListResponse {
-  data: MediaItem[]
+  data: {
+    results: MediaItem[]
+    query: string
+    total: number
+    per_page: number
+    page: number
+  }
+}
+
+export interface MediaFolder {
+  id: number
+  name: string
+  user_id: number
+  item_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface MediaFolderListResponse {
+  success: boolean
+  data: MediaFolder[]
+}
+
+export interface CreateMediaFolderRequest {
+  name: string
+}
+
+export interface ImportFromURLRequest {
+  url: string
 }
 
 export interface DashboardStats {
@@ -260,4 +292,199 @@ export interface PaginationParams {
   query?: string
   order_by?: string
   order?: 'asc' | 'desc'
+}
+
+// ============================================================
+// Import Types
+// ============================================================
+
+export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled'
+
+export type ImportSource = 'csv' | 'api' | 'webhook'
+
+export interface ImportHistoryRecord {
+  id: number
+  source: ImportSource
+  filename: string | null
+  status: ImportStatus
+  total: number
+  successful: number
+  failed: number
+  skipped: number
+  list_ids: number[]
+  field_mapping: Record<string, string>
+  error_log: ImportError[]
+  summary: Record<string, number>
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ImportError {
+  email?: string
+  error: string
+}
+
+export interface ImportHistoryListResponse {
+  success: boolean
+  data: ImportHistoryRecord[]
+  total: number
+  page: number
+  per_page: number
+}
+
+export interface ListmonkImportStatus {
+  data: {
+    name: string
+    total: number
+    imported: number
+    status: string
+  }
+}
+
+export interface ImportWebhook {
+  id: number
+  name: string
+  secret_key: string
+  list_ids: number[]
+  is_active: boolean
+  trigger_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ImportAnalytics {
+  total_imports: number
+  total_records: number
+  total_successful: number
+  total_failed: number
+  total_skipped: number
+  active_webhooks: number
+  suppressed_emails: number
+}
+
+export interface CSVImportParams {
+  mode: 'subscribe' | 'blocklist'
+  delim: string
+  lists: number[]
+  overwrite: boolean
+}
+
+export interface APIImportPayload {
+  subscribers: {
+    email: string
+    name: string
+    status?: string
+    attribs?: Record<string, string | number | boolean>
+  }[]
+  list_ids: number[]
+  overwrite: boolean
+}
+
+export interface APIImportResult {
+  success: boolean
+  data: {
+    import_id: number
+    total: number
+    successful: number
+    failed: number
+    skipped: number
+    errors: ImportError[]
+  }
+}
+
+export interface SuppressionEntry {
+  id: number
+  email: string
+  reason: string
+  created_at: string
+}
+
+export interface SuppressionListResponse {
+  success: boolean
+  data: SuppressionEntry[]
+  total: number
+  page: number
+  per_page: number
+}
+
+// ============================================================
+// Account Settings Types
+// ============================================================
+
+export interface CompanyProfile {
+  company_name: string
+  website: string
+  address: string
+  city: string
+  country: string
+  timezone: string
+  time_format: '12h' | '24h'
+  show_branding: boolean
+}
+
+export interface SocialLink {
+  platform: string
+  url: string
+}
+
+export interface BrandDefaults {
+  sender_name: string
+  sender_email: string
+  custom_reply_to: boolean
+  reply_to_email: string
+  add_recipient_name: boolean
+  logo_url: string
+  force_update_logo: boolean
+  font_family: string
+  color_primary: string
+  color_secondary: string
+  color_heading: string
+  color_text: string
+  color_border: string
+  track_opens: boolean
+  google_analytics: boolean
+  ga_campaigns: boolean
+  ga_automations: boolean
+  social_links: SocialLink[]
+  company_details: string
+  auto_generate_footer: boolean
+  force_update_footer: boolean
+  unsubscribe_disclaimer: string
+  unsubscribe_link_text: string
+}
+
+export interface SendingDomain {
+  domain: string
+  status: 'verified' | 'pending' | 'failed'
+  domain_alignment: boolean
+}
+
+export interface DomainsConfig {
+  sending_domains: SendingDomain[]
+  site_domains: string[]
+}
+
+export interface EcommerceConfig {
+  enabled: boolean
+  provider: string
+  api_key: string
+  store_url: string
+}
+
+export interface LinkTrackingConfig {
+  utm_source: string
+  utm_medium: string
+  utm_campaign: string
+  utm_term: string
+  utm_content: string
+}
+
+export interface AccountSettings {
+  company_profile: CompanyProfile
+  brand_defaults: BrandDefaults
+  domains: DomainsConfig
+  ecommerce: EcommerceConfig
+  link_tracking: LinkTrackingConfig
 }

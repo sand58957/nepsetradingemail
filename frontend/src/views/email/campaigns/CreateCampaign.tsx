@@ -1,7 +1,10 @@
 'use client'
 
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+// Next Imports
+import { useRouter } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -28,31 +31,30 @@ import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableRow from '@mui/material/TableRow'
+import CircularProgress from '@mui/material/CircularProgress'
+import Snackbar from '@mui/material/Snackbar'
 
 // Type Imports
-import type { ContentType, CampaignType } from '@/types/email'
+import type { ContentType, CampaignType, List, Template } from '@/types/email'
+
+// Service Imports
+import campaignService from '@/services/campaigns'
+import listService from '@/services/lists'
+import templateService from '@/services/templates'
 
 const steps = ['Campaign Details', 'Select Lists', 'Content', 'Review & Send']
 
-// Mock lists
-const availableLists = [
-  { id: 1, name: 'Newsletter', subscriber_count: 5420, type: 'public' as const },
-  { id: 2, name: 'Product Updates', subscriber_count: 3200, type: 'public' as const },
-  { id: 3, name: 'Beta Users', subscriber_count: 890, type: 'private' as const },
-  { id: 4, name: 'Customers', subscriber_count: 12500, type: 'public' as const },
-  { id: 5, name: 'Leads', subscriber_count: 7800, type: 'private' as const }
-]
-
-// Mock templates
-const availableTemplates = [
-  { id: 1, name: 'Default Template' },
-  { id: 2, name: 'Newsletter Template' },
-  { id: 3, name: 'Product Announcement' },
-  { id: 4, name: 'Simple Text' }
-]
-
 const CreateCampaign = () => {
+  const router = useRouter()
+
   const [activeStep, setActiveStep] = useState(0)
+  const [saving, setSaving] = useState(false)
+
+  // Fetched data
+  const [availableLists, setAvailableLists] = useState<List[]>([])
+  const [availableTemplates, setAvailableTemplates] = useState<Template[]>([])
+  const [loadingLists, setLoadingLists] = useState(true)
+  const [loadingTemplates, setLoadingTemplates] = useState(true)
 
   // Campaign details state
   const [name, setName] = useState('')
@@ -72,6 +74,49 @@ const CreateCampaign = () => {
   const [sendNow, setSendNow] = useState(true)
   const [scheduledDate, setScheduledDate] = useState('')
 
+  // Snackbar
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
+  })
+
+  // Fetch lists from API
+  useEffect(() => {
+    const fetchLists = async () => {
+      setLoadingLists(true)
+
+      try {
+        const response = await listService.getAll({ per_page: 100 })
+
+        setAvailableLists(response.data?.results || [])
+      } catch {
+        console.error('Failed to fetch lists')
+      } finally {
+        setLoadingLists(false)
+      }
+    }
+
+    fetchLists()
+  }, [])
+
+  // Fetch templates from API
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      setLoadingTemplates(true)
+
+      try {
+        const response = await templateService.getAll()
+
+        setAvailableTemplates(response.data || [])
+      } catch {
+        console.error('Failed to fetch templates')
+      } finally {
+        setLoadingTemplates(false)
+      }
+    }
+
+    fetchTemplates()
+  }, [])
+
   const handleNext = () => setActiveStep(prev => prev + 1)
   const handleBack = () => setActiveStep(prev => prev - 1)
 
@@ -83,7 +128,7 @@ const CreateCampaign = () => {
 
   const totalRecipients = availableLists
     .filter(l => selectedLists.includes(l.id))
-    .reduce((sum, l) => sum + l.subscriber_count, 0)
+    .reduce((sum, l) => sum + (l.subscriber_count || 0), 0)
 
   const isStepValid = () => {
     switch (activeStep) {
@@ -97,6 +142,85 @@ const CreateCampaign = () => {
         return true
       default:
         return false
+    }
+  }
+
+  // Save as draft
+  const handleSaveAsDraft = async () => {
+    setSaving(true)
+
+    try {
+      const result = await campaignService.create({
+        name,
+        subject,
+        from_email: fromEmail,
+        type: campaignType,
+        content_type: contentType,
+        body,
+        lists: selectedLists,
+        send_at: !sendNow && scheduledDate ? new Date(scheduledDate).toISOString() : undefined
+      })
+
+      setSnackbar({ open: true, message: 'Campaign saved as draft', severity: 'success' })
+
+      setTimeout(() => router.push(`/campaigns/${result.data.id}`), 1000)
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to save campaign', severity: 'error' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Send or schedule campaign
+  const handleSendCampaign = async () => {
+    setSaving(true)
+
+    try {
+      // First create the campaign
+      const result = await campaignService.create({
+        name,
+        subject,
+        from_email: fromEmail,
+        type: campaignType,
+        content_type: contentType,
+        body,
+        lists: selectedLists,
+        send_at: !sendNow && scheduledDate ? new Date(scheduledDate).toISOString() : undefined
+      })
+
+      // Then update status to start sending
+      const status = sendNow ? 'running' : 'scheduled'
+
+      await campaignService.updateStatus(result.data.id, status)
+
+      setSnackbar({
+        open: true,
+        message: sendNow ? 'Campaign is now sending!' : 'Campaign scheduled successfully',
+        severity: 'success'
+      })
+
+      setTimeout(() => router.push(`/campaigns/${result.data.id}`), 1000)
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to send campaign', severity: 'error' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Load template body when template selected
+  const handleTemplateChange = async (tId: number | '') => {
+    setTemplateId(tId)
+
+    if (tId && typeof tId === 'number') {
+      try {
+        const response = await templateService.getById(tId)
+
+        if (response.data?.body) {
+          setBody(response.data.body)
+        }
+      } catch {
+        console.error('Failed to load template')
+      }
     }
   }
 
@@ -173,38 +297,50 @@ const CreateCampaign = () => {
             <Alert severity='info' className='mb-2'>
               Select one or more subscriber lists to send your campaign to. Total recipients: {totalRecipients.toLocaleString()}
             </Alert>
-            <FormGroup>
-              {availableLists.map(list => (
-                <div
-                  key={list.id}
-                  className={`flex items-center justify-between p-4 rounded-lg border mb-2 cursor-pointer transition-colors ${
-                    selectedLists.includes(list.id) ? 'border-primary bg-primaryLight' : ''
-                  }`}
-                  onClick={() => handleListToggle(list.id)}
-                >
-                  <div className='flex items-center gap-3'>
-                    <Checkbox
-                      checked={selectedLists.includes(list.id)}
-                      onChange={() => handleListToggle(list.id)}
-                    />
-                    <div>
-                      <Typography className='font-medium' color='text.primary'>
-                        {list.name}
-                      </Typography>
-                      <Typography variant='body2' color='text.secondary'>
-                        {list.subscriber_count.toLocaleString()} subscribers
-                      </Typography>
+
+            {loadingLists ? (
+              <div className='flex justify-center items-center py-8'>
+                <CircularProgress size={24} />
+                <Typography className='ml-2' color='text.secondary'>Loading lists...</Typography>
+              </div>
+            ) : availableLists.length === 0 ? (
+              <Alert severity='warning'>
+                No subscriber lists found. Create a list first before creating a campaign.
+              </Alert>
+            ) : (
+              <FormGroup>
+                {availableLists.map(list => (
+                  <div
+                    key={list.id}
+                    className={`flex items-center justify-between p-4 rounded-lg border mb-2 cursor-pointer transition-colors ${
+                      selectedLists.includes(list.id) ? 'border-primary bg-primaryLight' : ''
+                    }`}
+                    onClick={() => handleListToggle(list.id)}
+                  >
+                    <div className='flex items-center gap-3'>
+                      <Checkbox
+                        checked={selectedLists.includes(list.id)}
+                        onChange={() => handleListToggle(list.id)}
+                      />
+                      <div>
+                        <Typography className='font-medium' color='text.primary'>
+                          {list.name}
+                        </Typography>
+                        <Typography variant='body2' color='text.secondary'>
+                          {(list.subscriber_count || 0).toLocaleString()} subscribers
+                        </Typography>
+                      </div>
                     </div>
+                    <Chip
+                      label={list.type}
+                      size='small'
+                      variant='tonal'
+                      color={list.type === 'public' ? 'primary' : 'secondary'}
+                    />
                   </div>
-                  <Chip
-                    label={list.type}
-                    size='small'
-                    variant='tonal'
-                    color={list.type === 'public' ? 'primary' : 'secondary'}
-                  />
-                </div>
-              ))}
-            </FormGroup>
+                ))}
+              </FormGroup>
+            )}
           </div>
         )
 
@@ -217,14 +353,18 @@ const CreateCampaign = () => {
                 <Select
                   value={templateId}
                   label='Template (Optional)'
-                  onChange={e => setTemplateId(e.target.value as number)}
+                  onChange={e => handleTemplateChange(e.target.value as number | '')}
                 >
                   <MenuItem value=''>None - Start from scratch</MenuItem>
-                  {availableTemplates.map(t => (
-                    <MenuItem key={t.id} value={t.id}>
-                      {t.name}
-                    </MenuItem>
-                  ))}
+                  {loadingTemplates ? (
+                    <MenuItem disabled>Loading templates...</MenuItem>
+                  ) : (
+                    availableTemplates.map(t => (
+                      <MenuItem key={t.id} value={t.id}>
+                        {t.name} {t.is_default ? '(Default)' : ''}
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
               </FormControl>
             </Grid>
@@ -290,7 +430,7 @@ const CreateCampaign = () => {
                           {availableLists
                             .filter(l => selectedLists.includes(l.id))
                             .map(l => (
-                              <Chip key={l.id} label={`${l.name} (${l.subscriber_count.toLocaleString()})`} size='small' variant='outlined' />
+                              <Chip key={l.id} label={`${l.name} (${(l.subscriber_count || 0).toLocaleString()})`} size='small' variant='outlined' />
                             ))}
                         </div>
                       </TableCell>
@@ -338,51 +478,76 @@ const CreateCampaign = () => {
   }
 
   return (
-    <Card>
-      <CardHeader title='Create Campaign' />
-      <CardContent>
-        <Stepper activeStep={activeStep} className='mb-8'>
-          {steps.map(label => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
+    <>
+      <Card>
+        <CardHeader title='Create Campaign' />
+        <CardContent>
+          <Stepper activeStep={activeStep} className='mb-8'>
+            {steps.map(label => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
 
-        <div className='min-bs-[400px]'>
-          {renderStepContent(activeStep)}
-        </div>
-
-        <Divider className='my-6' />
-
-        <div className='flex justify-between'>
-          <Button disabled={activeStep === 0} onClick={handleBack} variant='outlined' color='secondary'>
-            Back
-          </Button>
-          <div className='flex gap-2'>
-            {activeStep === steps.length - 1 ? (
-              <>
-                <Button variant='outlined' color='secondary'>
-                  Save as Draft
-                </Button>
-                <Button
-                  variant='contained'
-                  color='primary'
-                  startIcon={<i className='tabler-send' />}
-                  disabled={!isStepValid()}
-                >
-                  {sendNow ? 'Send Campaign' : 'Schedule Campaign'}
-                </Button>
-              </>
-            ) : (
-              <Button variant='contained' onClick={handleNext} disabled={!isStepValid()}>
-                Next
-              </Button>
-            )}
+          <div className='min-bs-[400px]'>
+            {renderStepContent(activeStep)}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          <Divider className='my-6' />
+
+          <div className='flex justify-between'>
+            <Button disabled={activeStep === 0} onClick={handleBack} variant='outlined' color='secondary'>
+              Back
+            </Button>
+            <div className='flex gap-2'>
+              {activeStep === steps.length - 1 ? (
+                <>
+                  <Button
+                    variant='outlined'
+                    color='secondary'
+                    onClick={handleSaveAsDraft}
+                    disabled={saving}
+                  >
+                    {saving ? <CircularProgress size={20} className='mr-2' /> : null}
+                    Save as Draft
+                  </Button>
+                  <Button
+                    variant='contained'
+                    color='primary'
+                    startIcon={saving ? <CircularProgress size={20} color='inherit' /> : <i className='tabler-send' />}
+                    disabled={!isStepValid() || saving}
+                    onClick={handleSendCampaign}
+                  >
+                    {sendNow ? 'Send Campaign' : 'Schedule Campaign'}
+                  </Button>
+                </>
+              ) : (
+                <Button variant='contained' onClick={handleNext} disabled={!isStepValid()}>
+                  Next
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant='filled'
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
   )
 }
 

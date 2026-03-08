@@ -22,7 +22,10 @@ func (s *Server) RegisterRoutes() {
 	settingsHandler := handlers.NewSettingsHandler(s.LM)
 	automationHandler := handlers.NewAutomationHandler(s.DB)
 	formHandler := handlers.NewFormHandler(s.DB, s.LM)
+	importHandler := handlers.NewImportHandler(s.DB, s.LM)
 	analyticsHandler := handlers.NewAnalyticsHandler(s.LM)
+	accountSettingsHandler := handlers.NewAccountSettingsHandler(s.DB, s.LM)
+	mediaFolderHandler := handlers.NewMediaFolderHandler(s.DB, s.LM)
 
 	api := s.Echo.Group("/api")
 
@@ -42,6 +45,9 @@ func (s *Server) RegisterRoutes() {
 
 	// Public form submission
 	api.POST("/forms/:id/submit", formHandler.Submit)
+
+	// Public webhook import endpoint
+	api.POST("/webhooks/import/:secret", importHandler.WebhookImport)
 
 	// ==============================================================
 	// Public routes (no auth required)
@@ -86,7 +92,26 @@ func (s *Server) RegisterRoutes() {
 	subscribers.PUT("/blocklist", subscriberHandler.Blocklist)
 	subscribers.PUT("/lists", subscriberHandler.ManageLists)
 	subscribers.GET("/export", subscriberHandler.Export)
-	subscribers.POST("/import", subscriberHandler.Import)
+
+	// Import management
+	imports := staff.Group("/import")
+	imports.POST("/csv", importHandler.ImportCSV)
+	imports.GET("/status", importHandler.GetImportStatus)
+	imports.GET("/logs", importHandler.GetImportLogs)
+	imports.DELETE("/cancel", importHandler.CancelImport)
+	imports.POST("/json", importHandler.ImportJSON)
+	imports.GET("/history", importHandler.ListHistory)
+	imports.GET("/history/:id", importHandler.GetHistory)
+	imports.DELETE("/history/:id", importHandler.DeleteHistory)
+	imports.PUT("/history", importHandler.UpdateImportHistory)
+	imports.GET("/analytics", importHandler.GetAnalytics)
+	imports.GET("/webhooks", importHandler.ListWebhooks)
+	imports.POST("/webhooks", importHandler.CreateWebhook)
+	imports.PUT("/webhooks/:id", importHandler.UpdateWebhook)
+	imports.DELETE("/webhooks/:id", importHandler.DeleteWebhook)
+	imports.GET("/suppression", importHandler.ListSuppressed)
+	imports.POST("/suppression", importHandler.AddSuppressed)
+	imports.DELETE("/suppression/:id", importHandler.RemoveSuppressed)
 
 	// Campaigns
 	campaigns := staff.Group("/campaigns")
@@ -124,7 +149,18 @@ func (s *Server) RegisterRoutes() {
 	media.GET("", mediaHandler.List)
 	media.GET("/:id", mediaHandler.Get)
 	media.POST("", mediaHandler.Upload)
+	media.POST("/upload-from-url", mediaHandler.UploadFromURL)
 	media.DELETE("/:id", mediaHandler.Delete)
+
+	// Media Folders
+	mediaFolders := staff.Group("/media-folders")
+	mediaFolders.GET("", mediaFolderHandler.List)
+	mediaFolders.POST("", mediaFolderHandler.Create)
+	mediaFolders.PUT("/:id", mediaFolderHandler.Update)
+	mediaFolders.DELETE("/:id", mediaFolderHandler.Delete)
+	mediaFolders.GET("/:id/items", mediaFolderHandler.ListItems)
+	mediaFolders.POST("/:id/items", mediaFolderHandler.AddItems)
+	mediaFolders.DELETE("/:id/items/:media_id", mediaFolderHandler.RemoveItem)
 
 	// Analytics
 	analytics := staff.Group("/analytics")
@@ -153,12 +189,19 @@ func (s *Server) RegisterRoutes() {
 	admin.POST("/keys", authHandler.CreateAPIKey)
 	admin.DELETE("/keys/:id", authHandler.DeleteAPIKey)
 
-	// Settings
+	// Settings (Listmonk proxy)
 	settings := admin.Group("/settings")
 	settings.GET("", settingsHandler.Get)
 	settings.PUT("", settingsHandler.Update)
 	settings.POST("/smtp/test", settingsHandler.TestSMTP)
 	settings.GET("/logs", settingsHandler.GetLogs)
+
+	// Account Settings (platform-level settings in our DB)
+	accountSettings := admin.Group("/account-settings")
+	accountSettings.GET("", accountSettingsHandler.GetAll)
+	accountSettings.GET("/:key", accountSettingsHandler.GetByKey)
+	accountSettings.PUT("/:key", accountSettingsHandler.UpdateByKey)
+	accountSettings.POST("/logo", accountSettingsHandler.UploadLogo)
 
 	// Automations
 	automations := admin.Group("/automations")
