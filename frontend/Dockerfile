@@ -1,19 +1,21 @@
-FROM node:20-alpine AS deps
-WORKDIR /app
-RUN corepack enable pnpm
-COPY package.json pnpm-lock.yaml ./
-
-# Copy source files needed by postinstall (prisma generate + build:icons)
-COPY src/prisma ./src/prisma
-COPY src/assets/iconify-icons ./src/assets/iconify-icons
-
-RUN pnpm install --frozen-lockfile
-
 FROM node:20-alpine AS builder
 WORKDIR /app
 RUN corepack enable pnpm
-COPY --from=deps /app/node_modules ./node_modules
+
+# Copy package files and pnpm config (shamefully-hoist required)
+COPY package.json pnpm-lock.yaml .npmrc ./
+
+# Install ALL dependencies (including devDependencies for build)
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# Copy full source
 COPY . .
+
+# Run postinstall steps manually (prisma generate + icon build)
+RUN npx prisma generate
+RUN npx tsx src/assets/iconify-icons/bundle-icons-css.ts
+
+# Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
