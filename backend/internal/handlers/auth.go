@@ -63,10 +63,20 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return response.InternalError(c, "Failed to generate refresh token")
 	}
 
+	// Load current account if set
+	var account *models.Account
+	if user.CurrentAccountID != nil {
+		var acc models.Account
+		if err := h.db.Get(&acc, "SELECT * FROM app_accounts WHERE id = $1", *user.CurrentAccountID); err == nil {
+			account = &acc
+		}
+	}
+
 	return response.Success(c, models.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		User:         user,
+		Account:      account,
 	})
 }
 
@@ -99,7 +109,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	err = h.db.QueryRowx(
 		`INSERT INTO app_users (email, password_hash, name, role, is_active, created_at, updated_at)
 		 VALUES ($1, $2, $3, 'subscriber', true, NOW(), NOW())
-		 RETURNING id, email, password_hash, name, role, is_active, created_at, updated_at, preferences`,
+		 RETURNING id, email, password_hash, name, role, is_active, current_account_id, created_at, updated_at, preferences`,
 		req.Email, string(hashedPassword), req.Name,
 	).StructScan(&user)
 	if err != nil {
@@ -168,10 +178,20 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 		return response.InternalError(c, "Failed to generate refresh token")
 	}
 
+	// Load current account if set
+	var account *models.Account
+	if user.CurrentAccountID != nil {
+		var acc models.Account
+		if err := h.db.Get(&acc, "SELECT * FROM app_accounts WHERE id = $1", *user.CurrentAccountID); err == nil {
+			account = &acc
+		}
+	}
+
 	return response.Success(c, models.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
 		User:         user,
+		Account:      account,
 	})
 }
 
@@ -194,15 +214,60 @@ func (h *AuthHandler) UpdateProfile(c echo.Context) error {
 	userID := mw.GetUserID(c)
 
 	var req struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Password string `json:"password,omitempty"`
+		Name            string `json:"name"`
+		Email           string `json:"email"`
+		Password        string `json:"password,omitempty"`
+		CurrentPassword string `json:"current_password,omitempty"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
+	// Validate name
+	if !validator.IsNotEmpty(req.Name) {
+		return response.BadRequest(c, "Name is required")
+	}
+	if !validator.MaxLength(req.Name, 200) {
+		return response.BadRequest(c, "Name must be at most 200 characters")
+	}
+
+	// Validate email format
+	if !validator.IsValidEmail(req.Email) {
+		return response.BadRequest(c, "A valid email address is required")
+	}
+
+	// Fetch current user for email uniqueness check and password verification
+	var currentUser models.User
+	if err := h.db.Get(&currentUser, "SELECT id, email, password_hash FROM app_users WHERE id = $1", userID); err != nil {
+		return response.InternalError(c, "Failed to query user")
+	}
+
+	// Check email uniqueness if changed
+	if req.Email != currentUser.Email {
+		var count int
+		if err := h.db.Get(&count, "SELECT COUNT(*) FROM app_users WHERE email = $1 AND id != $2", req.Email, userID); err != nil {
+			return response.InternalError(c, "Failed to check email uniqueness")
+		}
+		if count > 0 {
+			return response.BadRequest(c, "Email address is already in use")
+		}
+	}
+
 	if req.Password != "" {
+		// Require current password for password changes
+		if req.CurrentPassword == "" {
+			return response.BadRequest(c, "Current password is required to change password")
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(currentUser.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+			return response.BadRequest(c, "Current password is incorrect")
+		}
+		if !validator.MinLength(req.Password, 8) {
+			return response.BadRequest(c, "New password must be at least 8 characters")
+		}
+		if !validator.MaxLength(req.Password, 72) {
+			return response.BadRequest(c, "New password must be at most 72 characters")
+		}
+
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return response.InternalError(c, "Failed to hash password")
@@ -263,7 +328,10 @@ func (h *AuthHandler) CreateAPIKey(c echo.Context) error {
 		return response.BadRequest(c, "Name is required")
 	}
 
-	rawKey := generateRandomKey(32)
+	rawKey, err := generateRandomKey(32)
+	if err != nil {
+		return response.InternalError(c, "Failed to generate API key")
+	}
 	prefix := rawKey[:8]
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(rawKey), bcrypt.DefaultCost)
@@ -292,7 +360,10 @@ func (h *AuthHandler) CreateAPIKey(c echo.Context) error {
 
 func (h *AuthHandler) DeleteAPIKey(c echo.Context) error {
 	userID := mw.GetUserID(c)
-	keyID := c.Param("id")
+	keyID, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	result, err := h.db.Exec("DELETE FROM app_api_keys WHERE id = $1 AND user_id = $2", keyID, userID)
 	if err != nil {
@@ -308,11 +379,17 @@ func (h *AuthHandler) DeleteAPIKey(c echo.Context) error {
 }
 
 func (h *AuthHandler) generateToken(user models.User, tokenType string, expiry time.Duration) (string, error) {
+	accountID := 0
+	if user.CurrentAccountID != nil {
+		accountID = *user.CurrentAccountID
+	}
+
 	claims := mw.JWTClaims{
-		UserID: user.ID,
-		Email:  user.Email,
-		Role:   user.Role,
-		Type:   tokenType,
+		UserID:    user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		AccountID: accountID,
+		Type:      tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -323,12 +400,12 @@ func (h *AuthHandler) generateToken(user models.User, tokenType string, expiry t
 	return token.SignedString([]byte(h.cfg.JWTSecret))
 }
 
-func generateRandomKey(length int) string {
+func generateRandomKey(length int) (string, error) {
 	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {
-		panic("failed to generate random key: " + err.Error())
+		return "", fmt.Errorf("failed to generate random key: %w", err)
 	}
-	return hex.EncodeToString(b)
+	return hex.EncodeToString(b), nil
 }
 
 // ============================================================
@@ -388,10 +465,13 @@ func (h *AuthHandler) ListUsers(c echo.Context) error {
 }
 
 func (h *AuthHandler) GetUser(c echo.Context) error {
-	userID := c.Param("id")
+	userID, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	var user models.User
-	err := h.db.Get(&user, "SELECT id, email, name, role, is_active, preferences, created_at, updated_at FROM app_users WHERE id = $1", userID)
+	err = h.db.Get(&user, "SELECT id, email, name, role, is_active, preferences, created_at, updated_at FROM app_users WHERE id = $1", userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return response.NotFound(c, "User not found")
@@ -410,6 +490,13 @@ func (h *AuthHandler) CreateUser(c echo.Context) error {
 
 	if req.Email == "" || req.Password == "" || req.Name == "" {
 		return response.BadRequest(c, "Email, password, and name are required")
+	}
+
+	if !validator.MinLength(req.Password, 8) {
+		return response.BadRequest(c, "Password must be at least 8 characters")
+	}
+	if !validator.MaxLength(req.Password, 72) {
+		return response.BadRequest(c, "Password must be at most 72 characters")
 	}
 
 	if !isValidRole(req.Role) {
@@ -445,11 +532,20 @@ func (h *AuthHandler) CreateUser(c echo.Context) error {
 }
 
 func (h *AuthHandler) UpdateUser(c echo.Context) error {
-	userID := c.Param("id")
+	userID, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+	currentUserID := mw.GetUserID(c)
 
 	var req models.UpdateUserRequest
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
+	}
+
+	// Prevent admin from deactivating themselves
+	if req.IsActive != nil && !*req.IsActive && fmt.Sprintf("%d", currentUserID) == userID {
+		return response.BadRequest(c, "You cannot deactivate your own account")
 	}
 
 	// Build dynamic update query
@@ -515,7 +611,10 @@ func (h *AuthHandler) UpdateUser(c echo.Context) error {
 }
 
 func (h *AuthHandler) DeleteUser(c echo.Context) error {
-	userID := c.Param("id")
+	userID, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 	currentUserID := mw.GetUserID(c)
 
 	// Prevent self-deletion
@@ -537,7 +636,10 @@ func (h *AuthHandler) DeleteUser(c echo.Context) error {
 }
 
 func (h *AuthHandler) UpdateUserRole(c echo.Context) error {
-	userID := c.Param("id")
+	userID, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 	currentUserID := mw.GetUserID(c)
 
 	// Prevent changing own role

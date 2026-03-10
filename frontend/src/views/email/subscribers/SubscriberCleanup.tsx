@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -19,6 +19,11 @@ import TableRow from '@mui/material/TableRow'
 import Checkbox from '@mui/material/Checkbox'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogActions from '@mui/material/DialogActions'
 
 import type { Subscriber } from '@/types/email'
 import subscriberService from '@/services/subscribers'
@@ -28,32 +33,99 @@ const SubscriberCleanup = () => {
   const [inactiveSubscribers, setInactiveSubscribers] = useState<Subscriber[]>([])
   const [inactiveCount, setInactiveCount] = useState(0)
   const [timePeriod, setTimePeriod] = useState('6months')
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [processing, setProcessing] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success'
   })
 
+  const fetchInactive = useCallback(async () => {
+    setLoading(true)
+
+    try {
+      const response = await subscriberService.getAll({
+        per_page: 50,
+        query: "subscribers.status = 'disabled' OR subscribers.status = 'blocklisted'"
+      })
+
+      setInactiveSubscribers(response.data?.results || [])
+      setInactiveCount(response.data?.total || 0)
+      setSelectedIds(new Set())
+    } catch {
+      console.error('Failed to fetch inactive subscribers')
+      setSnackbar({ open: true, message: 'Failed to load inactive subscribers', severity: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
-    const fetchInactive = async () => {
-      setLoading(true)
+    fetchInactive()
+  }, [fetchInactive])
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(inactiveSubscribers.map(s => s.id)))
+    } else {
+      setSelectedIds(new Set())
+    }
+  }
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    const next = new Set(selectedIds)
+
+    if (checked) {
+      next.add(id)
+    } else {
+      next.delete(id)
+    }
+
+    setSelectedIds(next)
+  }
+
+  const handleDisableInactive = async () => {
+    setConfirmOpen(false)
+
+    const targets = selectedIds.size > 0
+      ? inactiveSubscribers.filter(s => selectedIds.has(s.id))
+      : inactiveSubscribers
+
+    if (targets.length === 0) return
+
+    setProcessing(true)
+
+    let successCount = 0
+    let failCount = 0
+
+    for (const sub of targets) {
       try {
-        // Fetch subscribers that are disabled or unsubscribed (inactive)
-        const response = await subscriberService.getAll({
-          per_page: 50,
-          query: "subscribers.status = 'disabled' OR subscribers.status = 'blocklisted'"
-        })
-
-        setInactiveSubscribers(response.data?.results || [])
-        setInactiveCount(response.data?.total || 0)
+        await subscriberService.update(sub.id, { status: 'disabled' })
+        successCount++
       } catch {
-        console.error('Failed to fetch inactive subscribers')
-      } finally {
-        setLoading(false)
+        failCount++
       }
     }
 
+    setProcessing(false)
+
+    if (failCount > 0) {
+      setSnackbar({
+        open: true,
+        message: `Disabled ${successCount} subscribers, ${failCount} failed`,
+        severity: 'error'
+      })
+    } else {
+      setSnackbar({
+        open: true,
+        message: `Successfully disabled ${successCount} inactive subscribers`,
+        severity: 'success'
+      })
+    }
+
     fetchInactive()
-  }, [])
+  }
 
   if (loading) {
     return (
@@ -63,6 +135,8 @@ const SubscriberCleanup = () => {
       </div>
     )
   }
+
+  const allSelected = inactiveSubscribers.length > 0 && selectedIds.size === inactiveSubscribers.length
 
   return (
     <>
@@ -83,13 +157,20 @@ const SubscriberCleanup = () => {
 
       <Card>
         <CardContent>
-          <div className='flex items-center justify-between mb-6'>
+          <div className='flex items-center justify-between mb-6 flex-wrap gap-4'>
             <div>
               <Typography variant='body2' color='text.secondary'>This list contains inactive subscribers</Typography>
               <Typography variant='h4' className='font-bold'>{inactiveCount}</Typography>
             </div>
-            <Button variant='contained' color='error'>
-              Unsubscribe inactive
+            <Button
+              variant='contained'
+              color='error'
+              onClick={() => setConfirmOpen(true)}
+              disabled={processing || inactiveSubscribers.length === 0}
+            >
+              {processing ? 'Processing...' : selectedIds.size > 0
+                ? `Disable ${selectedIds.size} selected`
+                : 'Disable all inactive'}
             </Button>
           </div>
 
@@ -107,7 +188,14 @@ const SubscriberCleanup = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell padding='checkbox'><Checkbox size='small' /></TableCell>
+                  <TableCell padding='checkbox'>
+                    <Checkbox
+                      size='small'
+                      checked={allSelected}
+                      indeterminate={selectedIds.size > 0 && !allSelected}
+                      onChange={e => handleSelectAll(e.target.checked)}
+                    />
+                  </TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Subscribed</TableCell>
@@ -122,8 +210,14 @@ const SubscriberCleanup = () => {
                   </TableRow>
                 ) : (
                   inactiveSubscribers.map(sub => (
-                    <TableRow key={sub.id} hover>
-                      <TableCell padding='checkbox'><Checkbox size='small' /></TableCell>
+                    <TableRow key={sub.id} hover selected={selectedIds.has(sub.id)}>
+                      <TableCell padding='checkbox'>
+                        <Checkbox
+                          size='small'
+                          checked={selectedIds.has(sub.id)}
+                          onChange={e => handleSelectOne(sub.id, e.target.checked)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Typography color='primary' className='font-medium'>{sub.email}</Typography>
                       </TableCell>
@@ -145,6 +239,25 @@ const SubscriberCleanup = () => {
           </TableContainer>
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Confirm Cleanup</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to disable{' '}
+            <strong>{selectedIds.size > 0 ? selectedIds.size : inactiveSubscribers.length}</strong>{' '}
+            inactive subscriber{(selectedIds.size > 0 ? selectedIds.size : inactiveSubscribers.length) !== 1 ? 's' : ''}?
+            They will no longer receive any emails.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleDisableInactive} color='error' variant='contained'>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
         <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>{snackbar.message}</Alert>

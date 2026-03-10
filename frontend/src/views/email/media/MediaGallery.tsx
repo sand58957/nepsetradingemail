@@ -8,7 +8,6 @@ import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
-import CardMedia from '@mui/material/CardMedia'
 import CardActions from '@mui/material/CardActions'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -20,7 +19,6 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import Tooltip from '@mui/material/Tooltip'
-import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 import Alert from '@mui/material/Alert'
 
@@ -29,6 +27,7 @@ import { useDropzone } from 'react-dropzone'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
+import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
 // Mock media data
 const mockMedia = [
@@ -112,6 +111,7 @@ const MediaGallery = () => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [selectedMedia, setSelectedMedia] = useState<(typeof mockMedia)[0] | null>(null)
   const [copiedUrl, setCopiedUrl] = useState<number | null>(null)
+  const isMobile = useMobileBreakpoint()
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     // In a real app, this would upload files via the API
@@ -144,6 +144,7 @@ const MediaGallery = () => {
         <CardHeader
           title='Media Manager'
           subheader={`${mockMedia.length} files`}
+          sx={{ flexWrap: 'wrap', rowGap: 2 }}
           action={
             <Button
               variant='contained'
@@ -236,7 +237,7 @@ const MediaGallery = () => {
       </Grid>
 
       {/* Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth='sm' fullWidth>
+      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
         <DialogTitle>Upload Media</DialogTitle>
         <DialogContent>
           <div
@@ -272,7 +273,7 @@ const MediaGallery = () => {
       </Dialog>
 
       {/* Media Detail Dialog */}
-      <Dialog open={!!selectedMedia} onClose={() => setSelectedMedia(null)} maxWidth='sm' fullWidth>
+      <Dialog open={!!selectedMedia} onClose={() => setSelectedMedia(null)} maxWidth='sm' fullWidth fullScreen={isMobile}>
         {selectedMedia && (
           <>
             <DialogTitle>{selectedMedia.filename}</DialogTitle>

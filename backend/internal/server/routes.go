@@ -26,6 +26,7 @@ func (s *Server) RegisterRoutes() {
 	analyticsHandler := handlers.NewAnalyticsHandler(s.LM)
 	accountSettingsHandler := handlers.NewAccountSettingsHandler(s.DB, s.LM)
 	mediaFolderHandler := handlers.NewMediaFolderHandler(s.DB, s.LM)
+	accountHandler := handlers.NewAccountHandler(s.DB, s.Config)
 
 	api := s.Echo.Group("/api")
 
@@ -37,17 +38,25 @@ func (s *Server) RegisterRoutes() {
 		})
 	})
 
-	// Public auth routes
+	// Public auth routes (rate-limited: 5 requests/second, burst of 10)
+	authLimiter := middleware.NewRateLimiter(5, 10)
 	auth := api.Group("/auth")
+	auth.Use(authLimiter.Middleware())
 	auth.POST("/login", authHandler.Login)
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/refresh", authHandler.RefreshToken)
 
-	// Public form submission
-	api.POST("/forms/:id/submit", formHandler.Submit)
+	// Public form submission (rate-limited: 3 requests/second, burst of 5)
+	formLimiter := middleware.NewRateLimiter(3, 5)
+	formGroup := api.Group("")
+	formGroup.Use(formLimiter.Middleware())
+	formGroup.POST("/forms/:id/submit", formHandler.Submit)
 
-	// Public webhook import endpoint
-	api.POST("/webhooks/import/:secret", importHandler.WebhookImport)
+	// Public webhook import endpoint (rate-limited: 10 requests/second, burst of 20)
+	webhookLimiter := middleware.NewRateLimiter(10, 20)
+	webhookGroup := api.Group("")
+	webhookGroup.Use(webhookLimiter.Middleware())
+	webhookGroup.POST("/webhooks/import/:secret", importHandler.WebhookImport)
 
 	// ==============================================================
 	// Public routes (no auth required)
@@ -67,6 +76,15 @@ func (s *Server) RegisterRoutes() {
 	// Profile (any authenticated user)
 	protected.GET("/profile", authHandler.GetProfile)
 	protected.PUT("/profile", authHandler.UpdateProfile)
+
+	// Accounts (any authenticated user can manage their own accounts)
+	accounts := protected.Group("/accounts")
+	accounts.GET("", accountHandler.List)
+	accounts.POST("", accountHandler.Create)
+	accounts.POST("/switch", accountHandler.Switch)
+	accounts.GET("/:id", accountHandler.Get)
+	accounts.PUT("/:id", accountHandler.Update)
+	accounts.DELETE("/:id", accountHandler.Delete)
 
 	// Subscriber self-service (any authenticated user can manage their own subscriptions)
 	subscriber := protected.Group("/subscriber")
@@ -197,11 +215,13 @@ func (s *Server) RegisterRoutes() {
 	settings.GET("/logs", settingsHandler.GetLogs)
 
 	// Account Settings (platform-level settings in our DB)
+	dnsHandler := handlers.NewDnsVerificationHandler(s.DB)
 	accountSettings := admin.Group("/account-settings")
 	accountSettings.GET("", accountSettingsHandler.GetAll)
 	accountSettings.GET("/:key", accountSettingsHandler.GetByKey)
 	accountSettings.PUT("/:key", accountSettingsHandler.UpdateByKey)
 	accountSettings.POST("/logo", accountSettingsHandler.UploadLogo)
+	accountSettings.POST("/domains/verify", dnsHandler.VerifyDomain)
 
 	// Automations
 	automations := admin.Group("/automations")

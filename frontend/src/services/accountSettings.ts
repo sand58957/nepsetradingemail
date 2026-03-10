@@ -52,6 +52,12 @@ export const accountSettingsService = {
     return response.data
   },
 
+  verifyDomain: async (domain: string): Promise<any> => {
+    const response = await api.post('/account-settings/domains/verify', { domain })
+
+    return response.data
+  },
+
   uploadLogo: async (file: File): Promise<{ data: { url: string } }> => {
     const formData = new FormData()
 

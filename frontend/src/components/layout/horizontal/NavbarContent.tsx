@@ -70,7 +70,7 @@ const shortcuts: ShortcutsType[] = [
 const notifications: NotificationsType[] = [
   {
     avatarImage: '/images/avatars/8.png',
-    title: 'Congratulations Flora 🎉',
+    title: 'Congratulations Flora',
     subtitle: 'Won the monthly bestseller gold badge',
     time: '1h ago',
     read: false
@@ -99,7 +99,7 @@ const notifications: NotificationsType[] = [
   },
   {
     avatarText: 'MG',
-    title: 'Application has been approved 🚀',
+    title: 'Application has been approved',
     subtitle: 'Your Meta Gadgets project application has been approved.',
     avatarColor: 'success',
     time: 'Feb 17, 12:17 PM',

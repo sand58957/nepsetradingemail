@@ -24,6 +24,8 @@ import type { MediaItem } from '@/types/email'
 interface Props {
   media: MediaItem
   onDelete: (id: number) => void
+  pickerMode?: boolean
+  onSelect?: (media: MediaItem) => void
 }
 
 const fileTypeIcons: Record<string, string> = {
@@ -38,23 +40,31 @@ const fileTypeIcons: Record<string, string> = {
   'text/csv': 'tabler-file-spreadsheet'
 }
 
-const FileCard = ({ media, onDelete }: Props) => {
+const FileCard = ({ media, onDelete, pickerMode, onSelect }: Props) => {
   const [copiedUrl, setCopiedUrl] = useState(false)
 
-  const handleCopyUrl = () => {
+  const handleCopyUrl = async () => {
     const url = media.url || media.thumb_url
 
     if (url) {
-      navigator.clipboard.writeText(url)
-      setCopiedUrl(true)
-      setTimeout(() => setCopiedUrl(false), 2000)
+      try {
+        await navigator.clipboard.writeText(url)
+        setCopiedUrl(true)
+        setTimeout(() => setCopiedUrl(false), 2000)
+      } catch {
+        // Clipboard API may fail in non-HTTPS or denied permission contexts
+      }
     }
   }
 
   const isImage = isImageFile(media)
 
   return (
-    <Card className='h-full flex flex-col'>
+    <Card
+      className='h-full flex flex-col'
+      sx={pickerMode ? { cursor: 'pointer', '&:hover': { boxShadow: 6, outline: '2px solid', outlineColor: 'primary.main' }, transition: 'all 0.15s' } : {}}
+      onClick={pickerMode ? () => onSelect?.(media) : undefined}
+    >
       {/* Thumbnail / Preview — responsive height */}
       <Box
         className='flex items-center justify-center'
@@ -117,25 +127,33 @@ const FileCard = ({ media, onDelete }: Props) => {
       <Divider />
 
       {/* Actions — bigger touch targets on mobile */}
-      <CardActions sx={{ justifyContent: 'space-between', px: { xs: 0.5, sm: 1 }, py: { xs: 0.5, sm: 0.5 } }}>
-        <Tooltip title={copiedUrl ? 'Copied!' : 'Copy URL'}>
-          <IconButton onClick={handleCopyUrl} sx={{ p: { xs: 1, sm: 0.75 } }}>
-            <i className={`tabler-${copiedUrl ? 'check' : 'link'} text-[16px] sm:text-[18px]`} />
-          </IconButton>
-        </Tooltip>
-        <div className='flex'>
-          <Tooltip title='Download'>
-            <IconButton component='a' href={media.url} target='_blank' rel='noopener' sx={{ p: { xs: 1, sm: 0.75 } }}>
-              <i className='tabler-download text-[16px] sm:text-[18px]' />
+      {pickerMode ? (
+        <CardActions sx={{ justifyContent: 'center', px: { xs: 0.5, sm: 1 }, py: { xs: 0.5, sm: 0.5 } }}>
+          <Typography variant='caption' color='primary' fontWeight={600}>
+            Click to select
+          </Typography>
+        </CardActions>
+      ) : (
+        <CardActions sx={{ justifyContent: 'space-between', px: { xs: 0.5, sm: 1 }, py: { xs: 0.5, sm: 0.5 } }}>
+          <Tooltip title={copiedUrl ? 'Copied!' : 'Copy URL'}>
+            <IconButton onClick={handleCopyUrl} sx={{ p: { xs: 1, sm: 0.75 } }}>
+              <i className={`tabler-${copiedUrl ? 'check' : 'link'} text-[16px] sm:text-[18px]`} />
             </IconButton>
           </Tooltip>
-          <Tooltip title='Delete'>
-            <IconButton onClick={() => onDelete(media.id)} sx={{ p: { xs: 1, sm: 0.75 } }}>
-              <i className='tabler-trash text-[16px] sm:text-[18px]' />
-            </IconButton>
-          </Tooltip>
-        </div>
-      </CardActions>
+          <div className='flex'>
+            <Tooltip title='Download'>
+              <IconButton component='a' href={media.url} download={media.filename} target='_blank' rel='noopener' sx={{ p: { xs: 1, sm: 0.75 } }}>
+                <i className='tabler-download text-[16px] sm:text-[18px]' />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Delete'>
+              <IconButton onClick={() => onDelete(media.id)} sx={{ p: { xs: 1, sm: 0.75 } }}>
+                <i className='tabler-trash text-[16px] sm:text-[18px]' />
+              </IconButton>
+            </Tooltip>
+          </div>
+        </CardActions>
+      )}
     </Card>
   )
 }

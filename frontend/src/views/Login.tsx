@@ -81,6 +81,7 @@ const schema = object({
 const Login = ({ mode }: { mode: SystemMode }) => {
   // States
   const [isPasswordShown, setIsPasswordShown] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [errorState, setErrorState] = useState<ErrorType | null>(null)
 
   // Vars
@@ -123,44 +124,55 @@ const Login = ({ mode }: { mode: SystemMode }) => {
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
   const onSubmit: SubmitHandler<FormData> = async (data: FormData) => {
-    const res = await signIn('credentials', {
-      email: data.email,
-      password: data.password,
-      redirect: false
-    })
+    setIsLoading(true)
+    setErrorState(null)
 
-    if (res && res.ok && res.error === null) {
-      // Get the session to determine role-based redirect
-      const redirectTo = searchParams.get('redirectTo')
+    try {
+      const res = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false
+      })
 
-      if (redirectTo) {
-        router.replace(getLocalizedUrl(redirectTo, locale as Locale))
-      } else {
-        // Fetch session to get role for redirect
-        try {
-          const sessionRes = await fetch('/api/auth/session')
-          const session = await sessionRes.json()
-          const role = session?.role || 'subscriber'
+      if (res && res.ok && res.error === null) {
+        // Get the session to determine role-based redirect
+        const redirectTo = searchParams.get('redirectTo')
 
-          if (role === 'subscriber') {
-            router.replace(getLocalizedUrl('/portal', locale as Locale))
-          } else {
+        if (redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')) {
+          router.replace(getLocalizedUrl(redirectTo, locale as Locale))
+        } else {
+          // Fetch session to get role and account info for redirect
+          try {
+            const sessionRes = await fetch('/api/auth/session')
+            const session = await sessionRes.json()
+            const role = session?.role || 'subscriber'
+
+            if (role === 'subscriber') {
+              router.replace(getLocalizedUrl('/portal', locale as Locale))
+            } else if (!session?.accountId) {
+              router.replace(getLocalizedUrl('/choose-account', locale as Locale))
+            } else {
+              router.replace(getLocalizedUrl('/dashboards/email-marketing', locale as Locale))
+            }
+          } catch (_e) {
             router.replace(getLocalizedUrl('/dashboards/email-marketing', locale as Locale))
           }
-        } catch {
-          router.replace(getLocalizedUrl('/dashboards/email-marketing', locale as Locale))
         }
-      }
-    } else {
-      if (res?.error) {
-        try {
-          const error = JSON.parse(res.error)
+      } else {
+        if (res?.error) {
+          try {
+            const error = JSON.parse(res.error)
 
-          setErrorState(error)
-        } catch {
-          setErrorState({ message: [res.error || 'Login failed. Please check your credentials.'] })
+            setErrorState(error)
+          } catch (_e2) {
+            setErrorState({ message: [res.error || 'Login failed. Please check your credentials.'] })
+          }
         }
       }
+    } catch (_err) {
+      setErrorState({ message: ['An unexpected error occurred. Please try again.'] })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -211,7 +223,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                   }}
                   {...((errors.email || errorState !== null) && {
                     error: true,
-                    helperText: errors?.email?.message || errorState?.message[0]
+                    helperText: errors?.email?.message || errorState?.message?.[0]
                   })}
                 />
               )}
@@ -251,8 +263,8 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                 />
               )}
             />
-            <Button fullWidth variant='contained' type='submit'>
-              Login
+            <Button fullWidth variant='contained' type='submit' disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Login'}
             </Button>
             <div className='flex justify-center items-center flex-wrap gap-2'>
               <Typography>New on our platform?</Typography>

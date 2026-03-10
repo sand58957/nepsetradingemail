@@ -48,7 +48,7 @@ const Footer = ({ mode }: { mode: Mode }) => {
                   <Logo color='var(--mui-palette-common-white)' />
                 </Link>
                 <Typography color='white' className='md:max-is-[390px] opacity-[0.78]'>
-                  Most Powerful & Comprehensive 🤩 React NextJS Admin Template with Elegant Material Design & Unique
+                  Most Powerful & Comprehensive React NextJS Admin Template with Elegant Material Design & Unique
                   Layouts.
                 </Typography>
                 <div className='flex items-end'>
@@ -174,7 +174,7 @@ const Footer = ({ mode }: { mode: Mode }) => {
         >
           <Typography className='text-white' variant='body2'>
             <span>{`© ${new Date().getFullYear()}, Made with `}</span>
-            <span>{`❤️`}</span>
+            <span>love</span>
             <span>{` by `}</span>
             <Link href='https://pixinvent.com/' target='_blank' className='font-medium text-white'>
               Pixinvent

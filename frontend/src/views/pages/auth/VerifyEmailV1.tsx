@@ -34,7 +34,7 @@ const VerifyEmailV1 = () => {
             <Logo />
           </Link>
           <div className='flex flex-col gap-1 mbe-6'>
-            <Typography variant='h4'>Verify your email ✉️</Typography>
+            <Typography variant='h4'>Verify your email</Typography>
             <Typography>
               Account activation link sent to your email address:{' '}
               <span className='font-medium text-textPrimary'>john.doe@email.com</span> Please follow the link inside to

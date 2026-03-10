@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 )
@@ -29,13 +28,13 @@ type AutomationStep struct {
 }
 
 type AutomationLog struct {
-	ID           int            `json:"id" db:"id"`
-	AutomationID int           `json:"automation_id" db:"automation_id"`
-	StepID       sql.NullInt64  `json:"step_id" db:"step_id"`
-	SubscriberID sql.NullInt64  `json:"subscriber_id" db:"subscriber_id"`
-	Status       string         `json:"status" db:"status"`
+	ID           int             `json:"id" db:"id"`
+	AutomationID int            `json:"automation_id" db:"automation_id"`
+	StepID       *int64          `json:"step_id" db:"step_id"`
+	SubscriberID *int64          `json:"subscriber_id" db:"subscriber_id"`
+	Status       string          `json:"status" db:"status"`
 	Details      json.RawMessage `json:"details" db:"details"`
-	CreatedAt    time.Time      `json:"created_at" db:"created_at"`
+	CreatedAt    time.Time       `json:"created_at" db:"created_at"`
 }
 
 type CreateAutomationRequest struct {

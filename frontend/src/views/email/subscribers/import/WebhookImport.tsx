@@ -8,7 +8,6 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
-import Grid from '@mui/material/Grid'
 import Autocomplete from '@mui/material/Autocomplete'
 import Chip from '@mui/material/Chip'
 import Alert from '@mui/material/Alert'
@@ -17,7 +16,6 @@ import Switch from '@mui/material/Switch'
 import CircularProgress from '@mui/material/CircularProgress'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
-import Divider from '@mui/material/Divider'
 import Paper from '@mui/material/Paper'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -33,8 +31,13 @@ import DialogActions from '@mui/material/DialogActions'
 import type { List, ImportWebhook } from '@/types/email'
 import importService from '@/services/import'
 import listService from '@/services/lists'
+import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
-const WebhookImport = () => {
+interface WebhookImportProps {
+  onWebhookChange?: () => void
+}
+
+const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
   const [webhooks, setWebhooks] = useState<ImportWebhook[]>([])
   const [loading, setLoading] = useState(true)
   const [availableLists, setAvailableLists] = useState<List[]>([])
@@ -49,8 +52,14 @@ const WebhookImport = () => {
   // Created webhook display
   const [createdWebhook, setCreatedWebhook] = useState<ImportWebhook | null>(null)
 
+  // Delete confirmation
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
   const [copied, setCopied] = useState('')
+  const isMobile = useMobileBreakpoint()
 
   const fetchWebhooks = async () => {
     try {
@@ -84,7 +93,7 @@ const WebhookImport = () => {
   }, [])
 
   const getWebhookURL = (secret: string) => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://nepalfillings.com/api'
 
     return `${apiBase}/webhooks/import/${secret}`
   }
@@ -104,6 +113,7 @@ const WebhookImport = () => {
       setNewName('')
       setNewLists([])
       fetchWebhooks()
+      onWebhookChange?.()
       setSnackbar({ open: true, message: 'Webhook created successfully!', severity: 'success' })
     } catch {
       setSnackbar({ open: true, message: 'Failed to create webhook', severity: 'error' })
@@ -116,6 +126,7 @@ const WebhookImport = () => {
     try {
       await importService.updateWebhook(webhook.id, {
         name: webhook.name,
+        list_ids: webhook.list_ids || [],
         is_active: !webhook.is_active
       })
 
@@ -130,20 +141,32 @@ const WebhookImport = () => {
     }
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async () => {
+    if (!deleteId) return
+    setDeleting(true)
+
     try {
-      await importService.deleteWebhook(id)
+      await importService.deleteWebhook(deleteId)
+      setDeleteOpen(false)
+      setDeleteId(null)
       fetchWebhooks()
+      onWebhookChange?.()
       setSnackbar({ open: true, message: 'Webhook deleted', severity: 'success' })
     } catch {
       setSnackbar({ open: true, message: 'Failed to delete webhook', severity: 'error' })
+    } finally {
+      setDeleting(false)
     }
   }
 
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(label)
-    setTimeout(() => setCopied(''), 2000)
+  const handleCopy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(label)
+      setTimeout(() => setCopied(''), 2000)
+    } catch (_e) {
+      // Clipboard API may not be available in non-HTTPS contexts
+    }
   }
 
   const curlExample = (secret: string) =>
@@ -329,7 +352,7 @@ const WebhookImport = () => {
                   </TableCell>
                   <TableCell align='center'>
                     <Tooltip title='Delete'>
-                      <IconButton size='small' color='error' onClick={() => handleDelete(wh.id)}>
+                      <IconButton size='small' color='error' onClick={() => { setDeleteId(wh.id); setDeleteOpen(true) }}>
                         <i className='tabler-trash text-[16px]' />
                       </IconButton>
                     </Tooltip>
@@ -342,7 +365,7 @@ const WebhookImport = () => {
       )}
 
       {/* Create Webhook Dialog */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth='sm' fullWidth>
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
         <DialogTitle>Create Import Webhook</DialogTitle>
         <DialogContent className='flex flex-col gap-4 pt-2'>
           <TextField
@@ -381,6 +404,28 @@ const WebhookImport = () => {
             startIcon={creating ? <CircularProgress size={18} /> : <i className='tabler-plus' />}
           >
             {creating ? 'Creating...' : 'Create Webhook'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} fullScreen={isMobile}>
+        <DialogTitle>Delete Webhook</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this webhook? This action cannot be undone and the secret key will be permanently lost.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
+          <Button
+            variant='contained'
+            color='error'
+            onClick={handleDelete}
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={18} /> : <i className='tabler-trash' />}
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

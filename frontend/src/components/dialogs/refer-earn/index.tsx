@@ -42,17 +42,17 @@ type Options = {
 const options: Options[] = [
   {
     icon: <Paper />,
-    title: 'Send Invitation 👍🏻',
+    title: 'Send Invitation',
     subtitle: 'Send your referral link to your friend'
   },
   {
     icon: <Keyboard />,
-    title: 'Registration 😎',
+    title: 'Registration',
     subtitle: 'Let them register to our services'
   },
   {
     icon: <Rocket />,
-    title: 'Free Trial  🎉',
+    title: 'Free Trial',
     subtitle: 'Your friend will get 30 days free trial'
   }
 ]
@@ -112,7 +112,7 @@ const ReferEarn = ({ open, setOpen }: ReferEarnProps) => {
               size='small'
               id='refer-email'
               placeholder='johnDoe@email.com'
-              label=' Enter your friend&#39;s email address and invite them to join Vuexy 😍'
+              label=' Enter your friend&#39;s email address and invite them to join Vuexy'
             />
             <Button variant='contained' className='max-sm:is-full'>
               Send
@@ -127,7 +127,7 @@ const ReferEarn = ({ open, setOpen }: ReferEarnProps) => {
               size='small'
               id='refer-social'
               placeholder='http://pixinvent.link'
-              label='You can also copy and send it or share it on your social media. 🚀'
+              label='You can also copy and send it or share it on your social media.'
               slotProps={{
                 input: {
                   endAdornment: (

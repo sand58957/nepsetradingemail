@@ -10,11 +10,21 @@ declare module 'next-auth' {
     }
     role: string
     accessToken: string
+    accountId: number | null
+    accountName: string | null
+    accountPlan: string | null
+    accountLogoUrl: string | null
+    accountDomain: string | null
   }
 
   interface User {
     role: string
     accessToken: string
+    accountId: number | null
+    accountName: string | null
+    accountPlan: string | null
+    accountLogoUrl: string | null
+    accountDomain: string | null
   }
 }
 
@@ -22,5 +32,10 @@ declare module 'next-auth/jwt' {
   interface JWT {
     role: string
     accessToken: string
+    accountId: number | null
+    accountName: string | null
+    accountPlan: string | null
+    accountLogoUrl: string | null
+    accountDomain: string | null
   }
 }

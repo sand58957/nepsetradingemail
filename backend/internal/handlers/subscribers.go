@@ -3,7 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -24,6 +27,20 @@ func NewSubscriberHandler(lm *listmonk.Client, db ...*sqlx.DB) *SubscriberHandle
 		h.db = db[0]
 	}
 	return h
+}
+
+// sanitizeEmail escapes single quotes in email addresses for safe Listmonk query interpolation
+func sanitizeEmail(email string) string {
+	return strings.ReplaceAll(email, "'", "''")
+}
+
+// validateSubscriberID validates that the path param is a numeric ID
+func validateSubscriberID(c echo.Context) (string, error) {
+	id := c.Param("id")
+	if _, err := strconv.Atoi(id); err != nil {
+		return "", response.BadRequest(c, "Invalid subscriber ID")
+	}
+	return id, nil
 }
 
 func (h *SubscriberHandler) List(c echo.Context) error {
@@ -56,9 +73,14 @@ func (h *SubscriberHandler) List(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Get(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateSubscriberID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Get(fmt.Sprintf("/subscribers/%s", id), nil)
 	if err != nil {
+		log.Printf("[subscribers] Failed to fetch subscriber %s: %v", id, err)
 		return response.InternalError(c, "Failed to fetch subscriber from Listmonk")
 	}
 
@@ -80,7 +102,11 @@ func (h *SubscriberHandler) Create(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Update(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateSubscriberID(c)
+	if err != nil {
+		return err
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -88,6 +114,7 @@ func (h *SubscriberHandler) Update(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Put(fmt.Sprintf("/subscribers/%s", id), payload)
 	if err != nil {
+		log.Printf("[subscribers] Failed to update subscriber %s: %v", id, err)
 		return response.InternalError(c, "Failed to update subscriber in Listmonk")
 	}
 
@@ -95,32 +122,15 @@ func (h *SubscriberHandler) Update(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Delete(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateSubscriberID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Delete(fmt.Sprintf("/subscribers/%s", id))
 	if err != nil {
+		log.Printf("[subscribers] Failed to delete subscriber %s: %v", id, err)
 		return response.InternalError(c, "Failed to delete subscriber from Listmonk")
-	}
-
-	return c.JSONBlob(statusCode, data)
-}
-
-func (h *SubscriberHandler) DeleteBulk(c echo.Context) error {
-	var payload map[string]interface{}
-	if err := c.Bind(&payload); err != nil {
-		return response.BadRequest(c, "Invalid request body")
-	}
-
-	data, statusCode, err := h.lm.Delete("/subscribers")
-	if err != nil {
-		return response.InternalError(c, "Failed to delete subscribers from Listmonk")
-	}
-
-	if statusCode >= 400 {
-		// Try PUT method for bulk delete as some Listmonk versions use it
-		data, statusCode, err = h.lm.Put("/subscribers/query/delete", payload)
-		if err != nil {
-			return response.InternalError(c, "Failed to delete subscribers from Listmonk")
-		}
 	}
 
 	return c.JSONBlob(statusCode, data)
@@ -201,7 +211,7 @@ func (h *SubscriberHandler) MySubscriptions(c echo.Context) error {
 
 	// Query Listmonk for subscriber by email
 	params := map[string]string{
-		"query":    fmt.Sprintf("subscribers.email = '%s'", email),
+		"query":    fmt.Sprintf("subscribers.email = '%s'", sanitizeEmail(email)),
 		"per_page": "1",
 	}
 
@@ -241,7 +251,7 @@ func (h *SubscriberHandler) UpdateSubscriptions(c echo.Context) error {
 
 	// First find the subscriber by email in Listmonk
 	params := map[string]string{
-		"query":    fmt.Sprintf("subscribers.email = '%s'", email),
+		"query":    fmt.Sprintf("subscribers.email = '%s'", sanitizeEmail(email)),
 		"per_page": "1",
 	}
 

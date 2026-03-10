@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +17,15 @@ import (
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/listmonk"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
+
+// validateMediaID validates that the path param is a numeric ID
+func validateMediaID(c echo.Context) (string, error) {
+	id := c.Param("id")
+	if _, err := strconv.Atoi(id); err != nil {
+		return "", response.BadRequest(c, "Invalid media ID")
+	}
+	return id, nil
+}
 
 type MediaHandler struct {
 	lm *listmonk.Client
@@ -43,7 +53,11 @@ func (h *MediaHandler) List(c echo.Context) error {
 }
 
 func (h *MediaHandler) Get(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateMediaID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Get(fmt.Sprintf("/media/%s", id), nil)
 	if err != nil {
 		return response.InternalError(c, "Failed to fetch media from Listmonk")
@@ -52,10 +66,36 @@ func (h *MediaHandler) Get(c echo.Context) error {
 	return c.JSONBlob(statusCode, data)
 }
 
+// allowedMediaTypes maps allowed MIME type prefixes to their categories.
+var allowedMediaTypes = map[string]bool{
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/gif":       true,
+	"image/webp":      true,
+	"image/svg+xml":   true,
+	"application/pdf": true,
+	"video/mp4":       true,
+	"video/webm":      true,
+}
+
+// maxUploadSize is 10MB
+const maxUploadSize = 10 * 1024 * 1024
+
 func (h *MediaHandler) Upload(c echo.Context) error {
 	file, err := c.FormFile("file")
 	if err != nil {
 		return response.BadRequest(c, "No file provided")
+	}
+
+	// Validate file size
+	if file.Size > maxUploadSize {
+		return response.BadRequest(c, "File too large. Maximum size is 10MB")
+	}
+
+	// Validate content type
+	contentType := file.Header.Get("Content-Type")
+	if !allowedMediaTypes[contentType] {
+		return response.BadRequest(c, "File type not allowed. Accepted: JPEG, PNG, GIF, WebP, SVG, PDF, MP4, WebM")
 	}
 
 	src, err := file.Open()
@@ -63,6 +103,24 @@ func (h *MediaHandler) Upload(c echo.Context) error {
 		return response.InternalError(c, "Failed to read uploaded file")
 	}
 	defer src.Close()
+
+	// Verify content type by reading first 512 bytes (sniff)
+	header := make([]byte, 512)
+	n, _ := src.Read(header)
+	if n > 0 {
+		detected := http.DetectContentType(header[:n])
+		// Allow if detected type matches or is a generic octet-stream (for SVG/PDF which may not sniff correctly)
+		if !allowedMediaTypes[detected] && detected != "application/octet-stream" && detected != "text/xml; charset=utf-8" && detected != "text/plain; charset=utf-8" {
+			return response.BadRequest(c, "File content does not match declared type")
+		}
+		// Reset reader to beginning
+		src.Close()
+		src, err = file.Open()
+		if err != nil {
+			return response.InternalError(c, "Failed to read uploaded file")
+		}
+		defer src.Close()
+	}
 
 	data, statusCode, err := h.lm.PostMultipart("/media", "file", file.Filename, src, nil)
 	if err != nil {
@@ -77,7 +135,11 @@ func (h *MediaHandler) Upload(c echo.Context) error {
 }
 
 func (h *MediaHandler) Delete(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateMediaID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Delete(fmt.Sprintf("/media/%s", id))
 	if err != nil {
 		return response.InternalError(c, "Failed to delete media from Listmonk")
@@ -103,6 +165,20 @@ func (h *MediaHandler) UploadFromURL(c echo.Context) error {
 		return response.BadRequest(c, "Invalid URL — must start with http:// or https://")
 	}
 
+	// Block private/internal IP ranges to prevent SSRF
+	host := parsedURL.Hostname()
+	blockedPrefixes := []string{"127.", "10.", "172.16.", "172.17.", "172.18.", "172.19.",
+		"172.20.", "172.21.", "172.22.", "172.23.", "172.24.", "172.25.", "172.26.",
+		"172.27.", "172.28.", "172.29.", "172.30.", "172.31.", "192.168.", "169.254.", "0."}
+	for _, prefix := range blockedPrefixes {
+		if strings.HasPrefix(host, prefix) {
+			return response.BadRequest(c, "URL points to a private network address")
+		}
+	}
+	if host == "localhost" || host == "::1" || host == "" {
+		return response.BadRequest(c, "URL points to a private network address")
+	}
+
 	// Download the file
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 	resp, err := httpClient.Get(req.URL)
@@ -115,11 +191,21 @@ func (h *MediaHandler) UploadFromURL(c echo.Context) error {
 		return response.BadRequest(c, fmt.Sprintf("URL returned status %d", resp.StatusCode))
 	}
 
+	// Validate content type from response
+	ct := resp.Header.Get("Content-Type")
+	// Extract base MIME type (strip params like charset)
+	if idx := strings.Index(ct, ";"); idx != -1 {
+		ct = strings.TrimSpace(ct[:idx])
+	}
+	if ct != "" && !allowedMediaTypes[ct] {
+		return response.BadRequest(c, "URL points to a file type that is not allowed. Accepted: JPEG, PNG, GIF, WebP, SVG, PDF, MP4, WebM")
+	}
+
 	// Extract filename
 	filename := extractFilenameFromURL(req.URL, resp)
 
 	// Limit download size (10MB)
-	limitedReader := io.LimitReader(resp.Body, 10*1024*1024)
+	limitedReader := io.LimitReader(resp.Body, maxUploadSize)
 
 	// Forward to Listmonk as multipart upload
 	data, statusCode, err := h.lm.PostMultipart("/media", "file", filename, limitedReader, nil)

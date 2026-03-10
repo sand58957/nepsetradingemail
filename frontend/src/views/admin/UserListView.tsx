@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 
 import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
@@ -44,6 +45,9 @@ const UserListView = () => {
   const [error, setError] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; user: User | null }>({
     open: false,
     user: null
@@ -55,9 +59,26 @@ const UserListView = () => {
   })
 
   const [editForm, setEditForm] = useState({ name: '', email: '', is_active: true, password: '', role: '' })
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const router = useRouter()
   const { lang: locale } = useParams()
+  const { data: session } = useSession()
+  const currentUserId = (session as any)?.user?.id
+
+  // Debounce search input
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(value)
+    }, 400)
+  }, [])
 
   const fetchUsers = async () => {
     try {
@@ -67,7 +88,7 @@ const UserListView = () => {
       const params: { role?: string; query?: string } = {}
 
       if (roleFilter) params.role = roleFilter
-      if (searchQuery) params.query = searchQuery
+      if (debouncedSearch) params.query = debouncedSearch
 
       const result = await userService.list(params)
 
@@ -82,10 +103,20 @@ const UserListView = () => {
   useEffect(() => {
     fetchUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleFilter, searchQuery])
+  }, [roleFilter, debouncedSearch])
 
   const handleDelete = async () => {
     if (!deleteDialog.user) return
+
+    // Guard: prevent self-deletion
+    if (currentUserId && deleteDialog.user.id === currentUserId) {
+      setError('You cannot delete your own account')
+      setDeleteDialog({ open: false, user: null })
+
+      return
+    }
+
+    setDeleting(true)
 
     try {
       await userService.delete(deleteDialog.user.id)
@@ -94,6 +125,8 @@ const UserListView = () => {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete user')
       setDeleteDialog({ open: false, user: null })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -111,6 +144,28 @@ const UserListView = () => {
   const handleEditSave = async () => {
     if (!editDialog.user) return
 
+    // Validate form
+    if (!editForm.name.trim()) {
+      setError('Name is required')
+
+      return
+    }
+
+    if (!editForm.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
+      setError('A valid email address is required')
+
+      return
+    }
+
+    if (editForm.password && editForm.password.length < 8) {
+      setError('Password must be at least 8 characters')
+
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
     try {
       // Update user details
       const updatePayload: any = {}
@@ -124,8 +179,14 @@ const UserListView = () => {
         await userService.update(editDialog.user.id, updatePayload)
       }
 
-      // Update role if changed
+      // Update role if changed (guard against self-role-change)
       if (editForm.role !== editDialog.user.role) {
+        if (currentUserId && editDialog.user.id === currentUserId) {
+          setError('You cannot change your own role')
+
+          return
+        }
+
         await userService.updateRole(editDialog.user.id, { role: editForm.role })
       }
 
@@ -133,6 +194,8 @@ const UserListView = () => {
       fetchUsers()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update user')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -158,7 +221,7 @@ const UserListView = () => {
               size='small'
               placeholder='Search by name or email...'
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => handleSearchChange(e.target.value)}
               sx={{ minWidth: 250 }}
               InputProps={{
                 startAdornment: <i className='tabler-search mr-2 text-textSecondary' />
@@ -239,13 +302,15 @@ const UserListView = () => {
                           <IconButton size='small' color='primary' onClick={() => handleEditOpen(user)}>
                             <i className='tabler-edit text-lg' />
                           </IconButton>
-                          <IconButton
-                            size='small'
-                            color='error'
-                            onClick={() => setDeleteDialog({ open: true, user })}
-                          >
-                            <i className='tabler-trash text-lg' />
-                          </IconButton>
+                          {(!currentUserId || user.id !== currentUserId) && (
+                            <IconButton
+                              size='small'
+                              color='error'
+                              onClick={() => setDeleteDialog({ open: true, user })}
+                            >
+                              <i className='tabler-trash text-lg' />
+                            </IconButton>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -258,7 +323,7 @@ const UserListView = () => {
       </Card>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, user: null })}>
+      <Dialog open={deleteDialog.open} onClose={() => !deleting && setDeleteDialog({ open: false, user: null })}>
         <DialogTitle>Delete User</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -267,15 +332,15 @@ const UserListView = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialog({ open: false, user: null })}>Cancel</Button>
-          <Button onClick={handleDelete} color='error' variant='contained'>
-            Delete
+          <Button onClick={() => setDeleteDialog({ open: false, user: null })} disabled={deleting}>Cancel</Button>
+          <Button onClick={handleDelete} color='error' variant='contained' disabled={deleting}>
+            {deleting ? <CircularProgress size={20} /> : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Edit User Dialog */}
-      <Dialog open={editDialog.open} onClose={() => setEditDialog({ open: false, user: null })} maxWidth='sm' fullWidth>
+      <Dialog open={editDialog.open} onClose={() => !saving && setEditDialog({ open: false, user: null })} maxWidth='sm' fullWidth>
         <DialogTitle>Edit User</DialogTitle>
         <DialogContent>
           <Box className='flex flex-col gap-4 mt-2'>
@@ -284,6 +349,7 @@ const UserListView = () => {
               fullWidth
               value={editForm.name}
               onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+              disabled={saving}
             />
             <TextField
               label='Email'
@@ -291,8 +357,9 @@ const UserListView = () => {
               type='email'
               value={editForm.email}
               onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+              disabled={saving}
             />
-            <FormControl fullWidth>
+            <FormControl fullWidth disabled={saving || (currentUserId != null && editDialog.user?.id === currentUserId)}>
               <InputLabel>Role</InputLabel>
               <Select
                 value={editForm.role}
@@ -304,7 +371,7 @@ const UserListView = () => {
                 <MenuItem value='subscriber'>Subscriber</MenuItem>
               </Select>
             </FormControl>
-            <FormControl fullWidth>
+            <FormControl fullWidth disabled={saving}>
               <InputLabel>Status</InputLabel>
               <Select
                 value={editForm.is_active ? 'active' : 'inactive'}
@@ -321,13 +388,14 @@ const UserListView = () => {
               type='password'
               value={editForm.password}
               onChange={e => setEditForm({ ...editForm, password: e.target.value })}
+              disabled={saving}
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialog({ open: false, user: null })}>Cancel</Button>
-          <Button onClick={handleEditSave} variant='contained'>
-            Save Changes
+          <Button onClick={() => setEditDialog({ open: false, user: null })} disabled={saving}>Cancel</Button>
+          <Button onClick={handleEditSave} variant='contained' disabled={saving}>
+            {saving ? <CircularProgress size={20} /> : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>

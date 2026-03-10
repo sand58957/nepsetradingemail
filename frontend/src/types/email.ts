@@ -461,9 +461,30 @@ export interface SendingDomain {
   domain_alignment: boolean
 }
 
+export interface SiteDomain {
+  domain: string
+  status: 'verified' | 'pending' | 'failed'
+  ssl: boolean
+  site: string
+}
+
 export interface DomainsConfig {
   sending_domains: SendingDomain[]
-  site_domains: string[]
+  site_domains: SiteDomain[]
+}
+
+export interface DnsRecordResult {
+  record_type: string
+  expected: string
+  found: string
+  status: 'pass' | 'fail'
+}
+
+export interface DomainVerificationResult {
+  domain: string
+  all_passed: boolean
+  records: DnsRecordResult[]
+  checked_at: string
 }
 
 export interface EcommerceConfig {

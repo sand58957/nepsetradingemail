@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"fmt"
+	"log"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 
@@ -17,6 +19,15 @@ func NewTemplateHandler(lm *listmonk.Client) *TemplateHandler {
 	return &TemplateHandler{lm: lm}
 }
 
+// validateTemplateID validates that the path param is a numeric ID
+func validateTemplateID(c echo.Context) (string, error) {
+	id := c.Param("id")
+	if _, err := strconv.Atoi(id); err != nil {
+		return "", response.BadRequest(c, "Invalid template ID")
+	}
+	return id, nil
+}
+
 func (h *TemplateHandler) List(c echo.Context) error {
 	params := map[string]string{}
 	if v := c.QueryParam("page"); v != "" {
@@ -28,6 +39,7 @@ func (h *TemplateHandler) List(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Get("/templates", params)
 	if err != nil {
+		log.Printf("[templates] Failed to fetch templates: %v", err)
 		return response.InternalError(c, "Failed to fetch templates from Listmonk")
 	}
 
@@ -35,9 +47,14 @@ func (h *TemplateHandler) List(c echo.Context) error {
 }
 
 func (h *TemplateHandler) Get(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateTemplateID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Get(fmt.Sprintf("/templates/%s", id), nil)
 	if err != nil {
+		log.Printf("[templates] Failed to fetch template %s: %v", id, err)
 		return response.InternalError(c, "Failed to fetch template from Listmonk")
 	}
 
@@ -52,6 +69,7 @@ func (h *TemplateHandler) Create(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Post("/templates", payload)
 	if err != nil {
+		log.Printf("[templates] Failed to create template: %v", err)
 		return response.InternalError(c, "Failed to create template in Listmonk")
 	}
 
@@ -59,7 +77,11 @@ func (h *TemplateHandler) Create(c echo.Context) error {
 }
 
 func (h *TemplateHandler) Update(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateTemplateID(c)
+	if err != nil {
+		return err
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -67,6 +89,7 @@ func (h *TemplateHandler) Update(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Put(fmt.Sprintf("/templates/%s", id), payload)
 	if err != nil {
+		log.Printf("[templates] Failed to update template %s: %v", id, err)
 		return response.InternalError(c, "Failed to update template in Listmonk")
 	}
 
@@ -74,9 +97,14 @@ func (h *TemplateHandler) Update(c echo.Context) error {
 }
 
 func (h *TemplateHandler) Delete(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateTemplateID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Delete(fmt.Sprintf("/templates/%s", id))
 	if err != nil {
+		log.Printf("[templates] Failed to delete template %s: %v", id, err)
 		return response.InternalError(c, "Failed to delete template from Listmonk")
 	}
 
@@ -84,9 +112,14 @@ func (h *TemplateHandler) Delete(c echo.Context) error {
 }
 
 func (h *TemplateHandler) Preview(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateTemplateID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Get(fmt.Sprintf("/templates/%s/preview", id), nil)
 	if err != nil {
+		log.Printf("[templates] Failed to preview template %s: %v", id, err)
 		return response.InternalError(c, "Failed to preview template from Listmonk")
 	}
 
@@ -94,9 +127,14 @@ func (h *TemplateHandler) Preview(c echo.Context) error {
 }
 
 func (h *TemplateHandler) SetDefault(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateTemplateID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Put(fmt.Sprintf("/templates/%s/default", id), nil)
 	if err != nil {
+		log.Printf("[templates] Failed to set default template %s: %v", id, err)
 		return response.InternalError(c, "Failed to set default template in Listmonk")
 	}
 

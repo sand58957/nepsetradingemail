@@ -212,7 +212,7 @@ export const db: ChatDataType = {
           }
         },
         {
-          message: 'Looks clean and fresh UI. 😍',
+          message: 'Looks clean and fresh UI.',
           time: 'Mon Dec 10 2018 07:46:23 GMT+0000 (GMT)',
           senderId: 2
         },
@@ -227,7 +227,7 @@ export const db: ChatDataType = {
           senderId: 2
         },
         {
-          message: 'Thanks, From our official site  😇',
+          message: 'Thanks, From our official site',
           time: 'Mon Dec 10 2018 07:46:53 GMT+0000 (GMT)',
           senderId: 1,
           msgStatus: {
@@ -237,7 +237,7 @@ export const db: ChatDataType = {
           }
         },
         {
-          message: 'I will purchase it for sure. 👍',
+          message: 'I will purchase it for sure.',
           time: previousDay,
           senderId: 2
         }
@@ -264,7 +264,7 @@ export const db: ChatDataType = {
           senderId: 3
         },
         {
-          message: 'Can I get details of my last transaction I made last month? 🤔',
+          message: 'Can I get details of my last transaction I made last month?',
           time: 'Mon Dec 11 2018 07:46:10 GMT+0000 (GMT)',
           senderId: 1,
           msgStatus: {
@@ -537,7 +537,7 @@ export const db: ChatDataType = {
           senderId: 1
         },
         {
-          message: 'Your Welcome!😊',
+          message: 'Your Welcome!',
           time: 'Mon Dec 13 2021 13:06:00 GMT+0000 (GMT)',
           senderId: 14
         }

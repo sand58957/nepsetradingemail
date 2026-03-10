@@ -6,15 +6,16 @@ import (
 )
 
 type User struct {
-	ID           int             `json:"id" db:"id"`
-	Email        string          `json:"email" db:"email"`
-	PasswordHash string          `json:"-" db:"password_hash"`
-	Name         string          `json:"name" db:"name"`
-	Role         string          `json:"role" db:"role"`
-	IsActive     bool            `json:"is_active" db:"is_active"`
-	Preferences  json.RawMessage `json:"preferences,omitempty" db:"preferences"`
-	CreatedAt    time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at" db:"updated_at"`
+	ID               int             `json:"id" db:"id"`
+	Email            string          `json:"email" db:"email"`
+	PasswordHash     string          `json:"-" db:"password_hash"`
+	Name             string          `json:"name" db:"name"`
+	Role             string          `json:"role" db:"role"`
+	IsActive         bool            `json:"is_active" db:"is_active"`
+	CurrentAccountID *int            `json:"current_account_id,omitempty" db:"current_account_id"`
+	Preferences      json.RawMessage `json:"preferences,omitempty" db:"preferences"`
+	CreatedAt        time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 type APIKey struct {
@@ -42,16 +43,18 @@ type RefreshRequest struct {
 }
 
 type AuthResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	User         User   `json:"user"`
+	AccessToken  string   `json:"access_token"`
+	RefreshToken string   `json:"refresh_token"`
+	User         User     `json:"user"`
+	Account      *Account `json:"account,omitempty"`
 }
 
 type TokenClaims struct {
-	UserID int    `json:"user_id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
-	Type   string `json:"type"` // "access" or "refresh"
+	UserID    int    `json:"user_id"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	AccountID int    `json:"account_id,omitempty"`
+	Type      string `json:"type"` // "access" or "refresh"
 }
 
 // Admin user management request types

@@ -29,8 +29,6 @@ import verticalNavigationCustomStyles from '@core/styles/vertical/navigationCust
 import verticalMenuItemStyles from '@core/styles/vertical/menuItemStyles'
 import verticalMenuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 
-// Menu Data Imports
-// import menuData from '@/data/navigation/horizontalMenuData'
 
 type RenderExpandIconProps = {
   level?: number

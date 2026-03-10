@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react'
 
 // Next Imports
 import dynamic from 'next/dynamic'
-import { useSession } from 'next-auth/react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -30,12 +29,13 @@ import type { ApexOptions } from 'apexcharts'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
-
-// Type Imports
-import type { CampaignStatus } from '@/types/email'
+import OnboardingChecklist from './OnboardingChecklist'
 
 // Styled Component Imports
 const AppReactApexCharts = dynamic(() => import('@/libs/styles/AppReactApexCharts'))
+
+// Service Imports
+import api from '@/services/api'
 
 // Dashboard data shape from Go backend
 interface DashboardData {
@@ -97,7 +97,6 @@ const statusColorMap: Record<string, 'default' | 'success' | 'primary' | 'warnin
 
 const EmailDashboard = () => {
   const theme = useTheme()
-  const { data: session } = useSession()
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -105,23 +104,10 @@ const EmailDashboard = () => {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const token = (session as any)?.accessToken
+        const res = await api.get('/dashboard/stats')
 
-        if (!token) {
-          setLoading(false)
-          return
-        }
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || '/api'}/dashboard/stats`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-
-        const json = await res.json()
-
-        if (json.success && json.data) {
-          setDashboardData(json.data)
+        if (res.data?.success && res.data?.data) {
+          setDashboardData(res.data.data)
         } else {
           setError('Failed to load dashboard data')
         }
@@ -133,10 +119,8 @@ const EmailDashboard = () => {
       }
     }
 
-    if (session) {
-      fetchDashboard()
-    }
-  }, [session])
+    fetchDashboard()
+  }, [])
 
   // Campaign performance bar chart (from real data if available)
   const recentCampaigns = dashboardData?.recent_campaigns || []
@@ -190,6 +174,11 @@ const EmailDashboard = () => {
 
   return (
     <Grid container spacing={6}>
+      {/* Onboarding Checklist */}
+      <Grid size={{ xs: 12 }}>
+        <OnboardingChecklist />
+      </Grid>
+
       {/* Stat Cards */}
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard
@@ -323,7 +312,7 @@ const EmailDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={campaign.status?.charAt(0).toUpperCase() + campaign.status?.slice(1)}
+                          label={campaign.status ? campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1) : 'Unknown'}
                           color={statusColorMap[campaign.status] || 'default'}
                           size='small'
                           variant='tonal'

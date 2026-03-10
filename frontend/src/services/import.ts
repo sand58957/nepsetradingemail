@@ -6,10 +6,8 @@ import type {
   ListmonkImportStatus,
   ImportWebhook,
   ImportAnalytics,
-  CSVImportParams,
   APIImportPayload,
   APIImportResult,
-  SuppressionEntry,
   SuppressionListResponse
 } from '@/types/email'
 
@@ -17,7 +15,7 @@ export const importService = {
   // CSV Import
   importCSV: async (
     file: File,
-    params: CSVImportParams
+    params: Record<string, any>
   ): Promise<any> => {
     const formData = new FormData()
 

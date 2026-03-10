@@ -54,10 +54,13 @@ func (h *AutomationHandler) List(c echo.Context) error {
 }
 
 func (h *AutomationHandler) Get(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	var automation models.Automation
-	err := h.db.Get(&automation, "SELECT * FROM app_automations WHERE id = $1", id)
+	err = h.db.Get(&automation, "SELECT * FROM app_automations WHERE id = $1", id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return response.NotFound(c, "Automation not found")
@@ -143,7 +146,10 @@ func (h *AutomationHandler) Create(c echo.Context) error {
 }
 
 func (h *AutomationHandler) Update(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	var req models.UpdateAutomationRequest
 	if err := c.Bind(&req); err != nil {
@@ -161,9 +167,16 @@ func (h *AutomationHandler) Update(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	isActive := false
-	if req.IsActive != nil {
-		isActive = *req.IsActive
+	// If is_active not provided, keep current value
+	if req.IsActive == nil {
+		var currentActive bool
+		if err := h.db.Get(&currentActive, "SELECT is_active FROM app_automations WHERE id = $1", id); err != nil {
+			if err == sql.ErrNoRows {
+				return response.NotFound(c, "Automation not found")
+			}
+			return response.InternalError(c, "Failed to fetch automation")
+		}
+		req.IsActive = &currentActive
 	}
 
 	var automation models.Automation
@@ -172,7 +185,7 @@ func (h *AutomationHandler) Update(c echo.Context) error {
 		 SET name = $1, description = $2, trigger_type = $3, trigger_config = $4, is_active = $5, updated_at = NOW()
 		 WHERE id = $6
 		 RETURNING *`,
-		req.Name, req.Description, req.TriggerType, triggerConfig, isActive, id,
+		req.Name, req.Description, req.TriggerType, triggerConfig, *req.IsActive, id,
 	).StructScan(&automation)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -217,7 +230,10 @@ func (h *AutomationHandler) Update(c echo.Context) error {
 }
 
 func (h *AutomationHandler) Delete(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	result, err := h.db.Exec("DELETE FROM app_automations WHERE id = $1", id)
 	if err != nil {
@@ -233,10 +249,13 @@ func (h *AutomationHandler) Delete(c echo.Context) error {
 }
 
 func (h *AutomationHandler) ToggleStatus(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	var automation models.Automation
-	err := h.db.Get(&automation, "SELECT * FROM app_automations WHERE id = $1", id)
+	err = h.db.Get(&automation, "SELECT * FROM app_automations WHERE id = $1", id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return response.NotFound(c, "Automation not found")
@@ -258,7 +277,10 @@ func (h *AutomationHandler) ToggleStatus(c echo.Context) error {
 }
 
 func (h *AutomationHandler) GetLogs(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	page, _ := strconv.Atoi(c.QueryParam("page"))
 	if page < 1 {
@@ -271,7 +293,7 @@ func (h *AutomationHandler) GetLogs(c echo.Context) error {
 	offset := (page - 1) * perPage
 
 	var total int
-	err := h.db.Get(&total, "SELECT COUNT(*) FROM app_automation_logs WHERE automation_id = $1", id)
+	err = h.db.Get(&total, "SELECT COUNT(*) FROM app_automation_logs WHERE automation_id = $1", id)
 	if err != nil {
 		return response.InternalError(c, "Failed to count automation logs")
 	}

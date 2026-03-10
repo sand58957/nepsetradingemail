@@ -40,35 +40,20 @@ const SubscriptionsView = () => {
     try {
       setLoading(true)
 
-      // Get all available lists
-      const listsResponse = await api.get('/lists')
-      const allLists = listsResponse.data?.data?.results || listsResponse.data?.data || []
+      // Get user's current subscriptions (includes list info)
+      const subData = await portalService.getSubscriptions()
+      const subscriberLists = subData?.data?.lists || []
 
-      // Get user's current subscriptions
-      let subscribedListIds: number[] = []
-
-      try {
-        const subData = await portalService.getSubscriptions()
-
-        if (subData?.data?.lists) {
-          subscribedListIds = subData.data.lists
-            .filter((l: any) => l.subscription_status === 'confirmed')
-            .map((l: any) => l.id)
-        }
-      } catch {
-        // User may not be a subscriber in Listmonk yet
-      }
-
-      // Merge
-      const mergedLists = allLists.map((list: any) => ({
-        id: list.id,
-        name: list.name,
-        description: list.description || '',
-        subscribed: subscribedListIds.includes(list.id)
+      // Build list from subscription data — subscriber-accessible endpoint
+      const mergedLists = subscriberLists.map((l: any) => ({
+        id: l.id,
+        name: l.name,
+        description: l.description || '',
+        subscribed: l.subscription_status === 'confirmed'
       }))
 
       setLists(mergedLists)
-    } catch (err: any) {
+    } catch {
       setError('Failed to load subscription data')
     } finally {
       setLoading(false)
@@ -134,7 +119,7 @@ const SubscriptionsView = () => {
           </List>
         )}
 
-        <Box className='flex justify-end mt-4'>
+        <Box className='flex flex-wrap justify-end mt-4 gap-2'>
           <Button variant='contained' onClick={handleSave} disabled={saving} startIcon={<i className='tabler-check' />}>
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>

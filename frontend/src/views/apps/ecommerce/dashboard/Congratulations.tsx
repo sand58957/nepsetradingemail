@@ -12,7 +12,7 @@ const CongratulationsJohn = () => {
         <Grid size={{ xs: 8 }}>
           <CardContent>
             <Typography variant='h5' className='mbe-0.5'>
-              Congratulations John 🎉
+              Congratulations John
             </Typography>
             <Typography variant='subtitle1' className='mbe-2'>
               Best seller of the month

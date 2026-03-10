@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 
+import { useSearchParams } from 'next/navigation'
+
 // MUI Imports
 import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
@@ -10,6 +12,7 @@ import Alert from '@mui/material/Alert'
 import CircularProgress from '@mui/material/CircularProgress'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import IconButton from '@mui/material/IconButton'
+import Button from '@mui/material/Button'
 import Drawer from '@mui/material/Drawer'
 import { useTheme } from '@mui/material/styles'
 
@@ -29,16 +32,20 @@ import { isImageFile } from '@/utils/media'
 import type { MediaItem, MediaFolder } from '@/types/email'
 
 const FileManagerPage = () => {
+  const searchParams = useSearchParams()
+  const pickerMode = searchParams.get('picker') === 'true'
+
   const [media, setMedia] = useState<MediaItem[]>([])
   const [folders, setFolders] = useState<MediaFolder[]>([])
   const [activeFolderId, setActiveFolderId] = useState<number | null>(null)
   const [folderItemIds, setFolderItemIds] = useState<number[]>([])
-  const [filterTab, setFilterTab] = useState<'all' | 'images' | 'files'>('all')
+  const [filterTab, setFilterTab] = useState<'all' | 'images' | 'files'>(pickerMode ? 'images' : 'all')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [importUrlDialogOpen, setImportUrlDialogOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -151,6 +158,16 @@ const FileManagerPage = () => {
     setSnackbar(prev => ({ ...prev, open: false }))
   }
 
+  // In picker mode, send selected image URL back to opener and close window
+  const handlePickerSelect = useCallback((item: MediaItem) => {
+    const url = item.url || item.thumb_url
+
+    if (url && window.opener) {
+      window.opener.postMessage({ type: 'media-picker-select', url }, window.location.origin)
+      window.close()
+    }
+  }, [])
+
   const sidebarContent = (
     <FileManagerSidebar
       folders={folders}
@@ -193,13 +210,35 @@ const FileManagerPage = () => {
       {/* Header */}
       <div className='flex items-center justify-between'>
         <Typography variant='h5' sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} className='font-bold'>
-          File manager
+          {pickerMode ? 'Select an image' : 'File manager'}
         </Typography>
-        {isMobile && (
-          <IconButton onClick={() => setSidebarOpen(true)} color='primary'>
-            <i className='tabler-menu-2 text-[22px]' />
-          </IconButton>
-        )}
+        <div className='flex items-center gap-2'>
+          {pickerMode && (
+            <>
+              <Button
+                variant='outlined'
+                size='small'
+                startIcon={<i className='tabler-link text-[16px]' />}
+                onClick={() => setImportUrlDialogOpen(true)}
+              >
+                Import URL
+              </Button>
+              <Button
+                variant='contained'
+                size='small'
+                startIcon={<i className='tabler-upload text-[16px]' />}
+                onClick={() => setUploadDialogOpen(true)}
+              >
+                Upload
+              </Button>
+            </>
+          )}
+          {isMobile && !pickerMode && (
+            <IconButton onClick={() => setSidebarOpen(true)} color='primary'>
+              <i className='tabler-menu-2 text-[22px]' />
+            </IconButton>
+          )}
+        </div>
       </div>
 
       <Grid container spacing={{ xs: 4, sm: 6 }}>
@@ -220,6 +259,8 @@ const FileManagerPage = () => {
             onSearchChange={setSearch}
             loading={loading}
             onDelete={handleDelete}
+            pickerMode={pickerMode}
+            onSelect={handlePickerSelect}
           />
         </Grid>
       </Grid>

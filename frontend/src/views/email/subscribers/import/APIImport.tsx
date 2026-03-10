@@ -55,6 +55,7 @@ const APIImport = ({ onImportComplete }: APIImportProps) => {
   const [listsLoading, setListsLoading] = useState(false)
   const [overwrite, setOverwrite] = useState(true)
   const [importing, setImporting] = useState(false)
+
   const [result, setResult] = useState<{
     import_id: number
     total: number
@@ -63,6 +64,7 @@ const APIImport = ({ onImportComplete }: APIImportProps) => {
     skipped: number
     errors: ImportError[]
   } | null>(null)
+
   const [error, setError] = useState('')
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
   const [copied, setCopied] = useState(false)

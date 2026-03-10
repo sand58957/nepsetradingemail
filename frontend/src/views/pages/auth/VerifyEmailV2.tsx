@@ -95,7 +95,7 @@ const VerifyEmailV2 = ({ mode }: { mode: SystemMode }) => {
         </Link>
         <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-11 sm:mbs-14 md:mbs-0'>
           <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>Verify your email ✉️</Typography>
+            <Typography variant='h4'>Verify your email</Typography>
             <Typography>
               Account activation link sent to your email address:{' '}
               <span className='font-medium text-textPrimary'>john.doe@email.com</span> Please follow the link inside to

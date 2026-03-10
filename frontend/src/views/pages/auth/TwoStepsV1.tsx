@@ -65,7 +65,7 @@ const TwoStepsV1 = () => {
             <Logo />
           </Link>
           <div className='flex flex-col gap-1 mbe-6'>
-            <Typography variant='h4'>Two Step Verification 💬</Typography>
+            <Typography variant='h4'>Two Step Verification</Typography>
             <Typography>
               We sent a verification code to your mobile. Enter the code from the mobile in the field below.
             </Typography>

@@ -26,9 +26,11 @@ interface Props {
   onSearchChange: (search: string) => void
   loading: boolean
   onDelete: (id: number) => void
+  pickerMode?: boolean
+  onSelect?: (media: MediaItem) => void
 }
 
-const FileManagerContent = ({ media, filterTab, onFilterTabChange, search, onSearchChange, loading, onDelete }: Props) => {
+const FileManagerContent = ({ media, filterTab, onFilterTabChange, search, onSearchChange, loading, onDelete, pickerMode, onSelect }: Props) => {
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     const tabs: ('all' | 'images' | 'files')[] = ['all', 'images', 'files']
 
@@ -111,7 +113,7 @@ const FileManagerContent = ({ media, filterTab, onFilterTabChange, search, onSea
             <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
               {media.map(item => (
                 <Grid key={item.id} size={{ xs: 6, sm: 6, md: 4, lg: 4 }}>
-                  <FileCard media={item} onDelete={onDelete} />
+                  <FileCard media={item} onDelete={onDelete} pickerMode={pickerMode} onSelect={onSelect} />
                 </Grid>
               ))}
             </Grid>

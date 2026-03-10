@@ -276,7 +276,10 @@ func (h *AnalyticsHandler) GetOverview(c echo.Context) error {
 }
 
 func (h *AnalyticsHandler) GetCampaignAnalytics(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	data, statusCode, err := h.lm.Get("/campaigns/"+id, nil)
 	if err != nil {

@@ -80,13 +80,14 @@ const SubscriberDetail = ({ id }: SubscriberDetailProps) => {
         setStatus(data.status)
       } catch (err: any) {
         const msg = err?.response?.data?.message || 'Failed to load subscriber'
+
         setError(msg)
       } finally {
         setLoading(false)
       }
     }
 
-    if (id) {
+    if (id && !isNaN(Number(id))) {
       fetchSubscriber()
     }
   }, [id])
@@ -94,20 +95,33 @@ const SubscriberDetail = ({ id }: SubscriberDetailProps) => {
   // Handle save
   const handleSave = async () => {
     if (!subscriber) return
+
+    // Basic email validation
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setSnackbar({ open: true, message: 'Please enter a valid email address', severity: 'error' })
+      return
+    }
+
     setSaving(true)
 
     try {
       const response = await subscriberService.update(subscriber.id, {
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim(),
         status
       })
 
-      setSubscriber(response.data)
+      const updated = response.data
+
+      setSubscriber(updated)
+      setName(updated.name || '')
+      setEmail(updated.email || '')
+      setStatus(updated.status)
       setEditing(false)
       setSnackbar({ open: true, message: 'Subscriber updated successfully', severity: 'success' })
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to update subscriber'
+
       setSnackbar({ open: true, message: msg, severity: 'error' })
     } finally {
       setSaving(false)
@@ -167,19 +181,19 @@ const SubscriberDetail = ({ id }: SubscriberDetailProps) => {
             <Divider />
             <CardContent>
               <div className='flex flex-col gap-4'>
-                <div className='flex justify-between'>
+                <div className='flex justify-between flex-wrap gap-2'>
                   <Typography color='text.secondary'>Created</Typography>
                   <Typography className='font-medium'>
                     {new Date(subscriber.created_at).toLocaleDateString()}
                   </Typography>
                 </div>
-                <div className='flex justify-between'>
+                <div className='flex justify-between flex-wrap gap-2'>
                   <Typography color='text.secondary'>Updated</Typography>
                   <Typography className='font-medium'>
                     {new Date(subscriber.updated_at).toLocaleDateString()}
                   </Typography>
                 </div>
-                <div className='flex justify-between'>
+                <div className='flex justify-between flex-wrap gap-2'>
                   <Typography color='text.secondary'>UUID</Typography>
                   <Typography className='font-medium' variant='body2'>
                     {subscriber.uuid}
@@ -297,7 +311,7 @@ const SubscriberDetail = ({ id }: SubscriberDetailProps) => {
               {subscriber.lists && subscriber.lists.length > 0 ? (
                 <div className='flex flex-col gap-3'>
                   {subscriber.lists.map(list => (
-                    <div key={list.id} className='flex items-center justify-between p-3 rounded-lg border'>
+                    <div key={list.id} className='flex items-center justify-between flex-wrap gap-3 p-3 rounded-lg border'>
                       <div className='flex items-center gap-3'>
                         <CustomAvatar color='primary' skin='light' variant='rounded' size={36}>
                           <i className='tabler-list text-[20px]' />

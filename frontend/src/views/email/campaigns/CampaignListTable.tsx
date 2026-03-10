@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -39,12 +39,9 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import type { ColumnDef, FilterFn } from '@tanstack/react-table'
-import { rankItem } from '@tanstack/match-sorter-utils'
+import type { ColumnDef } from '@tanstack/react-table'
 
 // Type Imports
 import type { Campaign, CampaignStatus } from '@/types/email'
@@ -55,16 +52,11 @@ import campaignService from '@/services/campaigns'
 // Styles Imports
 import tableStyles from '@core/styles/table.module.css'
 
+// Hook Imports
+import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
+
 type CampaignWithAction = Campaign & {
   action?: string
-}
-
-const fuzzyFilter: FilterFn<CampaignWithAction> = (row, columnId, value, addMeta) => {
-  const itemRank = rankItem(row.getValue(columnId), value)
-
-  addMeta({ itemRank })
-
-  return itemRank.passed
 }
 
 const statusColorMap: Record<CampaignStatus, 'default' | 'success' | 'primary' | 'warning' | 'error' | 'info'> = {
@@ -80,6 +72,8 @@ const columnHelper = createColumnHelper<CampaignWithAction>()
 
 const CampaignListTable = () => {
   const router = useRouter()
+  const { lang } = useParams()
+  const locale = (lang as string) || 'en'
 
   // Data state
   const [campaigns, setCampaigns] = useState<CampaignWithAction[]>([])
@@ -97,9 +91,12 @@ const CampaignListTable = () => {
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success'
   })
+
+  const isMobile = useMobileBreakpoint()
 
   // Debounced search
   const [searchTerm, setSearchTerm] = useState('')
@@ -120,12 +117,22 @@ const CampaignListTable = () => {
     try {
       let query = ''
 
-      if (statusFilter !== 'all') {
+      // Validate statusFilter against allowlist to prevent injection
+      const allowedStatuses = ['draft', 'running', 'scheduled', 'paused', 'cancelled', 'finished']
+
+      if (statusFilter !== 'all' && allowedStatuses.includes(statusFilter)) {
         query = `campaigns.status = '${statusFilter}'`
       }
 
       if (globalFilter) {
-        const searchQuery = `campaigns.name ILIKE '%${globalFilter}%' OR campaigns.subject ILIKE '%${globalFilter}%'`
+        const sanitized = globalFilter
+          .replace(/'/g, "''")
+          .replace(/%/g, '\\%')
+          .replace(/_/g, '\\_')
+          .replace(/[;\-\\]/g, '')
+          .replace(/\/\*/g, '')
+          .slice(0, 200)
+        const searchQuery = `campaigns.name ILIKE '%${sanitized}%' OR campaigns.subject ILIKE '%${sanitized}%'`
 
         query = query ? `(${query}) AND (${searchQuery})` : searchQuery
       }
@@ -201,7 +208,7 @@ const CampaignListTable = () => {
             <Typography
               className='font-medium cursor-pointer hover:underline'
               color='text.primary'
-              onClick={() => router.push(`/campaigns/${row.original.id}`)}
+              onClick={() => router.push(`/${locale}/campaigns/${row.original.id}`)}
             >
               {row.original.name}
             </Typography>
@@ -297,7 +304,7 @@ const CampaignListTable = () => {
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
             <Tooltip title='Edit'>
-              <IconButton size='small' onClick={() => router.push(`/campaigns/${row.original.id}`)}>
+              <IconButton size='small' onClick={() => router.push(`/${locale}/campaigns/${row.original.id}`)}>
                 <i className='tabler-pencil text-[22px] text-textSecondary' />
               </IconButton>
             </Tooltip>
@@ -316,24 +323,18 @@ const CampaignListTable = () => {
         )
       })
     ],
-    [router]
+    [router, locale]
   )
 
   const table = useReactTable({
     data: campaigns,
     columns,
     filterFns: {
-      fuzzy: fuzzyFilter
+      fuzzy: () => true
     },
-    state: {
-      globalFilter
-    },
-    globalFilterFn: fuzzyFilter,
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     manualPagination: true,
+    manualFiltering: true,
     pageCount: Math.ceil(totalCount / rowsPerPage)
   })
 
@@ -342,18 +343,19 @@ const CampaignListTable = () => {
       <Card>
         <CardHeader
           title='Campaigns'
+          sx={{ flexWrap: 'wrap', rowGap: 2 }}
           action={
             <Button
               variant='contained'
               startIcon={<i className='tabler-plus' />}
               component={Link}
-              href='/campaigns/create'
+              href={`/${locale}/campaigns/create`}
             >
               Create Campaign
             </Button>
           }
         />
-        <div className='flex items-center justify-between gap-4 p-6 pt-0'>
+        <div className='flex items-center flex-wrap justify-between gap-4 p-6 pt-0'>
           <TextField
             size='small'
             placeholder='Search campaigns...'
@@ -368,7 +370,7 @@ const CampaignListTable = () => {
               )
             }}
           />
-          <FormControl size='small' className='min-is-[150px]'>
+          <FormControl size='small' className='min-is-[150px] max-sm:is-full'>
             <InputLabel>Status</InputLabel>
             <Select
               value={statusFilter}
@@ -486,7 +488,7 @@ const CampaignListTable = () => {
       </Menu>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullScreen={isMobile}>
         <DialogTitle>Delete Campaign</DialogTitle>
         <DialogContent>
           <DialogContentText>

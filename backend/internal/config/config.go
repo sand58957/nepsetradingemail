@@ -45,7 +45,7 @@ func Load() (*Config, error) {
 		JWTSecret:        getEnv("JWT_SECRET", ""),
 		JWTExpiry:        jwtExpiry,
 		RefreshExpiry:    refreshExpiry,
-		FrontendURL:      getEnv("FRONTEND_URL", "http://localhost:3000"),
+		FrontendURL:      getEnv("FRONTEND_URL", "https://nepalfillings.com"),
 	}
 
 	if cfg.JWTSecret == "" {

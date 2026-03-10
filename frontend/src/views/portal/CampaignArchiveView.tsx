@@ -12,6 +12,8 @@ import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
 
+import DOMPurify from 'isomorphic-dompurify'
+
 import type { Locale } from '@configs/i18n'
 
 import { portalService } from '@/services/portal'
@@ -48,10 +50,10 @@ const CampaignArchiveView = () => {
         if (campaignData) {
           const parsed = typeof campaignData === 'string' ? JSON.parse(campaignData) : campaignData
 
-          setCampaignName(parsed?.data?.subject || parsed?.data?.name || 'Newsletter')
+          setCampaignName(parsed?.subject || parsed?.name || parsed?.data?.subject || parsed?.data?.name || 'Newsletter')
         }
       }
-    } catch (err: any) {
+    } catch {
       setError('Failed to load newsletter')
     } finally {
       setLoading(false)
@@ -100,7 +102,7 @@ const CampaignArchiveView = () => {
       <Card>
         <CardContent>
           {html ? (
-            <div dangerouslySetInnerHTML={{ __html: html }} style={{ maxWidth: '100%', overflow: 'hidden' }} />
+            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} style={{ maxWidth: '100%', overflow: 'hidden' }} />
           ) : (
             <Typography color='text.secondary' className='text-center py-8'>
               No content available for this newsletter

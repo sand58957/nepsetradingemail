@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 
@@ -18,6 +20,15 @@ func NewCampaignHandler(lm *listmonk.Client) *CampaignHandler {
 	return &CampaignHandler{lm: lm}
 }
 
+// validateCampaignID validates that the path param is a numeric ID
+func validateCampaignID(c echo.Context) (string, error) {
+	id := c.Param("id")
+	if _, err := strconv.Atoi(id); err != nil {
+		return "", response.BadRequest(c, "Invalid campaign ID")
+	}
+	return id, nil
+}
+
 func (h *CampaignHandler) List(c echo.Context) error {
 	params := map[string]string{}
 	if v := c.QueryParam("page"); v != "" {
@@ -29,13 +40,22 @@ func (h *CampaignHandler) List(c echo.Context) error {
 	if v := c.QueryParam("query"); v != "" {
 		params["query"] = v
 	}
-	if v := c.QueryParam("order_by"); v != "" {
+	// Whitelist order_by to prevent SQL injection via downstream Listmonk
+	allowedOrderBy := map[string]bool{
+		"created_at": true, "updated_at": true, "name": true, "status": true,
+	}
+	if v := c.QueryParam("order_by"); v != "" && allowedOrderBy[v] {
 		params["order_by"] = v
 	}
-	if v := c.QueryParam("order"); v != "" {
+	// Whitelist order direction
+	if v := c.QueryParam("order"); v == "asc" || v == "desc" || v == "ASC" || v == "DESC" {
 		params["order"] = v
 	}
-	if v := c.QueryParam("status"); v != "" {
+	// Whitelist campaign status
+	allowedStatus := map[string]bool{
+		"draft": true, "running": true, "scheduled": true, "paused": true, "cancelled": true, "finished": true,
+	}
+	if v := c.QueryParam("status"); v != "" && allowedStatus[v] {
 		params["status"] = v
 	}
 	if v := c.QueryParam("tag"); v != "" {
@@ -44,6 +64,7 @@ func (h *CampaignHandler) List(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Get("/campaigns", params)
 	if err != nil {
+		log.Printf("[campaigns] Failed to fetch campaigns: %v", err)
 		return response.InternalError(c, "Failed to fetch campaigns from Listmonk")
 	}
 
@@ -51,9 +72,14 @@ func (h *CampaignHandler) List(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Get(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateCampaignID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Get(fmt.Sprintf("/campaigns/%s", id), nil)
 	if err != nil {
+		log.Printf("[campaigns] Failed to fetch campaign %s: %v", id, err)
 		return response.InternalError(c, "Failed to fetch campaign from Listmonk")
 	}
 
@@ -68,6 +94,7 @@ func (h *CampaignHandler) Create(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Post("/campaigns", payload)
 	if err != nil {
+		log.Printf("[campaigns] Failed to create campaign: %v", err)
 		return response.InternalError(c, "Failed to create campaign in Listmonk")
 	}
 
@@ -75,7 +102,11 @@ func (h *CampaignHandler) Create(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Update(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateCampaignID(c)
+	if err != nil {
+		return err
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -83,6 +114,7 @@ func (h *CampaignHandler) Update(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Put(fmt.Sprintf("/campaigns/%s", id), payload)
 	if err != nil {
+		log.Printf("[campaigns] Failed to update campaign %s: %v", id, err)
 		return response.InternalError(c, "Failed to update campaign in Listmonk")
 	}
 
@@ -90,9 +122,14 @@ func (h *CampaignHandler) Update(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Delete(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateCampaignID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Delete(fmt.Sprintf("/campaigns/%s", id))
 	if err != nil {
+		log.Printf("[campaigns] Failed to delete campaign %s: %v", id, err)
 		return response.InternalError(c, "Failed to delete campaign from Listmonk")
 	}
 
@@ -100,7 +137,11 @@ func (h *CampaignHandler) Delete(c echo.Context) error {
 }
 
 func (h *CampaignHandler) UpdateStatus(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateCampaignID(c)
+	if err != nil {
+		return err
+	}
+
 	var payload struct {
 		Status string `json:"status"`
 	}
@@ -108,8 +149,15 @@ func (h *CampaignHandler) UpdateStatus(c echo.Context) error {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
+	// Validate status value
+	validStatuses := map[string]bool{"running": true, "paused": true, "cancelled": true, "scheduled": true}
+	if !validStatuses[payload.Status] {
+		return response.BadRequest(c, "Invalid status. Must be one of: running, paused, cancelled, scheduled")
+	}
+
 	data, statusCode, err := h.lm.Put(fmt.Sprintf("/campaigns/%s/status", id), payload)
 	if err != nil {
+		log.Printf("[campaigns] Failed to update status for campaign %s: %v", id, err)
 		return response.InternalError(c, "Failed to update campaign status in Listmonk")
 	}
 
@@ -117,14 +165,20 @@ func (h *CampaignHandler) UpdateStatus(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Test(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateCampaignID(c)
+	if err != nil {
+		return err
+	}
+
+	// Decode body directly to avoid Echo's c.Bind() merging path params into the map
 	var payload map[string]interface{}
-	if err := c.Bind(&payload); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
 	data, statusCode, err := h.lm.Post(fmt.Sprintf("/campaigns/%s/test", id), payload)
 	if err != nil {
+		log.Printf("[campaigns] Failed to send test for campaign %s: %v", id, err)
 		return response.InternalError(c, "Failed to send test campaign in Listmonk")
 	}
 
@@ -132,9 +186,14 @@ func (h *CampaignHandler) Test(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Preview(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateCampaignID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Get(fmt.Sprintf("/campaigns/%s/preview", id), nil)
 	if err != nil {
+		log.Printf("[campaigns] Failed to preview campaign %s: %v", id, err)
 		return response.InternalError(c, "Failed to preview campaign from Listmonk")
 	}
 
@@ -153,9 +212,14 @@ func (h *CampaignHandler) Preview(c echo.Context) error {
 }
 
 func (h *CampaignHandler) GetStats(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateCampaignID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Get(fmt.Sprintf("/campaigns/%s", id), nil)
 	if err != nil {
+		log.Printf("[campaigns] Failed to fetch stats for campaign %s: %v", id, err)
 		return response.InternalError(c, "Failed to fetch campaign stats from Listmonk")
 	}
 
@@ -163,8 +227,10 @@ func (h *CampaignHandler) GetStats(c echo.Context) error {
 }
 
 func (h *CampaignHandler) GetRunning(c echo.Context) error {
-	data, statusCode, err := h.lm.Get("/campaigns/running/stats", nil)
+	// Fetch campaigns with status=running filter (Listmonk doesn't have a /running/stats endpoint)
+	data, statusCode, err := h.lm.Get("/campaigns", map[string]string{"status": "running"})
 	if err != nil {
+		log.Printf("[campaigns] Failed to fetch running campaigns: %v", err)
 		return response.InternalError(c, "Failed to fetch running campaigns from Listmonk")
 	}
 
@@ -191,11 +257,12 @@ func (h *CampaignHandler) ListArchive(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Get("/campaigns", params)
 	if err != nil {
+		log.Printf("[campaigns] Failed to fetch campaign archive: %v", err)
 		return response.InternalError(c, "Failed to fetch campaign archive")
 	}
 
 	if statusCode >= 400 {
-		return c.JSONBlob(statusCode, data)
+		return response.InternalError(c, "Failed to fetch campaign archive")
 	}
 
 	// Parse and strip sensitive data — only return public-safe fields
@@ -208,11 +275,32 @@ func (h *CampaignHandler) ListArchive(c echo.Context) error {
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(data, &result); err != nil {
-		return c.JSONBlob(statusCode, data)
+		return response.InternalError(c, "Failed to parse campaign data")
+	}
+
+	// Sanitize each campaign — only expose public-safe fields
+	sanitized := make([]map[string]interface{}, 0, len(result.Data.Results))
+	for _, raw := range result.Data.Results {
+		var campaign map[string]interface{}
+		if err := json.Unmarshal(raw, &campaign); err != nil {
+			continue
+		}
+		sanitized = append(sanitized, map[string]interface{}{
+			"id":         campaign["id"],
+			"name":       campaign["name"],
+			"subject":    campaign["subject"],
+			"status":     campaign["status"],
+			"tags":       campaign["tags"],
+			"created_at": campaign["created_at"],
+			"started_at": campaign["started_at"],
+			"sent":       campaign["sent"],
+			"views":      campaign["views"],
+			"clicks":     campaign["clicks"],
+		})
 	}
 
 	return response.Success(c, map[string]interface{}{
-		"results":  result.Data.Results,
+		"results":  sanitized,
 		"total":    result.Data.Total,
 		"page":     result.Data.Page,
 		"per_page": result.Data.PerPage,
@@ -221,35 +309,49 @@ func (h *CampaignHandler) ListArchive(c echo.Context) error {
 
 // GetArchive returns a single finished campaign's rendered HTML for public viewing
 func (h *CampaignHandler) GetArchive(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateCampaignID(c)
+	if err != nil {
+		return err
+	}
 
 	// Get campaign details to verify it's finished
 	campaignData, statusCode, err := h.lm.Get(fmt.Sprintf("/campaigns/%s", id), nil)
 	if err != nil {
+		log.Printf("[campaigns] Failed to fetch archive campaign %s: %v", id, err)
 		return response.InternalError(c, "Failed to fetch campaign")
 	}
 
 	if statusCode >= 400 {
-		return c.JSONBlob(statusCode, campaignData)
+		return response.NotFound(c, "Campaign not found")
 	}
 
-	// Verify campaign is finished (public access only for finished campaigns)
-	var campaign struct {
+	// Parse campaign for status check and public-safe fields
+	var campaignFull struct {
 		Data struct {
-			Status string `json:"status"`
+			ID        interface{} `json:"id"`
+			Name      string      `json:"name"`
+			Subject   string      `json:"subject"`
+			Status    string      `json:"status"`
+			Tags      interface{} `json:"tags"`
+			CreatedAt string      `json:"created_at"`
+			StartedAt string      `json:"started_at"`
+			Sent      int         `json:"sent"`
+			Views     int         `json:"views"`
+			Clicks    int         `json:"clicks"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(campaignData, &campaign); err != nil {
+	if err := json.Unmarshal(campaignData, &campaignFull); err != nil {
 		return response.InternalError(c, "Failed to parse campaign data")
 	}
 
-	if campaign.Data.Status != "finished" {
+	if campaignFull.Data.Status != "finished" {
 		return response.NotFound(c, "Campaign not found in archive")
 	}
 
 	// Get the campaign preview (rendered HTML)
 	previewData, previewStatus, err := h.lm.Get(fmt.Sprintf("/campaigns/%s/preview", id), nil)
 	if err != nil {
+		log.Printf("[campaigns] Failed to fetch preview for archive campaign %s: %v", id, err)
 		return response.InternalError(c, "Failed to fetch campaign preview")
 	}
 
@@ -260,12 +362,24 @@ func (h *CampaignHandler) GetArchive(c echo.Context) error {
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(previewData, &previewResult); err == nil && previewResult.Data.Body != "" {
+			// Return only public-safe campaign metadata (no body, from_email, internal IDs, etc.)
 			return response.Success(c, map[string]interface{}{
-				"html":     previewResult.Data.Body,
-				"campaign": json.RawMessage(campaignData),
+				"html": previewResult.Data.Body,
+				"campaign": map[string]interface{}{
+					"id":         campaignFull.Data.ID,
+					"name":       campaignFull.Data.Name,
+					"subject":    campaignFull.Data.Subject,
+					"status":     campaignFull.Data.Status,
+					"tags":       campaignFull.Data.Tags,
+					"created_at": campaignFull.Data.CreatedAt,
+					"started_at": campaignFull.Data.StartedAt,
+					"sent":       campaignFull.Data.Sent,
+					"views":      campaignFull.Data.Views,
+					"clicks":     campaignFull.Data.Clicks,
+				},
 			})
 		}
 	}
 
-	return c.JSONBlob(previewStatus, previewData)
+	return response.InternalError(c, "Failed to render campaign preview")
 }

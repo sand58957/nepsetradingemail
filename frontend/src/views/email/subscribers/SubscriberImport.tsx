@@ -148,7 +148,7 @@ const SubscriberImport = () => {
         <CardContent>
           {activeSubTab === 0 && <CSVImportWizard onImportComplete={fetchAnalytics} />}
           {activeSubTab === 1 && <APIImport onImportComplete={fetchAnalytics} />}
-          {activeSubTab === 2 && <WebhookImport />}
+          {activeSubTab === 2 && <WebhookImport onWebhookChange={fetchAnalytics} />}
           {activeSubTab === 3 && <ImportHistoryTable />}
         </CardContent>
       </Card>

@@ -2,7 +2,7 @@ import axios from 'axios'
 import { getSession } from 'next-auth/react'
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://nepalfillings.com/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -62,8 +62,12 @@ api.interceptors.response.use(
         cachedToken = null
         tokenFetchedAt = 0
 
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login'
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          // Extract locale from current URL path (e.g., /en/campaigns/list -> en)
+          const pathParts = window.location.pathname.split('/')
+          const locale = pathParts[1] && pathParts[1].length === 2 ? pathParts[1] : 'en'
+
+          window.location.href = `/${locale}/login`
         }
       }
 
@@ -74,5 +78,10 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+export const clearTokenCache = () => {
+  cachedToken = null
+  tokenFetchedAt = 0
+}
 
 export default api

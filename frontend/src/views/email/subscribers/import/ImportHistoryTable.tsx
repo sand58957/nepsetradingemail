@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -31,6 +31,7 @@ import Grid from '@mui/material/Grid'
 
 import type { ImportHistoryRecord, ImportSource, ImportStatus } from '@/types/email'
 import importService from '@/services/import'
+import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
 const statusColorMap: Record<ImportStatus, 'default' | 'primary' | 'success' | 'error' | 'warning' | 'info'> = {
   pending: 'default',
@@ -65,8 +66,9 @@ const ImportHistoryTable = () => {
   const [deleting, setDeleting] = useState(false)
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
+  const isMobile = useMobileBreakpoint()
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     setLoading(true)
 
     try {
@@ -88,11 +90,11 @@ const ImportHistoryTable = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, perPage, sourceFilter, statusFilter])
 
   useEffect(() => {
     fetchHistory()
-  }, [page, perPage, sourceFilter, statusFilter])
+  }, [fetchHistory])
 
   const handleDelete = async () => {
     if (!deleteId) return
@@ -131,7 +133,7 @@ const ImportHistoryTable = () => {
   return (
     <Box className='flex flex-col gap-4'>
       {/* Filters */}
-      <Box className='flex items-center gap-3'>
+      <Box className='flex items-center flex-wrap gap-3'>
         <FormControl size='small' sx={{ minWidth: 140 }}>
           <InputLabel>Source</InputLabel>
           <Select value={sourceFilter} label='Source' onChange={e => { setSourceFilter(e.target.value); setPage(0) }}>
@@ -279,7 +281,7 @@ const ImportHistoryTable = () => {
       )}
 
       {/* Detail Dialog */}
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth='md' fullWidth>
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth='md' fullWidth fullScreen={isMobile}>
         <DialogTitle>Import Details #{selectedRecord?.id}</DialogTitle>
         <DialogContent>
           {selectedRecord && (
@@ -412,7 +414,7 @@ const ImportHistoryTable = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>
+      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} fullScreen={isMobile}>
         <DialogTitle>Delete Import Record</DialogTitle>
         <DialogContent>
           <Typography>Are you sure you want to delete this import history record? This action cannot be undone.</Typography>

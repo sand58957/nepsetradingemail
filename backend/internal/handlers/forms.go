@@ -56,10 +56,13 @@ func (h *FormHandler) List(c echo.Context) error {
 }
 
 func (h *FormHandler) Get(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	var form models.Form
-	err := h.db.Get(&form, "SELECT * FROM app_forms WHERE id = $1", id)
+	err = h.db.Get(&form, "SELECT * FROM app_forms WHERE id = $1", id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return response.NotFound(c, "Form not found")
@@ -108,7 +111,10 @@ func (h *FormHandler) Create(c echo.Context) error {
 }
 
 func (h *FormHandler) Update(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	var req models.UpdateFormRequest
 	if err := c.Bind(&req); err != nil {
@@ -134,7 +140,7 @@ func (h *FormHandler) Update(c echo.Context) error {
 	}
 
 	var form models.Form
-	err := h.db.QueryRowx(
+	err = h.db.QueryRowx(
 		`UPDATE app_forms
 		 SET name = $1, description = $2, list_ids = $3, fields = $4, settings = $5, is_active = $6, updated_at = NOW()
 		 WHERE id = $7
@@ -152,7 +158,10 @@ func (h *FormHandler) Update(c echo.Context) error {
 }
 
 func (h *FormHandler) Delete(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	result, err := h.db.Exec("DELETE FROM app_forms WHERE id = $1", id)
 	if err != nil {
@@ -168,10 +177,13 @@ func (h *FormHandler) Delete(c echo.Context) error {
 }
 
 func (h *FormHandler) Submit(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	var form models.Form
-	err := h.db.Get(&form, "SELECT * FROM app_forms WHERE id = $1 AND is_active = true", id)
+	err = h.db.Get(&form, "SELECT * FROM app_forms WHERE id = $1 AND is_active = true", id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return response.NotFound(c, "Form not found or inactive")

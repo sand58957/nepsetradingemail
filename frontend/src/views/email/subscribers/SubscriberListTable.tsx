@@ -3,6 +3,9 @@
 // React Imports
 import { useState, useMemo, useEffect, useCallback } from 'react'
 
+// Next Imports
+import { useParams } from 'next/navigation'
+
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
@@ -34,11 +37,9 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import type { ColumnDef, FilterFn } from '@tanstack/react-table'
-import { rankItem } from '@tanstack/match-sorter-utils'
+import type { ColumnDef } from '@tanstack/react-table'
 
 // Type Imports
 import type { Subscriber, SubscriberStatus, List } from '@/types/email'
@@ -47,20 +48,14 @@ import type { Subscriber, SubscriberStatus, List } from '@/types/email'
 import subscriberService from '@/services/subscribers'
 import listService from '@/services/lists'
 
+// Hook Imports
+import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
+
 // Styles Imports
 import tableStyles from '@core/styles/table.module.css'
 
 type SubscriberWithAction = Subscriber & {
   action?: string
-}
-
-// Fuzzy filter
-const fuzzyFilter: FilterFn<SubscriberWithAction> = (row, columnId, value, addMeta) => {
-  const itemRank = rankItem(row.getValue(columnId), value)
-
-  addMeta({ itemRank })
-
-  return itemRank.passed
 }
 
 // Status color mapping
@@ -79,6 +74,9 @@ const statusColorMap: Record<
 const columnHelper = createColumnHelper<SubscriberWithAction>()
 
 const SubscriberListTable = () => {
+  const { lang } = useParams()
+  const locale = (lang as string) || 'en'
+
   // States
   const [subscribers, setSubscribers] = useState<SubscriberWithAction[]>([])
   const [loading, setLoading] = useState(true)
@@ -93,6 +91,7 @@ const SubscriberListTable = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [subscriberToDelete, setSubscriberToDelete] = useState<SubscriberWithAction | null>(null)
+
   const [newSubscriber, setNewSubscriber] = useState({
     name: '',
     email: '',
@@ -111,6 +110,8 @@ const SubscriberListTable = () => {
   })
 
   const [submitting, setSubmitting] = useState(false)
+
+  const isMobile = useMobileBreakpoint()
 
   // Debounce search input
   useEffect(() => {
@@ -133,12 +134,26 @@ const SubscriberListTable = () => {
       }
 
       if (searchDebounce) {
-        params.query = `subscribers.name ILIKE '%${searchDebounce}%' OR subscribers.email ILIKE '%${searchDebounce}%'`
+        // Sanitize: escape SQL special chars and strip dangerous patterns
+        const sanitized = searchDebounce
+          .replace(/'/g, "''")
+          .replace(/%/g, '\\%')
+          .replace(/_/g, '\\_')
+          .replace(/[;\-\\]/g, '')
+          .replace(/\/\*/g, '')
+          .slice(0, 200)
+
+        params.query = `subscribers.name ILIKE '%${sanitized}%' OR subscribers.email ILIKE '%${sanitized}%'`
       }
 
       if (statusFilter !== 'all') {
-        const statusQuery = `subscribers.status = '${statusFilter}'`
-        params.query = params.query ? `(${params.query}) AND ${statusQuery}` : statusQuery
+        const allowed = ['enabled', 'disabled', 'blocklisted', 'unconfirmed', 'unsubscribed']
+
+        if (allowed.includes(statusFilter)) {
+          const statusQuery = `subscribers.status = '${statusFilter}'`
+
+          params.query = params.query ? `(${params.query}) AND ${statusQuery}` : statusQuery
+        }
       }
 
       const response = await subscriberService.getAll(params)
@@ -165,6 +180,7 @@ const SubscriberListTable = () => {
     const fetchLists = async () => {
       try {
         const response = await listService.getAll({ per_page: 100 })
+
         setAvailableLists(response.data?.results || [])
       } catch {
         console.error('Failed to fetch lists')
@@ -176,8 +192,10 @@ const SubscriberListTable = () => {
 
   // Handle add subscriber
   const handleAddSubscriber = async () => {
-    if (!newSubscriber.email) {
-      setSnackbar({ open: true, message: 'Email is required', severity: 'error' })
+    const emailTrimmed = newSubscriber.email.trim()
+
+    if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      setSnackbar({ open: true, message: 'Please enter a valid email address', severity: 'error' })
 
       return
     }
@@ -198,6 +216,7 @@ const SubscriberListTable = () => {
       fetchSubscribers()
     } catch (error: any) {
       const msg = error?.response?.data?.message || 'Failed to add subscriber'
+
       setSnackbar({ open: true, message: msg, severity: 'error' })
     } finally {
       setSubmitting(false)
@@ -218,6 +237,7 @@ const SubscriberListTable = () => {
       fetchSubscribers()
     } catch (error: any) {
       const msg = error?.response?.data?.message || 'Failed to delete subscriber'
+
       setSnackbar({ open: true, message: msg, severity: 'error' })
     } finally {
       setSubmitting(false)
@@ -286,7 +306,7 @@ const SubscriberListTable = () => {
           <div className='flex items-center gap-1'>
             <IconButton
               size='small'
-              href={`subscribers/${row.original.id}`}
+              href={`/${locale}/subscribers/${row.original.id}`}
               title='View details'
             >
               <i className='tabler-eye text-[22px] text-textSecondary' />
@@ -312,11 +332,11 @@ const SubscriberListTable = () => {
     data: subscribers,
     columns,
     filterFns: {
-      fuzzy: fuzzyFilter
+      fuzzy: () => true
     },
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     manualPagination: true,
+    manualFiltering: true,
     pageCount: Math.ceil(totalCount / perPage)
   })
 
@@ -326,13 +346,14 @@ const SubscriberListTable = () => {
         <CardHeader
           title='Subscribers'
           subheader={!loading ? `${totalCount} total subscribers` : undefined}
+          sx={{ flexWrap: 'wrap', rowGap: 2 }}
           action={
             <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => setAddDialogOpen(true)}>
               Add Subscriber
             </Button>
           }
         />
-        <div className='flex items-center justify-between gap-4 p-6 pt-0'>
+        <div className='flex items-center flex-wrap justify-between gap-4 p-6 pt-0'>
           <TextField
             size='small'
             placeholder='Search subscribers...'
@@ -347,7 +368,7 @@ const SubscriberListTable = () => {
               )
             }}
           />
-          <FormControl size='small' className='min-is-[150px]'>
+          <FormControl size='small' className='min-is-[150px] max-sm:is-full'>
             <InputLabel>Status</InputLabel>
             <Select
               value={statusFilter}
@@ -444,7 +465,7 @@ const SubscriberListTable = () => {
       </Card>
 
       {/* Add Subscriber Dialog */}
-      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth='sm' fullWidth>
+      <Dialog open={addDialogOpen} onClose={() => { setAddDialogOpen(false); setNewSubscriber({ name: '', email: '', status: 'enabled', lists: [] }) }} maxWidth='sm' fullWidth fullScreen={isMobile}>
         <DialogTitle>Add New Subscriber</DialogTitle>
         <DialogContent>
           <Grid container spacing={4} className='pt-2'>
@@ -500,7 +521,7 @@ const SubscriberListTable = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)} color='secondary' disabled={submitting}>
+          <Button onClick={() => { setAddDialogOpen(false); setNewSubscriber({ name: '', email: '', status: 'enabled', lists: [] }) }} color='secondary' disabled={submitting}>
             Cancel
           </Button>
           <Button onClick={handleAddSubscriber} variant='contained' disabled={submitting}>
@@ -510,7 +531,7 @@ const SubscriberListTable = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth='xs' fullWidth>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth='xs' fullWidth fullScreen={isMobile}>
         <DialogTitle>Delete Subscriber</DialogTitle>
         <DialogContent>
           <Typography>

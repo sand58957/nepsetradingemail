@@ -31,9 +31,8 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import CircularProgress from '@mui/material/CircularProgress'
 import Snackbar from '@mui/material/Snackbar'
-import IconButton from '@mui/material/IconButton'
 
-import type { List, CSVImportParams } from '@/types/email'
+import type { List } from '@/types/email'
 import importService from '@/services/import'
 import listService from '@/services/lists'
 
@@ -75,9 +74,20 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
   const [importLogs, setImportLogs] = useState<string>('')
   const [error, setError] = useState('')
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
+  const [fileText, setFileText] = useState<string>('')
 
-  // Ref to track import completion for use in setTimeout closure
+  // Refs for cleanup
   const importCompleteRef = useRef(false)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Cleanup intervals on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
 
   // Fetch lists on mount
   useEffect(() => {
@@ -89,7 +99,7 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
 
         setAvailableLists(res.data.results || [])
       } catch {
-        // silently fail
+        setSnackbar({ open: true, message: 'Failed to load lists', severity: 'error' })
       } finally {
         setListsLoading(false)
       }
@@ -102,6 +112,7 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
     (text: string) => {
       const delim = delimiter
       const lines = text.split('\n').filter(l => l.trim())
+
       const parsed = lines.map(line => {
         const result: string[] = []
         let current = ''
@@ -130,6 +141,50 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
     [delimiter]
   )
 
+  const applyParsing = useCallback(
+    (text: string) => {
+      const parsed = parseCSV(text)
+
+      if (parsed.length > 0) {
+        setHeaders(parsed[0])
+        setPreviewRows(parsed.slice(1, 6))
+
+        // Auto-detect field mapping
+        const mapping: Record<number, string> = {}
+
+        parsed[0].forEach((header, idx) => {
+          const h = header.toLowerCase().trim()
+
+          if (h === 'email' || h === 'e-mail' || h === 'email_address') {
+            mapping[idx] = 'email'
+          } else if (h === 'name' || h === 'full_name' || h === 'fullname') {
+            mapping[idx] = 'name'
+          } else if (h === 'city') {
+            mapping[idx] = 'attribs.city'
+          } else if (h === 'company' || h === 'organization') {
+            mapping[idx] = 'attribs.company'
+          } else if (h === 'country') {
+            mapping[idx] = 'attribs.country'
+          } else if (h === 'phone' || h === 'telephone') {
+            mapping[idx] = 'attribs.phone'
+          } else {
+            mapping[idx] = ''
+          }
+        })
+
+        setFieldMapping(mapping)
+      }
+    },
+    [parseCSV]
+  )
+
+  // Re-parse when delimiter changes and we have file text
+  useEffect(() => {
+    if (fileText) {
+      applyParsing(fileText)
+    }
+  }, [delimiter, fileText, applyParsing])
+
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const f = acceptedFiles[0]
@@ -141,42 +196,14 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
 
       reader.onload = e => {
         const text = e.target?.result as string
-        const parsed = parseCSV(text)
 
-        if (parsed.length > 0) {
-          setHeaders(parsed[0])
-          setPreviewRows(parsed.slice(1, 6))
-
-          // Auto-detect field mapping
-          const mapping: Record<number, string> = {}
-
-          parsed[0].forEach((header, idx) => {
-            const h = header.toLowerCase().trim()
-
-            if (h === 'email' || h === 'e-mail' || h === 'email_address') {
-              mapping[idx] = 'email'
-            } else if (h === 'name' || h === 'full_name' || h === 'fullname') {
-              mapping[idx] = 'name'
-            } else if (h === 'city') {
-              mapping[idx] = 'attribs.city'
-            } else if (h === 'company' || h === 'organization') {
-              mapping[idx] = 'attribs.company'
-            } else if (h === 'country') {
-              mapping[idx] = 'attribs.country'
-            } else if (h === 'phone' || h === 'telephone') {
-              mapping[idx] = 'attribs.phone'
-            } else {
-              mapping[idx] = ''
-            }
-          })
-
-          setFieldMapping(mapping)
-        }
+        setFileText(text)
+        applyParsing(text)
       }
 
       reader.readAsText(f)
     },
-    [parseCSV]
+    [applyParsing]
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -199,19 +226,26 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
     setError('')
 
     try {
-      const params: CSVImportParams = {
+      const params = {
         mode,
         delim: delimiter,
         lists: selectedLists.map(l => l.id),
-        overwrite
+        overwrite,
+        field_mapping: fieldMapping
       }
 
-      await importService.importCSV(file, params)
+      const importRes = await importService.importCSV(file, params)
+      const historyId = importRes?.history_id
+
       setImportProgress(30)
       setImportStatus('Processing...')
 
+      // Clear any previous intervals
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+
       // Poll for import status
-      const pollInterval = setInterval(async () => {
+      pollIntervalRef.current = setInterval(async () => {
         try {
           const statusRes = await importService.getImportStatus()
           const data = statusRes?.data
@@ -228,7 +262,8 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
             }
 
             if (data.status === 'finished' || data.status === 'stopped') {
-              clearInterval(pollInterval)
+              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+              pollIntervalRef.current = null
               setImportProgress(100)
               setImportComplete(true)
               importCompleteRef.current = true
@@ -240,12 +275,28 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
                 status: data.status
               })
 
+              // Update import history with completion status
+              if (historyId) {
+                try {
+                  await importService.updateHistory({
+                    id: historyId,
+                    status: data.status === 'finished' ? 'completed' : 'failed',
+                    total: data.total || 0,
+                    successful: data.imported || 0,
+                    failed: 0,
+                    skipped: 0
+                  })
+                } catch (_e) {
+                  // non-critical
+                }
+              }
+
               // Fetch logs
               try {
                 const logsRes = await importService.getImportLogs()
 
                 setImportLogs(typeof logsRes === 'string' ? logsRes : JSON.stringify(logsRes?.data, null, 2))
-              } catch {
+              } catch (_e) {
                 // ignore
               }
 
@@ -254,14 +305,17 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
               setSnackbar({ open: true, message: 'Import completed successfully!', severity: 'success' })
             }
           }
-        } catch {
+        } catch (_e) {
           // Keep polling
         }
       }, 2000)
 
       // Timeout after 5 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval)
+      timeoutRef.current = setTimeout(() => {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current)
+          pollIntervalRef.current = null
+        }
 
         if (!importCompleteRef.current) {
           setImporting(false)
@@ -289,6 +343,7 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
   const handleReset = () => {
     setActiveStep(0)
     setFile(null)
+    setFileText('')
     setPreviewRows([])
     setHeaders([])
     setFieldMapping({})
@@ -306,11 +361,13 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
     switch (activeStep) {
       case 0:
         return !!file
+
       case 1: {
         const mappedValues = Object.values(fieldMapping)
 
         return mappedValues.includes('email')
       }
+
       case 2:
         return selectedLists.length > 0 || mode === 'blocklist'
       default:
@@ -321,6 +378,16 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
   // Step 1: File Upload
   const renderFileUpload = () => (
     <Box className='flex flex-col gap-4'>
+      <FormControl size='small' sx={{ maxWidth: 200 }}>
+        <InputLabel>Delimiter</InputLabel>
+        <Select value={delimiter} label='Delimiter' onChange={e => setDelimiter(e.target.value)}>
+          <MenuItem value=','>Comma (,)</MenuItem>
+          <MenuItem value={'\t'}>Tab</MenuItem>
+          <MenuItem value=';'>Semicolon (;)</MenuItem>
+          <MenuItem value='|'>Pipe (|)</MenuItem>
+        </Select>
+      </FormControl>
+
       <Box
         {...getRootProps()}
         sx={{
@@ -447,17 +514,6 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
             <Select value={mode} label='Import Mode' onChange={e => setMode(e.target.value as 'subscribe' | 'blocklist')}>
               <MenuItem value='subscribe'>Subscribe — Add to lists</MenuItem>
               <MenuItem value='blocklist'>Blocklist — Block these emails</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <FormControl fullWidth>
-            <InputLabel>Delimiter</InputLabel>
-            <Select value={delimiter} label='Delimiter' onChange={e => setDelimiter(e.target.value)}>
-              <MenuItem value=','>Comma (,)</MenuItem>
-              <MenuItem value='\t'>Tab</MenuItem>
-              <MenuItem value=';'>Semicolon (;)</MenuItem>
-              <MenuItem value='|'>Pipe (|)</MenuItem>
             </Select>
           </FormControl>
         </Grid>

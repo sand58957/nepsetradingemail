@@ -3,14 +3,12 @@
 import { useState, useEffect } from 'react'
 
 // MUI Imports
+import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
-import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Divider from '@mui/material/Divider'
-import Alert from '@mui/material/Alert'
 import Chip from '@mui/material/Chip'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -23,13 +21,21 @@ import Tooltip from '@mui/material/Tooltip'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
+import Link from '@mui/material/Link'
+
+// Components
+import DomainVerificationDialog from './DomainVerificationDialog'
 
 // Services
 import accountSettingsService from '@/services/accountSettings'
 
 // Types
-import type { DomainsConfig, SendingDomain } from '@/types/email'
+import type { DomainsConfig, SendingDomain, SiteDomain } from '@/types/email'
+
+// Hook Imports
+import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
 interface Props {
   data: DomainsConfig
@@ -43,9 +49,16 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
     site_domains: []
   })
 
-  const [saving, setSaving] = useState(false)
-  const [addDomainOpen, setAddDomainOpen] = useState(false)
+  const [addSendingOpen, setAddSendingOpen] = useState(false)
+  const [addSiteOpen, setAddSiteOpen] = useState(false)
   const [newDomain, setNewDomain] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [verifyDomain, setVerifyDomain] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: 'sending' | 'site'; index: number; domain: string }>({
+    open: false, type: 'sending', index: -1, domain: ''
+  })
+
+  const isMobile = useMobileBreakpoint()
 
   useEffect(() => {
     if (data) {
@@ -53,41 +66,137 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
     }
   }, [data])
 
-  const handleAddDomain = () => {
+  const saveForm = async (updated: DomainsConfig, previous: DomainsConfig, silent = false): Promise<boolean> => {
+    try {
+      setSaving(true)
+      await accountSettingsService.updateDomains(updated)
+
+      if (!silent) {
+        onSaveSuccess('Domain settings updated')
+      }
+
+      return true
+    } catch (err) {
+      console.error('Failed to save domain settings:', err)
+      onSaveError('Failed to update domain settings')
+
+      // Rollback to previous state on failure
+      setForm(previous)
+
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const isValidDomain = (d: string) => /^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(d)
+
+  const handleAddSendingDomain = async () => {
     if (!newDomain.trim()) return
 
+    const domainName = newDomain.trim().toLowerCase()
+
+    if (!isValidDomain(domainName)) {
+      onSaveError('Please enter a valid domain name (e.g. mail.yourdomain.com)')
+      return
+    }
+
+    if (form.sending_domains.some(d => d.domain.toLowerCase() === domainName)) {
+      onSaveError('This domain has already been added')
+      return
+    }
+
     const domain: SendingDomain = {
-      domain: newDomain.trim(),
+      domain: domainName,
       status: 'pending',
       domain_alignment: false
     }
 
-    setForm(prev => ({
-      ...prev,
-      sending_domains: [...prev.sending_domains, domain]
-    }))
+    const previous = form
 
+    const updated = {
+      ...form,
+      sending_domains: [...form.sending_domains, domain]
+    }
+
+    setForm(updated)
     setNewDomain('')
-    setAddDomainOpen(false)
+    setAddSendingOpen(false)
+
+    // Save silently (no parent refetch) so the verify dialog can open
+    const ok = await saveForm(updated, previous, true)
+
+    if (ok) {
+      setVerifyDomain(domainName)
+    }
   }
 
-  const handleRemoveDomain = (index: number) => {
-    setForm(prev => ({
-      ...prev,
-      sending_domains: prev.sending_domains.filter((_, i) => i !== index)
-    }))
+  const handleRemoveSendingDomain = async (index: number) => {
+    const previous = form
+
+    const updated = {
+      ...form,
+      sending_domains: form.sending_domains.filter((_, i) => i !== index)
+    }
+
+    setForm(updated)
+    setDeleteConfirm({ open: false, type: 'sending', index: -1, domain: '' })
+    await saveForm(updated, previous)
   }
 
-  const handleSave = async () => {
-    try {
-      setSaving(true)
-      await accountSettingsService.updateDomains(form)
-      onSaveSuccess('Domain settings updated successfully')
-    } catch (err) {
-      console.error('Failed to save domain settings:', err)
-      onSaveError('Failed to update domain settings')
-    } finally {
-      setSaving(false)
+  const handleAddSiteDomain = async () => {
+    if (!newDomain.trim()) return
+
+    const domainName = newDomain.trim().toLowerCase()
+
+    if (!isValidDomain(domainName)) {
+      onSaveError('Please enter a valid domain name (e.g. www.yourdomain.com)')
+      return
+    }
+
+    if (form.site_domains.some(d => typeof d !== 'string' && d.domain.toLowerCase() === domainName)) {
+      onSaveError('This domain has already been added')
+      return
+    }
+
+    const domain: SiteDomain = {
+      domain: domainName,
+      status: 'pending',
+      ssl: false,
+      site: ''
+    }
+
+    const previous = form
+
+    const updated = {
+      ...form,
+      site_domains: [...form.site_domains, domain]
+    }
+
+    setForm(updated)
+    setNewDomain('')
+    setAddSiteOpen(false)
+    await saveForm(updated, previous)
+  }
+
+  const handleRemoveSiteDomain = async (index: number) => {
+    const previous = form
+
+    const updated = {
+      ...form,
+      site_domains: form.site_domains.filter((_, i) => i !== index)
+    }
+
+    setForm(updated)
+    setDeleteConfirm({ open: false, type: 'sending', index: -1, domain: '' })
+    await saveForm(updated, previous)
+  }
+
+  const handleDeleteConfirmed = async () => {
+    if (deleteConfirm.type === 'sending') {
+      await handleRemoveSendingDomain(deleteConfirm.index)
+    } else {
+      await handleRemoveSiteDomain(deleteConfirm.index)
     }
   }
 
@@ -108,151 +217,220 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
     <div className='flex flex-col gap-6'>
       {/* Sending Domains */}
       <Card>
-        <CardContent>
-          <div className='flex flex-col gap-4'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <Typography variant='h6' className='mb-1'>
-                  Sending domains
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  Authenticate your sending domains to improve deliverability and domain reputation
-                </Typography>
-              </div>
-              <Button
-                variant='contained'
-                size='small'
-                startIcon={<i className='tabler-plus' />}
-                onClick={() => setAddDomainOpen(true)}
-              >
-                Add domain
-              </Button>
-            </div>
+        <CardContent sx={{ p: { xs: 4, sm: 6 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant='h5' fontWeight={700}>
+              Sending domains
+            </Typography>
+            <Button
+              variant='contained'
+              color='success'
+              startIcon={<i className='tabler-plus' />}
+              onClick={() => { setNewDomain(''); setAddSendingOpen(true) }}
+              disabled={saving}
+            >
+              Add domain
+            </Button>
+          </Box>
 
-            {form.sending_domains.length > 0 ? (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Domain</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Domain alignment</TableCell>
-                      <TableCell align='right'>Actions</TableCell>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 4 }}>
+            Manage your sending domains. Need help? Learn more{' '}
+            <Link href='#' underline='hover' color='primary'>
+              about verification and authentication
+            </Link>{' '}
+            or{' '}
+            <Link href='#' underline='hover' color='primary'>
+              custom domains
+            </Link>
+            .
+          </Typography>
+
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Domain</TableCell>
+                  <TableCell>Status</TableCell>
+                  {form.sending_domains.length > 0 && <TableCell align='right'>Actions</TableCell>}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {form.sending_domains.length > 0 ? (
+                  form.sending_domains.map((domain, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell>
+                        <Typography fontWeight={500}>{domain.domain}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
+                          color={getStatusColor(domain.status) as any}
+                          size='small'
+                          variant='tonal'
+                        />
+                      </TableCell>
+                      <TableCell align='right'>
+                        <div className='flex items-center justify-end gap-1'>
+                          {domain.status === 'pending' && (
+                            <Tooltip title='Verify DNS records'>
+                              <IconButton size='small' onClick={() => setVerifyDomain(domain.domain)}>
+                                <i className='tabler-settings text-[18px]' />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Tooltip title='Remove'>
+                            <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, type: 'sending', index, domain: domain.domain })}>
+                              <i className='tabler-trash text-[18px]' />
+                            </IconButton>
+                          </Tooltip>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {form.sending_domains.map((domain, index) => (
-                      <TableRow key={index} hover>
-                        <TableCell>
-                          <Typography className='font-medium' color='text.primary'>
-                            {domain.domain}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={2}>
+                      <Typography color='text.secondary'>No sending domains.</Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+
+      {/* Sites */}
+      <Card>
+        <CardContent sx={{ p: { xs: 4, sm: 6 } }}>
+          {/* Upgrade banner */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1,
+              px: 3,
+              py: 2,
+              mb: 4
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <i className='tabler-star text-[20px]' style={{ opacity: 0.6 }} />
+              <Typography variant='body2' color='text.secondary'>
+                Custom domains are included in Paid plans.
+              </Typography>
+            </Box>
+            <Button variant='outlined' size='small'>
+              Upgrade
+            </Button>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant='h5' fontWeight={700}>
+              Sites
+            </Typography>
+            <Button
+              variant='contained'
+              color='success'
+              startIcon={<i className='tabler-plus' />}
+              onClick={() => { setNewDomain(''); setAddSiteOpen(true) }}
+              disabled={saving}
+              sx={{ opacity: 0.6 }}
+            >
+              Add domain
+            </Button>
+          </Box>
+
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 4 }}>
+            Create websites or landing pages using your own domain. Learn{' '}
+            <Link href='#' underline='hover' color='primary'>
+              how to add custom domains
+            </Link>
+            .
+          </Typography>
+
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Domain</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      SSL
+                      <Tooltip title='SSL certificates are automatically provisioned for verified domains'>
+                        <i className='tabler-help-circle text-[16px]' style={{ opacity: 0.5, cursor: 'help' }} />
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                  <TableCell>Site</TableCell>
+                  {form.site_domains.length > 0 && <TableCell align='right'>Actions</TableCell>}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {form.site_domains.length > 0 ? (
+                  form.site_domains.map((domain, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell>
+                        <Typography fontWeight={500}>
+                          {typeof domain === 'string' ? domain : domain.domain}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {typeof domain !== 'string' && (
                           <Chip
                             label={domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
                             color={getStatusColor(domain.status) as any}
                             size='small'
                             variant='tonal'
                           />
-                        </TableCell>
-                        <TableCell>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {typeof domain !== 'string' && (
                           <Chip
-                            label={domain.domain_alignment ? 'Aligned' : 'Not aligned'}
-                            color={domain.domain_alignment ? 'success' : 'default'}
+                            label={domain.ssl ? 'Active' : 'Inactive'}
+                            color={domain.ssl ? 'success' : 'default'}
                             size='small'
                             variant='tonal'
                           />
-                        </TableCell>
-                        <TableCell align='right'>
-                          <div className='flex items-center justify-end gap-1'>
-                            <Tooltip title='Verify'>
-                              <IconButton size='small'>
-                                <i className='tabler-check text-[18px]' />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title='DNS Records'>
-                              <IconButton size='small'>
-                                <i className='tabler-file-text text-[18px]' />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title='Remove'>
-                              <IconButton size='small' onClick={() => handleRemoveDomain(index)}>
-                                <i className='tabler-trash text-[18px]' />
-                              </IconButton>
-                            </Tooltip>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Alert severity='info'>
-                No sending domains configured. Add a domain to improve email deliverability.
-              </Alert>
-            )}
-          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant='body2' color='text.secondary'>
+                          {typeof domain === 'string' ? '' : domain.site || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align='right'>
+                        <Tooltip title='Remove'>
+                          <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, type: 'site', index, domain: typeof domain === 'string' ? domain : domain.domain })}>
+                            <i className='tabler-trash text-[18px]' />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4}>
+                      <Typography color='text.secondary'>No custom domains.</Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </CardContent>
       </Card>
 
-      {/* Sites */}
-      <Card>
-        <CardContent>
-          <div className='flex flex-col gap-4'>
-            <div>
-              <Typography variant='h6' className='mb-1'>
-                Sites
-              </Typography>
-              <Typography variant='body2' color='text.secondary'>
-                Custom domains for landing pages and forms
-              </Typography>
-            </div>
-
-            <Alert severity='info' icon={<i className='tabler-info-circle text-[20px]' />}>
-              Custom domains for landing pages and forms are included in Paid plans. Upgrade your plan to use custom
-              site domains.
-            </Alert>
-
-            {form.site_domains.length > 0 && (
-              <div className='flex flex-wrap gap-2'>
-                {form.site_domains.map((domain, index) => (
-                  <Chip
-                    key={index}
-                    label={domain}
-                    onDelete={() => {
-                      setForm(prev => ({
-                        ...prev,
-                        site_domains: prev.site_domains.filter((_, i) => i !== index)
-                      }))
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Save Button */}
-      <div className='flex justify-end'>
-        <Button
-          variant='contained'
-          color='success'
-          onClick={handleSave}
-          disabled={saving}
-          startIcon={saving ? null : <i className='tabler-device-floppy' />}
-        >
-          {saving ? 'Saving...' : 'Save changes'}
-        </Button>
-      </div>
-
-      {/* Add Domain Dialog */}
-      <Dialog open={addDomainOpen} onClose={() => setAddDomainOpen(false)} maxWidth='sm' fullWidth>
+      {/* Add Sending Domain Dialog */}
+      <Dialog open={addSendingOpen} onClose={() => setAddSendingOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
         <DialogTitle>Add sending domain</DialogTitle>
         <DialogContent>
-          <Typography variant='body2' color='text.secondary' className='mb-4'>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
             Enter the domain you want to authenticate for sending emails. You will need to add DNS records to verify
             ownership.
           </Typography>
@@ -263,18 +441,82 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
             onChange={e => setNewDomain(e.target.value)}
             placeholder='e.g. mail.yourdomain.com'
             autoFocus
-            className='mt-2'
+            sx={{ mt: 1 }}
+            onKeyDown={e => e.key === 'Enter' && handleAddSendingDomain()}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAddDomainOpen(false)} color='secondary'>
+          <Button onClick={() => setAddSendingOpen(false)} color='secondary'>
             Cancel
           </Button>
-          <Button onClick={handleAddDomain} variant='contained' disabled={!newDomain.trim()}>
+          <Button onClick={handleAddSendingDomain} variant='contained' disabled={!newDomain.trim() || saving}>
             Add domain
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Add Site Domain Dialog */}
+      <Dialog open={addSiteOpen} onClose={() => setAddSiteOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+        <DialogTitle>Add custom domain</DialogTitle>
+        <DialogContent>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
+            Enter the custom domain for your website or landing page.
+          </Typography>
+          <TextField
+            fullWidth
+            label='Domain'
+            value={newDomain}
+            onChange={e => setNewDomain(e.target.value)}
+            placeholder='e.g. www.yourdomain.com'
+            autoFocus
+            sx={{ mt: 1 }}
+            onKeyDown={e => e.key === 'Enter' && handleAddSiteDomain()}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddSiteOpen(false)} color='secondary'>
+            Cancel
+          </Button>
+          <Button onClick={handleAddSiteDomain} variant='contained' disabled={!newDomain.trim() || saving}>
+            Add domain
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Domain Confirmation */}
+      <Dialog open={deleteConfirm.open} onClose={() => setDeleteConfirm(prev => ({ ...prev, open: false }))}>
+        <DialogTitle>Remove Domain</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to remove <strong>{deleteConfirm.domain}</strong>? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirm(prev => ({ ...prev, open: false }))}>Cancel</Button>
+          <Button onClick={handleDeleteConfirmed} color='error' variant='contained'>
+            Remove
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Domain Verification Wizard */}
+      <DomainVerificationDialog
+        open={!!verifyDomain}
+        onClose={() => setVerifyDomain(null)}
+        domain={verifyDomain || ''}
+        onVerificationComplete={(domain, status) => {
+          setForm(prev => ({
+            ...prev,
+            sending_domains: prev.sending_domains.map(d =>
+              d.domain === domain ? { ...d, status } : d
+            )
+          }))
+
+          if (status === 'verified') {
+            onSaveSuccess('Domain verified successfully!')
+          }
+        }}
+      />
     </div>
   )
 }

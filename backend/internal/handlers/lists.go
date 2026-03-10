@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"fmt"
+	"log"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 
@@ -15,6 +17,15 @@ type ListHandler struct {
 
 func NewListHandler(lm *listmonk.Client) *ListHandler {
 	return &ListHandler{lm: lm}
+}
+
+// validateListID validates that the path param is a numeric ID
+func validateListID(c echo.Context) (string, error) {
+	id := c.Param("id")
+	if _, err := strconv.Atoi(id); err != nil {
+		return "", response.BadRequest(c, "Invalid list ID")
+	}
+	return id, nil
 }
 
 func (h *ListHandler) List(c echo.Context) error {
@@ -40,6 +51,7 @@ func (h *ListHandler) List(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Get("/lists", params)
 	if err != nil {
+		log.Printf("[lists] Failed to fetch lists: %v", err)
 		return response.InternalError(c, "Failed to fetch lists from Listmonk")
 	}
 
@@ -47,9 +59,14 @@ func (h *ListHandler) List(c echo.Context) error {
 }
 
 func (h *ListHandler) Get(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateListID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Get(fmt.Sprintf("/lists/%s", id), nil)
 	if err != nil {
+		log.Printf("[lists] Failed to fetch list %s: %v", id, err)
 		return response.InternalError(c, "Failed to fetch list from Listmonk")
 	}
 
@@ -64,6 +81,7 @@ func (h *ListHandler) Create(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Post("/lists", payload)
 	if err != nil {
+		log.Printf("[lists] Failed to create list: %v", err)
 		return response.InternalError(c, "Failed to create list in Listmonk")
 	}
 
@@ -71,7 +89,11 @@ func (h *ListHandler) Create(c echo.Context) error {
 }
 
 func (h *ListHandler) Update(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateListID(c)
+	if err != nil {
+		return err
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -79,6 +101,7 @@ func (h *ListHandler) Update(c echo.Context) error {
 
 	data, statusCode, err := h.lm.Put(fmt.Sprintf("/lists/%s", id), payload)
 	if err != nil {
+		log.Printf("[lists] Failed to update list %s: %v", id, err)
 		return response.InternalError(c, "Failed to update list in Listmonk")
 	}
 
@@ -86,9 +109,14 @@ func (h *ListHandler) Update(c echo.Context) error {
 }
 
 func (h *ListHandler) Delete(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateListID(c)
+	if err != nil {
+		return err
+	}
+
 	data, statusCode, err := h.lm.Delete(fmt.Sprintf("/lists/%s", id))
 	if err != nil {
+		log.Printf("[lists] Failed to delete list %s: %v", id, err)
 		return response.InternalError(c, "Failed to delete list from Listmonk")
 	}
 

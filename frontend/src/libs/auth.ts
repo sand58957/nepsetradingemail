@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // Call Go backend login endpoint directly (server-side, Docker internal network)
-          const apiUrl = process.env.API_URL || 'http://backend:8080/api/auth'
+          const apiUrl = process.env.API_URL || 'https://nepalfillings.com/api/auth'
 
           const res = await fetch(`${apiUrl}/login`, {
             method: 'POST',
@@ -47,8 +47,9 @@ export const authOptions: NextAuthOptions = {
           }
 
           if (res.status === 200 && data.success) {
-            // Go backend returns: { success, data: { access_token, refresh_token, user: {...} } }
+            // Go backend returns: { success, data: { access_token, refresh_token, user: {...}, account: {...} } }
             const user = data.data.user
+            const account = data.data.account
 
             return {
               id: String(user.id),
@@ -56,7 +57,12 @@ export const authOptions: NextAuthOptions = {
               email: user.email,
               role: user.role,
               accessToken: data.data.access_token,
-              image: '/images/avatars/1.png'
+              image: '/images/avatars/1.png',
+              accountId: account?.id ?? null,
+              accountName: account?.name ?? null,
+              accountPlan: account?.plan ?? null,
+              accountLogoUrl: account?.logo_url ?? null,
+              accountDomain: account?.domain ?? null
             }
           }
 
@@ -105,11 +111,26 @@ export const authOptions: NextAuthOptions = {
      * the `session()` callback. So we have to add custom parameters in `token`
      * via `jwt()` callback to make them accessible in the `session()` callback
      */
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.name = user.name
         token.role = user.role
         token.accessToken = user.accessToken
+        token.accountId = user.accountId
+        token.accountName = user.accountName
+        token.accountPlan = user.accountPlan
+        token.accountLogoUrl = user.accountLogoUrl
+        token.accountDomain = user.accountDomain
+      }
+
+      // Handle session update (e.g. after account switch)
+      if (trigger === 'update' && session) {
+        if (session.accessToken) token.accessToken = session.accessToken
+        if (session.accountId !== undefined) token.accountId = session.accountId
+        if (session.accountName !== undefined) token.accountName = session.accountName
+        if (session.accountPlan !== undefined) token.accountPlan = session.accountPlan
+        if (session.accountLogoUrl !== undefined) token.accountLogoUrl = session.accountLogoUrl
+        if (session.accountDomain !== undefined) token.accountDomain = session.accountDomain
       }
 
       return token
@@ -121,6 +142,11 @@ export const authOptions: NextAuthOptions = {
 
       session.role = token.role
       session.accessToken = token.accessToken
+      session.accountId = token.accountId
+      session.accountName = token.accountName
+      session.accountPlan = token.accountPlan
+      session.accountLogoUrl = token.accountLogoUrl
+      session.accountDomain = token.accountDomain
 
       return session
     }

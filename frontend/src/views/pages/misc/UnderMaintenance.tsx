@@ -48,7 +48,7 @@ const UnderMaintenance = ({ mode }: { mode: SystemMode }) => {
     <div className='flex items-center justify-center min-bs-[100dvh] relative p-6 overflow-x-hidden'>
       <div className='flex items-center flex-col text-center'>
         <div className='flex flex-col gap-2 is-[90vw] sm:is-[unset] mbe-6'>
-          <Typography variant='h4'>Under Maintenance! 🚧</Typography>
+          <Typography variant='h4'>Under Maintenance!</Typography>
           <Typography>Sorry for the inconvenience but we&#39;re performing some maintenance at the moment</Typography>
         </div>
         <Button href={getLocalizedUrl('/', locale as Locale)} component={Link} variant='contained'>

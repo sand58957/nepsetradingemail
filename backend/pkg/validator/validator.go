@@ -61,6 +61,9 @@ func ValidateRegisterRequest(email, password, name string) *ValidationErrors {
 	if !MinLength(password, 8) {
 		errs.Add("password", "Password must be at least 8 characters")
 	}
+	if !MaxLength(password, 72) {
+		errs.Add("password", "Password must be at most 72 characters")
+	}
 	if !IsNotEmpty(name) {
 		errs.Add("name", "Name is required")
 	}

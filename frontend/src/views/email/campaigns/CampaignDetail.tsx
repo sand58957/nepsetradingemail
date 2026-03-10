@@ -1,11 +1,11 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 // Next Imports
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -55,10 +55,13 @@ interface CampaignDetailProps {
 const CampaignDetail = ({ id }: CampaignDetailProps) => {
   const theme = useTheme()
   const router = useRouter()
+  const { lang } = useParams()
+  const locale = (lang as string) || 'en'
 
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success'
   })
@@ -101,7 +104,7 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
       })
 
       setSnackbar({ open: true, message: 'Campaign duplicated successfully', severity: 'success' })
-      router.push(`/campaigns/${result.data.id}`)
+      router.push(`/${locale}/campaigns/${result.data.id}`)
     } catch {
       setSnackbar({ open: true, message: 'Failed to duplicate campaign', severity: 'error' })
     }
@@ -121,7 +124,7 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
       <Card>
         <CardContent className='text-center py-16'>
           <Typography color='error' className='mb-4'>{error || 'Campaign not found'}</Typography>
-          <Button variant='outlined' onClick={() => router.push('/campaigns/list')}>
+          <Button variant='outlined' onClick={() => router.push(`/${locale}/campaigns/list`)}>
             Back to Campaigns
           </Button>
         </CardContent>
@@ -133,16 +136,18 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
   const clickRate = campaign.sent > 0 ? ((campaign.clicks / campaign.sent) * 100).toFixed(1) : '0.0'
   const bounceRate = campaign.sent > 0 ? ((campaign.bounces / campaign.sent) * 100).toFixed(1) : '0.0'
 
-  // Opens over time chart (placeholder data based on views)
-  const opensOverTimeSeries = [
-    {
-      name: 'Opens',
-      data: campaign.views > 0
-        ? Array.from({ length: 12 }, (_, i) => Math.round((campaign.views / 12) * (i + 1) * (0.7 + Math.random() * 0.6)))
-            .map((v, i, arr) => i === arr.length - 1 ? campaign.views : Math.min(v, campaign.views))
-        : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  // Opens over time chart (estimated cumulative distribution based on total views)
+  const opensOverTimeSeries = useMemo(() => {
+    if (campaign.views <= 0) {
+      return [{ name: 'Opens', data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }]
     }
-  ]
+
+    // Model a typical email open curve: fast initial opens, then tapering off
+    const weights = [0.15, 0.30, 0.45, 0.58, 0.68, 0.76, 0.82, 0.87, 0.91, 0.94, 0.97, 1.0]
+    const data = weights.map(w => Math.round(campaign.views * w))
+
+    return [{ name: 'Opens', data }]
+  }, [campaign.views])
 
   const opensOverTimeOptions: ApexOptions = {
     chart: {
@@ -203,7 +208,7 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
         <Grid size={{ xs: 12 }}>
           <Card>
             <CardContent>
-              <div className='flex items-start justify-between'>
+              <div className='flex items-start flex-wrap gap-4 justify-between'>
                 <div>
                   <div className='flex items-center gap-3 mb-2'>
                     <Typography variant='h5'>{campaign.name}</Typography>
@@ -238,7 +243,7 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
                     variant='outlined'
                     color='secondary'
                     startIcon={<i className='tabler-arrow-left' />}
-                    onClick={() => router.push('/campaigns/list')}
+                    onClick={() => router.push(`/${locale}/campaigns/list`)}
                   >
                     Back
                   </Button>

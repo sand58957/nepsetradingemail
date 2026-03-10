@@ -28,7 +28,7 @@ const StepReview = ({ activeStep, handleNext, handlePrev, steps }: Props) => {
     <Grid container spacing={6}>
       <Grid size={{ xs: 12, lg: 6 }}>
         <Typography variant='h4' className='mb-4'>
-          Almost done! 🚀
+          Almost done!
         </Typography>
         <Typography className='mb-4'>Confirm your deal details information and submit to create it.</Typography>
         <table className='is-full border-collapse'>

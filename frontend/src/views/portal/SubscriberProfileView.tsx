@@ -14,7 +14,6 @@ import Grid from '@mui/material/Grid'
 import Alert from '@mui/material/Alert'
 import CircularProgress from '@mui/material/CircularProgress'
 import Divider from '@mui/material/Divider'
-import Typography from '@mui/material/Typography'
 import Switch from '@mui/material/Switch'
 import FormControlLabel from '@mui/material/FormControlLabel'
 
@@ -22,9 +21,10 @@ import api from '@/services/api'
 import { portalService } from '@/services/portal'
 
 const SubscriberProfileView = () => {
-  const { data: session } = useSession()
+  useSession()
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [savingPreferences, setSavingPreferences] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -81,7 +81,7 @@ const SubscriberProfileView = () => {
 
   const handleSaveProfile = async () => {
     try {
-      setSaving(true)
+      setSavingProfile(true)
       setError('')
       setSuccess('')
 
@@ -90,13 +90,13 @@ const SubscriberProfileView = () => {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update profile')
     } finally {
-      setSaving(false)
+      setSavingProfile(false)
     }
   }
 
   const handleSavePreferences = async () => {
     try {
-      setSaving(true)
+      setSavingPreferences(true)
       setError('')
       setSuccess('')
 
@@ -105,7 +105,7 @@ const SubscriberProfileView = () => {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update preferences')
     } finally {
-      setSaving(false)
+      setSavingPreferences(false)
     }
   }
 
@@ -145,8 +145,8 @@ const SubscriberProfileView = () => {
               />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <Button variant='contained' onClick={handleSaveProfile} disabled={saving}>
-                {saving ? 'Saving...' : 'Update Profile'}
+              <Button variant='contained' onClick={handleSaveProfile} disabled={savingProfile}>
+                {savingProfile ? 'Saving...' : 'Update Profile'}
               </Button>
             </Grid>
           </Grid>
@@ -178,8 +178,8 @@ const SubscriberProfileView = () => {
             />
           </Box>
           <Divider className='my-4' />
-          <Button variant='contained' onClick={handleSavePreferences} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Preferences'}
+          <Button variant='contained' onClick={handleSavePreferences} disabled={savingPreferences}>
+            {savingPreferences ? 'Saving...' : 'Save Preferences'}
           </Button>
         </CardContent>
       </Card>

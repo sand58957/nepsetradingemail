@@ -7,6 +7,9 @@ import Typography from '@mui/material/Typography'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import CircularProgress from '@mui/material/CircularProgress'
@@ -28,6 +31,7 @@ const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState(0)
   const [loading, setLoading] = useState(true)
   const [settings, setSettings] = useState<AccountSettings | null>(null)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -40,7 +44,7 @@ const SettingsPage = () => {
 
       const response = await accountSettingsService.getAll()
 
-      setSettings(response.data as unknown as AccountSettings)
+      setSettings(response.data)
     } catch (err) {
       console.error('Failed to fetch account settings:', err)
       setSnackbar({ open: true, message: 'Failed to load account settings', severity: 'error' })
@@ -127,6 +131,16 @@ const SettingsPage = () => {
           />
         </Tabs>
       </Box>
+
+      {/* Error state when settings failed to load */}
+      {!settings && !loading && (
+        <Card>
+          <CardContent className='flex flex-col items-center gap-4 py-8'>
+            <Typography color='text.secondary'>Failed to load account settings.</Typography>
+            <Button variant='outlined' onClick={fetchSettings}>Retry</Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tab Panels */}
       {activeTab === 0 && settings && (

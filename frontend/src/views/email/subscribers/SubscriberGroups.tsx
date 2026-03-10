@@ -21,30 +21,40 @@ import MenuItem from '@mui/material/MenuItem'
 import IconButton from '@mui/material/IconButton'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
+import DialogContentText from '@mui/material/DialogContentText'
 
 import type { List } from '@/types/email'
 import listService from '@/services/lists'
+import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
 const SubscriberGroups = () => {
   const [lists, setLists] = useState<List[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
   const [newList, setNewList] = useState({
     name: '',
     type: 'public' as 'public' | 'private' | 'temporary',
     optin: 'single' as 'single' | 'double',
     description: ''
   })
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success'
   })
+
+  const isMobile = useMobileBreakpoint()
 
   const fetchLists = async () => {
     setLoading(true)
 
     try {
       const response = await listService.getAll({ per_page: 100 })
+
       setLists(response.data?.results || [])
     } catch {
       setSnackbar({ open: true, message: 'Failed to fetch groups', severity: 'error' })
@@ -74,10 +84,14 @@ const SubscriberGroups = () => {
     }
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async () => {
+    if (!deletingId) return
+
     try {
-      await listService.delete(id)
+      await listService.delete(deletingId)
       setSnackbar({ open: true, message: 'Group deleted', severity: 'success' })
+      setDeleteDialogOpen(false)
+      setDeletingId(null)
       fetchLists()
     } catch {
       setSnackbar({ open: true, message: 'Failed to delete group', severity: 'error' })
@@ -136,7 +150,7 @@ const SubscriberGroups = () => {
                       <Typography className='font-bold'>{list.subscriber_count || 0}</Typography>
                     </div>
                     <div>
-                      <IconButton size='small' color='error' onClick={() => handleDelete(list.id)}>
+                      <IconButton size='small' color='error' onClick={() => { setDeletingId(list.id); setDeleteDialogOpen(true) }}>
                         <i className='tabler-trash text-[20px]' />
                       </IconButton>
                     </div>
@@ -149,7 +163,7 @@ const SubscriberGroups = () => {
       </Card>
 
       {/* Create Group Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth='sm' fullWidth>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
         <DialogTitle>Create Group</DialogTitle>
         <DialogContent>
           <Grid container spacing={4} className='pt-2'>
@@ -185,6 +199,20 @@ const SubscriberGroups = () => {
           <Button onClick={handleCreate} variant='contained' disabled={submitting}>
             {submitting ? <CircularProgress size={20} /> : 'Create'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullScreen={isMobile}>
+        <DialogTitle>Delete Group</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this group? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='secondary'>Cancel</Button>
+          <Button onClick={handleDelete} color='error' variant='contained'>Delete</Button>
         </DialogActions>
       </Dialog>
 

@@ -43,7 +43,7 @@ const ComingSoon = ({ mode }: { mode: SystemMode }) => {
       <div className='flex items-center flex-col text-center'>
         <div className='is-[90vw] sm:is-[unset]'>
           <div className='flex flex-col gap-2 is-[90vw] sm:is-[unset] mbe-6'>
-            <Typography variant='h4'>We are launching soon 🚀</Typography>
+            <Typography variant='h4'>We are launching soon</Typography>
             <Typography>Our website is opening soon. Please register to get notified when it&#39;s ready!</Typography>
           </div>
           <form noValidate autoComplete='off' onSubmit={e => e.preventDefault()}>

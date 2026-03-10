@@ -35,7 +35,7 @@ const StepConfirmation = () => {
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
         <div className='flex items-center flex-col text-center gap-4'>
-          <Typography variant='h4'>Thank You! 😇</Typography>
+          <Typography variant='h4'>Thank You!</Typography>
           <Typography>
             Your order <span className='font-medium text-textPrimary'>#1536548131</span> has been placed!
           </Typography>

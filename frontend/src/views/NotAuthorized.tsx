@@ -51,7 +51,7 @@ const NotAuthorized = ({ mode }: { mode: SystemMode }) => {
           <Typography className='font-medium text-8xl' color='text.primary'>
             401
           </Typography>
-          <Typography variant='h4'>You are not authorized! 🔐</Typography>
+          <Typography variant='h4'>You are not authorized!</Typography>
           <Typography>You don&#39;t have permission to access this page. Go Home!</Typography>
         </div>
         <Button href={getLocalizedUrl('/', locale as Locale)} component={Link} variant='contained'>

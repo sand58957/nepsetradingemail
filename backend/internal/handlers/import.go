@@ -61,31 +61,50 @@ func (h *ImportHandler) ImportCSV(c echo.Context) error {
 		listIDs = []byte("[]")
 	}
 
+	// Extract field_mapping if provided
+	var fieldMappingJSON []byte
+	var rawParams map[string]json.RawMessage
+	if json.Unmarshal([]byte(paramsStr), &rawParams) == nil {
+		if fm, ok := rawParams["field_mapping"]; ok {
+			fieldMappingJSON = fm
+		}
+	}
+	if fieldMappingJSON == nil {
+		fieldMappingJSON = []byte("{}")
+	}
+
 	now := time.Now()
 	filename := file.Filename
 
 	var history models.ImportHistory
 	err = h.db.QueryRowx(
-		`INSERT INTO app_import_history (source, filename, status, list_ids, started_at, created_at, updated_at)
-		 VALUES ('csv', $1, 'processing', $2, $3, $3, $3)
+		`INSERT INTO app_import_history (source, filename, status, list_ids, field_mapping, started_at, created_at, updated_at)
+		 VALUES ('csv', $1, 'processing', $2, $3, $4, $4, $4)
 		 RETURNING *`,
-		filename, listIDs, now,
+		filename, listIDs, fieldMappingJSON, now,
 	).StructScan(&history)
 	if err != nil {
 		return response.InternalError(c, "Failed to record import history")
 	}
 
-	// Send multipart to Listmonk
+	// Send multipart to Listmonk (only params Listmonk understands)
+	lmParams, _ := json.Marshal(map[string]interface{}{
+		"mode":      params.Mode,
+		"delim":     params.Delimiter,
+		"lists":     params.ListIDs,
+		"overwrite": params.Overwrite,
+	})
 	fields := map[string]string{
-		"params": paramsStr,
+		"params": string(lmParams),
 	}
 
 	data, statusCode, err := h.lm.PostMultipart("/import/subscribers", "file", file.Filename, src, fields)
 	if err != nil {
-		// Update history as failed
+		// Update history as failed - use json.Marshal for safe error log
+		errLog, _ := json.Marshal([]map[string]string{{"error": err.Error()}})
 		h.db.Exec(
 			`UPDATE app_import_history SET status = 'failed', error_log = $1, completed_at = NOW(), updated_at = NOW() WHERE id = $2`,
-			fmt.Sprintf(`[{"error": "%s"}]`, err.Error()), history.ID,
+			string(errLog), history.ID,
 		)
 		return response.InternalError(c, "Failed to import subscribers to Listmonk")
 	}
@@ -96,6 +115,12 @@ func (h *ImportHandler) ImportCSV(c echo.Context) error {
 			`UPDATE app_import_history SET status = 'processing', updated_at = NOW() WHERE id = $1`,
 			history.ID,
 		)
+		// Return the Listmonk response plus our history_id
+		var lmResponse map[string]interface{}
+		if json.Unmarshal(data, &lmResponse) == nil {
+			lmResponse["history_id"] = history.ID
+			return c.JSON(http.StatusOK, lmResponse)
+		}
 		return c.JSONBlob(http.StatusOK, data)
 	}
 
@@ -138,7 +163,7 @@ func (h *ImportHandler) CancelImport(c echo.Context) error {
 	// Update the latest processing import as cancelled
 	h.db.Exec(
 		`UPDATE app_import_history SET status = 'cancelled', completed_at = NOW(), updated_at = NOW()
-		 WHERE status = 'processing' ORDER BY created_at DESC LIMIT 1`,
+		 WHERE id = (SELECT id FROM app_import_history WHERE status = 'processing' ORDER BY created_at DESC LIMIT 1)`,
 	)
 
 	return c.JSONBlob(statusCode, data)
@@ -232,7 +257,7 @@ func (h *ImportHandler) ImportJSON(c echo.Context) error {
 			if req.Overwrite && statusCode == http.StatusConflict {
 				// Try to find existing subscriber
 				params := map[string]string{
-					"query":    fmt.Sprintf("subscribers.email = '%s'", sub.Email),
+					"query":    fmt.Sprintf("subscribers.email = '%s'", strings.ReplaceAll(sub.Email, "'", "''")),
 					"per_page": "1",
 				}
 				searchData, searchStatus, searchErr := h.lm.Get("/subscribers", params)
@@ -436,10 +461,13 @@ func (h *ImportHandler) ListHistory(c echo.Context) error {
 }
 
 func (h *ImportHandler) GetHistory(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	var history models.ImportHistory
-	err := h.db.Get(&history, "SELECT * FROM app_import_history WHERE id = $1", id)
+	err = h.db.Get(&history, "SELECT * FROM app_import_history WHERE id = $1", id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return response.NotFound(c, "Import history not found")
@@ -451,7 +479,10 @@ func (h *ImportHandler) GetHistory(c echo.Context) error {
 }
 
 func (h *ImportHandler) DeleteHistory(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	result, err := h.db.Exec("DELETE FROM app_import_history WHERE id = $1", id)
 	if err != nil {
@@ -490,7 +521,7 @@ func (h *ImportHandler) GetAnalytics(c echo.Context) error {
 
 func (h *ImportHandler) ListWebhooks(c echo.Context) error {
 	var webhooks []models.ImportWebhook
-	err := h.db.Select(&webhooks, "SELECT * FROM app_import_webhooks ORDER BY created_at DESC")
+	err := h.db.Select(&webhooks, "SELECT id, name, list_ids, is_active, trigger_count, created_at, updated_at FROM app_import_webhooks ORDER BY created_at DESC")
 	if err != nil {
 		return response.InternalError(c, "Failed to fetch webhooks")
 	}
@@ -539,7 +570,10 @@ func (h *ImportHandler) CreateWebhook(c echo.Context) error {
 }
 
 func (h *ImportHandler) UpdateWebhook(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	var req models.UpdateWebhookRequest
 	if err := c.Bind(&req); err != nil {
@@ -551,18 +585,25 @@ func (h *ImportHandler) UpdateWebhook(c echo.Context) error {
 		listIDs = []byte("[]")
 	}
 
-	isActive := true
-	if req.IsActive != nil {
-		isActive = *req.IsActive
+	// If is_active not provided, keep current value
+	if req.IsActive == nil {
+		var currentActive bool
+		if err := h.db.Get(&currentActive, "SELECT is_active FROM app_import_webhooks WHERE id = $1", id); err != nil {
+			if err == sql.ErrNoRows {
+				return response.NotFound(c, "Webhook not found")
+			}
+			return response.InternalError(c, "Failed to fetch webhook")
+		}
+		req.IsActive = &currentActive
 	}
 
 	var webhook models.ImportWebhook
-	err := h.db.QueryRowx(
+	err = h.db.QueryRowx(
 		`UPDATE app_import_webhooks
 		 SET name = $1, list_ids = $2, is_active = $3, updated_at = NOW()
 		 WHERE id = $4
 		 RETURNING *`,
-		req.Name, listIDs, isActive, id,
+		req.Name, listIDs, *req.IsActive, id,
 	).StructScan(&webhook)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -575,7 +616,10 @@ func (h *ImportHandler) UpdateWebhook(c echo.Context) error {
 }
 
 func (h *ImportHandler) DeleteWebhook(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	result, err := h.db.Exec("DELETE FROM app_import_webhooks WHERE id = $1", id)
 	if err != nil {
@@ -662,7 +706,10 @@ func (h *ImportHandler) AddSuppressed(c echo.Context) error {
 }
 
 func (h *ImportHandler) RemoveSuppressed(c echo.Context) error {
-	id := c.Param("id")
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
 
 	result, err := h.db.Exec("DELETE FROM app_suppression_list WHERE id = $1", id)
 	if err != nil {
@@ -677,7 +724,7 @@ func (h *ImportHandler) RemoveSuppressed(c echo.Context) error {
 	return response.SuccessWithMessage(c, "Email removed from suppression list", nil)
 }
 
-// UpdateImportHistory updates the most recent processing import with status info.
+// UpdateImportHistory updates a processing import with status info.
 // Called when polling Listmonk import status shows completion.
 func (h *ImportHandler) UpdateImportHistory(c echo.Context) error {
 	var req struct {
@@ -692,13 +739,34 @@ func (h *ImportHandler) UpdateImportHistory(c echo.Context) error {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
+	// Validate ID
+	if req.ID <= 0 {
+		return response.BadRequest(c, "Valid import history ID is required")
+	}
+
+	// Validate status
+	validStatuses := map[string]bool{"completed": true, "failed": true, "cancelled": true, "processing": true}
+	if !validStatuses[req.Status] {
+		return response.BadRequest(c, "Status must be one of: completed, failed, cancelled, processing")
+	}
+
+	// Verify the import record exists and is in a mutable state
+	var currentStatus string
+	err := h.db.Get(&currentStatus, "SELECT status FROM app_import_history WHERE id = $1", req.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return response.NotFound(c, "Import history not found")
+		}
+		return response.InternalError(c, "Failed to verify import history")
+	}
+
 	summary, _ := json.Marshal(map[string]int{
 		"successful": req.Successful,
 		"failed":     req.Failed,
 		"skipped":    req.Skipped,
 	})
 
-	_, err := h.db.Exec(
+	_, err = h.db.Exec(
 		`UPDATE app_import_history
 		 SET status = $1, total = $2, successful = $3, failed = $4, skipped = $5,
 		     summary = $6, completed_at = NOW(), updated_at = NOW()

@@ -11,10 +11,11 @@ import (
 )
 
 type JWTClaims struct {
-	UserID int    `json:"user_id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
-	Type   string `json:"type"`
+	UserID    int    `json:"user_id"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	AccountID int    `json:"account_id,omitempty"`
+	Type      string `json:"type"`
 	jwt.RegisteredClaims
 }
 
@@ -52,6 +53,7 @@ func JWTAuth(jwtSecret string) echo.MiddlewareFunc {
 			c.Set("user_id", claims.UserID)
 			c.Set("user_email", claims.Email)
 			c.Set("user_role", claims.Role)
+			c.Set("account_id", claims.AccountID)
 
 			return next(c)
 		}
@@ -96,4 +98,12 @@ func GetUserRole(c echo.Context) string {
 		return ""
 	}
 	return role
+}
+
+func GetAccountID(c echo.Context) int {
+	id, ok := c.Get("account_id").(int)
+	if !ok {
+		return 0
+	}
+	return id
 }
