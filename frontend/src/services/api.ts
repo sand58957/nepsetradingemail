@@ -50,6 +50,9 @@ api.interceptors.request.use(
   error => Promise.reject(error)
 )
 
+// Redirect guard: prevent 401 redirect loops
+let isRedirecting = false
+
 // Response interceptor: handle errors globally
 api.interceptors.response.use(
   response => response,
@@ -58,11 +61,14 @@ api.interceptors.response.use(
       const { status } = error.response
 
       if (status === 401) {
-        // Token expired — clear cache and redirect to login
+        // Token expired — clear cache
         cachedToken = null
         tokenFetchedAt = 0
 
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        // Only redirect once; prevent rapid redirect loops
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login') && !isRedirecting) {
+          isRedirecting = true
+
           // Extract locale from current URL path (e.g., /en/campaigns/list -> en)
           const pathParts = window.location.pathname.split('/')
           const locale = pathParts[1] && pathParts[1].length === 2 ? pathParts[1] : 'en'
@@ -82,6 +88,7 @@ api.interceptors.response.use(
 export const clearTokenCache = () => {
   cachedToken = null
   tokenFetchedAt = 0
+  isRedirecting = false
 }
 
 export default api

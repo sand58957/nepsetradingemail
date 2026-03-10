@@ -102,24 +102,37 @@ const EmailDashboard = () => {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchDashboard = async () => {
       try {
         const res = await api.get('/dashboard/stats')
+
+        if (cancelled) return
 
         if (res.data?.success && res.data?.data) {
           setDashboardData(res.data.data)
         } else {
           setError('Failed to load dashboard data')
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (cancelled) return
+
+        // Don't set error state for 401 — the interceptor handles redirect
+        if (err?.response?.status === 401) return
+
         console.error('Dashboard fetch error:', err)
         setError('Failed to connect to server')
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     fetchDashboard()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // Campaign performance bar chart (from real data if available)
