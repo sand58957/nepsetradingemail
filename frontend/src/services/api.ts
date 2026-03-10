@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getSession } from 'next-auth/react'
+import { getSession, signOut } from 'next-auth/react'
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://nepalfillings.com/api',
@@ -50,9 +50,6 @@ api.interceptors.request.use(
   error => Promise.reject(error)
 )
 
-// Redirect guard: prevent 401 redirect loops
-let isRedirecting = false
-
 // Response interceptor: handle errors globally
 api.interceptors.response.use(
   response => response,
@@ -65,15 +62,22 @@ api.interceptors.response.use(
         cachedToken = null
         tokenFetchedAt = 0
 
-        // Only redirect once; prevent rapid redirect loops
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login') && !isRedirecting) {
-          isRedirecting = true
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          // Use sessionStorage to prevent redirect loops across page reloads
+          const lastRedirect = sessionStorage.getItem('auth_redirect_ts')
+          const now = Date.now()
 
-          // Extract locale from current URL path (e.g., /en/campaigns/list -> en)
-          const pathParts = window.location.pathname.split('/')
-          const locale = pathParts[1] && pathParts[1].length === 2 ? pathParts[1] : 'en'
+          // Only redirect if we haven't redirected in the last 10 seconds
+          if (!lastRedirect || now - parseInt(lastRedirect) > 10000) {
+            sessionStorage.setItem('auth_redirect_ts', String(now))
 
-          window.location.href = `/${locale}/login`
+            // Sign out NextAuth session so login page shows the form
+            // instead of redirecting back (which causes the loop)
+            const pathParts = window.location.pathname.split('/')
+            const locale = pathParts[1] && pathParts[1].length === 2 ? pathParts[1] : 'en'
+
+            signOut({ callbackUrl: `/${locale}/login`, redirect: true })
+          }
         }
       }
 
@@ -88,7 +92,7 @@ api.interceptors.response.use(
 export const clearTokenCache = () => {
   cachedToken = null
   tokenFetchedAt = 0
-  isRedirecting = false
+  sessionStorage.removeItem('auth_redirect_ts')
 }
 
 export default api
