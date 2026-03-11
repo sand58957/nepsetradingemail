@@ -86,6 +86,38 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
     fetchCampaign()
   }, [id])
 
+  // All hooks must be called before any early returns (React Rules of Hooks)
+  const openRate = useMemo(() => {
+    if (!campaign || campaign.sent <= 0) return '0.0'
+
+    return ((campaign.views / campaign.sent) * 100).toFixed(1)
+  }, [campaign])
+
+  const clickRate = useMemo(() => {
+    if (!campaign || campaign.sent <= 0) return '0.0'
+
+    return ((campaign.clicks / campaign.sent) * 100).toFixed(1)
+  }, [campaign])
+
+  const bounceRate = useMemo(() => {
+    if (!campaign || campaign.sent <= 0) return '0.0'
+
+    return ((campaign.bounces / campaign.sent) * 100).toFixed(1)
+  }, [campaign])
+
+  // Opens over time chart (estimated cumulative distribution based on total views)
+  const opensOverTimeSeries = useMemo(() => {
+    if (!campaign || campaign.views <= 0) {
+      return [{ name: 'Opens', data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }]
+    }
+
+    // Model a typical email open curve: fast initial opens, then tapering off
+    const weights = [0.15, 0.30, 0.45, 0.58, 0.68, 0.76, 0.82, 0.87, 0.91, 0.94, 0.97, 1.0]
+    const data = weights.map(w => Math.round(campaign.views * w))
+
+    return [{ name: 'Opens', data }]
+  }, [campaign])
+
   // Duplicate campaign
   const handleDuplicate = async () => {
     if (!campaign) return
@@ -131,23 +163,6 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
       </Card>
     )
   }
-
-  const openRate = campaign.sent > 0 ? ((campaign.views / campaign.sent) * 100).toFixed(1) : '0.0'
-  const clickRate = campaign.sent > 0 ? ((campaign.clicks / campaign.sent) * 100).toFixed(1) : '0.0'
-  const bounceRate = campaign.sent > 0 ? ((campaign.bounces / campaign.sent) * 100).toFixed(1) : '0.0'
-
-  // Opens over time chart (estimated cumulative distribution based on total views)
-  const opensOverTimeSeries = useMemo(() => {
-    if (campaign.views <= 0) {
-      return [{ name: 'Opens', data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }]
-    }
-
-    // Model a typical email open curve: fast initial opens, then tapering off
-    const weights = [0.15, 0.30, 0.45, 0.58, 0.68, 0.76, 0.82, 0.87, 0.91, 0.94, 0.97, 1.0]
-    const data = weights.map(w => Math.round(campaign.views * w))
-
-    return [{ name: 'Opens', data }]
-  }, [campaign.views])
 
   const opensOverTimeOptions: ApexOptions = {
     chart: {
