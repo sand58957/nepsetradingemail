@@ -62,8 +62,8 @@ export const campaignService = {
     return response.data
   },
 
-  test: async (id: number, subscriberIds: number[]): Promise<void> => {
-    await api.post(`/campaigns/${id}/test`, { subscribers: subscriberIds })
+  test: async (id: number, emails: string[]): Promise<void> => {
+    await api.post(`/campaigns/${id}/test`, { subscribers: emails })
   }
 }
 

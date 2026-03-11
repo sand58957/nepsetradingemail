@@ -1243,8 +1243,8 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
 
         tempCampaignId = tempResult.data.id
 
-        // Send test
-        await campaignService.test(tempCampaignId, [subscriberId])
+        // Send test using email address (Listmonk expects email strings)
+        await campaignService.test(tempCampaignId, [email])
 
         setTestEmailOpen(false)
         setTestEmailAddress('')

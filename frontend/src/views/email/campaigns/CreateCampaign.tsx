@@ -358,8 +358,8 @@ const CreateCampaign = () => {
 
       tempCampaignId = tempResult.data.id
 
-      // Step 3: Send test using subscriber ID
-      await campaignService.test(tempCampaignId, [subscriberId])
+      // Step 3: Send test using email address (Listmonk expects email strings)
+      await campaignService.test(tempCampaignId, [email])
 
       setTestEmailOpen(false)
       setTestEmailAddress('')
