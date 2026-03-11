@@ -95,9 +95,9 @@ func (h *DnsVerificationHandler) VerifyDomain(c echo.Context) error {
 
 	records := make([]DnsRecordResult, 0, 3)
 
-	// 1. Check CNAME (DKIM)
-	cnameResult := checkCNAME(ctx, domain)
-	records = append(records, cnameResult)
+	// 1. Check TXT (DKIM)
+	dkimResult := checkDKIM(ctx, domain)
+	records = append(records, dkimResult)
 
 	// 2. Lookup TXT records once and use for both SPF and verification checks
 	resolver := net.Resolver{}
@@ -112,7 +112,7 @@ func (h *DnsVerificationHandler) VerifyDomain(c echo.Context) error {
 	verifyResult := checkVerification(txtRecords, txtErr, verifyHash)
 	records = append(records, verifyResult)
 
-	allPassed := cnameResult.Status == "pass" && spfResult.Status == "pass" && verifyResult.Status == "pass"
+	allPassed := dkimResult.Status == "pass" && spfResult.Status == "pass" && verifyResult.Status == "pass"
 
 	// If all passed, update domain status in database
 	if allPassed {
@@ -129,50 +129,45 @@ func (h *DnsVerificationHandler) VerifyDomain(c echo.Context) error {
 	})
 }
 
-func checkCNAME(ctx context.Context, domain string) DnsRecordResult {
-	lookupName := "litesrv._domainkey." + domain
-	expected := "litesrv._domainkey.mlsend.com"
+func checkDKIM(ctx context.Context, domain string) DnsRecordResult {
+	lookupName := "mail._domainkey." + domain
+	expected := "v=DKIM1"
 
 	resolver := net.Resolver{}
-	cname, err := resolver.LookupCNAME(ctx, lookupName)
+	txtRecords, err := resolver.LookupTXT(ctx, lookupName)
 	if err != nil {
 		return DnsRecordResult{
-			RecordType: "CNAME_DKIM",
+			RecordType: "TXT_DKIM",
 			Expected:   expected,
 			Found:      "",
 			Status:     "fail",
 		}
 	}
 
-	// Strip trailing dot from DNS response
-	cname = strings.TrimSuffix(cname, ".")
-
-	// LookupCNAME returns the lookup name itself when no CNAME exists — treat as not found
-	if strings.EqualFold(cname, lookupName) {
-		return DnsRecordResult{
-			RecordType: "CNAME_DKIM",
-			Expected:   expected,
-			Found:      "",
-			Status:     "fail",
-		}
-	}
-
+	var found string
 	status := "fail"
-	if strings.EqualFold(cname, expected) {
-		status = "pass"
+	for _, txt := range txtRecords {
+		if strings.Contains(txt, "v=DKIM1") {
+			found = txt
+			status = "pass"
+			break
+		}
+		if found == "" {
+			found = txt
+		}
 	}
 
 	return DnsRecordResult{
-		RecordType: "CNAME_DKIM",
+		RecordType: "TXT_DKIM",
 		Expected:   expected,
-		Found:      cname,
+		Found:      found,
 		Status:     status,
 	}
 }
 
-// checkSPF checks pre-fetched TXT records for SPF include
+// checkSPF checks pre-fetched TXT records for SPF containing the server IP
 func checkSPF(txtRecords []string, lookupErr error) DnsRecordResult {
-	expected := "include:_spf.mlsend.com"
+	expected := "ip4:194.180.176.91"
 
 	if lookupErr != nil {
 		return DnsRecordResult{
@@ -186,14 +181,12 @@ func checkSPF(txtRecords []string, lookupErr error) DnsRecordResult {
 	var found string
 	status := "fail"
 	for _, txt := range txtRecords {
-		if strings.Contains(txt, "include:_spf.mlsend.com") {
+		if strings.HasPrefix(txt, "v=spf1") {
 			found = txt
-			status = "pass"
+			if strings.Contains(txt, "194.180.176.91") {
+				status = "pass"
+			}
 			break
-		}
-		// Track SPF records even if they don't match
-		if strings.HasPrefix(txt, "v=spf1") && found == "" {
-			found = txt
 		}
 	}
 

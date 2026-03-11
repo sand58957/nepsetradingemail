@@ -78,16 +78,16 @@ const DomainVerificationDialog = ({ open, onClose, domain, onVerificationComplet
 
   const dnsRecords: DnsRecord[] = [
     {
-      label: 'CNAME Record (DKIM)',
-      type: 'cname',
-      name: 'litesrv._domainkey',
-      value: 'litesrv._domainkey.mlsend.com'
+      label: 'TXT Record (DKIM)',
+      type: 'txt',
+      name: 'mail._domainkey',
+      value: 'v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3djCDl+eiseykwRr6PoYI98t2JZRhScMrWAJB7RtRkxp+M2KlwRKHEIYyetyu+lDc85pdVbZmgIn8VZPA1P0eVd2d7GtqdQ7fWRxuv9ph+f57p0P75j/rD+EjsrqvzzFwxBK3/VaXuijR625rhk3/HIaK64kcQiTqTcmGjVj9hQCs98XIXSN4oASSW37dMK4ijPmWXG8RL8gu5EOWYVa3qnCvRo519Q22KMSasEFyijgVXh+cKslbI846Gv4D7WoqFn3Ff0Bnaj4kj+HPlNlcuW9WP4gvytX5xT0OMxJ0d6DvlMvbPJld9NI6TpRD0dJGsupX56O6O/V11f/wWVnuQIDAQAB'
     },
     {
       label: 'TXT Record (SPF)',
       type: 'txt',
       name: '@',
-      value: 'v=spf1 a mx include:_spf.mlsend.com ?all'
+      value: 'v=spf1 ip4:194.180.176.91 include:_spf.google.com ~all'
     },
     {
       label: 'TXT Record (Domain Verification)',
@@ -275,7 +275,7 @@ const DomainVerificationDialog = ({ open, onClose, domain, onVerificationComplet
 
     // Map each dns record index to its backend record_type key
     const getRecordTypeKey = (index: number): string => {
-      if (index === 0) return 'CNAME_DKIM'
+      if (index === 0) return 'TXT_DKIM'
       if (index === 1) return 'TXT_SPF'
 
       return 'TXT_VERIFY'
@@ -331,9 +331,8 @@ const DomainVerificationDialog = ({ open, onClose, domain, onVerificationComplet
         {dnsRecords.map((record, index) => {
           const recordTypeKey = getRecordTypeKey(index)
           const status = getRecordStatus(recordTypeKey)
-          const instructions = index === 0
-            ? selectedProvider.instructions.cname
-            : selectedProvider.instructions.txt
+          // All records are now TXT records (DKIM, SPF, Verification)
+          const instructions = selectedProvider.instructions.txt
 
           return (
             <Box key={index} sx={{ mb: 3 }}>
