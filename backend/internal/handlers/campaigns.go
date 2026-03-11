@@ -176,6 +176,57 @@ func (h *CampaignHandler) Test(c echo.Context) error {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
+	// Listmonk v6 requires full campaign fields for the test endpoint.
+	// Fetch the campaign details and merge them into the test payload.
+	campaignData, campaignStatus, err := h.lm.Get(fmt.Sprintf("/campaigns/%s", id), nil)
+	if err != nil || campaignStatus >= 400 {
+		log.Printf("[campaigns] Failed to fetch campaign %s for test: %v", id, err)
+		return response.InternalError(c, "Failed to fetch campaign for test")
+	}
+
+	var campaignResult struct {
+		Data struct {
+			Name      string        `json:"name"`
+			Subject   string        `json:"subject"`
+			FromEmail string        `json:"from_email"`
+			Messenger string        `json:"messenger"`
+			Lists     []struct {
+				ID int `json:"id"`
+			} `json:"lists"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(campaignData, &campaignResult); err != nil {
+		log.Printf("[campaigns] Failed to parse campaign %s for test: %v", id, err)
+		return response.InternalError(c, "Failed to parse campaign for test")
+	}
+
+	// Build list IDs array
+	listIDs := make([]int, len(campaignResult.Data.Lists))
+	for i, l := range campaignResult.Data.Lists {
+		listIDs[i] = l.ID
+	}
+
+	// Set required fields from campaign data if not already in payload
+	if _, ok := payload["name"]; !ok {
+		payload["name"] = campaignResult.Data.Name
+	}
+	if _, ok := payload["subject"]; !ok {
+		payload["subject"] = campaignResult.Data.Subject
+	}
+	if _, ok := payload["from_email"]; !ok {
+		payload["from_email"] = campaignResult.Data.FromEmail
+	}
+	if _, ok := payload["lists"]; !ok {
+		payload["lists"] = listIDs
+	}
+	if _, ok := payload["messenger"]; !ok {
+		messenger := campaignResult.Data.Messenger
+		if messenger == "" {
+			messenger = "email"
+		}
+		payload["messenger"] = messenger
+	}
+
 	data, statusCode, err := h.lm.Post(fmt.Sprintf("/campaigns/%s/test", id), payload)
 	if err != nil {
 		log.Printf("[campaigns] Failed to send test for campaign %s: %v", id, err)
