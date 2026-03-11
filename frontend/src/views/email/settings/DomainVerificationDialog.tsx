@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Alert from '@mui/material/Alert'
@@ -13,7 +13,6 @@ import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
-import Link from '@mui/material/Link'
 import Typography from '@mui/material/Typography'
 
 // Data
@@ -21,81 +20,66 @@ import { DNS_PROVIDERS, getProviderDnsUrl } from '@/data/dnsProviders'
 import type { DnsProvider } from '@/data/dnsProviders'
 
 // Services
-import accountSettingsService from '@/services/accountSettings'
+import domainService from '@/services/domains'
 
 // Hook Imports
 import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
 // Types
-import type { DnsRecordResult } from '@/types/email'
+import type { DomainRecord, DnsRecord, DnsRecordResult } from '@/types/email'
 
 interface Props {
   open: boolean
   onClose: () => void
-  domain: string
-  onVerificationComplete?: (domain: string, status: 'verified' | 'failed') => void
+  domainRecord: DomainRecord | null
+  onVerificationComplete?: (domainId: number, status: 'verified' | 'failed') => void
 }
 
-interface DnsRecord {
-  label: string
-  type: string
-  name: string
-  value: string
-}
-
-const DomainVerificationDialog = ({ open, onClose, domain, onVerificationComplete }: Props) => {
+const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationComplete }: Props) => {
   const [selectedProvider, setSelectedProvider] = useState<DnsProvider | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
   const [verificationResults, setVerificationResults] = useState<DnsRecordResult[] | null>(null)
   const [verificationError, setVerificationError] = useState<string | null>(null)
 
+  // DNS records fetched from API (per-domain, auto-generated DKIM keys)
+  const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([])
+  const [loadingRecords, setLoadingRecords] = useState(false)
+
   const isMobile = useMobileBreakpoint()
 
-  // Reset all state when domain changes (e.g. dialog reopened for different domain)
+  // Reset all state when domain changes
   useEffect(() => {
     setSelectedProvider(null)
     setVerificationResults(null)
     setVerificationError(null)
     setCopiedField(null)
     setVerifying(false)
-  }, [domain])
+    setDnsRecords([])
+  }, [domainRecord?.id])
 
-  const verificationHash = useMemo(() => {
-    let hash = 0
+  // Fetch DNS records from API when provider is selected
+  useEffect(() => {
+    if (!selectedProvider || !domainRecord) return
 
-    for (let i = 0; i < domain.length; i++) {
-      const char = domain.charCodeAt(i)
+    const fetchRecords = async () => {
+      try {
+        setLoadingRecords(true)
+        const response = await domainService.getDnsRecords(domainRecord.id)
 
-      hash = (hash << 5) - hash + char
-      hash |= 0
+        setDnsRecords(response.data.records)
+      } catch (err) {
+        console.error('Failed to fetch DNS records:', err)
+        setVerificationError('Failed to load DNS records. Please try again.')
+      } finally {
+        setLoadingRecords(false)
+      }
     }
 
-    const hex = Math.abs(hash).toString(16).padStart(8, '0')
+    fetchRecords()
+  }, [selectedProvider, domainRecord?.id])
 
-    return `${hex}${hex.split('').reverse().join('')}${hex}cfa4334fc1`
-  }, [domain])
-
-  const dnsRecords: DnsRecord[] = [
-    {
-      label: 'TXT Record (DKIM)',
-      type: 'txt',
-      name: 'mail._domainkey',
-      value: 'v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3djCDl+eiseykwRr6PoYI98t2JZRhScMrWAJB7RtRkxp+M2KlwRKHEIYyetyu+lDc85pdVbZmgIn8VZPA1P0eVd2d7GtqdQ7fWRxuv9ph+f57p0P75j/rD+EjsrqvzzFwxBK3/VaXuijR625rhk3/HIaK64kcQiTqTcmGjVj9hQCs98XIXSN4oASSW37dMK4ijPmWXG8RL8gu5EOWYVa3qnCvRo519Q22KMSasEFyijgVXh+cKslbI846Gv4D7WoqFn3Ff0Bnaj4kj+HPlNlcuW9WP4gvytX5xT0OMxJ0d6DvlMvbPJld9NI6TpRD0dJGsupX56O6O/V11f/wWVnuQIDAQAB'
-    },
-    {
-      label: 'TXT Record (SPF)',
-      type: 'txt',
-      name: '@',
-      value: 'v=spf1 ip4:194.180.176.91 include:_spf.google.com ~all'
-    },
-    {
-      label: 'TXT Record (Domain Verification)',
-      type: 'txt',
-      name: '@',
-      value: `nepsefilling-domain-verification=${verificationHash}`
-    }
-  ]
+  const domain = domainRecord?.domain || ''
 
   const handleClose = () => {
     setSelectedProvider(null)
@@ -130,17 +114,19 @@ const DomainVerificationDialog = ({ open, onClose, domain, onVerificationComplet
   }
 
   const handleVerify = async () => {
+    if (!domainRecord) return
+
     setVerifying(true)
     setVerificationError(null)
 
     try {
-      const result = await accountSettingsService.verifyDomain(domain)
+      const result = await domainService.verify(domainRecord.id)
       const data = result.data
 
       setVerificationResults(data.records)
 
       if (data.all_passed) {
-        onVerificationComplete?.(domain, 'verified')
+        onVerificationComplete?.(domainRecord.id, 'verified')
       }
     } catch (err: any) {
       setVerificationError(err?.response?.data?.message || 'Failed to verify domain. Please try again.')
@@ -157,6 +143,14 @@ const DomainVerificationDialog = ({ open, onClose, domain, onVerificationComplet
   }
 
   const allPassed = verificationResults?.every(r => r.status === 'pass') ?? false
+
+  // Map each dns record index to its backend record_type key
+  const getRecordTypeKey = (index: number): string => {
+    if (index === 0) return 'TXT_DKIM'
+    if (index === 1) return 'TXT_SPF'
+
+    return 'TXT_VERIFY'
+  }
 
   const DnsValueBox = ({ label, value, fieldId }: { label: string; value: string; fieldId: string }) => (
     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -273,12 +267,13 @@ const DomainVerificationDialog = ({ open, onClose, domain, onVerificationComplet
 
     const dnsUrl = getProviderDnsUrl(selectedProvider, domain)
 
-    // Map each dns record index to its backend record_type key
-    const getRecordTypeKey = (index: number): string => {
-      if (index === 0) return 'TXT_DKIM'
-      if (index === 1) return 'TXT_SPF'
-
-      return 'TXT_VERIFY'
+    if (loadingRecords) {
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6, gap: 2 }}>
+          <CircularProgress />
+          <Typography color='text.secondary'>Loading DNS records...</Typography>
+        </Box>
+      )
     }
 
     return (
@@ -331,7 +326,6 @@ const DomainVerificationDialog = ({ open, onClose, domain, onVerificationComplet
         {dnsRecords.map((record, index) => {
           const recordTypeKey = getRecordTypeKey(index)
           const status = getRecordStatus(recordTypeKey)
-          // All records are now TXT records (DKIM, SPF, Verification)
           const instructions = selectedProvider.instructions.txt
 
           return (

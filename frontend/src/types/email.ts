@@ -473,6 +473,37 @@ export interface DomainsConfig {
   site_domains: SiteDomain[]
 }
 
+// Per-account domain record (from app_domains table)
+export interface DomainRecord {
+  id: number
+  account_id: number
+  domain: string
+  type: 'sending' | 'site'
+  status: 'verified' | 'pending' | 'failed'
+  dkim_public_key?: string
+  dkim_selector: string
+  verification_hash: string
+  domain_alignment: boolean
+  ssl: boolean
+  site: string
+  verified_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DnsRecord {
+  label: string
+  type: string
+  name: string
+  value: string
+}
+
+export interface DnsRecordsResponse {
+  domain_id: number
+  domain: string
+  records: DnsRecord[]
+}
+
 export interface DnsRecordResult {
   record_type: string
   expected: string

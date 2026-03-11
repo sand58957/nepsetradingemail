@@ -157,9 +157,8 @@ const SettingsPage = () => {
           onSaveError={handleSaveError}
         />
       )}
-      {activeTab === 2 && settings && (
+      {activeTab === 2 && (
         <DomainsTab
-          data={settings.domains}
           onSaveSuccess={handleSaveSuccess}
           onSaveError={handleSaveError}
         />

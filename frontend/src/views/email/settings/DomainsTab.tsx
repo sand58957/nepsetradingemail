@@ -24,70 +24,61 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import Link from '@mui/material/Link'
+import CircularProgress from '@mui/material/CircularProgress'
 
 // Components
 import DomainVerificationDialog from './DomainVerificationDialog'
 
 // Services
-import accountSettingsService from '@/services/accountSettings'
+import domainService from '@/services/domains'
 
 // Types
-import type { DomainsConfig, SendingDomain, SiteDomain } from '@/types/email'
+import type { DomainRecord } from '@/types/email'
 
 // Hook Imports
 import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
 interface Props {
-  data: DomainsConfig
   onSaveSuccess: (message: string) => void
   onSaveError: (message: string) => void
 }
 
-const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
-  const [form, setForm] = useState<DomainsConfig>({
-    sending_domains: [],
-    site_domains: []
-  })
+const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
+  const [sendingDomains, setSendingDomains] = useState<DomainRecord[]>([])
+  const [siteDomains, setSiteDomains] = useState<DomainRecord[]>([])
+  const [loading, setLoading] = useState(true)
 
   const [addSendingOpen, setAddSendingOpen] = useState(false)
   const [addSiteOpen, setAddSiteOpen] = useState(false)
   const [newDomain, setNewDomain] = useState('')
   const [saving, setSaving] = useState(false)
-  const [verifyDomain, setVerifyDomain] = useState<string | null>(null)
-  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; type: 'sending' | 'site'; index: number; domain: string }>({
-    open: false, type: 'sending', index: -1, domain: ''
+  const [verifyDomain, setVerifyDomain] = useState<DomainRecord | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; domain: DomainRecord | null }>({
+    open: false, domain: null
   })
 
   const isMobile = useMobileBreakpoint()
 
-  useEffect(() => {
-    if (data) {
-      setForm(data)
-    }
-  }, [data])
-
-  const saveForm = async (updated: DomainsConfig, previous: DomainsConfig, silent = false): Promise<boolean> => {
+  const fetchDomains = async () => {
     try {
-      setSaving(true)
-      await accountSettingsService.updateDomains(updated)
+      setLoading(true)
 
-      if (!silent) {
-        onSaveSuccess('Domain settings updated')
-      }
+      const response = await domainService.list()
+      const all = response.data || []
 
-      return true
+      setSendingDomains(all.filter(d => d.type === 'sending'))
+      setSiteDomains(all.filter(d => d.type === 'site'))
     } catch (err) {
-      console.error('Failed to save domain settings:', err)
-      onSaveError('Failed to update domain settings')
-
-      // Rollback to previous state on failure
-      setForm(previous)
-
-      return false
+      console.error('Failed to fetch domains:', err)
+      onSaveError('Failed to load domains')
     } finally {
-      setSaving(false)
+      setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchDomains()
+  }, [])
 
   const isValidDomain = (d: string) => /^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(d)
 
@@ -101,47 +92,23 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
       return
     }
 
-    if (form.sending_domains.some(d => d.domain.toLowerCase() === domainName)) {
-      onSaveError('This domain has already been added')
-      return
+    try {
+      setSaving(true)
+      const response = await domainService.create(domainName, 'sending')
+
+      setNewDomain('')
+      setAddSendingOpen(false)
+
+      // Add to local state immediately
+      setSendingDomains(prev => [...prev, response.data])
+
+      // Open verification dialog
+      setVerifyDomain(response.data)
+    } catch (err: any) {
+      onSaveError(err?.response?.data?.message || 'Failed to add domain')
+    } finally {
+      setSaving(false)
     }
-
-    const domain: SendingDomain = {
-      domain: domainName,
-      status: 'pending',
-      domain_alignment: false
-    }
-
-    const previous = form
-
-    const updated = {
-      ...form,
-      sending_domains: [...form.sending_domains, domain]
-    }
-
-    setForm(updated)
-    setNewDomain('')
-    setAddSendingOpen(false)
-
-    // Save silently (no parent refetch) so the verify dialog can open
-    const ok = await saveForm(updated, previous, true)
-
-    if (ok) {
-      setVerifyDomain(domainName)
-    }
-  }
-
-  const handleRemoveSendingDomain = async (index: number) => {
-    const previous = form
-
-    const updated = {
-      ...form,
-      sending_domains: form.sending_domains.filter((_, i) => i !== index)
-    }
-
-    setForm(updated)
-    setDeleteConfirm({ open: false, type: 'sending', index: -1, domain: '' })
-    await saveForm(updated, previous)
   }
 
   const handleAddSiteDomain = async () => {
@@ -154,49 +121,37 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
       return
     }
 
-    if (form.site_domains.some(d => typeof d !== 'string' && d.domain.toLowerCase() === domainName)) {
-      onSaveError('This domain has already been added')
-      return
+    try {
+      setSaving(true)
+      const response = await domainService.create(domainName, 'site')
+
+      setNewDomain('')
+      setAddSiteOpen(false)
+      setSiteDomains(prev => [...prev, response.data])
+      onSaveSuccess('Domain added')
+    } catch (err: any) {
+      onSaveError(err?.response?.data?.message || 'Failed to add domain')
+    } finally {
+      setSaving(false)
     }
-
-    const domain: SiteDomain = {
-      domain: domainName,
-      status: 'pending',
-      ssl: false,
-      site: ''
-    }
-
-    const previous = form
-
-    const updated = {
-      ...form,
-      site_domains: [...form.site_domains, domain]
-    }
-
-    setForm(updated)
-    setNewDomain('')
-    setAddSiteOpen(false)
-    await saveForm(updated, previous)
   }
 
-  const handleRemoveSiteDomain = async (index: number) => {
-    const previous = form
+  const handleDeleteDomain = async () => {
+    if (!deleteConfirm.domain) return
 
-    const updated = {
-      ...form,
-      site_domains: form.site_domains.filter((_, i) => i !== index)
-    }
+    try {
+      await domainService.delete(deleteConfirm.domain.id)
 
-    setForm(updated)
-    setDeleteConfirm({ open: false, type: 'sending', index: -1, domain: '' })
-    await saveForm(updated, previous)
-  }
+      if (deleteConfirm.domain.type === 'sending') {
+        setSendingDomains(prev => prev.filter(d => d.id !== deleteConfirm.domain!.id))
+      } else {
+        setSiteDomains(prev => prev.filter(d => d.id !== deleteConfirm.domain!.id))
+      }
 
-  const handleDeleteConfirmed = async () => {
-    if (deleteConfirm.type === 'sending') {
-      await handleRemoveSendingDomain(deleteConfirm.index)
-    } else {
-      await handleRemoveSiteDomain(deleteConfirm.index)
+      setDeleteConfirm({ open: false, domain: null })
+      onSaveSuccess('Domain removed')
+    } catch (err: any) {
+      onSaveError(err?.response?.data?.message || 'Failed to remove domain')
     }
   }
 
@@ -211,6 +166,14 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
       default:
         return 'default'
     }
+  }
+
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center min-h-[200px]'>
+        <CircularProgress />
+      </div>
+    )
   }
 
   return (
@@ -234,13 +197,9 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
           </Box>
 
           <Typography variant='body2' color='text.secondary' sx={{ mb: 4 }}>
-            Manage your sending domains. Need help? Learn more{' '}
+            Manage your sending domains. Each domain gets its own DKIM keys auto-generated for email authentication.{' '}
             <Link href='#' underline='hover' color='primary'>
-              about verification and authentication
-            </Link>{' '}
-            or{' '}
-            <Link href='#' underline='hover' color='primary'>
-              custom domains
+              Learn more
             </Link>
             .
           </Typography>
@@ -251,13 +210,13 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
                 <TableRow>
                   <TableCell>Domain</TableCell>
                   <TableCell>Status</TableCell>
-                  {form.sending_domains.length > 0 && <TableCell align='right'>Actions</TableCell>}
+                  {sendingDomains.length > 0 && <TableCell align='right'>Actions</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {form.sending_domains.length > 0 ? (
-                  form.sending_domains.map((domain, index) => (
-                    <TableRow key={index} hover>
+                {sendingDomains.length > 0 ? (
+                  sendingDomains.map(domain => (
+                    <TableRow key={domain.id} hover>
                       <TableCell>
                         <Typography fontWeight={500}>{domain.domain}</Typography>
                       </TableCell>
@@ -271,15 +230,15 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
                       </TableCell>
                       <TableCell align='right'>
                         <div className='flex items-center justify-end gap-1'>
-                          {domain.status === 'pending' && (
+                          {domain.status !== 'verified' && (
                             <Tooltip title='Verify DNS records'>
-                              <IconButton size='small' onClick={() => setVerifyDomain(domain.domain)}>
+                              <IconButton size='small' onClick={() => setVerifyDomain(domain)}>
                                 <i className='tabler-settings text-[18px]' />
                               </IconButton>
                             </Tooltip>
                           )}
                           <Tooltip title='Remove'>
-                            <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, type: 'sending', index, domain: domain.domain })}>
+                            <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, domain })}>
                               <i className='tabler-trash text-[18px]' />
                             </IconButton>
                           </Tooltip>
@@ -367,46 +326,40 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
                     </Box>
                   </TableCell>
                   <TableCell>Site</TableCell>
-                  {form.site_domains.length > 0 && <TableCell align='right'>Actions</TableCell>}
+                  {siteDomains.length > 0 && <TableCell align='right'>Actions</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {form.site_domains.length > 0 ? (
-                  form.site_domains.map((domain, index) => (
-                    <TableRow key={index} hover>
+                {siteDomains.length > 0 ? (
+                  siteDomains.map(domain => (
+                    <TableRow key={domain.id} hover>
                       <TableCell>
-                        <Typography fontWeight={500}>
-                          {typeof domain === 'string' ? domain : domain.domain}
-                        </Typography>
+                        <Typography fontWeight={500}>{domain.domain}</Typography>
                       </TableCell>
                       <TableCell>
-                        {typeof domain !== 'string' && (
-                          <Chip
-                            label={domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
-                            color={getStatusColor(domain.status) as any}
-                            size='small'
-                            variant='tonal'
-                          />
-                        )}
+                        <Chip
+                          label={domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
+                          color={getStatusColor(domain.status) as any}
+                          size='small'
+                          variant='tonal'
+                        />
                       </TableCell>
                       <TableCell>
-                        {typeof domain !== 'string' && (
-                          <Chip
-                            label={domain.ssl ? 'Active' : 'Inactive'}
-                            color={domain.ssl ? 'success' : 'default'}
-                            size='small'
-                            variant='tonal'
-                          />
-                        )}
+                        <Chip
+                          label={domain.ssl ? 'Active' : 'Inactive'}
+                          color={domain.ssl ? 'success' : 'default'}
+                          size='small'
+                          variant='tonal'
+                        />
                       </TableCell>
                       <TableCell>
                         <Typography variant='body2' color='text.secondary'>
-                          {typeof domain === 'string' ? '' : domain.site || '-'}
+                          {domain.site || '-'}
                         </Typography>
                       </TableCell>
                       <TableCell align='right'>
                         <Tooltip title='Remove'>
-                          <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, type: 'site', index, domain: typeof domain === 'string' ? domain : domain.domain })}>
+                          <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, domain })}>
                             <i className='tabler-trash text-[18px]' />
                           </IconButton>
                         </Tooltip>
@@ -431,8 +384,8 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
         <DialogTitle>Add sending domain</DialogTitle>
         <DialogContent>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-            Enter the domain you want to authenticate for sending emails. You will need to add DNS records to verify
-            ownership.
+            Enter the domain you want to authenticate for sending emails. DKIM keys will be automatically generated,
+            and you will need to add DNS records to verify ownership.
           </Typography>
           <TextField
             fullWidth
@@ -450,7 +403,7 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
             Cancel
           </Button>
           <Button onClick={handleAddSendingDomain} variant='contained' disabled={!newDomain.trim() || saving}>
-            Add domain
+            {saving ? 'Adding...' : 'Add domain'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -478,22 +431,23 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
             Cancel
           </Button>
           <Button onClick={handleAddSiteDomain} variant='contained' disabled={!newDomain.trim() || saving}>
-            Add domain
+            {saving ? 'Adding...' : 'Add domain'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Domain Confirmation */}
-      <Dialog open={deleteConfirm.open} onClose={() => setDeleteConfirm(prev => ({ ...prev, open: false }))} fullScreen={isMobile}>
+      <Dialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, domain: null })} fullScreen={isMobile}>
         <DialogTitle>Remove Domain</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to remove <strong>{deleteConfirm.domain}</strong>? This action cannot be undone.
+            Are you sure you want to remove <strong>{deleteConfirm.domain?.domain}</strong>? This will also remove its
+            DKIM keys. This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteConfirm(prev => ({ ...prev, open: false }))}>Cancel</Button>
-          <Button onClick={handleDeleteConfirmed} color='error' variant='contained'>
+          <Button onClick={() => setDeleteConfirm({ open: false, domain: null })}>Cancel</Button>
+          <Button onClick={handleDeleteDomain} color='error' variant='contained'>
             Remove
           </Button>
         </DialogActions>
@@ -503,14 +457,11 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
       <DomainVerificationDialog
         open={!!verifyDomain}
         onClose={() => setVerifyDomain(null)}
-        domain={verifyDomain || ''}
-        onVerificationComplete={(domain, status) => {
-          setForm(prev => ({
-            ...prev,
-            sending_domains: prev.sending_domains.map(d =>
-              d.domain === domain ? { ...d, status } : d
-            )
-          }))
+        domainRecord={verifyDomain}
+        onVerificationComplete={(domainId, status) => {
+          setSendingDomains(prev =>
+            prev.map(d => (d.id === domainId ? { ...d, status } : d))
+          )
 
           if (status === 'verified') {
             onSaveSuccess('Domain verified successfully!')

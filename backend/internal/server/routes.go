@@ -215,13 +215,20 @@ func (s *Server) RegisterRoutes() {
 	settings.GET("/logs", settingsHandler.GetLogs)
 
 	// Account Settings (platform-level settings in our DB)
-	dnsHandler := handlers.NewDnsVerificationHandler(s.DB)
 	accountSettings := admin.Group("/account-settings")
 	accountSettings.GET("", accountSettingsHandler.GetAll)
 	accountSettings.GET("/:key", accountSettingsHandler.GetByKey)
 	accountSettings.PUT("/:key", accountSettingsHandler.UpdateByKey)
 	accountSettings.POST("/logo", accountSettingsHandler.UploadLogo)
-	accountSettings.POST("/domains/verify", dnsHandler.VerifyDomain)
+
+	// Domains — per-account with auto-generated DKIM keys
+	domainHandler := handlers.NewDomainHandler(s.DB)
+	domains := staff.Group("/domains")
+	domains.GET("", domainHandler.List)
+	domains.POST("", domainHandler.Create)
+	domains.DELETE("/:id", domainHandler.Delete)
+	domains.GET("/:id/dns-records", domainHandler.GetDnsRecords)
+	domains.POST("/:id/verify", domainHandler.Verify)
 
 	// Automations
 	automations := admin.Group("/automations")
