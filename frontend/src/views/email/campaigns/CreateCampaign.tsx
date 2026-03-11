@@ -349,7 +349,7 @@ const CreateCampaign = () => {
       const tempResult = await campaignService.create({
         name: `Test - ${name || 'Untitled'}`,
         subject: subject || 'Test Email',
-        from_email: fromEmail.trim() || 'noreply@nepsetrading.com',
+        from_email: assembleFromEmail(),
         type: campaignType as any,
         content_type: 'html',
         body: assembleBody(),
