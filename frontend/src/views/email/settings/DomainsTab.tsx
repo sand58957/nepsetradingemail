@@ -128,7 +128,9 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
       setNewDomain('')
       setAddSiteOpen(false)
       setSiteDomains(prev => [...prev, response.data])
-      onSaveSuccess('Domain added')
+
+      // Open verification dialog for site domains too
+      setVerifyDomain(response.data)
     } catch (err: any) {
       onSaveError(err?.response?.data?.message || 'Failed to add domain')
     } finally {
@@ -297,7 +299,6 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
               startIcon={<i className='tabler-plus' />}
               onClick={() => { setNewDomain(''); setAddSiteOpen(true) }}
               disabled={saving}
-              sx={{ opacity: 0.6 }}
             >
               Add domain
             </Button>
@@ -358,11 +359,20 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
                         </Typography>
                       </TableCell>
                       <TableCell align='right'>
-                        <Tooltip title='Remove'>
-                          <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, domain })}>
-                            <i className='tabler-trash text-[18px]' />
-                          </IconButton>
-                        </Tooltip>
+                        <div className='flex items-center justify-end gap-1'>
+                          {domain.status !== 'verified' && (
+                            <Tooltip title='Verify DNS records'>
+                              <IconButton size='small' onClick={() => setVerifyDomain(domain)}>
+                                <i className='tabler-settings text-[18px]' />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Tooltip title='Remove'>
+                            <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, domain })}>
+                              <i className='tabler-trash text-[18px]' />
+                            </IconButton>
+                          </Tooltip>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -460,6 +470,9 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
         domainRecord={verifyDomain}
         onVerificationComplete={(domainId, status) => {
           setSendingDomains(prev =>
+            prev.map(d => (d.id === domainId ? { ...d, status } : d))
+          )
+          setSiteDomains(prev =>
             prev.map(d => (d.id === domainId ? { ...d, status } : d))
           )
 

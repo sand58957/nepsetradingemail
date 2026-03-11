@@ -232,20 +232,25 @@ func (h *DomainHandler) Create(c echo.Context) error {
 		return response.BadRequest(c, "This domain has already been added")
 	}
 
-	// Generate DKIM key pair
-	privKey, pubKey, err := generateDKIMKeyPair()
-	if err != nil {
-		log.Printf("ERROR: generate DKIM keys for %s: %v", domain, err)
-		return response.InternalError(c, "Failed to generate DKIM keys")
-	}
-
 	// Generate verification hash
 	verifyHash := domainVerificationHash(domain)
+
+	var privKey, pubKey string
+
+	// Only generate DKIM keys for sending domains
+	if domainType == "sending" {
+		var err error
+		privKey, pubKey, err = generateDKIMKeyPair()
+		if err != nil {
+			log.Printf("ERROR: generate DKIM keys for %s: %v", domain, err)
+			return response.InternalError(c, "Failed to generate DKIM keys")
+		}
+	}
 
 	// Insert
 	var d models.Domain
 
-	err = h.db.QueryRowx(
+	err := h.db.QueryRowx(
 		`INSERT INTO app_domains
 			(account_id, domain, type, status, dkim_private_key, dkim_public_key, dkim_selector, verification_hash)
 		 VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7)
@@ -257,9 +262,11 @@ func (h *DomainHandler) Create(c echo.Context) error {
 		return response.InternalError(c, "Failed to add domain")
 	}
 
-	// Write DKIM private key file for Exim4
-	if err := h.writeDKIMKeyFile(domain, privKey); err != nil {
-		log.Printf("WARNING: write DKIM key file for %s: %v", domain, err)
+	// Write DKIM private key file for Exim4 (only for sending domains)
+	if domainType == "sending" && privKey != "" {
+		if err := h.writeDKIMKeyFile(domain, privKey); err != nil {
+			log.Printf("WARNING: write DKIM key file for %s: %v", domain, err)
+		}
 	}
 
 	return response.Success(c, d)
@@ -315,25 +322,46 @@ func (h *DomainHandler) GetDnsRecords(c echo.Context) error {
 		return response.NotFound(c, "Domain not found")
 	}
 
-	records := []models.DnsRecord{
-		{
-			Label: "TXT Record (DKIM)",
-			Type:  "TXT",
-			Name:  d.DKIMSelector + "._domainkey",
-			Value: "v=DKIM1; k=rsa; p=" + d.DKIMPublicKey,
-		},
-		{
-			Label: "TXT Record (SPF)",
-			Type:  "TXT",
-			Name:  "@",
-			Value: "v=spf1 ip4:" + serverIP + " include:_spf.google.com ~all",
-		},
-		{
-			Label: "TXT Record (Domain Verification)",
-			Type:  "TXT",
-			Name:  "@",
-			Value: "nepsefilling-domain-verification=" + d.VerificationHash,
-		},
+	var records []models.DnsRecord
+
+	if d.Type == "site" {
+		// Site domains need an A record pointing to server + verification TXT
+		records = []models.DnsRecord{
+			{
+				Label: "A Record (Points to server)",
+				Type:  "A",
+				Name:  "@",
+				Value: serverIP,
+			},
+			{
+				Label: "TXT Record (Domain Verification)",
+				Type:  "TXT",
+				Name:  "@",
+				Value: "nepsefilling-domain-verification=" + d.VerificationHash,
+			},
+		}
+	} else {
+		// Sending domains need DKIM + SPF + verification TXT
+		records = []models.DnsRecord{
+			{
+				Label: "TXT Record (DKIM)",
+				Type:  "TXT",
+				Name:  d.DKIMSelector + "._domainkey",
+				Value: "v=DKIM1; k=rsa; p=" + d.DKIMPublicKey,
+			},
+			{
+				Label: "TXT Record (SPF)",
+				Type:  "TXT",
+				Name:  "@",
+				Value: "v=spf1 ip4:" + serverIP + " include:_spf.google.com ~all",
+			},
+			{
+				Label: "TXT Record (Domain Verification)",
+				Type:  "TXT",
+				Name:  "@",
+				Value: "nepsefilling-domain-verification=" + d.VerificationHash,
+			},
+		}
 	}
 
 	return response.Success(c, models.DnsRecordsResponse{
@@ -352,17 +380,18 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 
 	id := c.Param("id")
 
-	// Need public key and verification hash from DB
+	// Need public key, type, and verification hash from DB
 	var d struct {
 		ID               int    `db:"id"`
 		Domain           string `db:"domain"`
+		Type             string `db:"type"`
 		DKIMPublicKey    string `db:"dkim_public_key"`
 		DKIMSelector     string `db:"dkim_selector"`
 		VerificationHash string `db:"verification_hash"`
 	}
 
 	err := h.db.Get(&d,
-		`SELECT id, domain, dkim_public_key, dkim_selector, verification_hash
+		`SELECT id, domain, type, dkim_public_key, dkim_selector, verification_hash
 		 FROM app_domains WHERE id = $1 AND account_id = $2`, id, accountID)
 	if err != nil {
 		return response.NotFound(c, "Domain not found")
@@ -372,24 +401,35 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 	defer cancel()
 
 	results := make([]DnsRecordResult, 0, 3)
+	var allPassed bool
 
-	// 1. DKIM
-	dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
-	results = append(results, dkimResult)
+	if d.Type == "site" {
+		// Site domains: check A record + Verification TXT
+		aResult := verifyARecord(ctx, d.Domain)
+		results = append(results, aResult)
 
-	// 2. Lookup root-domain TXT once for SPF + verification
-	resolver := net.Resolver{}
-	txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+		resolver := net.Resolver{}
+		txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+		verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
+		results = append(results, verifyResult)
 
-	// 3. SPF
-	spfResult := verifySPF(txtRecords, txtErr)
-	results = append(results, spfResult)
+		allPassed = aResult.Status == "pass" && verifyResult.Status == "pass"
+	} else {
+		// Sending domains: check DKIM + SPF + Verification TXT
+		dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
+		results = append(results, dkimResult)
 
-	// 4. Verification TXT
-	verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
-	results = append(results, verifyResult)
+		resolver := net.Resolver{}
+		txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
 
-	allPassed := dkimResult.Status == "pass" && spfResult.Status == "pass" && verifyResult.Status == "pass"
+		spfResult := verifySPF(txtRecords, txtErr)
+		results = append(results, spfResult)
+
+		verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
+		results = append(results, verifyResult)
+
+		allPassed = dkimResult.Status == "pass" && spfResult.Status == "pass" && verifyResult.Status == "pass"
+	}
 
 	now := time.Now().UTC()
 
@@ -445,6 +485,7 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 	var domains []struct {
 		ID               int    `db:"id"`
 		Domain           string `db:"domain"`
+		Type             string `db:"type"`
 		DKIMPublicKey    string `db:"dkim_public_key"`
 		DKIMSelector     string `db:"dkim_selector"`
 		VerificationHash string `db:"verification_hash"`
@@ -452,7 +493,7 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 	}
 
 	err := h.db.Select(&domains,
-		`SELECT id, domain, dkim_public_key, dkim_selector, verification_hash, status
+		`SELECT id, domain, type, dkim_public_key, dkim_selector, verification_hash, status
 		 FROM app_domains WHERE status IN ('pending', 'failed') ORDER BY id`)
 	if err != nil {
 		log.Printf("ERROR: auto-verify: failed to fetch pending domains: %v", err)
@@ -468,32 +509,32 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 	for _, d := range domains {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 
-		// Check DKIM
-		dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
+		var allPassed bool
+		var failedChecks []string
 
-		// Lookup root-domain TXT once for SPF + verification
-		resolver := net.Resolver{}
-		txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+		if d.Type == "site" {
+			// Site domains: check A record + Verification TXT
+			aResult := verifyARecord(ctx, d.Domain)
+			resolver := net.Resolver{}
+			txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+			verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
 
-		// Check SPF
-		spfResult := verifySPF(txtRecords, txtErr)
-
-		// Check Verification TXT
-		verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
-
-		cancel()
-
-		allPassed := dkimResult.Status == "pass" && spfResult.Status == "pass" && verifyResult.Status == "pass"
-		now := time.Now().UTC()
-
-		if allPassed {
-			_, _ = h.db.Exec(
-				`UPDATE app_domains SET status = 'verified', verified_at = $1, updated_at = $1 WHERE id = $2`,
-				now, d.ID)
-			log.Printf("INFO: auto-verify: domain %s VERIFIED", d.Domain)
+			allPassed = aResult.Status == "pass" && verifyResult.Status == "pass"
+			if aResult.Status != "pass" {
+				failedChecks = append(failedChecks, "A-Record")
+			}
+			if verifyResult.Status != "pass" {
+				failedChecks = append(failedChecks, "Verify")
+			}
 		} else {
-			// Log which checks failed for debugging
-			var failedChecks []string
+			// Sending domains: check DKIM + SPF + Verification TXT
+			dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
+			resolver := net.Resolver{}
+			txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+			spfResult := verifySPF(txtRecords, txtErr)
+			verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
+
+			allPassed = dkimResult.Status == "pass" && spfResult.Status == "pass" && verifyResult.Status == "pass"
 			if dkimResult.Status != "pass" {
 				failedChecks = append(failedChecks, "DKIM")
 			}
@@ -503,9 +544,20 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 			if verifyResult.Status != "pass" {
 				failedChecks = append(failedChecks, "Verify")
 			}
+		}
 
-			log.Printf("INFO: auto-verify: domain %s still pending (failed: %s)",
-				d.Domain, strings.Join(failedChecks, ", "))
+		cancel()
+
+		now := time.Now().UTC()
+
+		if allPassed {
+			_, _ = h.db.Exec(
+				`UPDATE app_domains SET status = 'verified', verified_at = $1, updated_at = $1 WHERE id = $2`,
+				now, d.ID)
+			log.Printf("INFO: auto-verify: domain %s (%s) VERIFIED", d.Domain, d.Type)
+		} else {
+			log.Printf("INFO: auto-verify: domain %s (%s) still pending (failed: %s)",
+				d.Domain, d.Type, strings.Join(failedChecks, ", "))
 		}
 	}
 }
@@ -513,6 +565,35 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 // --------------------------------------------------------------------------
 // DNS verification helpers
 // --------------------------------------------------------------------------
+
+func verifyARecord(ctx context.Context, domain string) DnsRecordResult {
+	expected := serverIP
+
+	resolver := net.Resolver{}
+	ips, err := resolver.LookupIPAddr(ctx, domain)
+
+	if err != nil {
+		return DnsRecordResult{RecordType: "A", Expected: expected, Found: "", Status: "fail"}
+	}
+
+	var found string
+	status := "fail"
+
+	for _, ip := range ips {
+		ipStr := ip.IP.String()
+		if found == "" {
+			found = ipStr
+		} else {
+			found += ", " + ipStr
+		}
+
+		if ipStr == serverIP {
+			status = "pass"
+		}
+	}
+
+	return DnsRecordResult{RecordType: "A", Expected: expected, Found: found, Status: status}
+}
 
 func verifyDKIM(ctx context.Context, domain, selector, expectedPubKey string) DnsRecordResult {
 	lookupName := selector + "._domainkey." + domain
