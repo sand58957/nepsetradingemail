@@ -185,11 +185,27 @@ const Login = ({ mode }: { mode: SystemMode }) => {
             'border-ie': settings.skin === 'bordered'
           }
         )}
+        style={
+          mode === 'dark'
+            ? { background: 'linear-gradient(135deg, #0a0a18 0%, #12122a 40%, #1a1040 70%, #0f0f1a 100%)' }
+            : undefined
+        }
       >
         <LoginIllustration src={characterIllustration} alt='character-illustration' />
         {!hidden && <MaskImg alt='mask' src={authBackground} />}
       </div>
-      <div className='flex justify-center items-center bs-full bg-backgroundPaper !min-is-full p-6 md:!min-is-[unset] md:p-12 md:is-[480px]'>
+      <div
+        className='flex justify-center items-center bs-full bg-backgroundPaper !min-is-full p-6 md:!min-is-[unset] md:p-12 md:is-[480px]'
+        style={
+          mode === 'dark'
+            ? {
+                background: 'rgba(22, 22, 38, 0.7)',
+                backdropFilter: 'blur(16px)',
+                borderInlineStart: '1px solid rgba(115, 103, 240, 0.1)'
+              }
+            : undefined
+        }
+      >
         <div className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'>
           <Logo />
         </div>

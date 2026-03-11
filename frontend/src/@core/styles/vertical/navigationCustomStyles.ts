@@ -38,6 +38,11 @@ const navigationCustomStyles = (verticalNavOptions: VerticalNavState, theme: The
       }),
       borderColor: 'transparent',
       boxShadow: 'var(--mui-customShadows-sm)',
+      // Dark mode sidebar gradient
+      '[data-mui-color-scheme="dark"] &': {
+        background: 'linear-gradient(180deg, #0f0f1a 0%, #161626 50%, #1a1a2e 100%)',
+        borderInlineEnd: '1px solid rgba(115, 103, 240, 0.08)'
+      },
       '[data-skin="bordered"] &': {
         boxShadow: 'none',
         ...(collapsedHovered && {

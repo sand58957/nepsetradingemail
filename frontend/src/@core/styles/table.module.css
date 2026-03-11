@@ -80,6 +80,25 @@
   }
 }
 
+/* Dark mode premium table styles */
+:global([data-mui-color-scheme="dark"]) .table thead {
+  background: linear-gradient(135deg, rgba(115, 103, 240, 0.08) 0%, rgba(115, 103, 240, 0.02) 100%);
+  border-block-start-color: rgba(115, 103, 240, 0.1);
+}
+
+:global([data-mui-color-scheme="dark"]) .table thead th {
+  color: rgba(225, 222, 245, 0.95);
+}
+
+:global([data-mui-color-scheme="dark"]) .table tbody tr:hover {
+  background-color: rgba(115, 103, 240, 0.04);
+}
+
+:global([data-mui-color-scheme="dark"]) .table tbody tr {
+  border-block-color: rgba(115, 103, 240, 0.06);
+  transition: background-color 0.2s ease;
+}
+
 .cellWithInput input {
   inline-size: 100%;
   background-color: transparent;

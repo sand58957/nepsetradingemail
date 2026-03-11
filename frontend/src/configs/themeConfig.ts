@@ -57,7 +57,7 @@ const themeConfig: Config = {
   templateName: 'Nepal Fillings',
   homePageUrl: '/dashboards/email-marketing',
   settingsCookieName: 'nepal-fillings-email',
-  mode: 'system', // 'system', 'light', 'dark'
+  mode: 'dark', // 'system', 'light', 'dark'
   skin: 'default', // 'default', 'bordered'
   semiDark: false, // true, false
   layout: 'vertical', // 'vertical', 'collapsed', 'horizontal'

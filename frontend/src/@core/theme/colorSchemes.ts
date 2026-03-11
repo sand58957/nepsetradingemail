@@ -235,9 +235,9 @@ const colorSchemes = (skin: Skin): Theme['colorSchemes'] => {
         divider: `rgb(var(--mui-mainColorChannels-dark) / 0.12)`,
         dividerChannel: 'var(--mui-mainColorChannels-dark)',
         background: {
-          default: skin === 'bordered' ? '#2F3349' : '#25293C',
-          paper: '#2F3349',
-          paperChannel: '47 51 73'
+          default: skin === 'bordered' ? '#1a1a2e' : '#0f0f1a',
+          paper: '#161626',
+          paperChannel: '22 22 38'
         },
         action: {
           active: `rgb(var(--mui-mainColorChannels-dark) / 0.6)`,
@@ -269,7 +269,7 @@ const colorSchemes = (skin: Skin): Theme['colorSchemes'] => {
           successFilledBg: 'var(--mui-palette-success-main)'
         },
         Avatar: {
-          defaultBg: '#373B50'
+          defaultBg: '#252542'
         },
         Chip: {
           defaultBorder: 'var(--mui-palette-divider)'
@@ -280,7 +280,7 @@ const colorSchemes = (skin: Skin): Theme['colorSchemes'] => {
           disabledBg: `var(--mui-palette-action-hover)`
         },
         SnackbarContent: {
-          bg: '#F7F4FF',
+          bg: '#252542',
           color: 'var(--mui-palette-background-paper)'
         },
         Switch: {
@@ -294,19 +294,19 @@ const colorSchemes = (skin: Skin): Theme['colorSchemes'] => {
           successDisabledColor: 'var(--mui-palette-common-white)'
         },
         Tooltip: {
-          bg: '#F7F4FF'
+          bg: '#252542'
         },
         TableCell: {
           border: 'var(--mui-palette-divider)'
         },
         customColors: {
-          bodyBg: '#25293C',
-          chatBg: '#202534',
-          greyLightBg: '#353A52',
+          bodyBg: '#0f0f1a',
+          chatBg: '#12121f',
+          greyLightBg: '#1e1e35',
           inputBorder: `rgb(var(--mui-mainColorChannels-dark) / 0.22)`,
-          tableHeaderBg: '#2F3349',
-          tooltipText: '#2F3349',
-          trackBg: '#3A3F57'
+          tableHeaderBg: '#1a1a30',
+          tooltipText: '#161626',
+          trackBg: '#252542'
         }
       }
     }

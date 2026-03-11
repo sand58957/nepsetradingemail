@@ -246,6 +246,16 @@ const button: Theme['components'] = {
               '&.Mui-disabled': {
                 color: 'var(--mui-palette-primary-contrastText)',
                 backgroundColor: 'var(--mui-palette-primary-main)'
+              },
+              // Dark mode gradient button
+              '[data-mui-color-scheme="dark"] &:not(.Mui-disabled)': {
+                background: 'linear-gradient(135deg, #7367F0 0%, #8B5CF6 50%, #6C63FF 100%)',
+                boxShadow: '0 4px 15px rgba(115, 103, 240, 0.35)',
+                transition: 'all 0.3s ease'
+              },
+              '[data-mui-color-scheme="dark"] &:not(.Mui-disabled):hover': {
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 50%, #7C3AED 100%)',
+                boxShadow: '0 6px 20px rgba(115, 103, 240, 0.45)'
               }
             }
           },

@@ -96,8 +96,79 @@
 }
 
 [data-dark] {
-  --backdrop-color: rgb(23 25 37 / 0.6);
+  --backdrop-color: rgb(15 15 26 / 0.7);
   --mui-mainColorChannels-shadow: var(--mui-mainColorChannels-darkShadow);
+
+  /* Premium gradient variables */
+  --gradient-primary-btn: linear-gradient(135deg, #7367F0 0%, #8B5CF6 50%, #6C63FF 100%);
+  --gradient-primary-hover: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 50%, #7C3AED 100%);
+  --gradient-card-border: linear-gradient(135deg, rgba(115, 103, 240, 0.3) 0%, rgba(115, 103, 240, 0.05) 50%, rgba(115, 103, 240, 0.3) 100%);
+  --gradient-sidebar: linear-gradient(180deg, #0f0f1a 0%, #161626 50%, #1a1a2e 100%);
+  --gradient-table-header: linear-gradient(135deg, rgba(115, 103, 240, 0.08) 0%, rgba(115, 103, 240, 0.03) 100%);
+  --glow-primary: 0 0 20px rgba(115, 103, 240, 0.15), 0 0 40px rgba(115, 103, 240, 0.05);
+  --glow-card: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(115, 103, 240, 0.06);
+}
+
+/* ========== DARK MODE PREMIUM STYLES ========== */
+
+/* Card gradient border + glow */
+[data-mui-color-scheme="dark"] .MuiCard-root {
+  border: 1px solid rgba(115, 103, 240, 0.12);
+  box-shadow: var(--glow-card);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+[data-mui-color-scheme="dark"] .MuiCard-root:hover {
+  border-color: rgba(115, 103, 240, 0.25);
+  box-shadow: var(--glow-card), 0 0 20px rgba(115, 103, 240, 0.08);
+}
+
+/* Primary contained button gradient */
+[data-mui-color-scheme="dark"] .MuiButton-containedPrimary:not(.Mui-disabled) {
+  background: var(--gradient-primary-btn) !important;
+  box-shadow: 0 4px 15px rgba(115, 103, 240, 0.35);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+[data-mui-color-scheme="dark"] .MuiButton-containedPrimary:not(.Mui-disabled):hover {
+  background: var(--gradient-primary-hover) !important;
+  box-shadow: 0 6px 20px rgba(115, 103, 240, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Table header gradient */
+[data-mui-color-scheme="dark"] thead,
+[data-mui-color-scheme="dark"] .MuiTableHead-root {
+  background: var(--gradient-table-header);
+}
+
+/* Table row hover */
+[data-mui-color-scheme="dark"] tbody tr:hover,
+[data-mui-color-scheme="dark"] .MuiTableBody-root .MuiTableRow-root:hover {
+  background-color: rgba(115, 103, 240, 0.04);
+}
+
+/* Input focus glow ring */
+[data-mui-color-scheme="dark"] .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #7367F0;
+  box-shadow: 0 0 0 3px rgba(115, 103, 240, 0.15);
+}
+
+/* Chip subtle border */
+[data-mui-color-scheme="dark"] .MuiChip-root {
+  border-color: rgba(115, 103, 240, 0.15);
+}
+
+/* Softer dividers */
+[data-mui-color-scheme="dark"] .MuiDivider-root {
+  border-color: rgba(115, 103, 240, 0.08);
+}
+
+/* Dialog premium styling */
+[data-mui-color-scheme="dark"] .MuiDialog-paper {
+  border: 1px solid rgba(115, 103, 240, 0.12);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(115, 103, 240, 0.08);
 }
 
 @layer base {

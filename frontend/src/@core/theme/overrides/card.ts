@@ -16,7 +16,16 @@ const card = (skin: Skin): Theme['components'] => {
         root: ({ ownerState }) => ({
           ...(ownerState.variant !== 'outlined' && {
             boxShadow: 'var(--mui-customShadows-md)'
-          })
+          }),
+          // Premium dark mode card styling
+          '[data-mui-color-scheme="dark"] &': {
+            backgroundImage:
+              'linear-gradient(135deg, rgba(115, 103, 240, 0.03) 0%, transparent 50%, rgba(115, 103, 240, 0.03) 100%)',
+            ...(ownerState.variant !== 'outlined' && {
+              border: '1px solid rgba(115, 103, 240, 0.12)',
+              boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(115, 103, 240, 0.06)'
+            })
+          }
         })
       }
     },
