@@ -32,6 +32,22 @@ const (
 
 var domainNameRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
+// DnsRecordResult represents the result of verifying a single DNS record.
+type DnsRecordResult struct {
+	RecordType string `json:"record_type"`
+	Expected   string `json:"expected"`
+	Found      string `json:"found"`
+	Status     string `json:"status"` // "pass" or "fail"
+}
+
+// VerifyDomainResponse is the response for domain verification.
+type VerifyDomainResponse struct {
+	Domain    string            `json:"domain"`
+	AllPassed bool              `json:"all_passed"`
+	Records   []DnsRecordResult `json:"records"`
+	CheckedAt string            `json:"checked_at"`
+}
+
 // DomainHandler manages per-account domains with DKIM key generation and DNS verification.
 type DomainHandler struct {
 	db         *sqlx.DB
