@@ -319,7 +319,7 @@ const ListTable = () => {
             </Button>
           }
         />
-        <div className='flex items-center gap-4 p-6 pt-0'>
+        <div className='flex items-center flex-wrap justify-between gap-4 p-6 pt-0'>
           <TextField
             size='small'
             placeholder='Search lists...'
@@ -532,7 +532,7 @@ const ListTable = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullScreen={isMobile}>
         <DialogTitle>Delete List</DialogTitle>
         <DialogContent>
           <DialogContentText>

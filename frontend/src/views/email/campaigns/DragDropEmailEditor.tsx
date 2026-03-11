@@ -1387,7 +1387,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           </Tooltip>
         </Box>
 
-        <Typography variant='subtitle2' sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <Typography variant='subtitle2' sx={{ color: 'rgba(255,255,255,0.7)', display: { xs: 'none', sm: 'block' } }}>
           Email Editor
         </Typography>
 
@@ -1404,7 +1404,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             startIcon={<i className='tabler-eye' />}
             endIcon={<i className='tabler-chevron-down text-[14px]' />}
           >
-            Preview and test
+            <Box component='span' sx={{ display: { xs: 'none', sm: 'inline' } }}>Preview and test</Box>
           </Button>
           <Menu
             anchorEl={previewMenuAnchor}
@@ -1429,7 +1429,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             onClick={handleDoneEditing}
             startIcon={<i className='tabler-device-floppy' />}
           >
-            Done editing
+            <Box component='span' sx={{ display: { xs: 'none', sm: 'inline' } }}>Done editing</Box>
           </Button>
         </Box>
       </Box>

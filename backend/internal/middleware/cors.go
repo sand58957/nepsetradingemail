@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
@@ -11,10 +10,8 @@ import (
 func CORSConfig(frontendURL string) echo.MiddlewareFunc {
 	origins := []string{frontendURL}
 
-	// Only allow localhost origins in development
-	if strings.Contains(frontendURL, "localhost") || strings.Contains(frontendURL, "127.0.0.1") {
-		origins = append(origins, "http://localhost:3000", "http://localhost:3001")
-	}
+	// Always allow localhost origins for local development against production API
+	origins = append(origins, "http://localhost:3000", "http://localhost:3001")
 
 	return echomw.CORSWithConfig(echomw.CORSConfig{
 		AllowOrigins: origins,

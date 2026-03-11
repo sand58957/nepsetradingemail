@@ -27,8 +27,7 @@ const PortalLayout = ({ children }: ChildrenType) => {
 
   const navItems = [
     { label: 'Home', icon: 'tabler-home', path: '/portal' },
-    { label: 'Subscriptions', icon: 'tabler-mail', path: '/portal/subscriptions' },
-    { label: 'Archive', icon: 'tabler-archive', path: '/portal/archive' },
+    { label: 'Email Marketing', icon: 'tabler-mail', path: '/dashboards/email-marketing' },
     { label: 'Profile', icon: 'tabler-user', path: '/portal/profile' }
   ]
 

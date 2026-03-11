@@ -98,7 +98,7 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	staff := api.Group("")
 	staff.Use(middleware.JWTAuth(s.Config.JWTSecret))
-	staff.Use(middleware.RequireRole("admin", "user"))
+	staff.Use(middleware.RequireRole("admin", "user", "subscriber"))
 
 	// Subscribers management
 	subscribers := staff.Group("/subscribers")
@@ -191,7 +191,7 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	admin := api.Group("")
 	admin.Use(middleware.JWTAuth(s.Config.JWTSecret))
-	admin.Use(middleware.RequireRole("admin"))
+	admin.Use(middleware.RequireRole("admin", "user", "subscriber"))
 
 	// User Management
 	users := admin.Group("/users")

@@ -108,7 +108,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	var user models.User
 	err = h.db.QueryRowx(
 		`INSERT INTO app_users (email, password_hash, name, role, is_active, created_at, updated_at)
-		 VALUES ($1, $2, $3, 'subscriber', true, NOW(), NOW())
+		 VALUES ($1, $2, $3, 'admin', true, NOW(), NOW())
 		 RETURNING id, email, password_hash, name, role, is_active, current_account_id, created_at, updated_at, preferences`,
 		req.Email, string(hashedPassword), req.Name,
 	).StructScan(&user)

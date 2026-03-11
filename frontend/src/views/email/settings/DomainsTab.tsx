@@ -484,7 +484,7 @@ const DomainsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
       </Dialog>
 
       {/* Delete Domain Confirmation */}
-      <Dialog open={deleteConfirm.open} onClose={() => setDeleteConfirm(prev => ({ ...prev, open: false }))}>
+      <Dialog open={deleteConfirm.open} onClose={() => setDeleteConfirm(prev => ({ ...prev, open: false }))} fullScreen={isMobile}>
         <DialogTitle>Remove Domain</DialogTitle>
         <DialogContent>
           <DialogContentText>

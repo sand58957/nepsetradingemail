@@ -332,7 +332,7 @@ const TemplateGrid = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullScreen={isMobile}>
         <DialogTitle>Delete Template</DialogTitle>
         <DialogContent>
           <DialogContentText>
