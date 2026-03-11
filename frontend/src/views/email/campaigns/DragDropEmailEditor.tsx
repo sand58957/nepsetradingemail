@@ -1234,7 +1234,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         const tempResult = await campaignService.create({
           name: `Test Preview - ${new Date().toISOString()}`,
           subject: 'Test Email Preview',
-          from_email: 'noreply@test.com',
+          from_email: 'noreply@nepsetrading.com',
           type: campaignType as any,
           content_type: 'html',
           body: data.html,

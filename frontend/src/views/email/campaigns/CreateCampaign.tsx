@@ -59,8 +59,8 @@ const CreateCampaign = () => {
   // Campaign details
   const [name, setName] = useState('')
   const [subject, setSubject] = useState('')
-  const [fromName, setFromName] = useState('Nepal Fillings')
-  const [fromEmail, setFromEmail] = useState('noreply@nepalfilling.com')
+  const [fromName, setFromName] = useState('NEPSE Trading')
+  const [fromEmail, setFromEmail] = useState('noreply@nepsetrading.com')
   const [preheader, setPreheader] = useState('')
 
   // Recipients
@@ -349,7 +349,7 @@ const CreateCampaign = () => {
       const tempResult = await campaignService.create({
         name: `Test - ${name || 'Untitled'}`,
         subject: subject || 'Test Email',
-        from_email: fromEmail.trim() || 'noreply@nepalfilling.com',
+        from_email: fromEmail.trim() || 'noreply@nepsetrading.com',
         type: campaignType as any,
         content_type: 'html',
         body: assembleBody(),
