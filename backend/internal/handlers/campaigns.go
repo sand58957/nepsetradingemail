@@ -30,6 +30,11 @@ func validateCampaignID(c echo.Context) (string, error) {
 }
 
 func (h *CampaignHandler) List(c echo.Context) error {
+	// Non-admin users get a fresh/clean view (no shared Listmonk data)
+	if !isAdmin(c) {
+		return emptyListmonkList(c)
+	}
+
 	params := map[string]string{}
 	if v := c.QueryParam("page"); v != "" {
 		params["page"] = v
@@ -278,6 +283,11 @@ func (h *CampaignHandler) GetStats(c echo.Context) error {
 }
 
 func (h *CampaignHandler) GetRunning(c echo.Context) error {
+	// Non-admin users get a fresh/clean view
+	if !isAdmin(c) {
+		return emptyListmonkList(c)
+	}
+
 	// Fetch campaigns with status=running filter (Listmonk doesn't have a /running/stats endpoint)
 	data, statusCode, err := h.lm.Get("/campaigns", map[string]string{"status": "running"})
 	if err != nil {

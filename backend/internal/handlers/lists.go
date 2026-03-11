@@ -29,6 +29,11 @@ func validateListID(c echo.Context) (string, error) {
 }
 
 func (h *ListHandler) List(c echo.Context) error {
+	// Non-admin users get a fresh/clean view (no shared Listmonk data)
+	if !isAdmin(c) {
+		return emptyListmonkList(c)
+	}
+
 	params := map[string]string{}
 	if v := c.QueryParam("page"); v != "" {
 		params["page"] = v

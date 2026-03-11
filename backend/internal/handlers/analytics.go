@@ -55,6 +55,11 @@ type PerformanceAnalytics struct {
 }
 
 func (h *AnalyticsHandler) GetOverview(c echo.Context) error {
+	// Non-admin users get a fresh/clean analytics view
+	if !isAdmin(c) {
+		return response.Success(c, AnalyticsOverview{})
+	}
+
 	var (
 		analytics AnalyticsOverview
 		mu        sync.Mutex
@@ -290,6 +295,11 @@ func (h *AnalyticsHandler) GetCampaignAnalytics(c echo.Context) error {
 }
 
 func (h *AnalyticsHandler) GetListAnalytics(c echo.Context) error {
+	// Non-admin users get a fresh/clean view
+	if !isAdmin(c) {
+		return emptyListmonkList(c)
+	}
+
 	data, statusCode, err := h.lm.Get("/lists", map[string]string{
 		"page":     "1",
 		"per_page": "100",

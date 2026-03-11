@@ -44,6 +44,11 @@ func validateSubscriberID(c echo.Context) (string, error) {
 }
 
 func (h *SubscriberHandler) List(c echo.Context) error {
+	// Non-admin users get a fresh/clean view (no shared Listmonk data)
+	if !isAdmin(c) {
+		return emptyListmonkList(c)
+	}
+
 	params := map[string]string{}
 	if v := c.QueryParam("page"); v != "" {
 		params["page"] = v
@@ -165,6 +170,13 @@ func (h *SubscriberHandler) ManageLists(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Export(c echo.Context) error {
+	// Non-admin users get an empty CSV
+	if !isAdmin(c) {
+		c.Response().Header().Set("Content-Type", "text/csv")
+		c.Response().Header().Set("Content-Disposition", "attachment; filename=subscribers.csv")
+		return c.Blob(http.StatusOK, "text/csv", []byte("email,name,status\n"))
+	}
+
 	params := map[string]string{}
 	if v := c.QueryParam("list_id"); v != "" {
 		params["list_id"] = v
