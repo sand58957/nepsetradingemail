@@ -50,7 +50,7 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
   // Vars
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
   const { lang: locale } = params
-  const isAdmin = role === 'admin'
+  const isStaff = role === 'admin' || role === 'user'
 
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
 
@@ -106,8 +106,8 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           </MenuItem>
         </MenuSection>
 
-        {/* Admin-only section */}
-        {isAdmin && (
+        {/* Administration section — visible to admin + user */}
+        {isStaff && (
           <MenuSection label='Administration'>
             <MenuItem href={`/${locale}/admin/users`} icon={<i className='tabler-users-group' />}>
               User Management

@@ -191,7 +191,7 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	admin := api.Group("")
 	admin.Use(middleware.JWTAuth(s.Config.JWTSecret))
-	admin.Use(middleware.RequireRole("admin"))
+	admin.Use(middleware.RequireRole("admin", "user"))
 
 	// User Management
 	users := admin.Group("/users")
