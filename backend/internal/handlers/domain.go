@@ -412,6 +412,105 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 }
 
 // --------------------------------------------------------------------------
+// Auto-verification background job
+// --------------------------------------------------------------------------
+
+// StartAutoVerification starts a background goroutine that periodically checks
+// all pending/failed domains and updates their status when DNS records pass.
+func (h *DomainHandler) StartAutoVerification(ctx context.Context, interval time.Duration) {
+	log.Printf("INFO: Domain auto-verification started (interval: %s)", interval)
+
+	// Run once immediately on startup (with a small delay to let services warm up)
+	go func() {
+		time.Sleep(30 * time.Second)
+		h.verifyAllPendingDomains()
+	}()
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("INFO: Domain auto-verification stopped")
+			return
+		case <-ticker.C:
+			h.verifyAllPendingDomains()
+		}
+	}
+}
+
+// verifyAllPendingDomains checks all pending/failed domains.
+func (h *DomainHandler) verifyAllPendingDomains() {
+	var domains []struct {
+		ID               int    `db:"id"`
+		Domain           string `db:"domain"`
+		DKIMPublicKey    string `db:"dkim_public_key"`
+		DKIMSelector     string `db:"dkim_selector"`
+		VerificationHash string `db:"verification_hash"`
+		Status           string `db:"status"`
+	}
+
+	err := h.db.Select(&domains,
+		`SELECT id, domain, dkim_public_key, dkim_selector, verification_hash, status
+		 FROM app_domains WHERE status IN ('pending', 'failed') ORDER BY id`)
+	if err != nil {
+		log.Printf("ERROR: auto-verify: failed to fetch pending domains: %v", err)
+		return
+	}
+
+	if len(domains) == 0 {
+		return
+	}
+
+	log.Printf("INFO: auto-verify: checking %d pending domain(s)", len(domains))
+
+	for _, d := range domains {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+
+		// Check DKIM
+		dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
+
+		// Lookup root-domain TXT once for SPF + verification
+		resolver := net.Resolver{}
+		txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+
+		// Check SPF
+		spfResult := verifySPF(txtRecords, txtErr)
+
+		// Check Verification TXT
+		verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
+
+		cancel()
+
+		allPassed := dkimResult.Status == "pass" && spfResult.Status == "pass" && verifyResult.Status == "pass"
+		now := time.Now().UTC()
+
+		if allPassed {
+			_, _ = h.db.Exec(
+				`UPDATE app_domains SET status = 'verified', verified_at = $1, updated_at = $1 WHERE id = $2`,
+				now, d.ID)
+			log.Printf("INFO: auto-verify: domain %s VERIFIED", d.Domain)
+		} else {
+			// Log which checks failed for debugging
+			var failedChecks []string
+			if dkimResult.Status != "pass" {
+				failedChecks = append(failedChecks, "DKIM")
+			}
+			if spfResult.Status != "pass" {
+				failedChecks = append(failedChecks, "SPF")
+			}
+			if verifyResult.Status != "pass" {
+				failedChecks = append(failedChecks, "Verify")
+			}
+
+			log.Printf("INFO: auto-verify: domain %s still pending (failed: %s)",
+				d.Domain, strings.Join(failedChecks, ", "))
+		}
+	}
+}
+
+// --------------------------------------------------------------------------
 // DNS verification helpers
 // --------------------------------------------------------------------------
 

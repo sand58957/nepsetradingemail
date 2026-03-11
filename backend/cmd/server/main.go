@@ -17,6 +17,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/sandeep/nepsetradingemail/backend/internal/config"
+	"github.com/sandeep/nepsetradingemail/backend/internal/handlers"
 	"github.com/sandeep/nepsetradingemail/backend/internal/server"
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/cache"
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/listmonk"
@@ -111,6 +112,13 @@ func main() {
 
 	// Create and start server
 	srv := server.New(cfg, db, redisCache, lmClient)
+
+	// Start domain auto-verification background job (checks every 5 minutes)
+	autoVerifyCtx, autoVerifyCancel := context.WithCancel(context.Background())
+	defer autoVerifyCancel()
+
+	domainHandler := handlers.NewDomainHandler(db)
+	go domainHandler.StartAutoVerification(autoVerifyCtx, 5*time.Minute)
 
 	// Start server in a goroutine
 	go func() {
