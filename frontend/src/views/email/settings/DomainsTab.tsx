@@ -82,13 +82,24 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
 
   const isValidDomain = (d: string) => /^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(d)
 
+  // Extract domain from email or domain input (e.g. "info@example.com" → "example.com")
+  const extractDomain = (input: string): string => {
+    const trimmed = input.trim().toLowerCase()
+
+    if (trimmed.includes('@')) {
+      return trimmed.split('@')[1] || ''
+    }
+
+    return trimmed
+  }
+
   const handleAddSendingDomain = async () => {
     if (!newDomain.trim()) return
 
-    const domainName = newDomain.trim().toLowerCase()
+    const domainName = extractDomain(newDomain)
 
-    if (!isValidDomain(domainName)) {
-      onSaveError('Please enter a valid domain name (e.g. mail.yourdomain.com)')
+    if (!domainName || !isValidDomain(domainName)) {
+      onSaveError('Please enter a valid domain or email (e.g. yourdomain.com or info@yourdomain.com)')
       return
     }
 
@@ -394,15 +405,15 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
         <DialogTitle>Add sending domain</DialogTitle>
         <DialogContent>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-            Enter the domain you want to authenticate for sending emails. DKIM keys will be automatically generated,
-            and you will need to add DNS records to verify ownership.
+            Enter the domain or email address you want to authenticate for sending emails (e.g. info@yourdomain.com).
+            DKIM keys will be automatically generated, and you will need to add DNS records to verify ownership.
           </Typography>
           <TextField
             fullWidth
-            label='Domain'
+            label='Domain or Email'
             value={newDomain}
             onChange={e => setNewDomain(e.target.value)}
-            placeholder='e.g. mail.yourdomain.com'
+            placeholder='e.g. info@yourdomain.com or yourdomain.com'
             autoFocus
             sx={{ mt: 1 }}
             onKeyDown={e => e.key === 'Enter' && handleAddSendingDomain()}
