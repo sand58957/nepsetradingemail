@@ -5,30 +5,37 @@ import (
 	"log"
 	"sync"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 
+	"github.com/sandeep/nepsetradingemail/backend/internal/middleware"
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/listmonk"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
 
 type DashboardHandler struct {
 	lm *listmonk.Client
+	db *sqlx.DB
 }
 
-func NewDashboardHandler(lm *listmonk.Client) *DashboardHandler {
-	return &DashboardHandler{lm: lm}
+func NewDashboardHandler(lm *listmonk.Client, db *sqlx.DB) *DashboardHandler {
+	return &DashboardHandler{lm: lm, db: db}
 }
 
 type DashboardStats struct {
-	TotalSubscribers  int                    `json:"total_subscribers"`
-	ActiveSubscribers int                    `json:"active_subscribers"`
-	TotalLists        int                    `json:"total_lists"`
-	TotalCampaigns    int                    `json:"total_campaigns"`
-	CampaignsSent     int                    `json:"campaigns_sent"`
-	OpenRate          float64                `json:"open_rate"`
-	ClickRate         float64                `json:"click_rate"`
-	RecentCampaigns   json.RawMessage        `json:"recent_campaigns"`
-	ListStats         json.RawMessage        `json:"list_stats"`
+	TotalSubscribers  int             `json:"total_subscribers"`
+	ActiveSubscribers int             `json:"active_subscribers"`
+	TotalLists        int             `json:"total_lists"`
+	TotalCampaigns    int             `json:"total_campaigns"`
+	CampaignsSent     int             `json:"campaigns_sent"`
+	OpenRate          float64         `json:"open_rate"`
+	ClickRate         float64         `json:"click_rate"`
+	RecentCampaigns   json.RawMessage `json:"recent_campaigns"`
+	ListStats         json.RawMessage `json:"list_stats"`
+	TotalDomains      int             `json:"total_domains"`
+	VerifiedDomains   int             `json:"verified_domains"`
+	SendingDomains    int             `json:"sending_domains"`
+	SiteDomains       int             `json:"site_domains"`
 }
 
 func (h *DashboardHandler) GetStats(c echo.Context) error {
@@ -199,6 +206,37 @@ func (h *DashboardHandler) GetStats(c echo.Context) error {
 			mu.Unlock()
 		}
 	}()
+
+	// Fetch account-scoped domain stats
+	accountID := middleware.GetAccountID(c)
+	if accountID > 0 && h.db != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var domainStats struct {
+				Total    int `db:"total"`
+				Verified int `db:"verified"`
+				Sending  int `db:"sending"`
+				Site     int `db:"site"`
+			}
+			err := h.db.Get(&domainStats, `
+				SELECT
+					COUNT(*) as total,
+					COUNT(*) FILTER (WHERE status = 'verified') as verified,
+					COUNT(*) FILTER (WHERE type = 'sending') as sending,
+					COUNT(*) FILTER (WHERE type = 'site') as site
+				FROM app_domains WHERE account_id = $1
+			`, accountID)
+			if err == nil {
+				mu.Lock()
+				stats.TotalDomains = domainStats.Total
+				stats.VerifiedDomains = domainStats.Verified
+				stats.SendingDomains = domainStats.Sending
+				stats.SiteDomains = domainStats.Site
+				mu.Unlock()
+			}
+		}()
+	}
 
 	wg.Wait()
 

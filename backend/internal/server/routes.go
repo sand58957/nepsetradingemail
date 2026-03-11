@@ -13,7 +13,7 @@ import (
 func (s *Server) RegisterRoutes() {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(s.DB, s.Config)
-	dashboardHandler := handlers.NewDashboardHandler(s.LM)
+	dashboardHandler := handlers.NewDashboardHandler(s.LM, s.DB)
 	subscriberHandler := handlers.NewSubscriberHandler(s.LM, s.DB)
 	campaignHandler := handlers.NewCampaignHandler(s.LM)
 	listHandler := handlers.NewListHandler(s.LM)
@@ -191,7 +191,7 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	admin := api.Group("")
 	admin.Use(middleware.JWTAuth(s.Config.JWTSecret))
-	admin.Use(middleware.RequireRole("admin", "user", "subscriber"))
+	admin.Use(middleware.RequireRole("admin"))
 
 	// User Management
 	users := admin.Group("/users")

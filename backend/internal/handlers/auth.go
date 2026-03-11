@@ -105,15 +105,67 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return response.InternalError(c, "Failed to hash password")
 	}
 
+	// Use a transaction for user creation + account setup
+	tx, err := h.db.Beginx()
+	if err != nil {
+		return response.InternalError(c, "Failed to start transaction")
+	}
+	defer tx.Rollback()
+
 	var user models.User
-	err = h.db.QueryRowx(
+	err = tx.QueryRowx(
 		`INSERT INTO app_users (email, password_hash, name, role, is_active, created_at, updated_at)
-		 VALUES ($1, $2, $3, 'admin', true, NOW(), NOW())
+		 VALUES ($1, $2, $3, 'user', true, NOW(), NOW())
 		 RETURNING id, email, password_hash, name, role, is_active, current_account_id, created_at, updated_at, preferences`,
 		req.Email, string(hashedPassword), req.Name,
 	).StructScan(&user)
 	if err != nil {
 		return response.InternalError(c, "Failed to create user")
+	}
+
+	// Auto-create a default account for the new user
+	accountName := req.Name + "'s Account"
+	if req.Name == "" {
+		accountName = req.Email + "'s Account"
+	}
+
+	var account models.Account
+	err = tx.QueryRowx(
+		`INSERT INTO app_accounts (name, plan, created_at, updated_at)
+		 VALUES ($1, 'Free', NOW(), NOW())
+		 RETURNING *`,
+		accountName,
+	).StructScan(&account)
+	if err != nil {
+		return response.InternalError(c, "Failed to create account")
+	}
+
+	// Add user as owner of the account
+	_, err = tx.Exec(
+		`INSERT INTO app_account_members (account_id, user_id, role, created_at)
+		 VALUES ($1, $2, 'owner', NOW())`,
+		account.ID, user.ID,
+	)
+	if err != nil {
+		return response.InternalError(c, "Failed to add account member")
+	}
+
+	// Set as current account
+	_, err = tx.Exec(
+		`UPDATE app_users SET current_account_id = $1, updated_at = NOW() WHERE id = $2`,
+		account.ID, user.ID,
+	)
+	if err != nil {
+		return response.InternalError(c, "Failed to set current account")
+	}
+
+	if err := tx.Commit(); err != nil {
+		return response.InternalError(c, "Failed to commit transaction")
+	}
+
+	// Re-fetch user to get updated current_account_id
+	if err := h.db.Get(&user, "SELECT * FROM app_users WHERE id = $1", user.ID); err != nil {
+		return response.InternalError(c, "Failed to fetch updated user")
 	}
 
 	accessToken, err := h.generateToken(user, "access", time.Duration(h.cfg.JWTExpiry)*time.Hour)
@@ -130,6 +182,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		User:         user,
+		Account:      &account,
 	})
 }
 
