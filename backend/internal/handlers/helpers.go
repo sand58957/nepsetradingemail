@@ -26,6 +26,15 @@ func isAdmin(c echo.Context) bool {
 	return middleware.GetUserRole(c) == "admin"
 }
 
+// adminOnly returns a 403 Forbidden response for non-admin users.
+// Used to block write operations on shared Listmonk data.
+func adminOnly(c echo.Context) error {
+	return c.JSON(http.StatusForbidden, map[string]interface{}{
+		"success": false,
+		"message": "Admin access required",
+	})
+}
+
 // emptyListmonkList returns an empty Listmonk-formatted paginated response.
 // Used for non-admin users who should see a fresh/clean view without shared data.
 func emptyListmonkList(c echo.Context) error {

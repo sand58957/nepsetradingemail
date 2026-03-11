@@ -64,6 +64,10 @@ func (h *ListHandler) List(c echo.Context) error {
 }
 
 func (h *ListHandler) Get(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.NotFound(c, "List not found")
+	}
+
 	id, err := validateListID(c)
 	if err != nil {
 		return err
@@ -79,6 +83,10 @@ func (h *ListHandler) Get(c echo.Context) error {
 }
 
 func (h *ListHandler) Create(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -94,6 +102,10 @@ func (h *ListHandler) Create(c echo.Context) error {
 }
 
 func (h *ListHandler) Update(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateListID(c)
 	if err != nil {
 		return err
@@ -114,6 +126,10 @@ func (h *ListHandler) Update(c echo.Context) error {
 }
 
 func (h *ListHandler) Delete(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateListID(c)
 	if err != nil {
 		return err

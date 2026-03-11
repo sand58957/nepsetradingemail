@@ -77,6 +77,10 @@ func (h *CampaignHandler) List(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Get(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.NotFound(c, "Campaign not found")
+	}
+
 	id, err := validateCampaignID(c)
 	if err != nil {
 		return err
@@ -92,6 +96,10 @@ func (h *CampaignHandler) Get(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Create(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -107,6 +115,10 @@ func (h *CampaignHandler) Create(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Update(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateCampaignID(c)
 	if err != nil {
 		return err
@@ -127,6 +139,10 @@ func (h *CampaignHandler) Update(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Delete(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateCampaignID(c)
 	if err != nil {
 		return err
@@ -142,6 +158,10 @@ func (h *CampaignHandler) Delete(c echo.Context) error {
 }
 
 func (h *CampaignHandler) UpdateStatus(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateCampaignID(c)
 	if err != nil {
 		return err
@@ -170,6 +190,10 @@ func (h *CampaignHandler) UpdateStatus(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Test(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateCampaignID(c)
 	if err != nil {
 		return err
@@ -242,6 +266,10 @@ func (h *CampaignHandler) Test(c echo.Context) error {
 }
 
 func (h *CampaignHandler) Preview(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateCampaignID(c)
 	if err != nil {
 		return err
@@ -268,6 +296,10 @@ func (h *CampaignHandler) Preview(c echo.Context) error {
 }
 
 func (h *CampaignHandler) GetStats(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.NotFound(c, "Campaign not found")
+	}
+
 	id, err := validateCampaignID(c)
 	if err != nil {
 		return err

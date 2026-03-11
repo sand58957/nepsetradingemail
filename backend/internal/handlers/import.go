@@ -33,6 +33,10 @@ func NewImportHandler(db *sqlx.DB, lm *listmonk.Client) *ImportHandler {
 // ============================================================
 
 func (h *ImportHandler) ImportCSV(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		return response.BadRequest(c, "No file provided")
@@ -135,6 +139,10 @@ func (h *ImportHandler) ImportCSV(c echo.Context) error {
 
 // GetImportStatus proxies GET /import/subscribers to Listmonk
 func (h *ImportHandler) GetImportStatus(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.Success(c, map[string]interface{}{"status": "idle"})
+	}
+
 	data, statusCode, err := h.lm.Get("/import/subscribers", nil)
 	if err != nil {
 		return response.InternalError(c, "Failed to get import status from Listmonk")
@@ -145,6 +153,10 @@ func (h *ImportHandler) GetImportStatus(c echo.Context) error {
 
 // GetImportLogs proxies GET /import/subscribers/logs to Listmonk
 func (h *ImportHandler) GetImportLogs(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.Success(c, []interface{}{})
+	}
+
 	data, statusCode, err := h.lm.Get("/import/subscribers/logs", nil)
 	if err != nil {
 		return response.InternalError(c, "Failed to get import logs from Listmonk")
@@ -155,6 +167,10 @@ func (h *ImportHandler) GetImportLogs(c echo.Context) error {
 
 // CancelImport proxies DELETE /import/subscribers to Listmonk and updates history
 func (h *ImportHandler) CancelImport(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	data, statusCode, err := h.lm.Delete("/import/subscribers")
 	if err != nil {
 		return response.InternalError(c, "Failed to cancel import in Listmonk")
@@ -174,6 +190,10 @@ func (h *ImportHandler) CancelImport(c echo.Context) error {
 // ============================================================
 
 func (h *ImportHandler) ImportJSON(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var req models.APIImportRequest
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -404,6 +424,10 @@ func (h *ImportHandler) WebhookImport(c echo.Context) error {
 // ============================================================
 
 func (h *ImportHandler) ListHistory(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.Paginated(c, []interface{}{}, 0, 1, 20)
+	}
+
 	page, _ := strconv.Atoi(c.QueryParam("page"))
 	if page < 1 {
 		page = 1
@@ -461,6 +485,10 @@ func (h *ImportHandler) ListHistory(c echo.Context) error {
 }
 
 func (h *ImportHandler) GetHistory(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.NotFound(c, "Import history not found")
+	}
+
 	id, err := validateParamID(c, "id")
 	if err != nil {
 		return err
@@ -479,6 +507,10 @@ func (h *ImportHandler) GetHistory(c echo.Context) error {
 }
 
 func (h *ImportHandler) DeleteHistory(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateParamID(c, "id")
 	if err != nil {
 		return err
@@ -502,6 +534,10 @@ func (h *ImportHandler) DeleteHistory(c echo.Context) error {
 // ============================================================
 
 func (h *ImportHandler) GetAnalytics(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.Success(c, models.ImportAnalytics{})
+	}
+
 	var analytics models.ImportAnalytics
 
 	h.db.Get(&analytics.TotalImports, "SELECT COUNT(*) FROM app_import_history")
@@ -520,6 +556,10 @@ func (h *ImportHandler) GetAnalytics(c echo.Context) error {
 // ============================================================
 
 func (h *ImportHandler) ListWebhooks(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.Success(c, []interface{}{})
+	}
+
 	var webhooks []models.ImportWebhook
 	err := h.db.Select(&webhooks, "SELECT id, name, list_ids, is_active, trigger_count, created_at, updated_at FROM app_import_webhooks ORDER BY created_at DESC")
 	if err != nil {
@@ -534,6 +574,10 @@ func (h *ImportHandler) ListWebhooks(c echo.Context) error {
 }
 
 func (h *ImportHandler) CreateWebhook(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var req models.CreateWebhookRequest
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -570,6 +614,10 @@ func (h *ImportHandler) CreateWebhook(c echo.Context) error {
 }
 
 func (h *ImportHandler) UpdateWebhook(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateParamID(c, "id")
 	if err != nil {
 		return err
@@ -616,6 +664,10 @@ func (h *ImportHandler) UpdateWebhook(c echo.Context) error {
 }
 
 func (h *ImportHandler) DeleteWebhook(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateParamID(c, "id")
 	if err != nil {
 		return err
@@ -639,6 +691,10 @@ func (h *ImportHandler) DeleteWebhook(c echo.Context) error {
 // ============================================================
 
 func (h *ImportHandler) ListSuppressed(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.Paginated(c, []interface{}{}, 0, 1, 20)
+	}
+
 	page, _ := strconv.Atoi(c.QueryParam("page"))
 	if page < 1 {
 		page = 1
@@ -672,6 +728,10 @@ func (h *ImportHandler) ListSuppressed(c echo.Context) error {
 }
 
 func (h *ImportHandler) AddSuppressed(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var req models.SuppressionAddRequest
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -706,6 +766,10 @@ func (h *ImportHandler) AddSuppressed(c echo.Context) error {
 }
 
 func (h *ImportHandler) RemoveSuppressed(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateParamID(c, "id")
 	if err != nil {
 		return err
@@ -727,6 +791,10 @@ func (h *ImportHandler) RemoveSuppressed(c echo.Context) error {
 // UpdateImportHistory updates a processing import with status info.
 // Called when polling Listmonk import status shows completion.
 func (h *ImportHandler) UpdateImportHistory(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var req struct {
 		ID         int    `json:"id"`
 		Status     string `json:"status"`

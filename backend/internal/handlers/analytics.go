@@ -281,6 +281,10 @@ func (h *AnalyticsHandler) GetOverview(c echo.Context) error {
 }
 
 func (h *AnalyticsHandler) GetCampaignAnalytics(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.NotFound(c, "Campaign not found")
+	}
+
 	id, err := validateParamID(c, "id")
 	if err != nil {
 		return err

@@ -58,6 +58,10 @@ func (h *MediaHandler) List(c echo.Context) error {
 }
 
 func (h *MediaHandler) Get(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.NotFound(c, "Media not found")
+	}
+
 	id, err := validateMediaID(c)
 	if err != nil {
 		return err
@@ -87,6 +91,10 @@ var allowedMediaTypes = map[string]bool{
 const maxUploadSize = 10 * 1024 * 1024
 
 func (h *MediaHandler) Upload(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		return response.BadRequest(c, "No file provided")
@@ -140,6 +148,10 @@ func (h *MediaHandler) Upload(c echo.Context) error {
 }
 
 func (h *MediaHandler) Delete(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateMediaID(c)
 	if err != nil {
 		return err
@@ -155,6 +167,10 @@ func (h *MediaHandler) Delete(c echo.Context) error {
 
 // UploadFromURL downloads a file from a URL and uploads it to Listmonk media storage.
 func (h *MediaHandler) UploadFromURL(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var req models.ImportFromURLRequest
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")

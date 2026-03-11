@@ -78,6 +78,10 @@ func (h *SubscriberHandler) List(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Get(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.NotFound(c, "Subscriber not found")
+	}
+
 	id, err := validateSubscriberID(c)
 	if err != nil {
 		return err
@@ -93,6 +97,10 @@ func (h *SubscriberHandler) Get(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Create(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -107,6 +115,10 @@ func (h *SubscriberHandler) Create(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Update(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateSubscriberID(c)
 	if err != nil {
 		return err
@@ -127,6 +139,10 @@ func (h *SubscriberHandler) Update(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Delete(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateSubscriberID(c)
 	if err != nil {
 		return err
@@ -142,6 +158,10 @@ func (h *SubscriberHandler) Delete(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Blocklist(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -156,6 +176,10 @@ func (h *SubscriberHandler) Blocklist(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) ManageLists(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -197,6 +221,10 @@ func (h *SubscriberHandler) Export(c echo.Context) error {
 }
 
 func (h *SubscriberHandler) Import(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var payload json.RawMessage
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")

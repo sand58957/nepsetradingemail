@@ -52,6 +52,10 @@ func (h *TemplateHandler) List(c echo.Context) error {
 }
 
 func (h *TemplateHandler) Get(c echo.Context) error {
+	if !isAdmin(c) {
+		return response.NotFound(c, "Template not found")
+	}
+
 	id, err := validateTemplateID(c)
 	if err != nil {
 		return err
@@ -67,6 +71,10 @@ func (h *TemplateHandler) Get(c echo.Context) error {
 }
 
 func (h *TemplateHandler) Create(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	var payload map[string]interface{}
 	if err := c.Bind(&payload); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -82,6 +90,10 @@ func (h *TemplateHandler) Create(c echo.Context) error {
 }
 
 func (h *TemplateHandler) Update(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateTemplateID(c)
 	if err != nil {
 		return err
@@ -102,6 +114,10 @@ func (h *TemplateHandler) Update(c echo.Context) error {
 }
 
 func (h *TemplateHandler) Delete(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateTemplateID(c)
 	if err != nil {
 		return err
@@ -117,6 +133,10 @@ func (h *TemplateHandler) Delete(c echo.Context) error {
 }
 
 func (h *TemplateHandler) Preview(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateTemplateID(c)
 	if err != nil {
 		return err
@@ -132,6 +152,10 @@ func (h *TemplateHandler) Preview(c echo.Context) error {
 }
 
 func (h *TemplateHandler) SetDefault(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
 	id, err := validateTemplateID(c)
 	if err != nil {
 		return err
