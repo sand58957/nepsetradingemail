@@ -325,14 +325,8 @@ func (h *DomainHandler) GetDnsRecords(c echo.Context) error {
 	var records []models.DnsRecord
 
 	if d.Type == "site" {
-		// Site domains need an A record pointing to server + verification TXT
+		// Site domains only need a TXT verification record (works with Cloudflare/CDN proxies)
 		records = []models.DnsRecord{
-			{
-				Label: "A Record (Points to server)",
-				Type:  "A",
-				Name:  "@",
-				Value: serverIP,
-			},
 			{
 				Label: "TXT Record (Domain Verification)",
 				Type:  "TXT",
@@ -404,16 +398,13 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 	var allPassed bool
 
 	if d.Type == "site" {
-		// Site domains: check A record + Verification TXT
-		aResult := verifyARecord(ctx, d.Domain)
-		results = append(results, aResult)
-
+		// Site domains: only check Verification TXT (works with Cloudflare/CDN proxies)
 		resolver := net.Resolver{}
 		txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
 		verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
 		results = append(results, verifyResult)
 
-		allPassed = aResult.Status == "pass" && verifyResult.Status == "pass"
+		allPassed = verifyResult.Status == "pass"
 	} else {
 		// Sending domains: check DKIM + SPF + Verification TXT
 		dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
@@ -513,16 +504,12 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 		var failedChecks []string
 
 		if d.Type == "site" {
-			// Site domains: check A record + Verification TXT
-			aResult := verifyARecord(ctx, d.Domain)
+			// Site domains: only check Verification TXT (works with Cloudflare/CDN proxies)
 			resolver := net.Resolver{}
 			txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
 			verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
 
-			allPassed = aResult.Status == "pass" && verifyResult.Status == "pass"
-			if aResult.Status != "pass" {
-				failedChecks = append(failedChecks, "A-Record")
-			}
+			allPassed = verifyResult.Status == "pass"
 			if verifyResult.Status != "pass" {
 				failedChecks = append(failedChecks, "Verify")
 			}
