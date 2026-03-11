@@ -134,8 +134,8 @@ const Register = ({ mode }: { mode: SystemMode }) => {
       })
 
       if (result?.ok) {
-        // Subscriber role → redirect to portal
-        router.push(getLocalizedUrl('/portal', locale as Locale))
+        // Redirect to dashboard (new users get the email marketing dashboard)
+        router.push(getLocalizedUrl('/dashboards/email-marketing', locale as Locale))
       } else {
         // If auto-login fails, redirect to login page
         router.push(getLocalizedUrl('/login', locale as Locale))
