@@ -486,6 +486,10 @@ export interface DomainRecord {
   domain_alignment: boolean
   ssl: boolean
   site: string
+  sendgrid_domain_id: number
+  sendgrid_dns: any
+  from_email: string
+  from_name: string
   verified_at: string | null
   created_at: string
   updated_at: string
@@ -496,6 +500,7 @@ export interface DnsRecord {
   type: string
   name: string
   value: string
+  status?: string
 }
 
 export interface DnsRecordsResponse {

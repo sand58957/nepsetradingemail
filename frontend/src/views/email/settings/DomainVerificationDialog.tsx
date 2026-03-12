@@ -14,6 +14,7 @@ import DialogContent from '@mui/material/DialogContent'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
+import Chip from '@mui/material/Chip'
 
 // Data
 import { DNS_PROVIDERS, getProviderDnsUrl } from '@/data/dnsProviders'
@@ -42,7 +43,7 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
   const [verificationResults, setVerificationResults] = useState<DnsRecordResult[] | null>(null)
   const [verificationError, setVerificationError] = useState<string | null>(null)
 
-  // DNS records fetched from API (per-domain, auto-generated DKIM keys)
+  // DNS records fetched from API
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([])
   const [loadingRecords, setLoadingRecords] = useState(false)
 
@@ -80,6 +81,7 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
   }, [selectedProvider, domainRecord?.id])
 
   const domain = domainRecord?.domain || ''
+  const hasSendGrid = (domainRecord?.sendgrid_domain_id ?? 0) > 0
 
   const handleClose = () => {
     setSelectedProvider(null)
@@ -135,22 +137,33 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
     }
   }
 
-  const getRecordStatus = (recordType: string): 'pass' | 'fail' | null => {
+  // Map DNS record to its verification result
+  const getRecordStatusByLabel = (label: string): 'pass' | 'fail' | null => {
     if (!verificationResults) return null
-    const result = verificationResults.find(r => r.record_type === recordType)
 
-    return result ? result.status : null
+    // Map label to record_type
+    const labelMap: Record<string, string[]> = {
+      'CNAME Record (DKIM 1)': ['CNAME_DKIM1'],
+      'CNAME Record (DKIM 2)': ['CNAME_DKIM2'],
+      'CNAME Record (Mail)': ['CNAME_MAIL'],
+      'TXT Record (DKIM)': ['TXT_DKIM'],
+      'TXT Record (SPF)': ['TXT_SPF'],
+      'TXT Record (DMARC)': ['TXT_DMARC'],
+      'TXT Record (Domain Verification)': ['TXT_VERIFY']
+    }
+
+    const types = labelMap[label] || []
+
+    for (const t of types) {
+      const result = verificationResults.find(r => r.record_type === t)
+
+      if (result) return result.status as 'pass' | 'fail'
+    }
+
+    return null
   }
 
   const allPassed = verificationResults?.every(r => r.status === 'pass') ?? false
-
-  // Map each dns record index to its backend record_type key
-  const getRecordTypeKey = (index: number): string => {
-    if (index === 0) return 'TXT_DKIM'
-    if (index === 1) return 'TXT_SPF'
-
-    return 'TXT_VERIFY'
-  }
 
   const DnsValueBox = ({ label, value, fieldId }: { label: string; value: string; fieldId: string }) => (
     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -210,9 +223,16 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
       <Typography variant='h5' fontWeight={700} sx={{ mb: 1 }}>
         Select your DNS provider
       </Typography>
-      <Typography variant='body2' color='text.secondary' sx={{ mb: 4 }}>
+      <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
         Choose your DNS provider so we can show you step-by-step instructions for setting up your domain records.
       </Typography>
+
+      {hasSendGrid && domainRecord?.type === 'sending' && (
+        <Alert severity='info' sx={{ mb: 3 }}>
+          <strong>SendGrid Integration Active</strong> — Your domain is set up with SendGrid for email delivery.
+          You&apos;ll need to add CNAME records (not TXT) for DKIM authentication.
+        </Alert>
+      )}
 
       <Grid container spacing={2}>
         {DNS_PROVIDERS.map(provider => (
@@ -294,13 +314,16 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
           Configure DNS records for {domain}
         </Typography>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <i className={`${selectedProvider.icon} text-[18px]`} style={{ color: selectedProvider.color }} />
             <Typography variant='body2' fontWeight={600}>
               {selectedProvider.name}
             </Typography>
           </Box>
+          {hasSendGrid && (
+            <Chip label='SendGrid' size='small' color='success' variant='outlined' />
+          )}
           {dnsUrl && (
             <Button
               variant='outlined'
@@ -322,11 +345,16 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
           </Alert>
         )}
 
-        {/* DNS Records with Instructions */}
+        {hasSendGrid && (
+          <Alert severity='warning' sx={{ mb: 3 }}>
+            <strong>Important:</strong> For CNAME records, make sure proxy is set to <strong>&quot;DNS only&quot;</strong> (grey cloud icon in Cloudflare). Proxied CNAME records will not work for email authentication.
+          </Alert>
+        )}
+
+        {/* DNS Records */}
         {dnsRecords.map((record, index) => {
-          const recordTypeKey = getRecordTypeKey(index)
-          const status = getRecordStatus(recordTypeKey)
-          const instructions = selectedProvider.instructions.txt
+          const status = getRecordStatusByLabel(record.label)
+          const isCNAME = record.type === 'CNAME'
 
           return (
             <Box key={index} sx={{ mb: 3 }}>
@@ -342,6 +370,12 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
                 <Typography variant='body1' fontWeight={600}>
                   {record.label}
                 </Typography>
+                <Chip
+                  label={record.type}
+                  size='small'
+                  color={isCNAME ? 'info' : 'default'}
+                  variant='outlined'
+                />
               </Box>
 
               {/* Status alert */}
@@ -356,14 +390,31 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
                 </Alert>
               )}
 
-              {/* Provider-specific instructions (show before verification and on fail) */}
+              {/* Instructions */}
               {status !== 'pass' && (
                 <Box sx={{ mb: 2, pl: 5 }}>
-                  {instructions.map((step, stepIdx) => (
-                    <Typography key={stepIdx} variant='body2' color='text.secondary' sx={{ mb: 0.5 }}>
-                      {stepIdx + 1}. {step}
-                    </Typography>
-                  ))}
+                  {isCNAME ? (
+                    <>
+                      <Typography variant='body2' color='text.secondary' sx={{ mb: 0.5 }}>
+                        1. Go to your DNS provider&apos;s dashboard
+                      </Typography>
+                      <Typography variant='body2' color='text.secondary' sx={{ mb: 0.5 }}>
+                        2. Add a new <strong>CNAME</strong> record
+                      </Typography>
+                      <Typography variant='body2' color='text.secondary' sx={{ mb: 0.5 }}>
+                        3. Set the Name and Value as shown below
+                      </Typography>
+                      <Typography variant='body2' color='text.secondary' sx={{ mb: 0.5 }}>
+                        4. Set Proxy to <strong>&quot;DNS only&quot;</strong> (not proxied)
+                      </Typography>
+                    </>
+                  ) : (
+                    selectedProvider.instructions.txt.map((step, stepIdx) => (
+                      <Typography key={stepIdx} variant='body2' color='text.secondary' sx={{ mb: 0.5 }}>
+                        {stepIdx + 1}. {step}
+                      </Typography>
+                    ))
+                  )}
                 </Box>
               )}
 
@@ -382,7 +433,9 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
         {verificationResults && allPassed && (
           <Alert severity='success' sx={{ mb: 3 }}>
             <Typography fontWeight={600}>All DNS records verified successfully!</Typography>
-            <Typography variant='body2'>Your domain is now authenticated for sending emails.</Typography>
+            <Typography variant='body2'>
+              Your domain is now authenticated for sending emails via SendGrid.
+            </Typography>
           </Alert>
         )}
 
@@ -391,6 +444,7 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
             <Typography fontWeight={600}>Some records are missing or incorrect</Typography>
             <Typography variant='body2'>
               DNS changes can take up to 48 hours to propagate. You can check again later.
+              Make sure CNAME records are set to &quot;DNS only&quot; (not proxied).
             </Typography>
           </Alert>
         )}

@@ -272,14 +272,15 @@ func (s *Server) RegisterRoutes() {
 	accountSettings.PUT("/:key", accountSettingsHandler.UpdateByKey)
 	accountSettings.POST("/logo", accountSettingsHandler.UploadLogo)
 
-	// Domains — per-account with auto-generated DKIM keys
-	domainHandler := handlers.NewDomainHandler(s.DB)
+	// Domains — per-account with auto-generated DKIM keys + SendGrid domain auth
+	domainHandler := handlers.NewDomainHandler(s.DB, s.Config.SendGridAPIKey)
 	domains := staff.Group("/domains")
 	domains.GET("", domainHandler.List)
 	domains.POST("", domainHandler.Create)
 	domains.DELETE("/:id", domainHandler.Delete)
 	domains.GET("/:id/dns-records", domainHandler.GetDnsRecords)
 	domains.POST("/:id/verify", domainHandler.Verify)
+	domains.PUT("/:id/sender", domainHandler.UpdateFromEmail)
 
 	// Automations
 	automations := admin.Group("/automations")

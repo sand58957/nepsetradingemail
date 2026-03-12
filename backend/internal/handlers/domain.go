@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/sandeep/nepsetradingemail/backend/internal/middleware"
 	"github.com/sandeep/nepsetradingemail/backend/internal/models"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/sendgrid"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
 
@@ -48,43 +50,47 @@ type VerifyDomainResponse struct {
 	CheckedAt string            `json:"checked_at"`
 }
 
-// DomainHandler manages per-account domains with DKIM key generation and DNS verification.
+// DomainHandler manages per-account domains with DKIM key generation, SendGrid, and DNS verification.
 type DomainHandler struct {
 	db         *sqlx.DB
 	dkimKeyDir string
+	sg         *sendgrid.Client
 }
 
 // NewDomainHandler creates a new DomainHandler.
-// It reads DKIM_KEYS_DIR from environment (default: /opt/dkim-keys).
-func NewDomainHandler(db *sqlx.DB) *DomainHandler {
+func NewDomainHandler(db *sqlx.DB, sendgridAPIKey string) *DomainHandler {
 	dir := os.Getenv("DKIM_KEYS_DIR")
 	if dir == "" {
 		dir = "/opt/dkim-keys"
 	}
 
-	return &DomainHandler{db: db, dkimKeyDir: dir}
+	var sgClient *sendgrid.Client
+	if sendgridAPIKey != "" {
+		sgClient = sendgrid.NewClient(sendgridAPIKey)
+		log.Println("INFO: SendGrid domain authentication enabled")
+	} else {
+		log.Println("WARNING: SENDGRID_API_KEY not set — SendGrid domain auth disabled")
+	}
+
+	return &DomainHandler{db: db, dkimKeyDir: dir, sg: sgClient}
 }
 
 // --------------------------------------------------------------------------
 // DKIM key generation
 // --------------------------------------------------------------------------
 
-// generateDKIMKeyPair generates an RSA 2048-bit key pair for DKIM signing.
-// Returns PEM-encoded private key and base64-encoded DER public key.
 func generateDKIMKeyPair() (privateKeyPEM string, publicKeyBase64 string, err error) {
 	key, err := rsa.GenerateKey(rand.Reader, dkimKeyBits)
 	if err != nil {
 		return "", "", fmt.Errorf("generate RSA key: %w", err)
 	}
 
-	// Private key → PEM
 	privBytes := x509.MarshalPKCS1PrivateKey(key)
 	privPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: privBytes,
 	})
 
-	// Public key → base64 (for DNS TXT p= value)
 	pubBytes, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
 	if err != nil {
 		return "", "", fmt.Errorf("marshal public key: %w", err)
@@ -96,7 +102,7 @@ func generateDKIMKeyPair() (privateKeyPEM string, publicKeyBase64 string, err er
 }
 
 // --------------------------------------------------------------------------
-// Verification hash (matches frontend algorithm for backward compatibility)
+// Verification hash
 // --------------------------------------------------------------------------
 
 func domainVerificationHash(domain string) string {
@@ -123,7 +129,7 @@ func domainVerificationHash(domain string) string {
 }
 
 // --------------------------------------------------------------------------
-// DKIM key file management (for Exim4)
+// DKIM key file management
 // --------------------------------------------------------------------------
 
 func (h *DomainHandler) writeDKIMKeyFile(domain, privateKeyPEM string) error {
@@ -159,11 +165,12 @@ func (h *DomainHandler) removeDKIMKeyFile(domain string) {
 }
 
 // --------------------------------------------------------------------------
-// SQL helpers (columns to SELECT — never includes dkim_private_key)
+// SQL helpers
 // --------------------------------------------------------------------------
 
 const domainSelectCols = `id, account_id, domain, type, status, dkim_public_key, dkim_selector,
-	verification_hash, domain_alignment, ssl, site, verified_at, created_at, updated_at`
+	verification_hash, domain_alignment, ssl, site, sendgrid_domain_id, sendgrid_dns,
+	from_email, from_name, verified_at, created_at, updated_at`
 
 // --------------------------------------------------------------------------
 // Handlers
@@ -194,7 +201,7 @@ func (h *DomainHandler) List(c echo.Context) error {
 	return response.Success(c, domains)
 }
 
-// Create adds a new domain with auto-generated DKIM keys and verification hash.
+// Create adds a new domain with auto-generated DKIM keys, SendGrid auth, and verification hash.
 func (h *DomainHandler) Create(c echo.Context) error {
 	accountID := middleware.GetAccountID(c)
 	if accountID == 0 {
@@ -236,14 +243,35 @@ func (h *DomainHandler) Create(c echo.Context) error {
 	verifyHash := domainVerificationHash(domain)
 
 	var privKey, pubKey string
+	var sendgridDomainID int
+	var sendgridDNSJSON []byte = []byte("{}")
+	fromEmail := strings.TrimSpace(req.FromEmail)
+	fromName := strings.TrimSpace(req.FromName)
 
-	// Only generate DKIM keys for sending domains
 	if domainType == "sending" {
+		// Generate local DKIM keys
 		var err error
 		privKey, pubKey, err = generateDKIMKeyPair()
 		if err != nil {
 			log.Printf("ERROR: generate DKIM keys for %s: %v", domain, err)
 			return response.InternalError(c, "Failed to generate DKIM keys")
+		}
+
+		// Create SendGrid domain authentication
+		if h.sg != nil {
+			sgResp, err := h.sg.AuthenticateDomain(domain)
+			if err != nil {
+				log.Printf("WARNING: SendGrid domain auth for %s failed: %v (continuing without SendGrid)", domain, err)
+			} else {
+				sendgridDomainID = sgResp.ID
+				sendgridDNSJSON, _ = json.Marshal(sgResp.DNS)
+				log.Printf("INFO: SendGrid domain auth created for %s (ID: %d)", domain, sgResp.ID)
+			}
+		}
+
+		// Default from_email if not provided
+		if fromEmail == "" {
+			fromEmail = "no-reply@" + domain
 		}
 	}
 
@@ -252,17 +280,19 @@ func (h *DomainHandler) Create(c echo.Context) error {
 
 	err := h.db.QueryRowx(
 		`INSERT INTO app_domains
-			(account_id, domain, type, status, dkim_private_key, dkim_public_key, dkim_selector, verification_hash)
-		 VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7)
+			(account_id, domain, type, status, dkim_private_key, dkim_public_key, dkim_selector,
+			 verification_hash, sendgrid_domain_id, sendgrid_dns, from_email, from_name)
+		 VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, $8, $9, $10, $11)
 		 RETURNING `+domainSelectCols,
 		accountID, domain, domainType, privKey, pubKey, dkimSelector, verifyHash,
+		sendgridDomainID, sendgridDNSJSON, fromEmail, fromName,
 	).StructScan(&d)
 	if err != nil {
 		log.Printf("ERROR: insert domain %s: %v", domain, err)
 		return response.InternalError(c, "Failed to add domain")
 	}
 
-	// Write DKIM private key file for Exim4 (only for sending domains)
+	// Write DKIM private key file
 	if domainType == "sending" && privKey != "" {
 		if err := h.writeDKIMKeyFile(domain, privKey); err != nil {
 			log.Printf("WARNING: write DKIM key file for %s: %v", domain, err)
@@ -281,11 +311,14 @@ func (h *DomainHandler) Delete(c echo.Context) error {
 
 	id := c.Param("id")
 
-	// Get domain name for key file cleanup
-	var domainName string
+	// Get domain details for cleanup
+	var domainInfo struct {
+		Domain           string `db:"domain"`
+		SendgridDomainID int    `db:"sendgrid_domain_id"`
+	}
 
-	err := h.db.Get(&domainName,
-		`SELECT domain FROM app_domains WHERE id = $1 AND account_id = $2`, id, accountID)
+	err := h.db.Get(&domainInfo,
+		`SELECT domain, sendgrid_domain_id FROM app_domains WHERE id = $1 AND account_id = $2`, id, accountID)
 	if err != nil {
 		return response.NotFound(c, "Domain not found")
 	}
@@ -295,11 +328,18 @@ func (h *DomainHandler) Delete(c echo.Context) error {
 		return response.InternalError(c, "Failed to delete domain")
 	}
 
+	// Delete SendGrid domain auth
+	if h.sg != nil && domainInfo.SendgridDomainID > 0 {
+		if err := h.sg.DeleteDomainAuth(domainInfo.SendgridDomainID); err != nil {
+			log.Printf("WARNING: Failed to delete SendGrid domain auth %d: %v", domainInfo.SendgridDomainID, err)
+		}
+	}
+
 	// Only remove key file if no other account uses this domain
 	var otherCnt int
-	_ = h.db.Get(&otherCnt, `SELECT COUNT(*) FROM app_domains WHERE domain = $1`, domainName)
+	_ = h.db.Get(&otherCnt, `SELECT COUNT(*) FROM app_domains WHERE domain = $1`, domainInfo.Domain)
 	if otherCnt == 0 {
-		h.removeDKIMKeyFile(domainName)
+		h.removeDKIMKeyFile(domainInfo.Domain)
 	}
 
 	return response.Success(c, map[string]string{"message": "Domain removed"})
@@ -325,7 +365,7 @@ func (h *DomainHandler) GetDnsRecords(c echo.Context) error {
 	var records []models.DnsRecord
 
 	if d.Type == "site" {
-		// Site domains only need a TXT verification record (works with Cloudflare/CDN proxies)
+		// Site domains only need a TXT verification record
 		records = []models.DnsRecord{
 			{
 				Label: "TXT Record (Domain Verification)",
@@ -335,27 +375,67 @@ func (h *DomainHandler) GetDnsRecords(c echo.Context) error {
 			},
 		}
 	} else {
-		// Sending domains need DKIM + SPF + verification TXT
-		records = []models.DnsRecord{
-			{
+		// Sending domains: SendGrid CNAME records + SPF + DMARC + Verification TXT
+
+		// Try to get SendGrid DNS records
+		var sgDNS sendgrid.DomainAuthDNS
+		if d.SendgridDomainID > 0 && len(d.SendgridDNS) > 2 {
+			_ = json.Unmarshal(d.SendgridDNS, &sgDNS)
+		}
+
+		// If we have SendGrid DNS records, show CNAME records
+		if sgDNS.DKIM1.Host != "" {
+			records = append(records, models.DnsRecord{
+				Label: "CNAME Record (DKIM 1)",
+				Type:  "CNAME",
+				Name:  sgDNS.DKIM1.Host,
+				Value: sgDNS.DKIM1.Data,
+			})
+			records = append(records, models.DnsRecord{
+				Label: "CNAME Record (DKIM 2)",
+				Type:  "CNAME",
+				Name:  sgDNS.DKIM2.Host,
+				Value: sgDNS.DKIM2.Data,
+			})
+			records = append(records, models.DnsRecord{
+				Label: "CNAME Record (Mail)",
+				Type:  "CNAME",
+				Name:  sgDNS.MailCNAME.Host,
+				Value: sgDNS.MailCNAME.Data,
+			})
+		} else {
+			// Fallback to local DKIM
+			records = append(records, models.DnsRecord{
 				Label: "TXT Record (DKIM)",
 				Type:  "TXT",
 				Name:  d.DKIMSelector + "._domainkey",
 				Value: "v=DKIM1; k=rsa; p=" + d.DKIMPublicKey,
-			},
-			{
-				Label: "TXT Record (SPF)",
-				Type:  "TXT",
-				Name:  "@",
-				Value: "v=spf1 ip4:" + serverIP + " include:_spf.google.com ~all",
-			},
-			{
-				Label: "TXT Record (Domain Verification)",
-				Type:  "TXT",
-				Name:  "@",
-				Value: "nepsefilling-domain-verification=" + d.VerificationHash,
-			},
+			})
 		}
+
+		// SPF — include sendgrid.net
+		records = append(records, models.DnsRecord{
+			Label: "TXT Record (SPF)",
+			Type:  "TXT",
+			Name:  "@",
+			Value: "v=spf1 ip4:" + serverIP + " include:sendgrid.net ~all",
+		})
+
+		// DMARC
+		records = append(records, models.DnsRecord{
+			Label: "TXT Record (DMARC)",
+			Type:  "TXT",
+			Name:  "_dmarc",
+			Value: "v=DMARC1; p=none; adkim=r; aspf=r",
+		})
+
+		// Verification
+		records = append(records, models.DnsRecord{
+			Label: "TXT Record (Domain Verification)",
+			Type:  "TXT",
+			Name:  "@",
+			Value: "nepsefilling-domain-verification=" + d.VerificationHash,
+		})
 	}
 
 	return response.Success(c, models.DnsRecordsResponse{
@@ -365,7 +445,7 @@ func (h *DomainHandler) GetDnsRecords(c echo.Context) error {
 	})
 }
 
-// Verify performs live DNS lookups and checks DKIM, SPF, and verification records.
+// Verify performs DNS lookups and SendGrid validation to check domain records.
 func (h *DomainHandler) Verify(c echo.Context) error {
 	accountID := middleware.GetAccountID(c)
 	if accountID == 0 {
@@ -374,18 +454,20 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 
 	id := c.Param("id")
 
-	// Need public key, type, and verification hash from DB
 	var d struct {
-		ID               int    `db:"id"`
-		Domain           string `db:"domain"`
-		Type             string `db:"type"`
-		DKIMPublicKey    string `db:"dkim_public_key"`
-		DKIMSelector     string `db:"dkim_selector"`
-		VerificationHash string `db:"verification_hash"`
+		ID               int             `db:"id"`
+		Domain           string          `db:"domain"`
+		Type             string          `db:"type"`
+		DKIMPublicKey    string          `db:"dkim_public_key"`
+		DKIMSelector     string          `db:"dkim_selector"`
+		VerificationHash string          `db:"verification_hash"`
+		SendgridDomainID int             `db:"sendgrid_domain_id"`
+		SendgridDNS      json.RawMessage `db:"sendgrid_dns"`
 	}
 
 	err := h.db.Get(&d,
-		`SELECT id, domain, type, dkim_public_key, dkim_selector, verification_hash
+		`SELECT id, domain, type, dkim_public_key, dkim_selector, verification_hash,
+		        sendgrid_domain_id, sendgrid_dns
 		 FROM app_domains WHERE id = $1 AND account_id = $2`, id, accountID)
 	if err != nil {
 		return response.NotFound(c, "Domain not found")
@@ -394,11 +476,11 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 30*time.Second)
 	defer cancel()
 
-	results := make([]DnsRecordResult, 0, 3)
+	results := make([]DnsRecordResult, 0, 6)
 	var allPassed bool
 
 	if d.Type == "site" {
-		// Site domains: only check Verification TXT (works with Cloudflare/CDN proxies)
+		// Site domains: only check Verification TXT
 		resolver := net.Resolver{}
 		txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
 		verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
@@ -406,20 +488,81 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 
 		allPassed = verifyResult.Status == "pass"
 	} else {
-		// Sending domains: check DKIM + SPF + Verification TXT
-		dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
-		results = append(results, dkimResult)
+		// Sending domains: check via SendGrid API + SPF + DMARC + Verification TXT
 
+		// 1. SendGrid validation (checks DKIM CNAMEs + Mail CNAME)
+		sgPassed := false
+		if h.sg != nil && d.SendgridDomainID > 0 {
+			sgResult, err := h.sg.ValidateDomain(d.SendgridDomainID)
+			if err != nil {
+				log.Printf("WARNING: SendGrid validate domain %d: %v", d.SendgridDomainID, err)
+				results = append(results, DnsRecordResult{
+					RecordType: "SENDGRID_DKIM",
+					Expected:   "SendGrid CNAME records",
+					Found:      fmt.Sprintf("Error: %v", err),
+					Status:     "fail",
+				})
+			} else {
+				sgPassed = sgResult.Valid
+
+				// DKIM1
+				dkim1Status := "fail"
+				if sgResult.ValidationResults.DKIM1.Valid {
+					dkim1Status = "pass"
+				}
+				results = append(results, DnsRecordResult{
+					RecordType: "CNAME_DKIM1",
+					Expected:   "DKIM CNAME record 1",
+					Found:      fmt.Sprintf("valid=%v", sgResult.ValidationResults.DKIM1.Valid),
+					Status:     dkim1Status,
+				})
+
+				// DKIM2
+				dkim2Status := "fail"
+				if sgResult.ValidationResults.DKIM2.Valid {
+					dkim2Status = "pass"
+				}
+				results = append(results, DnsRecordResult{
+					RecordType: "CNAME_DKIM2",
+					Expected:   "DKIM CNAME record 2",
+					Found:      fmt.Sprintf("valid=%v", sgResult.ValidationResults.DKIM2.Valid),
+					Status:     dkim2Status,
+				})
+
+				// Mail CNAME
+				mailStatus := "fail"
+				if sgResult.ValidationResults.MailCNAME.Valid {
+					mailStatus = "pass"
+				}
+				results = append(results, DnsRecordResult{
+					RecordType: "CNAME_MAIL",
+					Expected:   "Mail CNAME record",
+					Found:      fmt.Sprintf("valid=%v", sgResult.ValidationResults.MailCNAME.Valid),
+					Status:     mailStatus,
+				})
+			}
+		} else {
+			// Fallback to local DKIM check
+			dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
+			results = append(results, dkimResult)
+			sgPassed = dkimResult.Status == "pass"
+		}
+
+		// 2. SPF check (includes sendgrid.net)
 		resolver := net.Resolver{}
 		txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
-
-		spfResult := verifySPF(txtRecords, txtErr)
+		spfResult := verifySPFSendGrid(txtRecords, txtErr)
 		results = append(results, spfResult)
 
+		// 3. DMARC check
+		dmarcResult := verifyDMARC(ctx, d.Domain)
+		results = append(results, dmarcResult)
+
+		// 4. Verification TXT
 		verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
 		results = append(results, verifyResult)
 
-		allPassed = dkimResult.Status == "pass" && spfResult.Status == "pass" && verifyResult.Status == "pass"
+		allPassed = sgPassed && spfResult.Status == "pass" && verifyResult.Status == "pass"
 	}
 
 	now := time.Now().UTC()
@@ -442,16 +585,42 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 	})
 }
 
+// UpdateFromEmail updates the sender email/name for a domain.
+func (h *DomainHandler) UpdateFromEmail(c echo.Context) error {
+	accountID := middleware.GetAccountID(c)
+	if accountID == 0 {
+		return response.BadRequest(c, "No account selected")
+	}
+
+	id := c.Param("id")
+
+	var req struct {
+		FromEmail string `json:"from_email"`
+		FromName  string `json:"from_name"`
+	}
+
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	_, err := h.db.Exec(
+		`UPDATE app_domains SET from_email = $1, from_name = $2, updated_at = NOW()
+		 WHERE id = $3 AND account_id = $4`,
+		strings.TrimSpace(req.FromEmail), strings.TrimSpace(req.FromName), id, accountID)
+	if err != nil {
+		return response.InternalError(c, "Failed to update sender info")
+	}
+
+	return response.Success(c, map[string]string{"message": "Sender info updated"})
+}
+
 // --------------------------------------------------------------------------
 // Auto-verification background job
 // --------------------------------------------------------------------------
 
-// StartAutoVerification starts a background goroutine that periodically checks
-// all pending/failed domains and updates their status when DNS records pass.
 func (h *DomainHandler) StartAutoVerification(ctx context.Context, interval time.Duration) {
 	log.Printf("INFO: Domain auto-verification started (interval: %s)", interval)
 
-	// Run once immediately on startup (with a small delay to let services warm up)
 	go func() {
 		time.Sleep(30 * time.Second)
 		h.verifyAllPendingDomains()
@@ -471,20 +640,22 @@ func (h *DomainHandler) StartAutoVerification(ctx context.Context, interval time
 	}
 }
 
-// verifyAllPendingDomains checks all pending/failed domains.
 func (h *DomainHandler) verifyAllPendingDomains() {
 	var domains []struct {
-		ID               int    `db:"id"`
-		Domain           string `db:"domain"`
-		Type             string `db:"type"`
-		DKIMPublicKey    string `db:"dkim_public_key"`
-		DKIMSelector     string `db:"dkim_selector"`
-		VerificationHash string `db:"verification_hash"`
-		Status           string `db:"status"`
+		ID               int             `db:"id"`
+		Domain           string          `db:"domain"`
+		Type             string          `db:"type"`
+		DKIMPublicKey    string          `db:"dkim_public_key"`
+		DKIMSelector     string          `db:"dkim_selector"`
+		VerificationHash string          `db:"verification_hash"`
+		Status           string          `db:"status"`
+		SendgridDomainID int             `db:"sendgrid_domain_id"`
+		SendgridDNS      json.RawMessage `db:"sendgrid_dns"`
 	}
 
 	err := h.db.Select(&domains,
-		`SELECT id, domain, type, dkim_public_key, dkim_selector, verification_hash, status
+		`SELECT id, domain, type, dkim_public_key, dkim_selector, verification_hash, status,
+		        sendgrid_domain_id, sendgrid_dns
 		 FROM app_domains WHERE status IN ('pending', 'failed') ORDER BY id`)
 	if err != nil {
 		log.Printf("ERROR: auto-verify: failed to fetch pending domains: %v", err)
@@ -504,7 +675,6 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 		var failedChecks []string
 
 		if d.Type == "site" {
-			// Site domains: only check Verification TXT (works with Cloudflare/CDN proxies)
 			resolver := net.Resolver{}
 			txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
 			verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
@@ -514,17 +684,32 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 				failedChecks = append(failedChecks, "Verify")
 			}
 		} else {
-			// Sending domains: check DKIM + SPF + Verification TXT
-			dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
+			// SendGrid validation
+			sgPassed := false
+			if h.sg != nil && d.SendgridDomainID > 0 {
+				sgResult, err := h.sg.ValidateDomain(d.SendgridDomainID)
+				if err != nil {
+					failedChecks = append(failedChecks, "SendGrid")
+				} else {
+					sgPassed = sgResult.Valid
+					if !sgResult.Valid {
+						failedChecks = append(failedChecks, "SendGrid-DKIM")
+					}
+				}
+			} else {
+				dkimResult := verifyDKIM(ctx, d.Domain, d.DKIMSelector, d.DKIMPublicKey)
+				sgPassed = dkimResult.Status == "pass"
+				if dkimResult.Status != "pass" {
+					failedChecks = append(failedChecks, "DKIM")
+				}
+			}
+
 			resolver := net.Resolver{}
 			txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
-			spfResult := verifySPF(txtRecords, txtErr)
+			spfResult := verifySPFSendGrid(txtRecords, txtErr)
 			verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
 
-			allPassed = dkimResult.Status == "pass" && spfResult.Status == "pass" && verifyResult.Status == "pass"
-			if dkimResult.Status != "pass" {
-				failedChecks = append(failedChecks, "DKIM")
-			}
+			allPassed = sgPassed && spfResult.Status == "pass" && verifyResult.Status == "pass"
 			if spfResult.Status != "pass" {
 				failedChecks = append(failedChecks, "SPF")
 			}
@@ -600,14 +785,12 @@ func verifyDKIM(ctx context.Context, domain, selector, expectedPubKey string) Dn
 		if strings.Contains(txt, "v=DKIM1") {
 			found = txt
 
-			// Compare public key: strip whitespace and check if our key is present
 			norm := strings.ReplaceAll(txt, " ", "")
 			normKey := strings.ReplaceAll(expectedPubKey, " ", "")
 
 			if strings.Contains(norm, "p="+normKey) {
 				status = "pass"
 			} else if len(normKey) > 60 && strings.Contains(norm, normKey[:60]) {
-				// Partial match — DNS might truncate
 				status = "pass"
 			}
 
@@ -622,6 +805,32 @@ func verifyDKIM(ctx context.Context, domain, selector, expectedPubKey string) Dn
 	return DnsRecordResult{RecordType: "TXT_DKIM", Expected: expected, Found: found, Status: status}
 }
 
+// verifySPFSendGrid checks SPF includes sendgrid.net or server IP
+func verifySPFSendGrid(txtRecords []string, lookupErr error) DnsRecordResult {
+	expected := "include:sendgrid.net"
+
+	if lookupErr != nil {
+		return DnsRecordResult{RecordType: "TXT_SPF", Expected: expected, Found: "", Status: "fail"}
+	}
+
+	var found string
+	status := "fail"
+
+	for _, txt := range txtRecords {
+		if strings.HasPrefix(txt, "v=spf1") {
+			found = txt
+			if strings.Contains(txt, "sendgrid.net") || strings.Contains(txt, serverIP) {
+				status = "pass"
+			}
+
+			break
+		}
+	}
+
+	return DnsRecordResult{RecordType: "TXT_SPF", Expected: expected, Found: found, Status: status}
+}
+
+// verifySPF checks SPF includes server IP (legacy)
 func verifySPF(txtRecords []string, lookupErr error) DnsRecordResult {
 	expected := "ip4:" + serverIP
 
@@ -644,6 +853,31 @@ func verifySPF(txtRecords []string, lookupErr error) DnsRecordResult {
 	}
 
 	return DnsRecordResult{RecordType: "TXT_SPF", Expected: expected, Found: found, Status: status}
+}
+
+// verifyDMARC checks for a DMARC record
+func verifyDMARC(ctx context.Context, domain string) DnsRecordResult {
+	expected := "v=DMARC1"
+
+	resolver := net.Resolver{}
+	txtRecords, err := resolver.LookupTXT(ctx, "_dmarc."+domain)
+
+	if err != nil {
+		return DnsRecordResult{RecordType: "TXT_DMARC", Expected: expected, Found: "", Status: "fail"}
+	}
+
+	var found string
+	status := "fail"
+
+	for _, txt := range txtRecords {
+		if strings.Contains(txt, "v=DMARC1") {
+			found = txt
+			status = "pass"
+			break
+		}
+	}
+
+	return DnsRecordResult{RecordType: "TXT_DMARC", Expected: expected, Found: found, Status: status}
 }
 
 func verifyTXT(txtRecords []string, lookupErr error, hash string) DnsRecordResult {

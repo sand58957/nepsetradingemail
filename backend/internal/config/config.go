@@ -17,6 +17,7 @@ type Config struct {
 	JWTExpiry        int // in hours
 	RefreshExpiry    int // in hours
 	FrontendURL      string
+	SendGridAPIKey   string
 }
 
 func Load() (*Config, error) {
@@ -46,6 +47,7 @@ func Load() (*Config, error) {
 		JWTExpiry:        jwtExpiry,
 		RefreshExpiry:    refreshExpiry,
 		FrontendURL:      getEnv("FRONTEND_URL", "https://nepalfillings.com"),
+		SendGridAPIKey:   getEnv("SENDGRID_API_KEY", ""),
 	}
 
 	if cfg.JWTSecret == "" {

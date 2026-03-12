@@ -25,6 +25,7 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import Link from '@mui/material/Link'
 import CircularProgress from '@mui/material/CircularProgress'
+import Alert from '@mui/material/Alert'
 
 // Components
 import DomainVerificationDialog from './DomainVerificationDialog'
@@ -51,6 +52,8 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
   const [addSendingOpen, setAddSendingOpen] = useState(false)
   const [addSiteOpen, setAddSiteOpen] = useState(false)
   const [newDomain, setNewDomain] = useState('')
+  const [newFromEmail, setNewFromEmail] = useState('')
+  const [newFromName, setNewFromName] = useState('')
   const [saving, setSaving] = useState(false)
   const [verifyDomain, setVerifyDomain] = useState<DomainRecord | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; domain: DomainRecord | null }>({
@@ -82,7 +85,6 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
 
   const isValidDomain = (d: string) => /^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(d)
 
-  // Extract domain from email or domain input (e.g. "info@example.com" → "example.com")
   const extractDomain = (input: string): string => {
     const trimmed = input.trim().toLowerCase()
 
@@ -105,15 +107,15 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
 
     try {
       setSaving(true)
-      const response = await domainService.create(domainName, 'sending')
+      const fromEmail = newFromEmail.trim() || `no-reply@${domainName}`
+      const response = await domainService.create(domainName, 'sending', fromEmail, newFromName.trim())
 
       setNewDomain('')
+      setNewFromEmail('')
+      setNewFromName('')
       setAddSendingOpen(false)
 
-      // Add to local state immediately
       setSendingDomains(prev => [...prev, response.data])
-
-      // Open verification dialog
       setVerifyDomain(response.data)
     } catch (err: any) {
       onSaveError(err?.response?.data?.message || 'Failed to add domain')
@@ -139,8 +141,6 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
       setNewDomain('')
       setAddSiteOpen(false)
       setSiteDomains(prev => [...prev, response.data])
-
-      // Open verification dialog for site domains too
       setVerifyDomain(response.data)
     } catch (err: any) {
       onSaveError(err?.response?.data?.message || 'Failed to add domain')
@@ -202,26 +202,32 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
               variant='contained'
               color='success'
               startIcon={<i className='tabler-plus' />}
-              onClick={() => { setNewDomain(''); setAddSendingOpen(true) }}
+              onClick={() => { setNewDomain(''); setNewFromEmail(''); setNewFromName(''); setAddSendingOpen(true) }}
               disabled={saving}
             >
               Add domain
             </Button>
           </Box>
 
-          <Typography variant='body2' color='text.secondary' sx={{ mb: 4 }}>
-            Manage your sending domains. Each domain gets its own DKIM keys auto-generated for email authentication.{' '}
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
+            Manage your sending domains. Each domain gets automatic DKIM authentication via SendGrid and auto-verification.{' '}
             <Link href='#' underline='hover' color='primary'>
               Learn more
             </Link>
             .
           </Typography>
 
+          <Alert severity='info' sx={{ mb: 3 }} icon={<i className='tabler-brand-sendgrid text-[20px]' />}>
+            Domains are authenticated via <strong>SendGrid</strong> for optimal email deliverability.
+            CNAME records are used for DKIM signing (not TXT records).
+          </Alert>
+
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
                   <TableCell>Domain</TableCell>
+                  <TableCell>Sender Email</TableCell>
                   <TableCell>Status</TableCell>
                   {sendingDomains.length > 0 && <TableCell align='right'>Actions</TableCell>}
                 </TableRow>
@@ -234,19 +240,36 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
                         <Typography fontWeight={500}>{domain.domain}</Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
-                          color={getStatusColor(domain.status) as any}
-                          size='small'
-                          variant='tonal'
-                        />
+                        <Typography variant='body2' color='text.secondary'>
+                          {domain.from_email || `no-reply@${domain.domain}`}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <div className='flex items-center gap-1'>
+                          <Chip
+                            label={domain.status.charAt(0).toUpperCase() + domain.status.slice(1)}
+                            color={getStatusColor(domain.status) as any}
+                            size='small'
+                            variant='tonal'
+                          />
+                          {(domain.sendgrid_domain_id ?? 0) > 0 && (
+                            <Chip label='SendGrid' size='small' variant='outlined' color='info' />
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell align='right'>
                         <div className='flex items-center justify-end gap-1'>
                           {domain.status !== 'verified' && (
-                            <Tooltip title='Verify DNS records'>
+                            <Tooltip title='Setup DNS records'>
                               <IconButton size='small' onClick={() => setVerifyDomain(domain)}>
                                 <i className='tabler-settings text-[18px]' />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {domain.status === 'verified' && (
+                            <Tooltip title='Re-verify'>
+                              <IconButton size='small' onClick={() => setVerifyDomain(domain)}>
+                                <i className='tabler-refresh text-[18px]' />
                               </IconButton>
                             </Tooltip>
                           )}
@@ -261,8 +284,8 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={2}>
-                      <Typography color='text.secondary'>No sending domains.</Typography>
+                    <TableCell colSpan={4}>
+                      <Typography color='text.secondary'>No sending domains. Add one to start sending emails.</Typography>
                     </TableCell>
                   </TableRow>
                 )}
@@ -275,7 +298,6 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
       {/* Sites */}
       <Card>
         <CardContent sx={{ p: { xs: 4, sm: 6 } }}>
-          {/* Upgrade banner */}
           <Box
             sx={{
               display: 'flex',
@@ -405,19 +427,36 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
         <DialogTitle>Add sending domain</DialogTitle>
         <DialogContent>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-            Enter the domain or email address you want to authenticate for sending emails (e.g. info@yourdomain.com).
-            DKIM keys will be automatically generated, and you will need to add DNS records to verify ownership.
+            Enter the domain or email address you want to authenticate for sending emails.
+            DKIM will be set up automatically via SendGrid, and you will need to add DNS records to verify ownership.
           </Typography>
-          <TextField
-            fullWidth
-            label='Domain or Email'
-            value={newDomain}
-            onChange={e => setNewDomain(e.target.value)}
-            placeholder='e.g. info@yourdomain.com or yourdomain.com'
-            autoFocus
-            sx={{ mt: 1 }}
-            onKeyDown={e => e.key === 'Enter' && handleAddSendingDomain()}
-          />
+          <div className='flex flex-col gap-4 mt-2'>
+            <TextField
+              fullWidth
+              label='Domain or Email *'
+              value={newDomain}
+              onChange={e => setNewDomain(e.target.value)}
+              placeholder='e.g. info@yourdomain.com or yourdomain.com'
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleAddSendingDomain()}
+            />
+            <TextField
+              fullWidth
+              label='Sender Email (From address)'
+              value={newFromEmail}
+              onChange={e => setNewFromEmail(e.target.value)}
+              placeholder='e.g. no-reply@yourdomain.com'
+              helperText='Default: no-reply@yourdomain.com'
+            />
+            <TextField
+              fullWidth
+              label='Sender Name (From name)'
+              value={newFromName}
+              onChange={e => setNewFromName(e.target.value)}
+              placeholder='e.g. Your Company Name'
+              helperText='The name recipients will see in their inbox'
+            />
+          </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddSendingOpen(false)} color='secondary'>
@@ -463,7 +502,7 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
         <DialogContent>
           <DialogContentText>
             Are you sure you want to remove <strong>{deleteConfirm.domain?.domain}</strong>? This will also remove its
-            DKIM keys. This action cannot be undone.
+            DKIM keys and SendGrid authentication. This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

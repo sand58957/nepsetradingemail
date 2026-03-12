@@ -117,7 +117,7 @@ func main() {
 	autoVerifyCtx, autoVerifyCancel := context.WithCancel(context.Background())
 	defer autoVerifyCancel()
 
-	domainHandler := handlers.NewDomainHandler(db)
+	domainHandler := handlers.NewDomainHandler(db, cfg.SendGridAPIKey)
 	go domainHandler.StartAutoVerification(autoVerifyCtx, 5*time.Minute)
 
 	// Start server in a goroutine
