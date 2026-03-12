@@ -222,12 +222,12 @@ const UserListView = () => {
               placeholder='Search by name or email...'
               value={searchQuery}
               onChange={e => handleSearchChange(e.target.value)}
-              sx={{ minWidth: 250 }}
+              sx={{ minWidth: { xs: '100%', sm: 250 } }}
               InputProps={{
                 startAdornment: <i className='tabler-search mr-2 text-textSecondary' />
               }}
             />
-            <FormControl size='small' sx={{ minWidth: 150 }}>
+            <FormControl size='small' sx={{ minWidth: { xs: '100%', sm: 150 } }}>
               <InputLabel>Role</InputLabel>
               <Select value={roleFilter} label='Role' onChange={e => setRoleFilter(e.target.value)}>
                 <MenuItem value=''>All Roles</MenuItem>
@@ -249,8 +249,8 @@ const UserListView = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <TableContainer>
-              <Table>
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table sx={{ minWidth: 650 }}>
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
