@@ -99,6 +99,30 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           </MenuItem>
         </MenuSection>
 
+        {/* WhatsApp Marketing Section — visible to admin + user */}
+        <MenuSection label='WhatsApp Marketing'>
+          <MenuItem href={`/${locale}/whatsapp`} icon={<i className='tabler-brand-whatsapp' />}>
+            Dashboard
+          </MenuItem>
+          <SubMenu label='Contacts' icon={<i className='tabler-address-book' />}>
+            <MenuItem href={`/${locale}/whatsapp/contacts`}>All Contacts</MenuItem>
+            <MenuItem href={`/${locale}/whatsapp/contacts/import`}>Import</MenuItem>
+          </SubMenu>
+          <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
+            <MenuItem href={`/${locale}/whatsapp/campaigns`}>All Campaigns</MenuItem>
+            <MenuItem href={`/${locale}/whatsapp/campaigns/create`}>Create New</MenuItem>
+          </SubMenu>
+          <MenuItem href={`/${locale}/whatsapp/templates`} icon={<i className='tabler-template' />}>
+            Templates
+          </MenuItem>
+          <MenuItem href={`/${locale}/whatsapp/analytics`} icon={<i className='tabler-chart-dots-3' />}>
+            Analytics
+          </MenuItem>
+          <MenuItem href={`/${locale}/whatsapp/settings`} icon={<i className='tabler-settings' />}>
+            Settings
+          </MenuItem>
+        </MenuSection>
+
         {/* Analytics — visible to admin + user */}
         <MenuSection label='Insights'>
           <MenuItem href={`/${locale}/dashboards/analytics`} icon={<i className='tabler-chart-bar' />}>

@@ -187,6 +187,55 @@ func (s *Server) RegisterRoutes() {
 	analytics.GET("/lists", analyticsHandler.GetListAnalytics)
 
 	// ==============================================================
+	// WhatsApp Marketing — all authenticated users (account-scoped)
+	// ==============================================================
+	waHandler := handlers.NewWhatsAppHandler(s.DB)
+
+	// WhatsApp Settings
+	wa := staff.Group("/whatsapp")
+	wa.GET("/settings", waHandler.GetSettings)
+	wa.PUT("/settings", waHandler.UpdateSettings)
+	wa.POST("/settings/test", waHandler.TestConnection)
+
+	// WhatsApp Contacts
+	waContacts := wa.Group("/contacts")
+	waContacts.GET("", waHandler.ListContacts)
+	waContacts.GET("/:id", waHandler.GetContact)
+	waContacts.POST("", waHandler.CreateContact)
+	waContacts.PUT("/:id", waHandler.UpdateContact)
+	waContacts.DELETE("/:id", waHandler.DeleteContact)
+	waContacts.POST("/import", waHandler.ImportContacts)
+	waContacts.GET("/export", waHandler.ExportContacts)
+
+	// WhatsApp Templates
+	waTemplates := wa.Group("/templates")
+	waTemplates.GET("", waHandler.ListTemplates)
+	waTemplates.GET("/:id", waHandler.GetTemplate)
+	waTemplates.POST("/sync", waHandler.SyncTemplates)
+
+	// WhatsApp Campaigns
+	waCampaigns := wa.Group("/campaigns")
+	waCampaigns.GET("", waHandler.ListCampaigns)
+	waCampaigns.GET("/:id", waHandler.GetCampaign)
+	waCampaigns.POST("", waHandler.CreateCampaign)
+	waCampaigns.PUT("/:id", waHandler.UpdateCampaign)
+	waCampaigns.DELETE("/:id", waHandler.DeleteCampaign)
+	waCampaigns.POST("/:id/send", waHandler.SendCampaign)
+	waCampaigns.POST("/:id/test", waHandler.TestCampaign)
+	waCampaigns.POST("/:id/pause", waHandler.PauseCampaign)
+
+	// WhatsApp Analytics
+	waAnalytics := wa.Group("/analytics")
+	waAnalytics.GET("/overview", waHandler.GetOverview)
+	waAnalytics.GET("/campaigns/:id", waHandler.GetCampaignAnalytics)
+
+	// WhatsApp Webhook — Public endpoint (no auth, verified by secret)
+	waWebhookLimiter := middleware.NewRateLimiter(50, 100)
+	waWebhookGroup := api.Group("")
+	waWebhookGroup.Use(waWebhookLimiter.Middleware())
+	waWebhookGroup.POST("/webhooks/whatsapp/:secret", waHandler.WebhookReceive)
+
+	// ==============================================================
 	// Admin-only routes — full platform control
 	// ==============================================================
 	admin := api.Group("")
