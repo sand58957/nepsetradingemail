@@ -659,6 +659,109 @@ func (h *WhatsAppHandler) SyncTemplates(c echo.Context) error {
 	})
 }
 
+func (h *WhatsAppHandler) CreateTemplate(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	client, settings, err := h.getClient(accountID)
+	if err != nil {
+		return response.BadRequest(c, err.Error())
+	}
+
+	var req struct {
+		Name     string `json:"name"`
+		Category string `json:"category"`
+		Language string `json:"language"`
+		Body     string `json:"body"`
+		Example  string `json:"example"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if req.Name == "" || req.Body == "" || req.Category == "" {
+		return response.BadRequest(c, "Name, category, and body are required")
+	}
+	if req.Language == "" {
+		req.Language = "en"
+	}
+
+	// Create template in Gupshup
+	createReq := gupshup.CreateTemplateRequest{
+		ElementName: req.Name,
+		Language:    req.Language,
+		Category:    req.Category,
+		Content:     req.Body,
+		Example:     req.Example,
+		Vertical:    "TEXT",
+	}
+
+	result, err := client.CreateTemplate(settings.GupshupAppID, createReq)
+	if err != nil {
+		log.Printf("[whatsapp] Failed to create template in Gupshup: %v", err)
+		return response.Error(c, http.StatusBadGateway, fmt.Sprintf("Gupshup error: %v", err))
+	}
+
+	// Save to local database
+	now := time.Now()
+	gupshupID := result.Template.ID
+	status := strings.ToLower(result.Template.Status)
+	if status == "" {
+		status = "pending"
+	}
+
+	var tmpl WATemplate
+	err = h.db.Get(&tmpl, `
+		INSERT INTO wa_templates (account_id, gupshup_id, name, category, language, status, body_text, synced_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+		ON CONFLICT (account_id, name, language) DO UPDATE SET
+			gupshup_id = EXCLUDED.gupshup_id,
+			category = EXCLUDED.category,
+			status = EXCLUDED.status,
+			body_text = EXCLUDED.body_text,
+			synced_at = EXCLUDED.synced_at,
+			updated_at = NOW()
+		RETURNING *
+	`, accountID, gupshupID, req.Name, req.Category, req.Language, status, req.Body, now)
+	if err != nil {
+		log.Printf("[whatsapp] Failed to save template to DB: %v", err)
+		// Template was created in Gupshup but failed to save locally - still return success
+		return response.Success(c, map[string]interface{}{
+			"message":    "Template created in Gupshup (pending approval)",
+			"gupshup_id": gupshupID,
+		})
+	}
+
+	return response.Created(c, tmpl)
+}
+
+func (h *WhatsAppHandler) DeleteTemplate(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	var tmpl WATemplate
+	if err := h.db.Get(&tmpl, "SELECT * FROM wa_templates WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.NotFound(c, "Template not found")
+	}
+
+	// Try to delete from Gupshup
+	client, settings, clientErr := h.getClient(accountID)
+	if clientErr == nil && tmpl.Name != "" {
+		if delErr := client.DeleteTemplate(settings.GupshupAppID, tmpl.Name); delErr != nil {
+			log.Printf("[whatsapp] Warning: failed to delete template from Gupshup: %v", delErr)
+		}
+	}
+
+	// Delete from local DB
+	if _, err := h.db.Exec("DELETE FROM wa_templates WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.InternalError(c, "Failed to delete template")
+	}
+
+	return response.Success(c, map[string]interface{}{"deleted": true})
+}
+
 // ============================================================
 // Campaign Handlers
 // ============================================================

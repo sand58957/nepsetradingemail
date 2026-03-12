@@ -211,6 +211,8 @@ func (s *Server) RegisterRoutes() {
 	waTemplates := wa.Group("/templates")
 	waTemplates.GET("", waHandler.ListTemplates)
 	waTemplates.GET("/:id", waHandler.GetTemplate)
+	waTemplates.POST("", waHandler.CreateTemplate)
+	waTemplates.DELETE("/:id", waHandler.DeleteTemplate)
 	waTemplates.POST("/sync", waHandler.SyncTemplates)
 
 	// WhatsApp Campaigns

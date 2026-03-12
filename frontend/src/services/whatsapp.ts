@@ -88,6 +88,21 @@ export const whatsappService = {
     return response.data
   },
 
+  createTemplate: async (data: {
+    name: string
+    category: string
+    language: string
+    body: string
+    example: string
+  }): Promise<{ data: WATemplate }> => {
+    const response = await api.post('/whatsapp/templates', data)
+    return response.data
+  },
+
+  deleteTemplate: async (id: number): Promise<void> => {
+    await api.delete(`/whatsapp/templates/${id}`)
+  },
+
   // ==================== Campaigns ====================
   getCampaigns: async (params?: PaginationParams): Promise<WACampaignListResponse> => {
     const response = await api.get('/whatsapp/campaigns', { params })

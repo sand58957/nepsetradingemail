@@ -200,6 +200,115 @@ func (c *Client) ListTemplates(appID string) ([]TemplateInfo, error) {
 	return resp.Templates, nil
 }
 
+// CreateTemplateRequest holds the request for creating a template.
+type CreateTemplateRequest struct {
+	ElementName string `json:"element_name"`
+	Language    string `json:"language"`
+	Category    string `json:"category"`
+	Content     string `json:"content"`
+	Example     string `json:"example"`
+	Vertical    string `json:"vertical"` // TEXT, IMAGE, VIDEO, DOCUMENT
+}
+
+// CreateTemplateResponse holds the response after creating a template.
+type CreateTemplateResponse struct {
+	Status   string       `json:"status"`
+	Template TemplateInfo `json:"template"`
+}
+
+// CreateTemplate creates a new message template in Gupshup.
+func (c *Client) CreateTemplate(appID string, req CreateTemplateRequest) (*CreateTemplateResponse, error) {
+	fullURL := fmt.Sprintf("https://api.gupshup.io/wa/app/%s/template", appID)
+
+	vertical := req.Vertical
+	if vertical == "" {
+		vertical = "TEXT"
+	}
+	templateType := vertical
+
+	formData := url.Values{
+		"elementName":                  {req.ElementName},
+		"languageCode":                 {req.Language},
+		"category":                     {req.Category},
+		"templateType":                 {templateType},
+		"vertical":                     {vertical},
+		"content":                      {req.Content},
+		"example":                      {req.Example},
+		"enableSample":                 {"true"},
+		"allowTemplateCategoryChange":  {"true"},
+	}
+
+	httpReq, err := http.NewRequest(http.MethodPost, fullURL, strings.NewReader(formData.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	httpReq.Header.Set("apikey", c.apiKey)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("gupshup request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var errResp ErrorResponse
+		if jsonErr := json.Unmarshal(body, &errResp); jsonErr == nil && errResp.Message != "" {
+			return nil, fmt.Errorf("gupshup error: %s", errResp.Message)
+		}
+		return nil, fmt.Errorf("gupshup error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	// Check for error status in response body
+	var checkStatus struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(body, &checkStatus); err == nil && checkStatus.Status == "error" {
+		return nil, fmt.Errorf("gupshup error: %s", checkStatus.Message)
+	}
+
+	var result CreateTemplateResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// DeleteTemplate deletes a template from Gupshup.
+func (c *Client) DeleteTemplate(appID, elementName string) error {
+	fullURL := fmt.Sprintf("https://api.gupshup.io/wa/app/%s/template/%s", appID, elementName)
+
+	req, err := http.NewRequest(http.MethodDelete, fullURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("apikey", c.apiKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("gupshup request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("gupshup error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
 // TestConnection verifies the API key is valid by fetching templates.
 func (c *Client) TestConnection(appID string) error {
 	_, err := c.ListTemplates(appID)

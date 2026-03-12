@@ -163,37 +163,50 @@ const WACreateCampaign = () => {
                 />
 
                 {/* Template Selection */}
-                <FormControl fullWidth>
-                  <InputLabel>Message Template *</InputLabel>
-                  <Select
-                    value={selectedTemplate?.id || ''}
-                    label='Message Template *'
-                    onChange={e => {
-                      const t = templates.find(t => t.id === Number(e.target.value))
+                {/* Template Selection */}
+                {!loadingTemplates && approvedTemplates.length === 0 ? (
+                  <Alert severity='warning' action={
+                    <Button
+                      color='inherit'
+                      size='small'
+                      onClick={() => router.push(`/${locale}/whatsapp/templates`)}
+                    >
+                      Go to Templates
+                    </Button>
+                  }>
+                    No approved templates found. You need to create templates first and wait for Meta approval before creating campaigns.
+                  </Alert>
+                ) : (
+                  <FormControl fullWidth>
+                    <InputLabel>Message Template *</InputLabel>
+                    <Select
+                      value={selectedTemplate?.id || ''}
+                      label='Message Template *'
+                      onChange={e => {
+                        const t = templates.find(t => t.id === Number(e.target.value))
 
-                      setSelectedTemplate(t || null)
-                    }}
-                  >
-                    {loadingTemplates ? (
-                      <MenuItem disabled>
-                        <CircularProgress size={18} className='mr-2' /> Loading templates...
-                      </MenuItem>
-                    ) : approvedTemplates.length === 0 ? (
-                      <MenuItem disabled>No approved templates found. Sync templates first.</MenuItem>
-                    ) : (
-                      approvedTemplates.map(t => (
-                        <MenuItem key={t.id} value={t.id}>
-                          <div>
-                            <Typography>{t.name}</Typography>
-                            <Typography variant='caption' color='text.secondary'>
-                              {t.category} · {t.language}
-                            </Typography>
-                          </div>
+                        setSelectedTemplate(t || null)
+                      }}
+                    >
+                      {loadingTemplates ? (
+                        <MenuItem disabled>
+                          <CircularProgress size={18} className='mr-2' /> Loading templates...
                         </MenuItem>
-                      ))
-                    )}
-                  </Select>
-                </FormControl>
+                      ) : (
+                        approvedTemplates.map(t => (
+                          <MenuItem key={t.id} value={t.id}>
+                            <div>
+                              <Typography>{t.name}</Typography>
+                              <Typography variant='caption' color='text.secondary'>
+                                {t.category} · {t.language}
+                              </Typography>
+                            </div>
+                          </MenuItem>
+                        ))
+                      )}
+                    </Select>
+                  </FormControl>
+                )}
 
                 {/* Template Preview */}
                 {selectedTemplate && (
