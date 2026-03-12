@@ -3,6 +3,9 @@
 // React Imports
 import { useState, useEffect } from 'react'
 
+// Next Imports
+import { useRouter, useParams } from 'next/navigation'
+
 // MUI Imports
 import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
@@ -49,6 +52,10 @@ const categoryColorMap: Record<string, 'primary' | 'info' | 'warning' | 'default
 }
 
 const WATemplateList = () => {
+  const router = useRouter()
+  const { lang } = useParams()
+  const locale = (lang as string) || 'en'
+
   const [templates, setTemplates] = useState<WATemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -193,6 +200,14 @@ const WATemplateList = () => {
                   </Typography>
                 </div>
                 <div className='flex gap-2'>
+                  <Button
+                    variant='contained'
+                    color='info'
+                    onClick={() => router.push(`/${locale}/whatsapp/templates/library`)}
+                    startIcon={<i className='tabler-books' />}
+                  >
+                    Template Library
+                  </Button>
                   <Button
                     variant='contained'
                     color='success'
