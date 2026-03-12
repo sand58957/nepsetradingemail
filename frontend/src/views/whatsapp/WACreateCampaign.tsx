@@ -25,6 +25,10 @@ import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import Divider from '@mui/material/Divider'
 import Autocomplete from '@mui/material/Autocomplete'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
 
 // Service Imports
 import whatsappService from '@/services/whatsapp'
@@ -50,6 +54,8 @@ const WACreateCampaign = () => {
 
   // UI
   const [creating, setCreating] = useState(false)
+  const [sendingNow, setSendingNow] = useState(false)
+  const [confirmSendNow, setConfirmSendNow] = useState(false)
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -113,6 +119,61 @@ const WACreateCampaign = () => {
       setSnackbar({ open: true, message: 'Failed to create campaign', severity: 'error' })
     } finally {
       setCreating(false)
+    }
+  }
+
+  // Create campaign and immediately send
+  const handleSendNow = async () => {
+    if (!name.trim()) {
+      setSnackbar({ open: true, message: 'Campaign name is required', severity: 'error' })
+
+      return
+    }
+
+    if (!selectedTemplate) {
+      setSnackbar({ open: true, message: 'Please select a template', severity: 'error' })
+
+      return
+    }
+
+    setConfirmSendNow(true)
+  }
+
+  const handleConfirmSendNow = async () => {
+    setConfirmSendNow(false)
+    setSendingNow(true)
+
+    try {
+      const payload: any = {
+        name: name.trim(),
+        template_id: selectedTemplate!.id,
+        target_filter: {} as Record<string, any>
+      }
+
+      if (tags.length > 0) {
+        payload.target_filter.tags = tags
+      }
+
+      // Step 1: Create the campaign
+      const response = await whatsappService.createCampaign(payload)
+      const campaignId = response.data.id
+
+      // Step 2: Immediately send
+      try {
+        await whatsappService.sendCampaign(campaignId)
+        setSnackbar({ open: true, message: 'Campaign created and sending started!', severity: 'success' })
+      } catch {
+        setSnackbar({ open: true, message: 'Campaign created but failed to start sending. Go to campaign detail to retry.', severity: 'error' })
+      }
+
+      // Navigate to campaign detail
+      setTimeout(() => {
+        router.push(`/${locale}/whatsapp/campaigns/${campaignId}`)
+      }, 1000)
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to create campaign', severity: 'error' })
+    } finally {
+      setSendingNow(false)
     }
   }
 
@@ -276,15 +337,24 @@ const WACreateCampaign = () => {
                 />
 
                 {/* Submit */}
-                <div className='flex gap-3 mt-2'>
+                <div className='flex gap-3 mt-2 flex-wrap'>
                   <Button
                     variant='contained'
                     color='success'
                     onClick={handleCreate}
-                    disabled={creating}
+                    disabled={creating || sendingNow}
                     startIcon={creating ? <CircularProgress size={18} /> : <i className='tabler-plus' />}
                   >
                     {creating ? 'Creating...' : 'Create Campaign'}
+                  </Button>
+                  <Button
+                    variant='contained'
+                    color='primary'
+                    onClick={handleSendNow}
+                    disabled={creating || sendingNow}
+                    startIcon={sendingNow ? <CircularProgress size={18} /> : <i className='tabler-send' />}
+                  >
+                    {sendingNow ? 'Sending...' : 'Send Now'}
                   </Button>
                   <Button
                     variant='outlined'
@@ -314,11 +384,11 @@ const WACreateCampaign = () => {
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='3' size='small' color='primary' />
-                  <Typography variant='body2'>Create the campaign (it starts as &quot;draft&quot;)</Typography>
+                  <Typography variant='body2'>Click &quot;Create Campaign&quot; to save as draft, or &quot;Send Now&quot; to send immediately</Typography>
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='4' size='small' color='primary' />
-                  <Typography variant='body2'>Test with a single number, then send to all targets</Typography>
+                  <Typography variant='body2'>For drafts: test with a single number first, then send to all targets</Typography>
                 </div>
 
                 <Alert severity='warning' className='mt-2'>
@@ -329,6 +399,44 @@ const WACreateCampaign = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Send Now Confirmation Dialog */}
+      <Dialog open={confirmSendNow} onClose={() => setConfirmSendNow(false)}>
+        <DialogTitle>
+          <div className='flex items-center gap-2'>
+            <i className='tabler-alert-triangle' style={{ color: 'var(--mui-palette-warning-main)' }} />
+            Confirm Send Now
+          </div>
+        </DialogTitle>
+        <DialogContent>
+          <div className='flex flex-col gap-3 mt-1'>
+            <Typography>
+              This will create the campaign and <strong>immediately start sending</strong> messages to all targeted contacts.
+            </Typography>
+            <Box className='p-3 rounded' sx={{ backgroundColor: 'action.hover' }}>
+              <Typography variant='body2'><strong>Campaign:</strong> {name}</Typography>
+              <Typography variant='body2'><strong>Template:</strong> {selectedTemplate?.name}</Typography>
+              <Typography variant='body2'>
+                <strong>Audience:</strong> {tags.length > 0 ? `Contacts with tags: ${tags.join(', ')}` : 'All opted-in contacts'}
+              </Typography>
+            </Box>
+            <Alert severity='warning'>
+              Messages will be sent immediately. Make sure your template and audience are correct.
+            </Alert>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmSendNow(false)}>Cancel</Button>
+          <Button
+            variant='contained'
+            color='primary'
+            onClick={handleConfirmSendNow}
+            startIcon={<i className='tabler-send' />}
+          >
+            Yes, Send Now
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar */}
       <Snackbar
