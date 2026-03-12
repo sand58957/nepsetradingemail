@@ -3,32 +3,35 @@ import type { SVGAttributes } from 'react'
 
 const Logo = (props: SVGAttributes<SVGElement>) => {
   return (
-    <svg width='1.4583em' height='1em' viewBox='0 0 35 24' fill='none' xmlns='http://www.w3.org/2000/svg' {...props}>
+    <svg width='1em' height='1em' viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg' {...props}>
+      {/* Circular ring with gap at bottom-left */}
       <path
-        fillRule='evenodd'
-        clipRule='evenodd'
-        d='M0.00188479 0V7.47707C0.00188479 7.47707 -0.145285 9.83135 2.161 11.8242L14.9358 23.9961L21.5792 23.9107L20.5136 10.7809L17.9947 7.82497L10.0778 0H0.00188479Z'
-        fill='currentColor'
+        d='M50 5 A45 45 0 1 1 18 82'
+        stroke='#00A651'
+        strokeWidth='12'
+        strokeLinecap='round'
+        fill='none'
       />
       <path
-        opacity='0.06'
-        fillRule='evenodd'
-        clipRule='evenodd'
-        d='M8.39807 17.9307L13.6581 3.53127L18.059 7.91564L8.39807 17.9307Z'
-        fill='#161616'
+        d='M18 82 A45 45 0 0 1 26.5 18'
+        stroke='#00A651'
+        strokeWidth='12'
+        strokeLinecap='round'
+        fill='none'
       />
-      <path
-        opacity='0.06'
-        fillRule='evenodd'
-        clipRule='evenodd'
-        d='M8.81183 17.3645L15.2093 5.06165L18.0926 7.94695L8.81183 17.3645Z'
-        fill='#161616'
+      {/* Upward trending chart arrow */}
+      <polyline
+        points='20,72 38,55 50,65 72,32'
+        stroke='#00A651'
+        strokeWidth='10'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+        fill='none'
       />
-      <path
-        fillRule='evenodd'
-        clipRule='evenodd'
-        d='M8.47955 17.8436L25.8069 0H34.9091V7.50963C34.9091 7.50963 34.7195 10.0128 33.4463 11.3517L21.5808 24H14.9387L8.47955 17.8436Z'
-        fill='currentColor'
+      {/* Arrow head */}
+      <polygon
+        points='72,32 72,48 58,38'
+        fill='#00A651'
       />
     </svg>
   )
