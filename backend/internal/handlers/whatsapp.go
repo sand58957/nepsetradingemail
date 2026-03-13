@@ -1670,7 +1670,7 @@ func (h *WhatsAppHandler) WebhookReceive(c echo.Context) error {
 			`, payload.Payload.GsID).Scan(&campaignMsgID, &campaignID)
 		}
 		if err != nil {
-			log.Printf("[whatsapp-webhook] No matching message found for id=%s gsId=%s event=%s", msgID, payload.Payload.GsID, eventType)
+			log.Printf("[whatsapp-webhook] No matching message found for id=%s gsId=%s event=%s payload=%s", msgID, payload.Payload.GsID, eventType, string(payload.Payload.Payload))
 			return c.JSON(http.StatusOK, map[string]string{"status": "no matching message"})
 		}
 	}
@@ -1712,6 +1712,7 @@ func (h *WhatsAppHandler) WebhookReceive(c echo.Context) error {
 		if reason == "" {
 			reason = fmt.Sprintf("error code: %d", innerPayload.Code)
 		}
+		log.Printf("[whatsapp-webhook] FAILED: code=%d reason=%s rawPayload=%s", innerPayload.Code, reason, string(payload.Payload.Payload))
 
 		h.db.Exec(`
 			UPDATE wa_campaign_messages SET status = 'failed', error_reason = $1, failed_at = $2 WHERE id = $3
