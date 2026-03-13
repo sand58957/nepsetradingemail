@@ -68,7 +68,7 @@ const defaultBody = `<!DOCTYPE html>
     <tr>
       <td style="padding: 20px; background-color: #f3f4f6; text-align: center;">
         <p style="margin: 0; font-size: 12px; color: #6b7280;">
-          <a href="{{ .UnsubscribeURL }}">Unsubscribe</a>
+          <a href="{{ UnsubscribeURL . }}">Unsubscribe</a>
         </p>
       </td>
     </tr>
@@ -271,9 +271,9 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
                   '{{ .Subscriber.Name }}',
                   '{{ .Subscriber.Email }}',
                   '{{ .Campaign.Subject }}',
-                  '{{ .UnsubscribeURL }}',
-                  '{{ .TrackLink "URL" }}',
-                  '{{ .MessageURL }}'
+                  '{{ UnsubscribeURL . }}',
+                  '{{ TrackLink . "URL" }}',
+                  '{{ MessageURL . }}'
                 ].map(variable => (
                   <Chip
                     key={variable}
