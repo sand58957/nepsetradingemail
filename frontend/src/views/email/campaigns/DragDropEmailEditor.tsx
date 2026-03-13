@@ -1153,28 +1153,11 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           const campaign = response.data
 
           if (campaign?.body) {
-            // Try to load design JSON first (preserves blocks), fallback to raw HTML
-            const savedDesign = campaign.metadata?.design_json
-
-            if (savedDesign) {
-              try {
-                const designObj = typeof savedDesign === 'string' ? JSON.parse(savedDesign) : savedDesign
-
-                ;(unlayer as any).loadDesign(designObj)
-              } catch {
-                // Fallback to HTML import
-                ;(unlayer as any).loadDesign({
-                  html: campaign.body,
-                  classic: true
-                })
-              }
-            } else {
-              // No design JSON — import raw HTML into Unlayer
-              ;(unlayer as any).loadDesign({
-                html: campaign.body,
-                classic: true
-              })
-            }
+            // Import raw HTML into Unlayer editor
+            ;(unlayer as any).loadDesign({
+              html: campaign.body,
+              classic: true
+            })
 
             setAddedBlockName('Template loaded from recent email')
           }
