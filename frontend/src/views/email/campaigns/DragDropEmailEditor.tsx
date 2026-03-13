@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 
 import dynamic from 'next/dynamic'
 
@@ -19,6 +19,7 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
+import CircularProgress from '@mui/material/CircularProgress'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -28,6 +29,7 @@ import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 import campaignService from '@/services/campaigns'
 import subscriberService from '@/services/subscribers'
 import listService from '@/services/lists'
+import templateService from '@/services/templates'
 
 import type { EditorRef } from 'react-email-editor'
 
@@ -1070,6 +1072,7 @@ const DRAWER_WIDTH = 300
 const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const router = useRouter()
   const { lang } = useParams()
+  const searchParams = useSearchParams()
   const locale = (lang as string) || 'en'
   const emailEditorRef = useRef<any>(null)
   const unlayerRef = useRef<EditorRef | null>(null)
@@ -1084,6 +1087,12 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const [testEmailSending, setTestEmailSending] = useState(false)
   const dragPreviewKeyRef = useRef<string | null>(null)
   const isMobile = useMobileBreakpoint()
+  const [loadingTemplate, setLoadingTemplate] = useState(false)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
+  const [saveTemplateName, setSaveTemplateName] = useState('')
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const fromCampaignId = searchParams.get('from_campaign')
+  const fromCampaignLoadedRef = useRef(false)
 
   const onReady = useCallback((unlayer: EditorRef) => {
     unlayerRef.current = unlayer
@@ -1133,7 +1142,52 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         window.removeEventListener('message', handleMessage)
       }
     })
-  }, [])
+
+    // Load recent campaign content if from_campaign param is present
+    if (fromCampaignId && !fromCampaignLoadedRef.current) {
+      fromCampaignLoadedRef.current = true
+      setLoadingTemplate(true)
+
+      campaignService.getById(parseInt(fromCampaignId, 10))
+        .then((response) => {
+          const campaign = response.data
+
+          if (campaign?.body) {
+            // Try to load design JSON first (preserves blocks), fallback to raw HTML
+            const savedDesign = campaign.metadata?.design_json
+
+            if (savedDesign) {
+              try {
+                const designObj = typeof savedDesign === 'string' ? JSON.parse(savedDesign) : savedDesign
+
+                ;(unlayer as any).loadDesign(designObj)
+              } catch {
+                // Fallback to HTML import
+                ;(unlayer as any).loadDesign({
+                  html: campaign.body,
+                  classic: true
+                })
+              }
+            } else {
+              // No design JSON — import raw HTML into Unlayer
+              ;(unlayer as any).loadDesign({
+                html: campaign.body,
+                classic: true
+              })
+            }
+
+            setAddedBlockName('Template loaded from recent email')
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load campaign template:', err)
+          setAddedBlockName('Failed to load recent email template')
+        })
+        .finally(() => {
+          setLoadingTemplate(false)
+        })
+    }
+  }, [fromCampaignId])
 
   const handleGoBack = () => {
     router.push(`/${locale}/campaigns/create?type=${campaignType}`)
@@ -1339,6 +1393,33 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
     dragPreviewKeyRef.current = null
   }
 
+  const handleSaveAsTemplate = () => {
+    const unlayer = unlayerRef.current
+
+    if (!unlayer || !saveTemplateName.trim()) return
+
+    setSavingTemplate(true)
+
+    ;(unlayer as any).exportHtml(async (data: { design: object; html: string }) => {
+      try {
+        await templateService.create({
+          name: saveTemplateName.trim(),
+          type: 'html',
+          body: data.html
+        })
+
+        setAddedBlockName('Template saved successfully!')
+        setSaveTemplateOpen(false)
+        setSaveTemplateName('')
+      } catch (err) {
+        console.error('Failed to save template:', err)
+        setAddedBlockName('Failed to save template')
+      } finally {
+        setSavingTemplate(false)
+      }
+    })
+  }
+
   const activeCat = blockCategories.find(c => c.name === activeCategory)
 
   const filteredBlocks = activeCat?.blocks.filter(b =>
@@ -1392,6 +1473,21 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Tooltip title='Save as reusable template'>
+            <Button
+              variant='outlined'
+              size='small'
+              onClick={() => setSaveTemplateOpen(true)}
+              sx={{
+                color: '#fff',
+                borderColor: 'rgba(255,255,255,0.3)',
+                '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.1)' }
+              }}
+              startIcon={<i className='tabler-bookmark' />}
+            >
+              <Box component='span' sx={{ display: { xs: 'none', sm: 'inline' } }}>Save template</Box>
+            </Button>
+          </Tooltip>
           <Button
             variant='outlined'
             size='small'
@@ -1677,6 +1773,27 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           onDragLeave={handleEditorDragLeave}
           onDrop={handleEditorDrop}
         >
+          {/* Loading template overlay */}
+          {loadingTemplate && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 20,
+                bgcolor: 'rgba(255,255,255,0.85)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2
+              }}
+            >
+              <CircularProgress size={36} />
+              <Typography variant='body2' color='text.secondary' fontWeight={500}>
+                Loading email template...
+              </Typography>
+            </Box>
+          )}
           {/* Drop zone overlay */}
           {dragOverEditor && (
             <Box
@@ -1756,7 +1873,9 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           icon={<i className={`${addedBlockName?.startsWith('Failed') ? 'tabler-x' : 'tabler-check'} text-[18px]`} />}
           sx={{ minWidth: 250 }}
         >
-          {addedBlockName?.includes('email') ? addedBlockName : `${addedBlockName} added to email`}
+          {(addedBlockName?.includes('email') || addedBlockName?.includes('emplate') || addedBlockName?.startsWith('Failed'))
+            ? addedBlockName
+            : `${addedBlockName} added to email`}
         </Alert>
       </Snackbar>
 
@@ -1794,6 +1913,43 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             startIcon={testEmailSending ? <i className='tabler-loader-2 animate-spin text-[16px]' /> : <i className='tabler-send text-[16px]' />}
           >
             {testEmailSending ? 'Sending...' : 'Send test'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Save as Template dialog */}
+      <Dialog open={saveTemplateOpen} onClose={() => setSaveTemplateOpen(false)} maxWidth='xs' fullWidth fullScreen={isMobile}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <i className='tabler-bookmark text-[20px]' />
+          Save as template
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
+            Save this email design as a reusable template. You can find it under &quot;My templates&quot; in the Template gallery.
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label='Template name'
+            size='small'
+            value={saveTemplateName}
+            onChange={e => setSaveTemplateName(e.target.value)}
+            placeholder='e.g. Monthly Newsletter'
+            onKeyDown={e => { if (e.key === 'Enter' && saveTemplateName.trim()) handleSaveAsTemplate() }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSaveTemplateOpen(false)} size='small'>
+            Cancel
+          </Button>
+          <Button
+            variant='contained'
+            size='small'
+            onClick={handleSaveAsTemplate}
+            disabled={!saveTemplateName.trim() || savingTemplate}
+            startIcon={savingTemplate ? <i className='tabler-loader-2 animate-spin text-[16px]' /> : <i className='tabler-bookmark text-[16px]' />}
+          >
+            {savingTemplate ? 'Saving...' : 'Save template'}
           </Button>
         </DialogActions>
       </Dialog>
