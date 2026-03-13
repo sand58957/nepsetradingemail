@@ -40,6 +40,12 @@ export const subscriberService = {
     await api.delete('/subscribers', { data: { ids } })
   },
 
+  deleteAll: async (): Promise<{ data: { message: string; deleted: number } }> => {
+    const response = await api.delete('/subscribers')
+
+    return response.data
+  },
+
   manageListsByQuery: async (params: {
     action: 'add' | 'remove' | 'unsubscribe'
     target_list_ids: number[]

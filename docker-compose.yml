@@ -73,6 +73,7 @@ services:
   listmonk:
     image: listmonk/listmonk:latest
     container_name: nepse_listmonk
+    hostname: nepsetrading.com
     restart: unless-stopped
     expose:
       - "9000"

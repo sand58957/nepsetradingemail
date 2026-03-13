@@ -107,6 +107,7 @@ func (s *Server) RegisterRoutes() {
 	subscribers.POST("", subscriberHandler.Create)
 	subscribers.PUT("/:id", subscriberHandler.Update)
 	subscribers.DELETE("/:id", subscriberHandler.Delete)
+	subscribers.DELETE("", subscriberHandler.DeleteAll)
 	subscribers.PUT("/blocklist", subscriberHandler.Blocklist)
 	subscribers.PUT("/lists", subscriberHandler.ManageLists)
 	subscribers.GET("/export", subscriberHandler.Export)

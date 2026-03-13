@@ -139,6 +139,30 @@ func (c *Client) Delete(path string) (json.RawMessage, int, error) {
 	return json.RawMessage(respBody), resp.StatusCode, nil
 }
 
+func (c *Client) DeleteWithBody(path string, payload interface{}) (json.RawMessage, int, error) {
+	var body io.Reader
+	if payload != nil {
+		jsonData, err := json.Marshal(payload)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to marshal payload: %w", err)
+		}
+		body = bytes.NewReader(jsonData)
+	}
+
+	resp, err := c.doRequest(http.MethodDelete, path, body, "application/json")
+	if err != nil {
+		return nil, 0, err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	return json.RawMessage(respBody), resp.StatusCode, nil
+}
+
 func (c *Client) PostMultipart(path string, fileField string, fileName string, fileData io.Reader, fields map[string]string) (json.RawMessage, int, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)

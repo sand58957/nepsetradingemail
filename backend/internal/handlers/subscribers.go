@@ -157,6 +157,85 @@ func (h *SubscriberHandler) Delete(c echo.Context) error {
 	return c.JSONBlob(statusCode, data)
 }
 
+func (h *SubscriberHandler) DeleteAll(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
+	// Fetch all subscriber IDs from Listmonk (paginated)
+	allIDs := []int{}
+	page := 1
+	for {
+		params := map[string]string{
+			"page":     fmt.Sprintf("%d", page),
+			"per_page": "500",
+		}
+		data, statusCode, err := h.lm.Get("/subscribers", params)
+		if err != nil || statusCode >= 400 {
+			log.Printf("[subscribers] Failed to fetch subscribers page %d: %v", page, err)
+			break
+		}
+
+		var result struct {
+			Data struct {
+				Results []struct {
+					ID int `json:"id"`
+				} `json:"results"`
+				Total int `json:"total"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(data, &result); err != nil {
+			log.Printf("[subscribers] Failed to parse subscribers page %d: %v", page, err)
+			break
+		}
+
+		if len(result.Data.Results) == 0 {
+			break
+		}
+
+		for _, s := range result.Data.Results {
+			allIDs = append(allIDs, s.ID)
+		}
+
+		if len(allIDs) >= result.Data.Total {
+			break
+		}
+		page++
+	}
+
+	if len(allIDs) == 0 {
+		return response.Success(c, map[string]interface{}{
+			"message": "No subscribers to delete",
+			"deleted": 0,
+		})
+	}
+
+	// Batch delete via Listmonk API (batches of 100)
+	deleted := 0
+	batchSize := 100
+	for i := 0; i < len(allIDs); i += batchSize {
+		end := i + batchSize
+		if end > len(allIDs) {
+			end = len(allIDs)
+		}
+		batch := allIDs[i:end]
+
+		payload := map[string]interface{}{"ids": batch}
+		_, statusCode, err := h.lm.DeleteWithBody("/subscribers", payload)
+		if err != nil || statusCode >= 400 {
+			log.Printf("[subscribers] Failed to delete batch starting at %d: %v (status=%d)", i, err, statusCode)
+			continue
+		}
+		deleted += len(batch)
+	}
+
+	log.Printf("[subscribers] Deleted all subscribers: %d total", deleted)
+	return response.Success(c, map[string]interface{}{
+		"message": fmt.Sprintf("Successfully deleted %d subscribers", deleted),
+		"deleted": deleted,
+	})
+}
+
 func (h *SubscriberHandler) Blocklist(c echo.Context) error {
 	if !isAdmin(c) {
 		return adminOnly(c)

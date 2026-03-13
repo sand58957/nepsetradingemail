@@ -90,6 +90,8 @@ const SubscriberListTable = () => {
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false)
+  const [deleteAllConfirmText, setDeleteAllConfirmText] = useState('')
   const [subscriberToDelete, setSubscriberToDelete] = useState<SubscriberWithAction | null>(null)
 
   const [newSubscriber, setNewSubscriber] = useState({
@@ -244,6 +246,32 @@ const SubscriberListTable = () => {
     }
   }
 
+  // Handle delete all subscribers
+  const handleDeleteAll = async () => {
+    if (deleteAllConfirmText !== 'DELETE ALL') return
+
+    setSubmitting(true)
+
+    try {
+      const result = await subscriberService.deleteAll()
+
+      setSnackbar({
+        open: true,
+        message: result?.data?.message || `All subscribers deleted successfully`,
+        severity: 'success'
+      })
+      setDeleteAllDialogOpen(false)
+      setDeleteAllConfirmText('')
+      fetchSubscribers()
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Failed to delete all subscribers'
+
+      setSnackbar({ open: true, message: msg, severity: 'error' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const columns = useMemo<ColumnDef<SubscriberWithAction, any>[]>(
     () => [
       columnHelper.accessor('name', {
@@ -348,9 +376,21 @@ const SubscriberListTable = () => {
           subheader={!loading ? `${totalCount} total subscribers` : undefined}
           sx={{ flexWrap: 'wrap', rowGap: 2 }}
           action={
-            <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => setAddDialogOpen(true)}>
-              Add Subscriber
-            </Button>
+            <div className='flex gap-2 flex-wrap'>
+              {totalCount > 0 && (
+                <Button
+                  variant='outlined'
+                  color='error'
+                  startIcon={<i className='tabler-trash' />}
+                  onClick={() => setDeleteAllDialogOpen(true)}
+                >
+                  Delete All
+                </Button>
+              )}
+              <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => setAddDialogOpen(true)}>
+                Add Subscriber
+              </Button>
+            </div>
           }
         />
         <div className='flex items-center flex-wrap justify-between gap-4 p-6 pt-0'>
@@ -545,6 +585,42 @@ const SubscriberListTable = () => {
           </Button>
           <Button onClick={handleDeleteSubscriber} variant='contained' color='error' disabled={submitting}>
             {submitting ? <CircularProgress size={20} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete All Confirmation Dialog */}
+      <Dialog open={deleteAllDialogOpen} onClose={() => { setDeleteAllDialogOpen(false); setDeleteAllConfirmText('') }} maxWidth='sm' fullWidth fullScreen={isMobile}>
+        <DialogTitle sx={{ color: 'error.main' }}>
+          <i className='tabler-alert-triangle mr-2' />
+          Delete All Subscribers
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity='error' sx={{ mb: 3 }}>
+            This will permanently delete all <strong>{totalCount}</strong> subscribers. This action cannot be undone!
+          </Alert>
+          <Typography sx={{ mb: 2 }}>
+            To confirm, type <strong>DELETE ALL</strong> below:
+          </Typography>
+          <TextField
+            fullWidth
+            placeholder='Type DELETE ALL to confirm'
+            value={deleteAllConfirmText}
+            onChange={e => setDeleteAllConfirmText(e.target.value)}
+            autoFocus
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setDeleteAllDialogOpen(false); setDeleteAllConfirmText('') }} color='secondary' disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteAll}
+            variant='contained'
+            color='error'
+            disabled={submitting || deleteAllConfirmText !== 'DELETE ALL'}
+          >
+            {submitting ? <CircularProgress size={20} /> : `Delete All ${totalCount} Subscribers`}
           </Button>
         </DialogActions>
       </Dialog>
