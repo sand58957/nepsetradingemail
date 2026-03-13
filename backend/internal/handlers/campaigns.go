@@ -215,11 +215,15 @@ func (h *CampaignHandler) Test(c echo.Context) error {
 
 	var campaignResult struct {
 		Data struct {
-			Name      string        `json:"name"`
-			Subject   string        `json:"subject"`
-			FromEmail string        `json:"from_email"`
-			Messenger string        `json:"messenger"`
-			Lists     []struct {
+			Name        string        `json:"name"`
+			Subject     string        `json:"subject"`
+			FromEmail   string        `json:"from_email"`
+			Messenger   string        `json:"messenger"`
+			Body        string        `json:"body"`
+			ContentType string        `json:"content_type"`
+			AltBody     string        `json:"alt_body"`
+			TemplateID  int           `json:"template_id"`
+			Lists       []struct {
 				ID int `json:"id"`
 			} `json:"lists"`
 		} `json:"data"`
@@ -254,6 +258,22 @@ func (h *CampaignHandler) Test(c echo.Context) error {
 			messenger = "email"
 		}
 		payload["messenger"] = messenger
+	}
+	if _, ok := payload["body"]; !ok {
+		payload["body"] = campaignResult.Data.Body
+	}
+	if _, ok := payload["content_type"]; !ok {
+		contentType := campaignResult.Data.ContentType
+		if contentType == "" {
+			contentType = "richtext"
+		}
+		payload["content_type"] = contentType
+	}
+	if _, ok := payload["alt_body"]; !ok && campaignResult.Data.AltBody != "" {
+		payload["alt_body"] = campaignResult.Data.AltBody
+	}
+	if _, ok := payload["template_id"]; !ok && campaignResult.Data.TemplateID > 0 {
+		payload["template_id"] = campaignResult.Data.TemplateID
 	}
 
 	data, statusCode, err := h.lm.Post(fmt.Sprintf("/campaigns/%s/test", id), payload)
