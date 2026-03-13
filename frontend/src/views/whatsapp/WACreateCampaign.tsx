@@ -44,6 +44,7 @@ const WACreateCampaign = () => {
   // Form state
   const [name, setName] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<WATemplate | null>(null)
+  const [templateVarValues, setTemplateVarValues] = useState<Record<string, string>>({})
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
@@ -96,9 +97,17 @@ const WACreateCampaign = () => {
     setCreating(true)
 
     try {
+      // Build template params from variable values
+      const paramsList = templateVars.map((v, idx) => ({
+        index: idx + 1,
+        value: templateVarValues[v] || '',
+        field: ''
+      }))
+
       const payload: any = {
         name: name.trim(),
         template_id: selectedTemplate.id,
+        template_params: paramsList.length > 0 ? paramsList : undefined,
         target_filter: {} as Record<string, any>,
         scheduled_at: scheduledAt || undefined
       }
@@ -144,9 +153,17 @@ const WACreateCampaign = () => {
     setSendingNow(true)
 
     try {
+      // Build template params
+      const paramsList = templateVars.map((v, idx) => ({
+        index: idx + 1,
+        value: templateVarValues[v] || '',
+        field: ''
+      }))
+
       const payload: any = {
         name: name.trim(),
         template_id: selectedTemplate!.id,
+        template_params: paramsList.length > 0 ? paramsList : undefined,
         target_filter: {} as Record<string, any>
       }
 
@@ -224,7 +241,6 @@ const WACreateCampaign = () => {
                 />
 
                 {/* Template Selection */}
-                {/* Template Selection */}
                 {!loadingTemplates && approvedTemplates.length === 0 ? (
                   <Alert severity='warning' action={
                     <Button
@@ -247,6 +263,7 @@ const WACreateCampaign = () => {
                         const t = templates.find(t => t.id === Number(e.target.value))
 
                         setSelectedTemplate(t || null)
+                        setTemplateVarValues({})
                       }}
                     >
                       {loadingTemplates ? (
@@ -269,23 +286,120 @@ const WACreateCampaign = () => {
                   </FormControl>
                 )}
 
-                {/* Template Preview */}
+                {/* Template Variable Editing */}
+                {selectedTemplate && templateVars.length > 0 && (
+                  <Box className='p-4 rounded' sx={{ backgroundColor: 'primary.lighter', border: '1px solid', borderColor: 'primary.light' }}>
+                    <Typography variant='subtitle2' className='mb-1' color='primary.main'>
+                      <i className='tabler-edit mr-1' />
+                      Fill Template Variables
+                    </Typography>
+                    <Typography variant='caption' color='text.secondary' className='mb-3 block'>
+                      Enter values for each variable or use a contact field (e.g. name, phone) for personalization.
+                    </Typography>
+                    <div className='flex flex-col gap-3'>
+                      {templateVars.map((v, idx) => (
+                        <div key={v} className='flex items-center gap-3'>
+                          <Chip label={v} size='small' color='primary' variant='outlined' sx={{ minWidth: 55 }} />
+                          <TextField
+                            fullWidth
+                            size='small'
+                            label={`Value for ${v}`}
+                            placeholder={`e.g. ${idx === 0 ? 'Customer Name' : idx === 1 ? 'Your message here' : 'Valid date'}`}
+                            value={templateVarValues[v] || ''}
+                            onChange={e => setTemplateVarValues(prev => ({ ...prev, [v]: e.target.value }))}
+                          />
+                          <FormControl size='small' sx={{ minWidth: 140 }}>
+                            <InputLabel>Or use field</InputLabel>
+                            <Select
+                              value={templateVarValues[`_field_${v}`] || ''}
+                              label='Or use field'
+                              onChange={e => {
+                                const field = e.target.value as string
+
+                                if (field) {
+                                  setTemplateVarValues(prev => ({
+                                    ...prev,
+                                    [v]: `{{${field}}}`,
+                                    [`_field_${v}`]: field
+                                  }))
+                                } else {
+                                  setTemplateVarValues(prev => {
+                                    const next = { ...prev }
+
+                                    delete next[`_field_${v}`]
+                                    next[v] = ''
+
+                                    return next
+                                  })
+                                }
+                              }}
+                            >
+                              <MenuItem value=''><em>Static value</em></MenuItem>
+                              <MenuItem value='name'>Contact Name</MenuItem>
+                              <MenuItem value='phone'>Phone Number</MenuItem>
+                              <MenuItem value='email'>Email</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </div>
+                      ))}
+                    </div>
+                  </Box>
+                )}
+
+                {/* Live Template Preview */}
                 {selectedTemplate && (
-                  <Box className='p-4 rounded' sx={{ backgroundColor: 'action.hover' }}>
-                    <Typography variant='subtitle2' className='mb-2'>Template Preview</Typography>
+                  <Box className='p-4 rounded' sx={{ backgroundColor: '#DCF8C6', border: '1px solid #c5e1a5', borderRadius: '12px' }}>
+                    <div className='flex items-center gap-2 mb-2'>
+                      <i className='tabler-brand-whatsapp' style={{ color: '#25D366', fontSize: 20 }} />
+                      <Typography variant='subtitle2'>Message Preview</Typography>
+                    </div>
                     {selectedTemplate.header_text && (
-                      <Typography variant='body2' className='font-bold mb-1'>{selectedTemplate.header_text}</Typography>
+                      <Typography variant='body2' className='font-bold mb-1'>
+                        {(() => {
+                          let text = selectedTemplate.header_text
+
+                          templateVars.forEach(v => {
+                            const val = templateVarValues[v]
+
+                            if (val && !val.startsWith('{{')) text = text.replace(v, val)
+                          })
+
+                          return text
+                        })()}
+                      </Typography>
                     )}
-                    <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>{selectedTemplate.body_text}</Typography>
+                    <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                      {(() => {
+                        let text = selectedTemplate.body_text
+
+                        templateVars.forEach(v => {
+                          const val = templateVarValues[v]
+
+                          if (val && !val.startsWith('{{')) {
+                            text = text.replace(v, val)
+                          }
+                        })
+
+                        return text
+                      })()}
+                    </Typography>
                     {selectedTemplate.footer_text && (
-                      <Typography variant='caption' color='text.secondary' className='mt-1 block'>
+                      <Typography variant='caption' color='text.secondary' className='mt-2 block'>
                         {selectedTemplate.footer_text}
                       </Typography>
                     )}
-                    {templateVars.length > 0 && (
-                      <Alert severity='info' className='mt-2'>
-                        This template has {templateVars.length} variable(s): {templateVars.join(', ')}
-                      </Alert>
+                    {selectedTemplate.buttons && selectedTemplate.buttons.length > 0 && (
+                      <div className='flex gap-2 mt-2 pt-2' style={{ borderTop: '1px solid #b5d6a3' }}>
+                        {selectedTemplate.buttons.map((btn: any, idx: number) => (
+                          <Chip
+                            key={idx}
+                            label={btn.text || btn.label || `Button ${idx + 1}`}
+                            size='small'
+                            variant='outlined'
+                            sx={{ borderColor: '#25D366', color: '#25D366' }}
+                          />
+                        ))}
+                      </div>
                     )}
                   </Box>
                 )}
@@ -380,15 +494,15 @@ const WACreateCampaign = () => {
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='2' size='small' color='primary' />
-                  <Typography variant='body2'>Optionally filter your audience by tags</Typography>
+                  <Typography variant='body2'>Fill in template variables with static values or use contact fields for personalization</Typography>
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='3' size='small' color='primary' />
-                  <Typography variant='body2'>Click &quot;Create Campaign&quot; to save as draft, or &quot;Send Now&quot; to send immediately</Typography>
+                  <Typography variant='body2'>Optionally filter your audience by tags</Typography>
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='4' size='small' color='primary' />
-                  <Typography variant='body2'>For drafts: test with a single number first, then send to all targets</Typography>
+                  <Typography variant='body2'>Click &quot;Create Campaign&quot; to save as draft, or &quot;Send Now&quot; to send immediately</Typography>
                 </div>
 
                 <Alert severity='warning' className='mt-2'>
@@ -416,6 +530,11 @@ const WACreateCampaign = () => {
             <Box className='p-3 rounded' sx={{ backgroundColor: 'action.hover' }}>
               <Typography variant='body2'><strong>Campaign:</strong> {name}</Typography>
               <Typography variant='body2'><strong>Template:</strong> {selectedTemplate?.name}</Typography>
+              {templateVars.length > 0 && (
+                <Typography variant='body2'>
+                  <strong>Variables:</strong> {templateVars.map(v => `${v} = "${templateVarValues[v] || '(empty)'}"`).join(', ')}
+                </Typography>
+              )}
               <Typography variant='body2'>
                 <strong>Audience:</strong> {tags.length > 0 ? `Contacts with tags: ${tags.join(', ')}` : 'All opted-in contacts'}
               </Typography>
