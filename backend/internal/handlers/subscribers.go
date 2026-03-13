@@ -210,29 +210,29 @@ func (h *SubscriberHandler) DeleteAll(c echo.Context) error {
 		})
 	}
 
-	// Batch delete via Listmonk API (batches of 100)
+	// Delete individually via Listmonk API (bulk delete not supported in this version)
 	deleted := 0
-	batchSize := 100
-	for i := 0; i < len(allIDs); i += batchSize {
-		end := i + batchSize
-		if end > len(allIDs) {
-			end = len(allIDs)
-		}
-		batch := allIDs[i:end]
-
-		payload := map[string]interface{}{"ids": batch}
-		_, statusCode, err := h.lm.DeleteWithBody("/subscribers", payload)
+	failed := 0
+	for _, id := range allIDs {
+		_, statusCode, err := h.lm.Delete(fmt.Sprintf("/subscribers/%d", id))
 		if err != nil || statusCode >= 400 {
-			log.Printf("[subscribers] Failed to delete batch starting at %d: %v (status=%d)", i, err, statusCode)
+			log.Printf("[subscribers] Failed to delete subscriber %d: %v (status=%d)", id, err, statusCode)
+			failed++
 			continue
 		}
-		deleted += len(batch)
+		deleted++
 	}
 
-	log.Printf("[subscribers] Deleted all subscribers: %d total", deleted)
+	log.Printf("[subscribers] Delete all complete: %d deleted, %d failed out of %d total", deleted, failed, len(allIDs))
+
+	if deleted == 0 && failed > 0 {
+		return response.InternalError(c, fmt.Sprintf("Failed to delete subscribers. %d failures.", failed))
+	}
+
 	return response.Success(c, map[string]interface{}{
 		"message": fmt.Sprintf("Successfully deleted %d subscribers", deleted),
 		"deleted": deleted,
+		"failed":  failed,
 	})
 }
 
