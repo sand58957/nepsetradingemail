@@ -73,6 +73,49 @@ export const whatsappService = {
     return response.data
   },
 
+  // ==================== Contact Tags & Stats ====================
+  getContactTags: async (): Promise<{ data: { tag: string; count: number }[] }> => {
+    const response = await api.get('/whatsapp/contacts/tags')
+    return response.data
+  },
+
+  createContactTag: async (tag: string, contactIds: number[]): Promise<{ data: { tag: string; updated: number } }> => {
+    const response = await api.post('/whatsapp/contacts/tags', { tag, contact_ids: contactIds })
+    return response.data
+  },
+
+  deleteContactTag: async (tag: string): Promise<{ data: { tag: string; removed: number } }> => {
+    const response = await api.delete(`/whatsapp/contacts/tags/${encodeURIComponent(tag)}`)
+    return response.data
+  },
+
+  getContactStats: async (): Promise<{ data: {
+    total_contacts: number
+    opted_in: number
+    opted_out: number
+    tags: { tag: string; count: number }[]
+    recent_30d: number
+    with_attributes: number
+  } }> => {
+    const response = await api.get('/whatsapp/contacts/stats')
+    return response.data
+  },
+
+  getContactFields: async (): Promise<{ data: { field: string; count: number }[] }> => {
+    const response = await api.get('/whatsapp/contacts/fields')
+    return response.data
+  },
+
+  getCleanupContacts: async (): Promise<{ data: { contacts: WAContact[]; total: number } }> => {
+    const response = await api.get('/whatsapp/contacts/cleanup')
+    return response.data
+  },
+
+  deleteOptedOutContacts: async (): Promise<{ data: { deleted: number } }> => {
+    const response = await api.get('/whatsapp/contacts/cleanup?action=delete')
+    return response.data
+  },
+
   // ==================== Templates ====================
   getTemplates: async (): Promise<{ data: WATemplate[] }> => {
     const response = await api.get('/whatsapp/templates')

@@ -3,9 +3,6 @@
 // React Imports
 import { useState, useRef } from 'react'
 
-// Next Imports
-import { useRouter, useParams } from 'next/navigation'
-
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
@@ -23,9 +20,6 @@ import Grid from '@mui/material/Grid'
 import whatsappService from '@/services/whatsapp'
 
 const WAContactImport = () => {
-  const router = useRouter()
-  const { lang } = useParams()
-  const locale = (lang as string) || 'en'
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -85,29 +79,6 @@ const WAContactImport = () => {
   return (
     <>
       <Grid container spacing={6}>
-        {/* Header */}
-        <Grid size={{ xs: 12 }}>
-          <Card>
-            <CardContent>
-              <div className='flex items-center justify-between flex-wrap gap-4'>
-                <div>
-                  <Typography variant='h5'>Import WhatsApp Contacts</Typography>
-                  <Typography variant='body2' color='text.secondary'>
-                    Upload a CSV file to bulk import contacts
-                  </Typography>
-                </div>
-                <Button
-                  variant='outlined'
-                  startIcon={<i className='tabler-arrow-left' />}
-                  onClick={() => router.push(`/${locale}/whatsapp/contacts`)}
-                >
-                  Back to Contacts
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </Grid>
-
         {/* Upload Card */}
         <Grid size={{ xs: 12, md: 8 }}>
           <Card>
@@ -184,10 +155,13 @@ const WAContactImport = () => {
                   {importResult && (
                     <Button
                       variant='outlined'
-                      onClick={() => router.push(`/${locale}/whatsapp/contacts`)}
-                      startIcon={<i className='tabler-arrow-right' />}
+                      onClick={() => {
+                        setSelectedFile(null)
+                        setImportResult(null)
+                      }}
+                      startIcon={<i className='tabler-refresh' />}
                     >
-                      View Contacts
+                      Import More
                     </Button>
                   )}
                 </div>

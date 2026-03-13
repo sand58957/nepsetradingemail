@@ -578,6 +578,222 @@ func (h *WhatsAppHandler) ExportContacts(c echo.Context) error {
 }
 
 // ============================================================
+// Contact Tags & Stats
+// ============================================================
+
+// ListContactTags returns all unique tags across contacts with their counts.
+func (h *WhatsAppHandler) ListContactTags(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	type TagRow struct {
+		Tag   string `json:"tag" db:"tag"`
+		Count int    `json:"count" db:"count"`
+	}
+	var tags []TagRow
+	err := h.db.Select(&tags, `
+		SELECT tag, COUNT(*) as count
+		FROM wa_contacts, jsonb_array_elements_text(tags) AS tag
+		WHERE account_id = $1
+		GROUP BY tag
+		ORDER BY count DESC, tag ASC
+	`, accountID)
+	if err != nil {
+		log.Printf("[whatsapp] Failed to fetch tags: %v", err)
+	}
+
+	if tags == nil {
+		tags = []TagRow{}
+	}
+
+	return response.Success(c, tags)
+}
+
+// CreateContactTag adds a tag to multiple contacts.
+func (h *WhatsAppHandler) CreateContactTag(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	var req struct {
+		Tag        string `json:"tag"`
+		ContactIDs []int  `json:"contact_ids"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if req.Tag == "" {
+		return response.BadRequest(c, "Tag name is required")
+	}
+
+	tag := strings.TrimSpace(strings.ToLower(req.Tag))
+	updated := 0
+
+	if len(req.ContactIDs) > 0 {
+		// Add tag to specific contacts
+		for _, cid := range req.ContactIDs {
+			result, err := h.db.Exec(`
+				UPDATE wa_contacts
+				SET tags = CASE
+					WHEN NOT tags @> to_jsonb($1::text) THEN tags || to_jsonb($1::text)
+					ELSE tags
+				END,
+				updated_at = NOW()
+				WHERE id = $2 AND account_id = $3
+			`, tag, cid, accountID)
+			if err == nil {
+				if n, _ := result.RowsAffected(); n > 0 {
+					updated++
+				}
+			}
+		}
+	}
+
+	return response.Success(c, map[string]interface{}{
+		"tag":     tag,
+		"updated": updated,
+	})
+}
+
+// DeleteContactTag removes a tag from all contacts.
+func (h *WhatsAppHandler) DeleteContactTag(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	tag := c.Param("tag")
+
+	if tag == "" {
+		return response.BadRequest(c, "Tag is required")
+	}
+
+	result, err := h.db.Exec(`
+		UPDATE wa_contacts
+		SET tags = tags - $1, updated_at = NOW()
+		WHERE account_id = $2 AND tags @> to_jsonb($1::text)
+	`, tag, accountID)
+	if err != nil {
+		log.Printf("[whatsapp] Failed to delete tag: %v", err)
+		return response.InternalError(c, "Failed to delete tag")
+	}
+
+	removed, _ := result.RowsAffected()
+
+	return response.Success(c, map[string]interface{}{
+		"tag":     tag,
+		"removed": removed,
+	})
+}
+
+// GetContactStats returns contact statistics.
+func (h *WhatsAppHandler) GetContactStats(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	var stats struct {
+		TotalContacts int `json:"total_contacts" db:"total_contacts"`
+		OptedIn       int `json:"opted_in" db:"opted_in"`
+		OptedOut      int `json:"opted_out" db:"opted_out"`
+	}
+
+	h.db.Get(&stats.TotalContacts, "SELECT COUNT(*) FROM wa_contacts WHERE account_id = $1", accountID)
+	h.db.Get(&stats.OptedIn, "SELECT COUNT(*) FROM wa_contacts WHERE account_id = $1 AND opted_in = true", accountID)
+	h.db.Get(&stats.OptedOut, "SELECT COUNT(*) FROM wa_contacts WHERE account_id = $1 AND opted_in = false", accountID)
+
+	// Tags breakdown
+	type TagStat struct {
+		Tag   string `json:"tag" db:"tag"`
+		Count int    `json:"count" db:"count"`
+	}
+	var tagStats []TagStat
+	h.db.Select(&tagStats, `
+		SELECT tag, COUNT(*) as count
+		FROM wa_contacts, jsonb_array_elements_text(tags) AS tag
+		WHERE account_id = $1
+		GROUP BY tag ORDER BY count DESC LIMIT 20
+	`, accountID)
+	if tagStats == nil {
+		tagStats = []TagStat{}
+	}
+
+	// Recent additions (last 30 days)
+	var recentCount int
+	h.db.Get(&recentCount, "SELECT COUNT(*) FROM wa_contacts WHERE account_id = $1 AND created_at > NOW() - INTERVAL '30 days'", accountID)
+
+	// Contacts with attributes
+	var withAttrs int
+	h.db.Get(&withAttrs, "SELECT COUNT(*) FROM wa_contacts WHERE account_id = $1 AND attributes != '{}'::jsonb", accountID)
+
+	return response.Success(c, map[string]interface{}{
+		"total_contacts":   stats.TotalContacts,
+		"opted_in":         stats.OptedIn,
+		"opted_out":        stats.OptedOut,
+		"tags":             tagStats,
+		"recent_30d":       recentCount,
+		"with_attributes":  withAttrs,
+	})
+}
+
+// GetContactFields returns unique attribute field names from contacts.
+func (h *WhatsAppHandler) GetContactFields(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	type FieldRow struct {
+		Field string `json:"field" db:"field"`
+		Count int    `json:"count" db:"count"`
+	}
+	var fields []FieldRow
+	err := h.db.Select(&fields, `
+		SELECT key AS field, COUNT(*) as count
+		FROM wa_contacts, jsonb_each_text(attributes) AS kv(key, value)
+		WHERE account_id = $1
+		GROUP BY key ORDER BY key ASC
+	`, accountID)
+	if err != nil {
+		log.Printf("[whatsapp] Failed to fetch fields: %v", err)
+	}
+
+	if fields == nil {
+		fields = []FieldRow{}
+	}
+
+	return response.Success(c, fields)
+}
+
+// CleanupContacts lists or removes opted-out contacts.
+func (h *WhatsAppHandler) CleanupContacts(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	action := c.QueryParam("action") // "list" or "delete"
+
+	if action == "delete" {
+		result, err := h.db.Exec("DELETE FROM wa_contacts WHERE account_id = $1 AND opted_in = false", accountID)
+		if err != nil {
+			return response.InternalError(c, "Failed to delete opted-out contacts")
+		}
+		deleted, _ := result.RowsAffected()
+		return response.Success(c, map[string]interface{}{
+			"deleted": deleted,
+		})
+	}
+
+	// Default: list opted-out contacts
+	var contacts []WAContact
+	h.db.Select(&contacts, `
+		SELECT * FROM wa_contacts
+		WHERE account_id = $1 AND opted_in = false
+		ORDER BY opted_out_at DESC NULLS LAST, updated_at DESC
+		LIMIT 500
+	`, accountID)
+
+	if contacts == nil {
+		contacts = []WAContact{}
+	}
+
+	var optedOutCount int
+	h.db.Get(&optedOutCount, "SELECT COUNT(*) FROM wa_contacts WHERE account_id = $1 AND opted_in = false", accountID)
+
+	return response.Success(c, map[string]interface{}{
+		"contacts": contacts,
+		"total":    optedOutCount,
+	})
+}
+
+// ============================================================
 // Template Handlers
 // ============================================================
 

@@ -207,6 +207,12 @@ func (s *Server) RegisterRoutes() {
 	waContacts.DELETE("/:id", waHandler.DeleteContact)
 	waContacts.POST("/import", waHandler.ImportContacts)
 	waContacts.GET("/export", waHandler.ExportContacts)
+	waContacts.GET("/tags", waHandler.ListContactTags)
+	waContacts.POST("/tags", waHandler.CreateContactTag)
+	waContacts.DELETE("/tags/:tag", waHandler.DeleteContactTag)
+	waContacts.GET("/stats", waHandler.GetContactStats)
+	waContacts.GET("/fields", waHandler.GetContactFields)
+	waContacts.GET("/cleanup", waHandler.CleanupContacts)
 
 	// WhatsApp Templates
 	waTemplates := wa.Group("/templates")

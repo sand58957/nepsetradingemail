@@ -104,10 +104,9 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           <MenuItem href={`/${locale}/whatsapp`} icon={<i className='tabler-brand-whatsapp' />}>
             Dashboard
           </MenuItem>
-          <SubMenu label='Contacts' icon={<i className='tabler-address-book' />}>
-            <MenuItem href={`/${locale}/whatsapp/contacts`}>All Contacts</MenuItem>
-            <MenuItem href={`/${locale}/whatsapp/contacts/import`}>Import</MenuItem>
-          </SubMenu>
+          <MenuItem href={`/${locale}/whatsapp/contacts`} icon={<i className='tabler-address-book' />}>
+            Contacts
+          </MenuItem>
           <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
             <MenuItem href={`/${locale}/whatsapp/campaigns`}>All Campaigns</MenuItem>
             <MenuItem href={`/${locale}/whatsapp/campaigns/create`}>Create New</MenuItem>

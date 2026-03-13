@@ -3,9 +3,6 @@
 // React Imports
 import { useState, useEffect, useCallback } from 'react'
 
-// Next Imports
-import { useRouter, useParams } from 'next/navigation'
-
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
@@ -45,10 +42,6 @@ import whatsappService from '@/services/whatsapp'
 import type { WAContact } from '@/types/whatsapp'
 
 const WAContactList = () => {
-  const router = useRouter()
-  const { lang } = useParams()
-  const locale = (lang as string) || 'en'
-
   // State
   const [contacts, setContacts] = useState<WAContact[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -172,8 +165,7 @@ const WAContactList = () => {
     <>
       <Card>
         <CardHeader
-          title='WhatsApp Contacts'
-          subheader={`${totalCount} total contacts`}
+          title={`${totalCount} contacts`}
           action={
             <div className='flex gap-2 flex-wrap'>
               <Button
@@ -187,18 +179,10 @@ const WAContactList = () => {
               <Button
                 variant='outlined'
                 size='small'
-                startIcon={<i className='tabler-upload' />}
-                onClick={() => router.push(`/${locale}/whatsapp/contacts/import`)}
-              >
-                Import
-              </Button>
-              <Button
-                variant='outlined'
-                size='small'
                 startIcon={<i className='tabler-download' />}
                 onClick={handleExport}
               >
-                Export
+                Export CSV
               </Button>
             </div>
           }

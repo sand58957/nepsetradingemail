@@ -1,8 +1,8 @@
 // Component Imports
-import WAContactList from '@views/whatsapp/WAContactList'
+import WAContactsPage from '@views/whatsapp/WAContactsPage'
 
-const WhatsAppContactsPage = () => {
-  return <WAContactList />
+const WhatsAppContactsRoute = () => {
+  return <WAContactsPage />
 }
 
-export default WhatsAppContactsPage
+export default WhatsAppContactsRoute
