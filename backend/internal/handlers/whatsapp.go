@@ -1323,6 +1323,25 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WA
 		return
 	}
 
+	// Fetch campaign to get template_params
+	var campaign WACampaign
+	if err := h.db.Get(&campaign, "SELECT * FROM wa_campaigns WHERE id = $1", campaignID); err != nil {
+		log.Printf("[whatsapp] Campaign %d: failed to fetch campaign: %v", campaignID, err)
+		h.db.Exec("UPDATE wa_campaigns SET status = 'failed', updated_at = NOW() WHERE id = $1", campaignID)
+		return
+	}
+
+	// Parse template params from campaign
+	type TemplateParam struct {
+		Index int    `json:"index"`
+		Field string `json:"field"`
+		Value string `json:"value"`
+	}
+	var templateParams []TemplateParam
+	if campaign.TemplateParams != nil && string(campaign.TemplateParams) != "null" {
+		json.Unmarshal(campaign.TemplateParams, &templateParams)
+	}
+
 	// Get all opted-in contacts
 	var contacts []WAContact
 	if err := h.db.Select(&contacts, "SELECT * FROM wa_contacts WHERE account_id = $1 AND opted_in = true", accountID); err != nil {
@@ -1343,8 +1362,6 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WA
 	var mu sync.Mutex
 	sentCount := 0
 	failedCount := 0
-
-	templateJSON := fmt.Sprintf(`{"id":"%s","params":[]}`, tmpl.GupshupID)
 
 	for _, contact := range contacts {
 		<-ticker.C
@@ -1367,6 +1384,40 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WA
 			log.Printf("[whatsapp] Campaign %d: failed to create message record: %v", campaignID, err)
 			continue
 		}
+
+		// Build per-contact template params
+		var params []string
+		for _, p := range templateParams {
+			val := p.Value
+			// Replace contact field placeholders
+			if p.Field != "" {
+				switch p.Field {
+				case "name":
+					val = contact.Name
+				case "phone":
+					val = contact.Phone
+				case "email":
+					val = contact.Email
+				default:
+					// Check contact attributes for custom fields
+					if contact.Attributes != nil {
+						var attrs map[string]string
+						if jsonErr := json.Unmarshal(contact.Attributes, &attrs); jsonErr == nil {
+							if attrVal, ok := attrs[p.Field]; ok {
+								val = attrVal
+							}
+						}
+					}
+				}
+			}
+			if val == "" {
+				val = p.Value // Fallback to static value
+			}
+			params = append(params, val)
+		}
+
+		paramsJSON, _ := json.Marshal(params)
+		templateJSON := fmt.Sprintf(`{"id":"%s","params":%s}`, tmpl.GupshupID, string(paramsJSON))
 
 		// Send via Gupshup
 		result, err := client.SendTemplateMessage(contact.Phone, templateJSON)
@@ -1581,8 +1632,11 @@ func (h *WhatsAppHandler) WebhookReceive(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid payload"})
 	}
 
+	log.Printf("[whatsapp-webhook] Received event type=%s, payload.type=%s, payload.id=%s, payload.gsId=%s, destination=%s",
+		payload.Type, payload.Payload.Type, payload.Payload.ID, payload.Payload.GsID, payload.Payload.Destination)
+
 	if payload.Type != "message-event" {
-		// We only handle message events (delivery reports)
+		log.Printf("[whatsapp-webhook] Ignoring non-message-event: %s", payload.Type)
 		return c.JSON(http.StatusOK, map[string]string{"status": "ignored"})
 	}
 
@@ -1590,6 +1644,7 @@ func (h *WhatsAppHandler) WebhookReceive(c echo.Context) error {
 	eventType := payload.Payload.Type
 
 	if msgID == "" {
+		log.Printf("[whatsapp-webhook] No message ID in payload")
 		return c.JSON(http.StatusOK, map[string]string{"status": "no message id"})
 	}
 
@@ -1615,10 +1670,12 @@ func (h *WhatsAppHandler) WebhookReceive(c echo.Context) error {
 			`, payload.Payload.GsID).Scan(&campaignMsgID, &campaignID)
 		}
 		if err != nil {
-			// Still not found — just acknowledge
+			log.Printf("[whatsapp-webhook] No matching message found for id=%s gsId=%s event=%s", msgID, payload.Payload.GsID, eventType)
 			return c.JSON(http.StatusOK, map[string]string{"status": "no matching message"})
 		}
 	}
+
+	log.Printf("[whatsapp-webhook] Matched campaign_msg_id=%d campaign_id=%d event=%s", campaignMsgID, campaignID, eventType)
 
 	// Update message status based on event type
 	switch eventType {
