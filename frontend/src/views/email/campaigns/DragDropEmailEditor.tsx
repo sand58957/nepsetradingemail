@@ -49,6 +49,39 @@ interface BlockCategory {
 }
 
 const blockCategories: BlockCategory[] = [
+  {
+    name: 'Elements', icon: 'tabler-typography',
+    blocks: [
+      { name: 'Spacer', previewKey: 'el-spacer' },
+      { name: 'Divider', previewKey: 'el-divider' },
+      { name: 'Title', previewKey: 'el-title' },
+      { name: 'Title with button', previewKey: 'el-title-btn' },
+      { name: 'Text', previewKey: 'el-text' },
+      { name: 'Quote', previewKey: 'el-quote' },
+      { name: 'Button', previewKey: 'el-button' },
+      { name: 'Two buttons', previewKey: 'el-two-btn' },
+      { name: 'Three buttons', previewKey: 'el-three-btn' },
+      { name: 'Image', previewKey: 'el-image' },
+      { name: 'Video', previewKey: 'el-video' },
+      { name: 'Audio', previewKey: 'el-audio' },
+      { name: 'Table', previewKey: 'el-table' },
+      { name: 'Links', previewKey: 'el-links' }
+    ]
+  },
+  {
+    name: 'Content', icon: 'tabler-pencil',
+    blocks: [
+      { name: 'Message', previewKey: 'cnt-message' },
+      { name: 'Mini box CTA', previewKey: 'cnt-mini-box-cta' },
+      { name: 'Basic CTA', previewKey: 'cnt-basic-cta' },
+      { name: 'Box CTA', previewKey: 'cnt-box-cta' },
+      { name: 'Simple content', previewKey: 'cnt-simple' },
+      { name: 'Box content', previewKey: 'cnt-box' },
+      { name: 'Image + simple content', previewKey: 'cnt-img-simple' },
+      { name: 'Title + image content', previewKey: 'cnt-title-img' },
+      { name: 'Title + image', previewKey: 'cnt-title-image' }
+    ]
+  },
   { name: 'Saved blocks', icon: 'tabler-bookmark', blocks: [] },
   {
     name: 'Navigation', icon: 'tabler-layout-navbar',
@@ -81,39 +114,6 @@ const blockCategories: BlockCategory[] = [
       { name: '1:2 Columns', previewKey: 'sec-1-2' },
       { name: '2:1 Columns', previewKey: 'sec-2-1' },
       { name: 'Sidebar left', previewKey: 'sec-sidebar-l' }
-    ]
-  },
-  {
-    name: 'Elements', icon: 'tabler-typography',
-    blocks: [
-      { name: 'Spacer', previewKey: 'el-spacer' },
-      { name: 'Divider', previewKey: 'el-divider' },
-      { name: 'Title', previewKey: 'el-title' },
-      { name: 'Title with button', previewKey: 'el-title-btn' },
-      { name: 'Text', previewKey: 'el-text' },
-      { name: 'Quote', previewKey: 'el-quote' },
-      { name: 'Button', previewKey: 'el-button' },
-      { name: 'Two buttons', previewKey: 'el-two-btn' },
-      { name: 'Three buttons', previewKey: 'el-three-btn' },
-      { name: 'Image', previewKey: 'el-image' },
-      { name: 'Video', previewKey: 'el-video' },
-      { name: 'Audio', previewKey: 'el-audio' },
-      { name: 'Table', previewKey: 'el-table' },
-      { name: 'Links', previewKey: 'el-links' }
-    ]
-  },
-  {
-    name: 'Content', icon: 'tabler-pencil',
-    blocks: [
-      { name: 'Message', previewKey: 'cnt-message' },
-      { name: 'Mini box CTA', previewKey: 'cnt-mini-box-cta' },
-      { name: 'Basic CTA', previewKey: 'cnt-basic-cta' },
-      { name: 'Box CTA', previewKey: 'cnt-box-cta' },
-      { name: 'Simple content', previewKey: 'cnt-simple' },
-      { name: 'Box content', previewKey: 'cnt-box' },
-      { name: 'Image + simple content', previewKey: 'cnt-img-simple' },
-      { name: 'Title + image content', previewKey: 'cnt-title-img' },
-      { name: 'Title + image', previewKey: 'cnt-title-image' }
     ]
   },
   {
@@ -1076,7 +1076,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const locale = (lang as string) || 'en'
   const emailEditorRef = useRef<any>(null)
   const unlayerRef = useRef<EditorRef | null>(null)
-  const [activeCategory, setActiveCategory] = useState('')
+  const [activeCategory, setActiveCategory] = useState('Elements')
   const [searchQuery, setSearchQuery] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [dragOverEditor, setDragOverEditor] = useState(false)
@@ -1091,6 +1091,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
   const [saveTemplateName, setSaveTemplateName] = useState('')
   const [savingTemplate, setSavingTemplate] = useState(false)
+  const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const fromCampaignId = searchParams.get('from_campaign')
   const fromTemplateId = searchParams.get('from_template')
   const fromCampaignLoadedRef = useRef(false)
@@ -1098,16 +1099,6 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
 
   const onReady = useCallback((unlayer: EditorRef) => {
     unlayerRef.current = unlayer
-
-    // Hide Content & Blocks tabs, show only Body/design settings on the right panel
-    // (We provide our own block browser on the left — delay ensures editor is fully initialized)
-    setTimeout(() => {
-      ;(unlayer as any).updateTabs({
-        content: { enabled: false },
-        blocks: { enabled: false },
-        body: { active: true }
-      })
-    }, 500)
 
     // Register custom image picker — opens media library instead of default file upload
     ;(unlayer as any).registerCallback('selectImage', (data: any, done: (result: { url: string }) => void) => {
@@ -1432,6 +1423,23 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
     })
   }
 
+  // Toggle Unlayer's right panel (Content/Blocks/Body tabs)
+  const toggleRightPanel = () => {
+    const unlayer = unlayerRef.current
+
+    if (!unlayer) return
+
+    const newState = !rightPanelOpen
+
+    setRightPanelOpen(newState)
+
+    ;(unlayer as any).updateTabs({
+      content: { enabled: newState },
+      blocks: { enabled: newState },
+      body: { enabled: newState }
+    })
+  }
+
   const activeCat = blockCategories.find(c => c.name === activeCategory)
 
   const filteredBlocks = activeCat?.blocks.filter(b =>
@@ -1469,13 +1477,22 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           >
             Go back
           </Button>
-          <Tooltip title={drawerOpen ? 'Hide blocks' : 'Show blocks'}>
+          <Tooltip title={drawerOpen ? 'Hide blocks panel' : 'Show blocks panel'}>
             <IconButton
               size='small'
               onClick={() => setDrawerOpen(!drawerOpen)}
               sx={{ color: drawerOpen ? '#4caf50' : 'rgba(255,255,255,0.5)' }}
             >
               <i className='tabler-layout-sidebar-left-collapse text-[20px]' />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={rightPanelOpen ? 'Hide settings panel' : 'Show settings panel'}>
+            <IconButton
+              size='small'
+              onClick={toggleRightPanel}
+              sx={{ color: rightPanelOpen ? '#4caf50' : 'rgba(255,255,255,0.5)' }}
+            >
+              <i className='tabler-layout-sidebar-right-collapse text-[20px]' />
             </IconButton>
           </Tooltip>
         </Box>
@@ -1843,8 +1860,8 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
                 theme: 'modern_light'
               },
               tabs: {
-                content: { enabled: false },
-                blocks: { enabled: false },
+                content: { enabled: true },
+                blocks: { enabled: true },
                 body: { enabled: true, active: true }
               },
               tools: {
@@ -1867,6 +1884,29 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
                 { name: 'Message URL', value: '{{ MessageURL . }}' }
               ]
             } as any}
+          />
+        </Box>
+
+        {/* Right panel toggle chevron */}
+        <Box
+          onClick={toggleRightPanel}
+          sx={{
+            width: 20,
+            minWidth: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            bgcolor: '#f0f0f0',
+            borderLeft: '1px solid',
+            borderColor: 'divider',
+            '&:hover': { bgcolor: '#e0e0e0' },
+            transition: 'background-color 0.2s'
+          }}
+        >
+          <i
+            className={`tabler-chevron-${rightPanelOpen ? 'right' : 'left'} text-[14px]`}
+            style={{ color: '#757575' }}
           />
         </Box>
       </Box>
