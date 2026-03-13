@@ -26,143 +26,6 @@ import templateService from '@/services/templates'
 import campaignService from '@/services/campaigns'
 import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
-// ─── "Start from scratch" block browser data ───
-interface BlockPreview {
-  name: string
-
-  /** Render key – used to pick a mini-preview in the component */
-  previewKey: string
-}
-
-interface BlockCategory {
-  name: string
-  icon: string
-  blocks: BlockPreview[]
-}
-
-const scratchBlockCategories: BlockCategory[] = [
-  {
-    name: 'Saved blocks',
-    icon: 'tabler-bookmark',
-    blocks: []
-  },
-  {
-    name: 'Navigation',
-    icon: 'tabler-layout-navbar',
-    blocks: [
-      { name: 'Logo', previewKey: 'logo' },
-      { name: 'Navigation', previewKey: 'nav' },
-      { name: 'Logo + Navigation', previewKey: 'logo-nav-center' },
-      { name: 'Logo + Navigation', previewKey: 'logo-nav-row' },
-      { name: 'Logo + Button', previewKey: 'logo-btn' },
-      { name: 'Logo + Social links', previewKey: 'logo-social' },
-      { name: 'Logo + Text', previewKey: 'logo-text' }
-    ]
-  },
-  {
-    name: 'Hero',
-    icon: 'tabler-photo',
-    blocks: [
-      { name: 'Hero image', previewKey: 'hero-img' },
-      { name: 'Hero with text', previewKey: 'hero-text' },
-      { name: 'Hero split', previewKey: 'hero-split' },
-      { name: 'Hero gradient', previewKey: 'hero-gradient' },
-      { name: 'Hero with CTA', previewKey: 'hero-cta' }
-    ]
-  },
-  {
-    name: 'Sections',
-    icon: 'tabler-columns',
-    blocks: [
-      { name: '1 Column', previewKey: 'sec-1col' },
-      { name: '2 Columns', previewKey: 'sec-2col' },
-      { name: '3 Columns', previewKey: 'sec-3col' },
-      { name: '1:2 Columns', previewKey: 'sec-1-2' },
-      { name: '2:1 Columns', previewKey: 'sec-2-1' },
-      { name: 'Sidebar left', previewKey: 'sec-sidebar-l' }
-    ]
-  },
-  {
-    name: 'Elements',
-    icon: 'tabler-typography',
-    blocks: [
-      { name: 'Text', previewKey: 'el-text' },
-      { name: 'Image', previewKey: 'el-image' },
-      { name: 'Button', previewKey: 'el-button' },
-      { name: 'Divider', previewKey: 'el-divider' },
-      { name: 'Spacer', previewKey: 'el-spacer' },
-      { name: 'Heading', previewKey: 'el-heading' }
-    ]
-  },
-  {
-    name: 'Content',
-    icon: 'tabler-pencil',
-    blocks: [
-      { name: 'Text + Image', previewKey: 'cnt-text-img' },
-      { name: 'Image + Text', previewKey: 'cnt-img-text' },
-      { name: 'Feature list', previewKey: 'cnt-features' },
-      { name: 'Testimonial', previewKey: 'cnt-testimonial' },
-      { name: 'Stats', previewKey: 'cnt-stats' }
-    ]
-  },
-  {
-    name: 'Special',
-    icon: 'tabler-star',
-    blocks: [
-      { name: 'Timer', previewKey: 'sp-timer' },
-      { name: 'Countdown', previewKey: 'sp-countdown' },
-      { name: 'Banner', previewKey: 'sp-banner' },
-      { name: 'Coupon', previewKey: 'sp-coupon' }
-    ]
-  },
-  {
-    name: 'Products',
-    icon: 'tabler-tag',
-    blocks: [
-      { name: 'Product card', previewKey: 'prod-card' },
-      { name: 'Product grid', previewKey: 'prod-grid' },
-      { name: 'Product + CTA', previewKey: 'prod-cta' }
-    ]
-  },
-  {
-    name: 'Gallery',
-    icon: 'tabler-photo',
-    blocks: [
-      { name: '2-image gallery', previewKey: 'gal-2' },
-      { name: '3-image gallery', previewKey: 'gal-3' },
-      { name: '4-image grid', previewKey: 'gal-4' }
-    ]
-  },
-  {
-    name: 'Blog and RSS',
-    icon: 'tabler-rss',
-    blocks: [
-      { name: 'Blog post', previewKey: 'blog-post' },
-      { name: 'Blog list', previewKey: 'blog-list' },
-      { name: 'RSS feed', previewKey: 'blog-rss' }
-    ]
-  },
-  {
-    name: 'Social and sharing',
-    icon: 'tabler-brand-twitter',
-    blocks: [
-      { name: 'Social icons', previewKey: 'soc-icons' },
-      { name: 'Share buttons', previewKey: 'soc-share' },
-      { name: 'Follow us', previewKey: 'soc-follow' }
-    ]
-  },
-  {
-    name: 'Footer',
-    icon: 'tabler-layout-bottombar',
-    blocks: [
-      { name: 'Simple footer', previewKey: 'ftr-simple' },
-      { name: 'Footer + Social', previewKey: 'ftr-social' },
-      { name: 'Footer + Links', previewKey: 'ftr-links' },
-      { name: 'Full footer', previewKey: 'ftr-full' }
-    ]
-  }
-]
-
 // Category icon mapping for gallery templates
 const categoryIconMap: Record<string, string> = {
   'Black Friday': 'tabler-tag',
@@ -190,6 +53,30 @@ const parseCategory = (subject: string): string => {
 // Helper: check if a template is a gallery template (has [Category] prefix in subject)
 const isGalleryTemplate = (t: Template): boolean => /^\[.+\]/.test(t.subject)
 
+// Helper: check if a template is a Listmonk default/system template (should be hidden)
+const isDefaultTemplate = (t: Template): boolean => {
+  // Check for Listmonk Go template syntax in body
+  if (
+    t.body &&
+    (t.body.includes('{{ template "content"') ||
+      t.body.includes('{{ .Tx.Body }}') ||
+      t.body.includes('{{.Tx.Body}}') ||
+      t.body.includes('{{ template "content" .'))
+  ) {
+    return true
+  }
+
+  // Also check for known default template names
+  const defaultNames = [
+    'default campaign template',
+    'default archive template',
+    'sample transactional template',
+    'sample visual template'
+  ]
+
+  return defaultNames.includes(t.name.toLowerCase())
+}
+
 interface TemplateGalleryProps {
   campaignType: string
 }
@@ -198,7 +85,7 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
   const router = useRouter()
   const { lang } = useParams()
   const locale = (lang as string) || 'en'
-  const [activeTab, setActiveTab] = useState(1)
+  const [activeTab, setActiveTab] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [templates, setTemplates] = useState<Template[]>([])
@@ -207,7 +94,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
   const [loadingRecent, setLoadingRecent] = useState(false)
   const [loadedRecent, setLoadedRecent] = useState(false)
   const [previewDialog, setPreviewDialog] = useState<Template | null>(null)
-  const [scratchCategory, setScratchCategory] = useState('Navigation')
   const isMobile = useMobileBreakpoint()
 
   useEffect(() => {
@@ -229,7 +115,7 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
   }, [])
 
   useEffect(() => {
-    if (activeTab === 2 && !loadedRecent) {
+    if (activeTab === 1 && !loadedRecent) {
       const fetchRecent = async () => {
         setLoadingRecent(true)
 
@@ -249,7 +135,11 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
     }
   }, [activeTab, loadedRecent])
 
-  const handleSelectTemplate = (templateId: number | 'scratch') => {
+  const handleStartFromScratch = () => {
+    router.push(`/${locale}/campaigns/create?type=${campaignType}&template=scratch`)
+  }
+
+  const handleSelectTemplate = (templateId: number) => {
     router.push(`/${locale}/campaigns/create?type=${campaignType}&template=scratch&from_template=${templateId}`)
   }
 
@@ -257,8 +147,8 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
     router.push(`/${locale}/campaigns/create?type=${campaignType}&template=scratch&from_campaign=${campaign.id}`)
   }
 
-  // Split templates into user-created (no category prefix) and gallery (with [Category] prefix)
-  const userTemplates = templates.filter(t => !isGalleryTemplate(t))
+  // Split templates: exclude gallery templates AND default Listmonk templates from user list
+  const userTemplates = templates.filter(t => !isGalleryTemplate(t) && !isDefaultTemplate(t))
   const galleryTemplates = templates.filter(t => isGalleryTemplate(t))
 
   // Build dynamic gallery categories from real templates
@@ -367,387 +257,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
     )
   }
 
-  // Mini-preview component for scratch blocks
-  const BlockMiniPreview = ({ previewKey }: { previewKey: string }) => {
-    const pillStyle = {
-      bgcolor: '#e0e0e0',
-      borderRadius: 0.5,
-      height: 8,
-      display: 'inline-block'
-    }
-
-    const logoEl = (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <Box sx={{ width: 10, height: 10, bgcolor: '#4caf50', borderRadius: 0.5 }} />
-        <Box sx={{ ...pillStyle, width: 50 }} />
-      </Box>
-    )
-
-    const navLinks = (
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        <Box sx={{ ...pillStyle, width: 30 }} />
-        <Box sx={{ ...pillStyle, width: 26 }} />
-        <Box sx={{ ...pillStyle, width: 28 }} />
-      </Box>
-    )
-
-    const btnEl = (
-      <Box sx={{ bgcolor: '#4caf50', borderRadius: 0.5, height: 14, width: 40, display: 'inline-block' }} />
-    )
-
-    const socialDots = (
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <Box sx={{ width: 10, height: 10, bgcolor: '#616161', borderRadius: '50%' }} />
-        <Box sx={{ width: 10, height: 10, bgcolor: '#616161', borderRadius: '50%' }} />
-        <Box sx={{ width: 10, height: 10, bgcolor: '#616161', borderRadius: '50%' }} />
-      </Box>
-    )
-
-    const imgPlaceholder = (
-      <Box sx={{ width: '100%', height: 40, bgcolor: '#f5f5f5', borderRadius: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <i className='tabler-photo text-[16px]' style={{ color: '#bdbdbd' }} />
-      </Box>
-    )
-
-    const textLines = (n: number) => (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-        {Array.from({ length: n }).map((_, i) => (
-          <Box key={i} sx={{ ...pillStyle, width: i === n - 1 ? '60%' : '100%' }} />
-        ))}
-      </Box>
-    )
-
-    switch (previewKey) {
-      // Navigation blocks
-      case 'logo':
-        return <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>{logoEl}</Box>
-      case 'nav':
-        return <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>{navLinks}</Box>
-      case 'logo-nav-center':
-        return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, py: 0.5 }}>
-            {logoEl}
-            {navLinks}
-          </Box>
-        )
-      case 'logo-nav-row':
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 0.5 }}>
-            {logoEl}
-            {navLinks}
-          </Box>
-        )
-      case 'logo-btn':
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 0.5 }}>
-            {logoEl}
-            {btnEl}
-          </Box>
-        )
-      case 'logo-social':
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 0.5 }}>
-            {logoEl}
-            {socialDots}
-          </Box>
-        )
-      case 'logo-text':
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 0.5 }}>
-            {logoEl}
-            <Typography variant='caption' sx={{ color: '#9e9e9e', fontSize: '0.65rem' }}>Weekly Newsletter</Typography>
-          </Box>
-        )
-
-      // Hero blocks
-      case 'hero-img':
-        return <Box sx={{ height: 50, bgcolor: '#f5f5f5', borderRadius: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className='tabler-photo text-[20px]' style={{ color: '#bdbdbd' }} /></Box>
-      case 'hero-text':
-        return (
-          <Box sx={{ py: 1 }}>
-            <Box sx={{ ...pillStyle, width: '70%', height: 10, mb: 0.5 }} />
-            {textLines(2)}
-          </Box>
-        )
-      case 'hero-split':
-        return (
-          <Box sx={{ display: 'flex', gap: 1, py: 0.5 }}>
-            <Box sx={{ flex: 1 }}>{textLines(3)}<Box sx={{ mt: 0.5 }}>{btnEl}</Box></Box>
-            <Box sx={{ flex: 1, bgcolor: '#f5f5f5', borderRadius: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 40 }}><i className='tabler-photo text-[16px]' style={{ color: '#bdbdbd' }} /></Box>
-          </Box>
-        )
-      case 'hero-gradient':
-        return <Box sx={{ height: 50, background: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)', borderRadius: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Box sx={{ ...pillStyle, width: 80, height: 10 }} /></Box>
-      case 'hero-cta':
-        return (
-          <Box sx={{ textAlign: 'center', py: 1 }}>
-            <Box sx={{ ...pillStyle, width: '50%', height: 10, mx: 'auto', mb: 0.5 }} />
-            <Box sx={{ ...pillStyle, width: '70%', mx: 'auto', mb: 1 }} />
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>{btnEl}</Box>
-          </Box>
-        )
-
-      // Section blocks
-      case 'sec-1col':
-        return <Box sx={{ border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>1 Column</Typography></Box>
-      case 'sec-2col':
-        return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Box sx={{ flex: 1, border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>1</Typography></Box>
-            <Box sx={{ flex: 1, border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>2</Typography></Box>
-          </Box>
-        )
-      case 'sec-3col':
-        return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {[1, 2, 3].map(n => <Box key={n} sx={{ flex: 1, border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>{n}</Typography></Box>)}
-          </Box>
-        )
-      case 'sec-1-2':
-        return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Box sx={{ flex: 1, border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>1</Typography></Box>
-            <Box sx={{ flex: 2, border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>2</Typography></Box>
-          </Box>
-        )
-      case 'sec-2-1':
-        return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Box sx={{ flex: 2, border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>1</Typography></Box>
-            <Box sx={{ flex: 1, border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>2</Typography></Box>
-          </Box>
-        )
-      case 'sec-sidebar-l':
-        return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Box sx={{ width: 60, border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>Side</Typography></Box>
-            <Box sx={{ flex: 1, border: '1px dashed #e0e0e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Typography variant='caption' color='text.disabled'>Main</Typography></Box>
-          </Box>
-        )
-
-      // Element blocks
-      case 'el-text':
-        return <Box sx={{ py: 0.5 }}>{textLines(3)}</Box>
-      case 'el-image':
-        return imgPlaceholder
-      case 'el-button':
-        return <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>{btnEl}</Box>
-      case 'el-divider':
-        return <Box sx={{ py: 1.5 }}><Box sx={{ borderTop: '1px solid #e0e0e0' }} /></Box>
-      case 'el-spacer':
-        return <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}><Typography variant='caption' color='text.disabled'>↕ Spacer</Typography></Box>
-      case 'el-heading':
-        return <Box sx={{ py: 0.5 }}><Box sx={{ ...pillStyle, width: '50%', height: 12 }} /></Box>
-
-      // Content blocks
-      case 'cnt-text-img':
-        return (
-          <Box sx={{ display: 'flex', gap: 1, py: 0.5 }}>
-            <Box sx={{ flex: 1 }}>{textLines(3)}</Box>
-            <Box sx={{ width: 60, height: 40, bgcolor: '#f5f5f5', borderRadius: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className='tabler-photo text-[14px]' style={{ color: '#bdbdbd' }} /></Box>
-          </Box>
-        )
-      case 'cnt-img-text':
-        return (
-          <Box sx={{ display: 'flex', gap: 1, py: 0.5 }}>
-            <Box sx={{ width: 60, height: 40, bgcolor: '#f5f5f5', borderRadius: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className='tabler-photo text-[14px]' style={{ color: '#bdbdbd' }} /></Box>
-            <Box sx={{ flex: 1 }}>{textLines(3)}</Box>
-          </Box>
-        )
-      case 'cnt-features':
-        return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5 }}>
-            {[1, 2, 3].map(n => (
-              <Box key={n} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ width: 8, height: 8, bgcolor: '#4caf50', borderRadius: '50%' }} />
-                <Box sx={{ ...pillStyle, width: `${60 + n * 10}px` }} />
-              </Box>
-            ))}
-          </Box>
-        )
-      case 'cnt-testimonial':
-        return (
-          <Box sx={{ textAlign: 'center', py: 0.5 }}>
-            <Typography variant='caption' sx={{ color: '#bdbdbd', fontSize: '1.2rem', lineHeight: 1 }}>&ldquo;</Typography>
-            {textLines(2)}
-            <Box sx={{ ...pillStyle, width: 40, mx: 'auto', mt: 0.5 }} />
-          </Box>
-        )
-      case 'cnt-stats':
-        return (
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', py: 0.5 }}>
-            {['100+', '50K', '99%'].map(s => (
-              <Box key={s} sx={{ textAlign: 'center' }}>
-                <Typography variant='caption' fontWeight={700} sx={{ fontSize: '0.7rem' }}>{s}</Typography>
-                <Box sx={{ ...pillStyle, width: 30, mx: 'auto' }} />
-              </Box>
-            ))}
-          </Box>
-        )
-
-      // Special blocks
-      case 'sp-timer':
-        return (
-          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', py: 1 }}>
-            {['00', '12', '30', '45'].map((v, i) => (
-              <Box key={i} sx={{ textAlign: 'center' }}>
-                <Box sx={{ bgcolor: '#f5f5f5', borderRadius: 0.5, px: 1, py: 0.5 }}>
-                  <Typography variant='caption' fontWeight={700}>{v}</Typography>
-                </Box>
-                <Typography variant='caption' sx={{ fontSize: '0.5rem', color: '#9e9e9e' }}>{['Days', 'Hrs', 'Min', 'Sec'][i]}</Typography>
-              </Box>
-            ))}
-          </Box>
-        )
-      case 'sp-countdown':
-        return (
-          <Box sx={{ textAlign: 'center', py: 1 }}>
-            <Box sx={{ ...pillStyle, width: '40%', mx: 'auto', mb: 0.5 }} />
-            <Typography variant='caption' fontWeight={700} color='error'>Ends in 2 days!</Typography>
-          </Box>
-        )
-      case 'sp-banner':
-        return <Box sx={{ bgcolor: '#fff3e0', borderRadius: 0.5, p: 1, textAlign: 'center' }}><Box sx={{ ...pillStyle, width: '60%', mx: 'auto' }} /></Box>
-      case 'sp-coupon':
-        return <Box sx={{ border: '2px dashed #e0e0e0', borderRadius: 1, p: 1, textAlign: 'center' }}><Typography variant='caption' fontWeight={700} color='text.secondary'>SAVE20</Typography></Box>
-
-      // Product blocks
-      case 'prod-card':
-        return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, py: 0.5 }}>
-            <Box sx={{ width: 60, height: 40, bgcolor: '#f5f5f5', borderRadius: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className='tabler-package text-[16px]' style={{ color: '#bdbdbd' }} /></Box>
-            <Box sx={{ ...pillStyle, width: 50 }} />
-            <Typography variant='caption' fontWeight={600} sx={{ fontSize: '0.6rem' }}>$29.99</Typography>
-          </Box>
-        )
-      case 'prod-grid':
-        return (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {[1, 2].map(n => (
-              <Box key={n} sx={{ flex: 1, textAlign: 'center' }}>
-                <Box sx={{ height: 30, bgcolor: '#f5f5f5', borderRadius: 0.5, mb: 0.5 }} />
-                <Box sx={{ ...pillStyle, width: '70%', mx: 'auto' }} />
-              </Box>
-            ))}
-          </Box>
-        )
-      case 'prod-cta':
-        return (
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 0.5 }}>
-            <Box sx={{ width: 50, height: 40, bgcolor: '#f5f5f5', borderRadius: 0.5 }} />
-            <Box sx={{ flex: 1 }}>
-              <Box sx={{ ...pillStyle, width: '80%', mb: 0.5 }} />
-              <Box sx={{ ...pillStyle, width: '50%', mb: 0.5 }} />
-              {btnEl}
-            </Box>
-          </Box>
-        )
-
-      // Gallery blocks
-      case 'gal-2':
-        return (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            {[1, 2].map(n => <Box key={n} sx={{ flex: 1, height: 35, bgcolor: '#f5f5f5', borderRadius: 0.5 }} />)}
-          </Box>
-        )
-      case 'gal-3':
-        return (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            {[1, 2, 3].map(n => <Box key={n} sx={{ flex: 1, height: 35, bgcolor: '#f5f5f5', borderRadius: 0.5 }} />)}
-          </Box>
-        )
-      case 'gal-4':
-        return (
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5 }}>
-            {[1, 2, 3, 4].map(n => <Box key={n} sx={{ height: 25, bgcolor: '#f5f5f5', borderRadius: 0.5 }} />)}
-          </Box>
-        )
-
-      // Blog blocks
-      case 'blog-post':
-        return (
-          <Box sx={{ py: 0.5 }}>
-            <Box sx={{ height: 30, bgcolor: '#f5f5f5', borderRadius: 0.5, mb: 0.5 }} />
-            <Box sx={{ ...pillStyle, width: '60%', height: 10, mb: 0.5 }} />
-            {textLines(2)}
-          </Box>
-        )
-      case 'blog-list':
-        return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 0.5 }}>
-            {[1, 2].map(n => (
-              <Box key={n} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Box sx={{ width: 30, height: 24, bgcolor: '#f5f5f5', borderRadius: 0.5 }} />
-                <Box sx={{ flex: 1 }}><Box sx={{ ...pillStyle, width: '90%' }} /></Box>
-              </Box>
-            ))}
-          </Box>
-        )
-      case 'blog-rss':
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
-            <i className='tabler-rss text-[16px]' style={{ color: '#ff9800' }} />
-            <Box sx={{ flex: 1 }}><Box sx={{ ...pillStyle, width: '70%' }} /></Box>
-          </Box>
-        )
-
-      // Social blocks
-      case 'soc-icons':
-        return <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>{socialDots}</Box>
-      case 'soc-share':
-        return (
-          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', py: 1 }}>
-            {['Share', 'Tweet', 'Pin'].map(t => (
-              <Box key={t} sx={{ bgcolor: '#e0e0e0', borderRadius: 0.5, px: 1, py: 0.25 }}>
-                <Typography variant='caption' sx={{ fontSize: '0.55rem' }}>{t}</Typography>
-              </Box>
-            ))}
-          </Box>
-        )
-      case 'soc-follow':
-        return (
-          <Box sx={{ textAlign: 'center', py: 0.5 }}>
-            <Typography variant='caption' color='text.secondary' sx={{ fontSize: '0.6rem' }}>Follow us</Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>{socialDots}</Box>
-          </Box>
-        )
-
-      // Footer blocks
-      case 'ftr-simple':
-        return (
-          <Box sx={{ textAlign: 'center', py: 0.5, borderTop: '1px solid #f0f0f0', pt: 1 }}>
-            <Box sx={{ ...pillStyle, width: '50%', mx: 'auto' }} />
-          </Box>
-        )
-      case 'ftr-social':
-        return (
-          <Box sx={{ textAlign: 'center', py: 0.5, borderTop: '1px solid #f0f0f0', pt: 1 }}>
-            <Box sx={{ ...pillStyle, width: '40%', mx: 'auto', mb: 0.5 }} />
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>{socialDots}</Box>
-          </Box>
-        )
-      case 'ftr-links':
-        return (
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, py: 0.5, borderTop: '1px solid #f0f0f0', pt: 1 }}>
-            {navLinks}
-          </Box>
-        )
-      case 'ftr-full':
-        return (
-          <Box sx={{ borderTop: '1px solid #f0f0f0', pt: 1, py: 0.5 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-              {logoEl}
-              {socialDots}
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>{navLinks}</Box>
-          </Box>
-        )
-
-      default:
-        return <Box sx={{ py: 1, textAlign: 'center' }}><Box sx={{ ...pillStyle, width: '60%', mx: 'auto' }} /></Box>
-    }
-  }
-
   return (
     <div className='flex flex-col gap-4'>
       {/* Tab Bar */}
@@ -759,7 +268,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
             '& .MuiTab-root': { textTransform: 'none', fontWeight: 500, fontSize: '0.9rem' }
           }}
         >
-          <Tab label='Start from scratch' />
           <Tab
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -772,134 +280,8 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         </Tabs>
       </Box>
 
-      {/* Tab 0: Start from scratch – Block browser */}
+      {/* Tab 0: Template Gallery */}
       {activeTab === 0 && (
-        <Box sx={{ display: 'flex', gap: 0 }}>
-          {/* Left Sidebar – Block categories */}
-          <Box sx={{ width: 260, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', pr: 0 }}>
-            <TextField
-              fullWidth
-              size='small'
-              placeholder='Search..'
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              sx={{ mb: 2, px: 1 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position='start'>
-                    <i className='tabler-search text-[18px]' />
-                  </InputAdornment>
-                )
-              }}
-            />
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {scratchBlockCategories.map(cat => (
-                <Box
-                  key={cat.name}
-                  onClick={() => setScratchCategory(cat.name)}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    px: 2,
-                    py: 1.5,
-                    cursor: 'pointer',
-                    bgcolor: scratchCategory === cat.name ? 'success.lightOpacity' : 'transparent',
-                    '&:hover': { bgcolor: scratchCategory === cat.name ? 'success.lightOpacity' : 'action.hover' }
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 1,
-                        bgcolor: scratchCategory === cat.name ? 'success.main' : 'action.hover',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <i
-                        className={`${cat.icon} text-[18px]`}
-                        style={{ color: scratchCategory === cat.name ? '#fff' : 'inherit' }}
-                      />
-                    </Box>
-                    <Typography
-                      variant='body2'
-                      fontWeight={scratchCategory === cat.name ? 600 : 400}
-                      sx={{ color: scratchCategory === cat.name ? 'success.main' : 'text.primary' }}
-                    >
-                      {cat.name}
-                    </Typography>
-                  </Box>
-                  <i className='tabler-chevron-right text-[16px]' style={{ opacity: 0.4 }} />
-                </Box>
-              ))}
-            </Box>
-          </Box>
-
-          {/* Right Content – Block previews */}
-          <Box sx={{ flex: 1, pl: 3 }}>
-            {(() => {
-              const activeCat = scratchBlockCategories.find(c => c.name === scratchCategory)
-              const blocks = activeCat?.blocks || []
-
-              const filtered = searchQuery
-                ? blocks.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                : blocks
-
-              if (scratchCategory === 'Saved blocks') {
-                return (
-                  <Box sx={{ textAlign: 'center', py: 8 }}>
-                    <i className='tabler-bookmark text-[40px]' style={{ color: 'var(--mui-palette-text-disabled)' }} />
-                    <Typography color='text.secondary' sx={{ mt: 2 }}>
-                      No saved blocks yet. Build your email and save sections for reuse.
-                    </Typography>
-                    <Button
-                      variant='contained'
-                      color='success'
-                      sx={{ mt: 3 }}
-                      onClick={() => handleSelectTemplate('scratch')}
-                      startIcon={<i className='tabler-plus' />}
-                    >
-                      Start building
-                    </Button>
-                  </Box>
-                )
-              }
-
-              return (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {filtered.map((block, idx) => (
-                    <Box key={idx}>
-                      <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
-                        {block.name}
-                      </Typography>
-                      <Card
-                        variant='outlined'
-                        sx={{
-                          cursor: 'pointer',
-                          '&:hover': { borderColor: 'success.main', boxShadow: 2 },
-                          transition: 'all 0.2s'
-                        }}
-                        onClick={() => handleSelectTemplate('scratch')}
-                      >
-                        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-                          <BlockMiniPreview previewKey={block.previewKey} />
-                        </CardContent>
-                      </Card>
-                    </Box>
-                  ))}
-                </Box>
-              )
-            })()}
-          </Box>
-        </Box>
-      )}
-
-      {/* Tab 1: Template Gallery */}
-      {activeTab === 1 && (
         <Box sx={{ display: 'flex', gap: 3 }}>
           {/* Left Sidebar */}
           <Box sx={{ width: 250, flexShrink: 0 }}>
@@ -1030,14 +412,16 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                   gap: 3
                 }}
               >
-                {/* Blank Canvas Card — always first */}
+                {/* Start from scratch Card — always first, goes directly to editor */}
                 <Card
                   sx={{
                     border: '2px dashed',
                     borderColor: 'divider',
-                    '&:hover': { borderColor: 'primary.main', boxShadow: 4 },
+                    cursor: 'pointer',
+                    '&:hover': { borderColor: 'success.main', boxShadow: 4 },
                     transition: 'all 0.2s'
                   }}
+                  onClick={handleStartFromScratch}
                 >
                   <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 4, height: '100%', justifyContent: 'center' }}>
                     <Box
@@ -1060,7 +444,7 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                     <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
                       Create a custom design or use ready-made blocks.
                     </Typography>
-                    <Button variant='contained' color='success' size='small' onClick={() => setActiveTab(0)}>
+                    <Button variant='contained' color='success' size='small' onClick={handleStartFromScratch}>
                       Choose
                     </Button>
                   </CardContent>
@@ -1083,8 +467,8 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         </Box>
       )}
 
-      {/* Tab 2: Recent Emails */}
-      {activeTab === 2 && (
+      {/* Tab 1: Recent Emails */}
+      {activeTab === 1 && (
         <Box>
           {loadingRecent ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
