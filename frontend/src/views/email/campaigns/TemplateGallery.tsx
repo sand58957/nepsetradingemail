@@ -296,7 +296,7 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
 
   // Template card component for both user and gallery templates
   const TemplateCard = ({ template, showCategory }: { template: Template; showCategory?: boolean }) => {
-    const displayName = showCategory ? template.name : template.name
+    const displayName = template.name
     const category = showCategory ? parseCategory(template.subject) : ''
 
     return (
@@ -310,8 +310,8 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
       >
         <Box
           sx={{
-            height: 200,
-            bgcolor: 'action.hover',
+            height: 220,
+            bgcolor: '#f8f9fa',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -321,16 +321,18 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         >
           {template.body ? (
             <iframe
-              srcDoc={template.body.substring(0, 3000)}
-              sandbox=''
+              srcDoc={template.body}
+              sandbox='allow-same-origin'
+              loading='lazy'
               style={{
-                width: '250%',
-                height: '250%',
-                transform: 'scale(0.4)',
-                transformOrigin: 'top left',
+                width: '600px',
+                height: '800px',
+                transform: 'scale(0.35)',
+                transformOrigin: 'top center',
                 position: 'absolute',
                 top: 0,
-                left: 0,
+                left: '50%',
+                marginLeft: '-300px',
                 pointerEvents: 'none',
                 border: 'none'
               }}
@@ -350,7 +352,8 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                 bgcolor: 'rgba(255,255,255,0.9)',
                 fontWeight: 600,
                 fontSize: '0.65rem',
-                height: 20
+                height: 20,
+                zIndex: 1
               }}
             />
           )}
