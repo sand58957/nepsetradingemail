@@ -37,7 +37,7 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import whatsappService from '@/services/whatsapp'
 
 // Type Imports
-import type { WACampaign } from '@/types/whatsapp'
+import type { WACampaign, WACampaignRecipient } from '@/types/whatsapp'
 
 const statusColorMap: Record<string, 'default' | 'success' | 'primary' | 'warning' | 'error' | 'info'> = {
   draft: 'default',
@@ -60,6 +60,7 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
 
   const [campaign, setCampaign] = useState<WACampaign | null>(null)
   const [statusBreakdown, setStatusBreakdown] = useState<{ status: string; count: number }[]>([])
+  const [recipients, setRecipients] = useState<WACampaignRecipient[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -88,6 +89,7 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
 
         setCampaign(response.data.campaign)
         setStatusBreakdown(response.data.status_breakdown || [])
+        setRecipients(response.data.recipients || [])
       } catch {
         setError('Failed to load campaign details')
       } finally {
@@ -451,6 +453,93 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                   )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Recipients */}
+        <Grid size={{ xs: 12 }}>
+          <Card>
+            <CardHeader
+              title={`Recipients (${recipients.length})`}
+              subheader={recipients.length === 0 ? 'No messages have been sent for this campaign yet' : 'Individual message delivery status for each contact'}
+            />
+            <CardContent>
+              {recipients.length === 0 ? (
+                <div className='text-center py-8'>
+                  <i className='tabler-users text-[48px] mb-3' style={{ color: 'var(--mui-palette-text-secondary)' }} />
+                  <Typography color='text.secondary'>
+                    {campaign.status === 'draft'
+                      ? 'Recipients will appear here after you send the campaign.'
+                      : 'No recipient messages found for this campaign.'}
+                  </Typography>
+                </div>
+              ) : (
+                <TableContainer>
+                  <Table size='small'>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Contact</TableCell>
+                        <TableCell>Phone</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Submitted</TableCell>
+                        <TableCell>Delivered</TableCell>
+                        <TableCell>Read</TableCell>
+                        <TableCell>Error</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {recipients.map(recipient => (
+                        <TableRow key={recipient.id}>
+                          <TableCell>
+                            <Typography variant='body2' className='font-medium'>
+                              {recipient.contact_name || '—'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant='body2'>{recipient.phone}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={recipient.status.charAt(0).toUpperCase() + recipient.status.slice(1)}
+                              size='small'
+                              variant='tonal'
+                              color={
+                                recipient.status === 'delivered' ? 'success' :
+                                recipient.status === 'read' ? 'primary' :
+                                recipient.status === 'failed' ? 'error' :
+                                recipient.status === 'sent' || recipient.status === 'submitted' ? 'info' :
+                                recipient.status === 'queued' ? 'warning' :
+                                'default'
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant='caption'>
+                              {recipient.submitted_at ? new Date(recipient.submitted_at).toLocaleString() : '—'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant='caption'>
+                              {recipient.delivered_at ? new Date(recipient.delivered_at).toLocaleString() : '—'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant='caption'>
+                              {recipient.read_at ? new Date(recipient.read_at).toLocaleString() : '—'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant='caption' color='error'>
+                              {recipient.error_reason || '—'}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </CardContent>
           </Card>
         </Grid>

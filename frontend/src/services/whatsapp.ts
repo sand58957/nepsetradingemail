@@ -4,6 +4,7 @@ import type {
   WAContact,
   WATemplate,
   WACampaign,
+  WACampaignRecipient,
   WAContactListResponse,
   WACampaignListResponse,
   WAOverviewStats
@@ -109,7 +110,7 @@ export const whatsappService = {
     return response.data
   },
 
-  getCampaign: async (id: number): Promise<{ data: { campaign: WACampaign; status_breakdown: any[] } }> => {
+  getCampaign: async (id: number): Promise<{ data: { campaign: WACampaign; status_breakdown: any[]; recipients: WACampaignRecipient[] } }> => {
     const response = await api.get(`/whatsapp/campaigns/${id}`)
     return response.data
   },

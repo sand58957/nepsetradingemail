@@ -842,9 +842,47 @@ func (h *WhatsAppHandler) GetCampaign(c echo.Context) error {
 		GROUP BY status
 	`, id)
 
+	if statusBreakdown == nil {
+		statusBreakdown = []struct {
+			Status string `json:"status" db:"status"`
+			Count  int    `json:"count" db:"count"`
+		}{}
+	}
+
+	// Fetch individual recipient messages with contact details
+	type RecipientRow struct {
+		ID           int        `json:"id" db:"id"`
+		ContactID    int        `json:"contact_id" db:"contact_id"`
+		Phone        string     `json:"phone" db:"phone"`
+		ContactName  string     `json:"contact_name" db:"contact_name"`
+		Status       string     `json:"status" db:"status"`
+		ErrorReason  string     `json:"error_reason" db:"error_reason"`
+		SubmittedAt  *time.Time `json:"submitted_at" db:"submitted_at"`
+		DeliveredAt  *time.Time `json:"delivered_at" db:"delivered_at"`
+		ReadAt       *time.Time `json:"read_at" db:"read_at"`
+		FailedAt     *time.Time `json:"failed_at" db:"failed_at"`
+		CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	}
+	var recipients []RecipientRow
+	h.db.Select(&recipients, `
+		SELECT wcm.id, wcm.contact_id, wc.phone, wc.name AS contact_name,
+		       wcm.status, wcm.error_reason, wcm.submitted_at,
+		       wcm.delivered_at, wcm.read_at, wcm.failed_at, wcm.created_at
+		FROM wa_campaign_messages wcm
+		JOIN wa_contacts wc ON wc.id = wcm.contact_id
+		WHERE wcm.campaign_id = $1
+		ORDER BY wcm.created_at DESC
+		LIMIT 500
+	`, id)
+
+	if recipients == nil {
+		recipients = []RecipientRow{}
+	}
+
 	return response.Success(c, map[string]interface{}{
 		"campaign":         campaign,
 		"status_breakdown": statusBreakdown,
+		"recipients":       recipients,
 	})
 }
 

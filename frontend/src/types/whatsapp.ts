@@ -86,6 +86,20 @@ export interface WACampaignMessage {
   created_at: string
 }
 
+export interface WACampaignRecipient {
+  id: number
+  contact_id: number
+  phone: string
+  contact_name: string
+  status: string
+  error_reason: string
+  submitted_at: string | null
+  delivered_at: string | null
+  read_at: string | null
+  failed_at: string | null
+  created_at: string
+}
+
 export interface WAContactListResponse {
   data: {
     results: WAContact[]
