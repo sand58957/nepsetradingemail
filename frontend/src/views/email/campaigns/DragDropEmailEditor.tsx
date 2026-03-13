@@ -1092,7 +1092,9 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const [saveTemplateName, setSaveTemplateName] = useState('')
   const [savingTemplate, setSavingTemplate] = useState(false)
   const fromCampaignId = searchParams.get('from_campaign')
+  const fromTemplateId = searchParams.get('from_template')
   const fromCampaignLoadedRef = useRef(false)
+  const fromTemplateLoadedRef = useRef(false)
 
   const onReady = useCallback((unlayer: EditorRef) => {
     unlayerRef.current = unlayer
@@ -1170,7 +1172,34 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           setLoadingTemplate(false)
         })
     }
-  }, [fromCampaignId])
+
+    // Load template content if from_template param is present
+    if (fromTemplateId && !fromTemplateLoadedRef.current) {
+      fromTemplateLoadedRef.current = true
+      setLoadingTemplate(true)
+
+      templateService.getById(parseInt(fromTemplateId, 10))
+        .then((response) => {
+          const template = response.data
+
+          if (template?.body) {
+            ;(unlayer as any).loadDesign({
+              html: template.body,
+              classic: true
+            })
+
+            setAddedBlockName('Template loaded successfully')
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load template:', err)
+          setAddedBlockName('Failed to load template')
+        })
+        .finally(() => {
+          setLoadingTemplate(false)
+        })
+    }
+  }, [fromCampaignId, fromTemplateId])
 
   const handleGoBack = () => {
     router.push(`/${locale}/campaigns/create?type=${campaignType}`)
