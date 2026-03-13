@@ -1436,7 +1436,8 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
     ;(unlayer as any).updateTabs({
       content: { enabled: newState },
       blocks: { enabled: newState },
-      body: { enabled: newState }
+      body: { enabled: newState },
+      uploads: { enabled: newState }
     })
   }
 
@@ -1854,6 +1855,9 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
               features: {
                 textEditor: {
                   spellChecker: true
+                },
+                userUploads: {
+                  enabled: true
                 }
               },
               appearance: {
@@ -1862,7 +1866,8 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
               tabs: {
                 content: { enabled: true },
                 blocks: { enabled: true },
-                body: { enabled: true, active: true }
+                body: { enabled: true, active: true },
+                uploads: { enabled: true }
               },
               tools: {
                 image: { enabled: true },
