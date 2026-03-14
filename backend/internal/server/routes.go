@@ -412,8 +412,8 @@ func (s *Server) RegisterRoutes() {
 	settings.POST("/smtp/test", settingsHandler.TestSMTP)
 	settings.GET("/logs", settingsHandler.GetLogs)
 
-	// Account Settings (platform-level settings in our DB)
-	accountSettings := admin.Group("/account-settings")
+	// Account Settings (platform-level settings in our DB) — accessible to all staff
+	accountSettings := staff.Group("/account-settings")
 	accountSettings.GET("", accountSettingsHandler.GetAll)
 	accountSettings.GET("/:key", accountSettingsHandler.GetByKey)
 	accountSettings.PUT("/:key", accountSettingsHandler.UpdateByKey)
