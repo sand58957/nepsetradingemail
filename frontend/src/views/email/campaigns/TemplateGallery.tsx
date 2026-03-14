@@ -11,7 +11,6 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
-import Chip from '@mui/material/Chip'
 import CircularProgress from '@mui/material/CircularProgress'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
@@ -26,44 +25,7 @@ import templateService from '@/services/templates'
 import campaignService from '@/services/campaigns'
 import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
-// Category icon mapping for gallery templates
-const categoryIconMap: Record<string, string> = {
-  'Hospitality': 'tabler-building',
-  'Newsletter': 'tabler-news',
-  'Restaurant': 'tabler-tools-kitchen-2',
-  'Seasonal': 'tabler-leaf',
-  'Non-Profit': 'tabler-heart-handshake',
-  'Announcements': 'tabler-speakerphone',
-  'Small Business': 'tabler-building-store',
-  'Promotional': 'tabler-discount-2',
-  'Travel': 'tabler-plane',
-  'Black Friday': 'tabler-tag',
-  'Discount': 'tabler-receipt-off',
-  'Sale': 'tabler-shopping-cart',
-  'Welcome': 'tabler-hand-click',
-  'Loyalty': 'tabler-award',
-  'Retail': 'tabler-hanger',
-  'Fitness': 'tabler-stretching',
-  'Confirmation': 'tabler-circle-check',
-  'Purchase Receipt': 'tabler-receipt',
-  'Events': 'tabler-calendar-event',
-  'Recruiting': 'tabler-users',
-  'Financial': 'tabler-chart-line',
-  'Holiday': 'tabler-christmas-tree',
-  'Password Reset': 'tabler-lock',
-  'Abandoned Cart': 'tabler-shopping-cart-off',
-  'Contest': 'tabler-trophy',
-  'Featured': 'tabler-star',
-}
-
-// Helper: parse category from template name field (format: "[Category] Name")
-const parseCategory = (name: string): string => {
-  const match = name.match(/^\[([^\]]+)\]/)
-
-  return match ? match[1] : 'Featured'
-}
-
-// Helper: get display name (strip [Category] prefix)
+// Helper: get display name (strip [Category] prefix if present)
 const getDisplayName = (name: string): string => {
   return name.replace(/^\[[^\]]+\]\s*/, '')
 }
@@ -92,7 +54,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
   const { lang } = useParams()
   const locale = (lang as string) || 'en'
   const [activeTab, setActiveTab] = useState(0)
-  const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [templates, setTemplates] = useState<Template[]>([])
   const [recentCampaigns, setRecentCampaigns] = useState<any[]>([])
@@ -171,47 +132,16 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
     }
   }
 
-  // Split templates: exclude gallery templates AND default Listmonk templates from user list
+  // Only show user-created templates (exclude gallery templates and default Listmonk templates)
   const userTemplates = templates.filter(t => !isGalleryTemplate(t) && !isDefaultTemplate(t))
-  const galleryTemplates = templates.filter(t => isGalleryTemplate(t))
-
-  // Build dynamic gallery categories from real templates
-  const galleryByCategory: Record<string, Template[]> = {}
-
-  galleryTemplates.forEach(t => {
-    const cat = parseCategory(t.name)
-
-    if (!galleryByCategory[cat]) galleryByCategory[cat] = []
-    galleryByCategory[cat].push(t)
-  })
-
-  const galleryCategories = Object.keys(galleryByCategory).sort().map(name => ({
-    name,
-    count: galleryByCategory[name].length,
-    icon: categoryIconMap[name] || 'tabler-template'
-  }))
-
-  const totalGalleryTemplates = galleryTemplates.length
 
   const filteredUserTemplates = userTemplates.filter(t =>
     searchQuery ? t.name.toLowerCase().includes(searchQuery.toLowerCase()) : true
   )
 
-  // Get gallery templates for selected category
-  const getDisplayedGalleryTemplates = (): Template[] => {
-    if (selectedCategory === 'all' || selectedCategory === 'my') return galleryTemplates
-
-    return galleryByCategory[selectedCategory] || []
-  }
-
-  const filteredGalleryTemplates = getDisplayedGalleryTemplates().filter(t =>
-    searchQuery ? t.name.toLowerCase().includes(searchQuery.toLowerCase()) : true
-  )
-
-  // Template card component for both user and gallery templates
-  const TemplateCard = ({ template, showCategory }: { template: Template; showCategory?: boolean }) => {
+  // Template card component for user templates
+  const TemplateCard = ({ template }: { template: Template }) => {
     const displayName = getDisplayName(template.name)
-    const category = showCategory ? parseCategory(template.name) : ''
 
     return (
       <Card
@@ -255,22 +185,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
           ) : (
             <i className='tabler-mail text-[40px]' style={{ color: 'var(--mui-palette-text-disabled)' }} />
           )}
-          {showCategory && category && (
-            <Chip
-              label={category}
-              size='small'
-              sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                bgcolor: 'rgba(255,255,255,0.9)',
-                fontWeight: 600,
-                fontSize: '0.65rem',
-                height: 20,
-                zIndex: 1
-              }}
-            />
-          )}
         </Box>
         <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
           <Typography variant='body2' fontWeight={500} noWrap>
@@ -306,188 +220,95 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
 
       {/* Tab 0: Template Gallery */}
       {activeTab === 0 && (
-        <Box sx={{ display: 'flex', gap: 3 }}>
-          {/* Left Sidebar */}
-          <Box sx={{ width: 250, flexShrink: 0 }}>
-            <TextField
-              fullWidth
-              size='small'
-              placeholder='Search'
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              sx={{ mb: 2 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position='start'>
-                    <i className='tabler-search text-[18px]' />
-                  </InputAdornment>
-                )
+        <Box>
+          {/* Search */}
+          {userTemplates.length > 0 && (
+            <Box sx={{ maxWidth: 400, mb: 3 }}>
+              <TextField
+                fullWidth
+                size='small'
+                placeholder='Search your templates...'
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <i className='tabler-search text-[18px]' />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Box>
+          )}
+
+          {/* Template Grid */}
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+                gap: 3
               }}
-            />
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              {/* All templates */}
-              <Box
-                onClick={() => setSelectedCategory('all')}
+            >
+              {/* Start from scratch Card — always first, goes directly to editor */}
+              <Card
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  px: 2,
-                  py: 1,
-                  borderRadius: 1,
+                  border: '2px dashed',
+                  borderColor: 'divider',
                   cursor: 'pointer',
-                  bgcolor: selectedCategory === 'all' ? 'primary.lightOpacity' : 'transparent',
-                  borderLeft: selectedCategory === 'all' ? '3px solid var(--mui-palette-primary-main)' : '3px solid transparent',
-                  '&:hover': { bgcolor: 'action.hover' }
+                  '&:hover': { borderColor: 'success.main', boxShadow: 4 },
+                  transition: 'all 0.2s'
                 }}
+                onClick={handleStartFromScratch}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <i className='tabler-template text-[18px]' />
-                  <Typography variant='body2' fontWeight={selectedCategory === 'all' ? 600 : 400}>
-                    All templates
-                  </Typography>
-                </Box>
-                <Typography variant='caption' color='text.secondary'>
-                  {totalGalleryTemplates}
-                </Typography>
-              </Box>
-
-              {/* My templates */}
-              <Box
-                onClick={() => setSelectedCategory('my')}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  px: 2,
-                  py: 1,
-                  borderRadius: 1,
-                  cursor: 'pointer',
-                  bgcolor: selectedCategory === 'my' ? 'primary.lightOpacity' : 'transparent',
-                  borderLeft: selectedCategory === 'my' ? '3px solid var(--mui-palette-primary-main)' : '3px solid transparent',
-                  '&:hover': { bgcolor: 'action.hover' }
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <i className='tabler-folder text-[18px]' />
-                  <Typography variant='body2' fontWeight={selectedCategory === 'my' ? 600 : 400}>
-                    My templates
-                  </Typography>
-                </Box>
-                <Chip label={userTemplates.length} size='small' color='primary' sx={{ height: 22, fontSize: '0.75rem' }} />
-              </Box>
-
-              {/* Gallery Categories */}
-              {galleryCategories.map(cat => (
                 <Box
-                  key={cat.name}
-                  onClick={() => setSelectedCategory(cat.name)}
                   sx={{
+                    height: 220,
+                    bgcolor: '#f8f9fa',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    px: 2,
-                    py: 1,
-                    borderRadius: 1,
-                    cursor: 'pointer',
-                    bgcolor: selectedCategory === cat.name ? 'primary.lightOpacity' : 'transparent',
-                    borderLeft: selectedCategory === cat.name ? '3px solid var(--mui-palette-primary-main)' : '3px solid transparent',
-                    '&:hover': { bgcolor: 'action.hover' }
+                    justifyContent: 'center',
+                    flexDirection: 'column',
+                    gap: 1.5
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <i className={`${cat.icon} text-[18px]`} />
-                    <Typography variant='body2' fontWeight={selectedCategory === cat.name ? 600 : 400}>
-                      {cat.name}
-                    </Typography>
+                  <Box
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 2,
+                      bgcolor: 'action.hover',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <i className='tabler-photo text-[32px]' style={{ color: 'var(--mui-palette-primary-main)' }} />
                   </Box>
-                  <Typography variant='caption' color='text.secondary'>
-                    {cat.count}
+                  <Typography variant='body2' color='text.secondary' fontWeight={500}>
+                    Blank email with hero image
                   </Typography>
                 </Box>
+                <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 }, textAlign: 'center' }}>
+                  <Typography variant='subtitle2' fontWeight={600}>
+                    Start from scratch
+                  </Typography>
+                  <Typography variant='caption' color='text.secondary'>
+                    Create a custom design with the drag & drop editor
+                  </Typography>
+                </CardContent>
+              </Card>
+
+              {/* User Templates */}
+              {filteredUserTemplates.map(template => (
+                <TemplateCard key={`user-${template.id}`} template={template} />
               ))}
             </Box>
-          </Box>
-
-          {/* Right Content */}
-          <Box sx={{ flex: 1 }}>
-            {/* Template Count */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Typography variant='body2' color='text.secondary'>
-                {selectedCategory === 'my'
-                  ? `${filteredUserTemplates.length} templates listed`
-                  : selectedCategory === 'all'
-                    ? `${filteredGalleryTemplates.length + filteredUserTemplates.length} templates listed`
-                    : `${filteredGalleryTemplates.length} templates listed`}
-              </Typography>
-            </Box>
-
-            {/* Template Grid */}
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
-                  gap: 3
-                }}
-              >
-                {/* Start from scratch Card — always first, goes directly to editor */}
-                <Card
-                  sx={{
-                    border: '2px dashed',
-                    borderColor: 'divider',
-                    cursor: 'pointer',
-                    '&:hover': { borderColor: 'success.main', boxShadow: 4 },
-                    transition: 'all 0.2s'
-                  }}
-                  onClick={handleStartFromScratch}
-                >
-                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 4, height: '100%', justifyContent: 'center' }}>
-                    <Box
-                      sx={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: 2,
-                        bgcolor: 'action.hover',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 2
-                      }}
-                    >
-                      <i className='tabler-file-text text-[28px]' style={{ color: 'var(--mui-palette-text-secondary)' }} />
-                    </Box>
-                    <Typography variant='subtitle1' fontWeight={600} gutterBottom>
-                      Start from scratch
-                    </Typography>
-                    <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-                      Create a custom design or use ready-made blocks.
-                    </Typography>
-                    <Button variant='contained' color='success' size='small' onClick={handleStartFromScratch}>
-                      Choose
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* User Templates (show in 'my' and 'all') */}
-                {(selectedCategory === 'my' || selectedCategory === 'all') &&
-                  filteredUserTemplates.map(template => (
-                    <TemplateCard key={`user-${template.id}`} template={template} />
-                  ))}
-
-                {/* Gallery Templates (show in category or 'all') */}
-                {selectedCategory !== 'my' &&
-                  filteredGalleryTemplates.map(template => (
-                    <TemplateCard key={`gallery-${template.id}`} template={template} showCategory />
-                  ))}
-              </Box>
-            )}
-          </Box>
+          )}
         </Box>
       )}
 

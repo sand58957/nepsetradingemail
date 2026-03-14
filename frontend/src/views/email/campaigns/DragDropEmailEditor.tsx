@@ -1137,6 +1137,56 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
       }
     })
 
+    // Load default design with hero image when starting from scratch
+    if (!fromCampaignId && !fromTemplateId) {
+      const defaultDesign = {
+        html: `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4;">
+<tr><td align="center" style="padding:20px 0;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%;">
+
+<!-- Hero Image -->
+<tr>
+<td style="padding:0;">
+<img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&h=300&fit=crop" alt="Hero image" width="600" style="width:100%;height:auto;display:block;border-radius:8px 8px 0 0;" />
+</td>
+</tr>
+
+<!-- Content -->
+<tr>
+<td style="padding:32px 40px;">
+<h1 style="margin:0 0 16px;font-size:24px;color:#333333;font-weight:700;">Your headline goes here</h1>
+<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#666666;">Write your email content here. Use this space to share your message, announce news, or promote your products and services.</p>
+<a href="#" style="display:inline-block;padding:12px 28px;background-color:#7367F0;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;">Call to Action</a>
+</td>
+</tr>
+
+<!-- Footer -->
+<tr>
+<td style="padding:20px 40px;background-color:#f8f9fa;text-align:center;">
+<p style="margin:0;font-size:12px;color:#999999;">You received this email because you subscribed to our list.</p>
+<p style="margin:8px 0 0;font-size:12px;"><a href="{{ UnsubscribeURL . }}" style="color:#7367F0;">Unsubscribe</a></p>
+</td>
+</tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`,
+        classic: true
+      }
+
+      ;(unlayer as any).loadDesign(defaultDesign)
+    }
+
     // Load recent campaign content if from_campaign param is present
     if (fromCampaignId && !fromCampaignLoadedRef.current) {
       fromCampaignLoadedRef.current = true
