@@ -4,6 +4,7 @@
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
+import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 
 // Component Imports
@@ -19,17 +20,26 @@ interface StatCardProps {
 
 const StatCard = ({ title, value, icon, color, loading }: StatCardProps) => {
   return (
-    <Card>
-      <CardContent className='flex justify-between gap-1'>
-        <div className='flex flex-col gap-1 grow'>
-          <Typography color='text.primary'>{title}</Typography>
-          <div className='flex items-center gap-2 flex-wrap'>
-            {loading ? <CircularProgress size={24} /> : <Typography variant='h4'>{value}</Typography>}
-          </div>
-        </div>
-        <CustomAvatar color={color} skin='light' variant='rounded' size={42}>
-          <i className={`${icon} text-[26px]`} />
+    <Card sx={{ height: '100%' }}>
+      <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 4, height: '100%' }}>
+        <CustomAvatar color={color} skin='light' variant='rounded' size={44} sx={{ mb: 1.5 }}>
+          <i className={`${icon} text-[24px]`} />
         </CustomAvatar>
+        <Typography
+          variant='overline'
+          sx={{ letterSpacing: 1, color: 'text.secondary', fontWeight: 600, fontSize: '0.7rem', lineHeight: 1.4 }}
+        >
+          {title}
+        </Typography>
+        {loading ? (
+          <Box sx={{ mt: 1 }}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : (
+          <Typography variant='h4' sx={{ fontWeight: 700, mt: 0.5 }}>
+            {value}
+          </Typography>
+        )}
       </CardContent>
     </Card>
   )

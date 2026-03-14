@@ -270,7 +270,7 @@ const WASettings = () => {
                   <strong>Step 3:</strong> Enter your credentials here and save
                 </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 4:</strong> Click &quot;Test Connection&quot; to verify
+                  <strong>Step 4:</strong> Click &ldquo;Test Connection&rdquo; to verify
                 </Typography>
                 <Typography variant='body2' color='text.secondary'>
                   <strong>Step 5:</strong> Set up your webhook URL in Gupshup for delivery reports

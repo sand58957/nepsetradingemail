@@ -46,7 +46,7 @@ interface DashboardData {
   list_stats: any[]
 }
 
-// Delivery Stat Card matching the screenshot design (centered, percentage + count)
+// Delivery Stat Card — centered design with percentage + count
 const DeliveryStatCard = ({
   label,
   percentage,
@@ -61,24 +61,24 @@ const DeliveryStatCard = ({
   loading?: boolean
 }) => (
   <Card sx={{ textAlign: 'center', height: '100%' }}>
-    <CardContent sx={{ py: 4 }}>
+    <CardContent sx={{ py: 3, px: 2, '&:last-child': { pb: 3 } }}>
       <Typography
         variant='overline'
-        sx={{ letterSpacing: 1.5, color: 'text.secondary', fontWeight: 600, fontSize: '0.7rem' }}
+        sx={{ letterSpacing: 1.2, color: 'text.secondary', fontWeight: 600, fontSize: '0.65rem' }}
       >
         {label}
       </Typography>
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-          <CircularProgress size={28} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1.5 }}>
+          <CircularProgress size={26} />
         </Box>
       ) : (
         <>
-          <Typography variant='h4' sx={{ color, fontWeight: 700, mt: 1 }}>
+          <Typography variant='h5' sx={{ color, fontWeight: 700, mt: 0.5 }}>
             {percentage !== undefined ? percentage : count}
           </Typography>
           {percentage !== undefined && (
-            <Typography variant='body2' sx={{ color: 'text.secondary', mt: 0.5 }}>
+            <Typography variant='caption' sx={{ color: 'text.disabled' }}>
               {count}
             </Typography>
           )}
@@ -167,7 +167,7 @@ const AnalyticsDashboard = () => {
         </Grid>
       )}
 
-      {/* Row 0: Email Delivery Stats (Requests, Delivered, Opened, Clicked, Bounces, Spam Reports) */}
+      {/* Row 0: Email Delivery Stats */}
       <Grid size={{ xs: 12 }}>
         <Grid container spacing={3}>
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
@@ -181,7 +181,7 @@ const AnalyticsDashboard = () => {
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
             <DeliveryStatCard
               label='DELIVERED'
-              percentage={`${overviewData?.performance?.delivery_rate?.toFixed(2) || '0.00'}%`}
+              percentage={`${overviewData?.performance?.delivery_rate?.toFixed(1) || '0.0'}%`}
               count={overviewData?.performance?.total_delivered?.toLocaleString() || '0'}
               color='#8BC34A'
               loading={loading}
@@ -190,7 +190,7 @@ const AnalyticsDashboard = () => {
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
             <DeliveryStatCard
               label='OPENED'
-              percentage={`${overviewData?.performance?.avg_open_rate?.toFixed(2) || '0.00'}%`}
+              percentage={`${overviewData?.performance?.avg_open_rate?.toFixed(1) || '0.0'}%`}
               count={overviewData?.performance?.total_opens?.toLocaleString() || '0'}
               color='#00BCD4'
               loading={loading}
@@ -199,16 +199,16 @@ const AnalyticsDashboard = () => {
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
             <DeliveryStatCard
               label='CLICKED'
-              percentage={`${overviewData?.performance?.avg_click_rate?.toFixed(2) || '0.00'}%`}
+              percentage={`${overviewData?.performance?.avg_click_rate?.toFixed(1) || '0.0'}%`}
               count={overviewData?.performance?.total_clicks?.toLocaleString() || '0'}
-              color='#9E9E9E'
+              color='#78909C'
               loading={loading}
             />
           </Grid>
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
             <DeliveryStatCard
               label='BOUNCES'
-              percentage={`${overviewData?.performance?.bounce_rate?.toFixed(2) || '0.00'}%`}
+              percentage={`${overviewData?.performance?.bounce_rate?.toFixed(1) || '0.0'}%`}
               count={overviewData?.performance?.total_bounces?.toLocaleString() || '0'}
               color='#FF9800'
               loading={loading}
@@ -217,7 +217,7 @@ const AnalyticsDashboard = () => {
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
             <DeliveryStatCard
               label='SPAM REPORTS'
-              percentage={`${overviewData?.performance?.spam_rate?.toFixed(2) || '0.00'}%`}
+              percentage={`${overviewData?.performance?.spam_rate?.toFixed(1) || '0.0'}%`}
               count={overviewData?.performance?.spam_reports?.toLocaleString() || '0'}
               color='#F44336'
               loading={loading}
@@ -226,42 +226,64 @@ const AnalyticsDashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Row 1: KPI Stat Cards */}
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard
-          title='Total Subscribers'
-          value={overviewData?.subscribers?.total?.toLocaleString() || dashboardData?.total_subscribers?.toLocaleString() || '0'}
-          icon='tabler-users'
-          color='primary'
-          loading={loading}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard
-          title='Active Subscribers'
-          value={overviewData?.subscribers?.active?.toLocaleString() || dashboardData?.active_subscribers?.toLocaleString() || '0'}
-          icon='tabler-user-check'
-          color='success'
-          loading={loading}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard
-          title='Campaigns Sent'
-          value={overviewData?.campaigns?.sent?.toLocaleString() || dashboardData?.campaigns_sent?.toLocaleString() || '0'}
-          icon='tabler-send'
-          color='warning'
-          loading={loading}
-        />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard
-          title='Mailing Lists'
-          value={overviewData?.lists?.total?.toLocaleString() || dashboardData?.total_lists?.toLocaleString() || '0'}
-          icon='tabler-list'
-          color='info'
-          loading={loading}
-        />
+      {/* Row 1: KPI Stat Cards (6 cards — same grid as delivery row) */}
+      <Grid size={{ xs: 12 }}>
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatCard
+              title='Total Subscribers'
+              value={overviewData?.subscribers?.total?.toLocaleString() || dashboardData?.total_subscribers?.toLocaleString() || '0'}
+              icon='tabler-users'
+              color='primary'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatCard
+              title='Active Subscribers'
+              value={overviewData?.subscribers?.active?.toLocaleString() || dashboardData?.active_subscribers?.toLocaleString() || '0'}
+              icon='tabler-user-check'
+              color='success'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatCard
+              title='Blocklisted'
+              value={overviewData?.subscribers?.blocklisted?.toLocaleString() || '0'}
+              icon='tabler-user-off'
+              color='error'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatCard
+              title='Unsubscribed'
+              value={overviewData?.subscribers?.unsubscribed?.toLocaleString() || '0'}
+              icon='tabler-user-minus'
+              color='warning'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatCard
+              title='Total Campaigns'
+              value={overviewData?.campaigns?.total?.toLocaleString() || dashboardData?.total_campaigns?.toLocaleString() || '0'}
+              icon='tabler-speakerphone'
+              color='secondary'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <StatCard
+              title='Mailing Lists'
+              value={overviewData?.lists?.total?.toLocaleString() || dashboardData?.total_lists?.toLocaleString() || '0'}
+              icon='tabler-list'
+              color='info'
+              loading={loading}
+            />
+          </Grid>
+        </Grid>
       </Grid>
 
       {/* Row 2: Campaign Performance Chart + Email Performance Radial */}

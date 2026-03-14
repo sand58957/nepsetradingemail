@@ -10,6 +10,7 @@ import Box from '@mui/material/Box'
 
 // Tab Components
 import SubscriberListTable from './SubscriberListTable'
+import SubscriberSegments from './SubscriberSegments'
 import SubscriberGroups from './SubscriberGroups'
 import SubscriberFields from './SubscriberFields'
 import SubscriberStats from './SubscriberStats'
@@ -57,11 +58,7 @@ const SubscriberPage = () => {
 
       {/* Tab Panels */}
       {activeTab === 0 && <SubscriberListTable />}
-      {activeTab === 1 && (
-        <Box className='p-6'>
-          <Typography color='text.secondary'>Segments allow you to filter subscribers based on custom SQL queries. Coming soon.</Typography>
-        </Box>
-      )}
+      {activeTab === 1 && <SubscriberSegments />}
       {activeTab === 2 && <SubscriberGroups />}
       {activeTab === 3 && <SubscriberFields />}
       {activeTab === 4 && <SubscriberStats />}

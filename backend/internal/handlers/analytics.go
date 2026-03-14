@@ -127,23 +127,15 @@ func (h *AnalyticsHandler) GetOverview(c echo.Context) error {
 			}
 		}
 
-		// Unsubscribed
-		data, status, err = h.lm.Get("/subscribers", map[string]string{
-			"page": "1", "per_page": "1",
-			"query": "subscribers.status = 'unsubscribed'",
-		})
-		if err == nil && status >= 200 && status < 300 {
-			var result struct {
-				Data struct {
-					Total int `json:"total"`
-				} `json:"data"`
-			}
-			if json.Unmarshal(data, &result) == nil {
-				mu.Lock()
-				analytics.Subscribers.Unsubscribed = result.Data.Total
-				mu.Unlock()
-			}
+		// Unsubscribed = Total - Active - Blocklisted
+		// (Listmonk does not have an 'unsubscribed' status enum; subscribers
+		//  are either 'enabled' or 'blocklisted')
+		mu.Lock()
+		analytics.Subscribers.Unsubscribed = analytics.Subscribers.Total - analytics.Subscribers.Active - analytics.Subscribers.Blocklisted
+		if analytics.Subscribers.Unsubscribed < 0 {
+			analytics.Subscribers.Unsubscribed = 0
 		}
+		mu.Unlock()
 	}()
 
 	// Fetch campaign analytics

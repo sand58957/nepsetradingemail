@@ -28,45 +28,51 @@ import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
 // Category icon mapping for gallery templates
 const categoryIconMap: Record<string, string> = {
+  'Hospitality': 'tabler-building',
+  'Newsletter': 'tabler-news',
+  'Restaurant': 'tabler-tools-kitchen-2',
+  'Seasonal': 'tabler-leaf',
+  'Non-Profit': 'tabler-heart-handshake',
+  'Announcements': 'tabler-speakerphone',
+  'Small Business': 'tabler-building-store',
+  'Promotional': 'tabler-discount-2',
+  'Travel': 'tabler-plane',
   'Black Friday': 'tabler-tag',
-  'Blog and updates': 'tabler-news',
-  'Business': 'tabler-briefcase',
-  'Deals and offers': 'tabler-discount-2',
-  'E-commerce': 'tabler-shopping-cart',
+  'Discount': 'tabler-receipt-off',
+  'Sale': 'tabler-shopping-cart',
+  'Welcome': 'tabler-hand-click',
+  'Loyalty': 'tabler-award',
+  'Retail': 'tabler-hanger',
+  'Fitness': 'tabler-stretching',
+  'Confirmation': 'tabler-circle-check',
+  'Purchase Receipt': 'tabler-receipt',
   'Events': 'tabler-calendar-event',
-  'Featured': 'tabler-star',
-  'Health and wellness': 'tabler-heart',
+  'Recruiting': 'tabler-users',
+  'Financial': 'tabler-chart-line',
   'Holiday': 'tabler-christmas-tree',
-  'Nonprofit': 'tabler-heart-handshake',
-  'Notifications': 'tabler-bell',
-  'Products': 'tabler-package',
-  'Survey and quizzes': 'tabler-clipboard-list'
+  'Password Reset': 'tabler-lock',
+  'Abandoned Cart': 'tabler-shopping-cart-off',
+  'Contest': 'tabler-trophy',
+  'Featured': 'tabler-star',
 }
 
-// Helper: parse category from template subject field (format: "[Category] Name")
-const parseCategory = (subject: string): string => {
-  const match = subject.match(/^\[([^\]]+)\]/)
+// Helper: parse category from template name field (format: "[Category] Name")
+const parseCategory = (name: string): string => {
+  const match = name.match(/^\[([^\]]+)\]/)
 
   return match ? match[1] : 'Featured'
 }
 
-// Helper: check if a template is a gallery template (has [Category] prefix in subject)
-const isGalleryTemplate = (t: Template): boolean => /^\[.+\]/.test(t.subject)
+// Helper: get display name (strip [Category] prefix)
+const getDisplayName = (name: string): string => {
+  return name.replace(/^\[[^\]]+\]\s*/, '')
+}
+
+// Helper: check if a template is a gallery template (has [Category] prefix in name)
+const isGalleryTemplate = (t: Template): boolean => /^\[.+\]/.test(t.name)
 
 // Helper: check if a template is a Listmonk default/system template (should be hidden)
 const isDefaultTemplate = (t: Template): boolean => {
-  // Check for Listmonk Go template syntax in body
-  if (
-    t.body &&
-    (t.body.includes('{{ template "content"') ||
-      t.body.includes('{{ .Tx.Body }}') ||
-      t.body.includes('{{.Tx.Body}}') ||
-      t.body.includes('{{ template "content" .'))
-  ) {
-    return true
-  }
-
-  // Also check for known default template names
   const defaultNames = [
     'default campaign template',
     'default archive template',
@@ -94,6 +100,8 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
   const [loadingRecent, setLoadingRecent] = useState(false)
   const [loadedRecent, setLoadedRecent] = useState(false)
   const [previewDialog, setPreviewDialog] = useState<Template | null>(null)
+  const [deleteDialog, setDeleteDialog] = useState<any>(null)
+  const [deleting, setDeleting] = useState(false)
   const isMobile = useMobileBreakpoint()
 
   useEffect(() => {
@@ -147,6 +155,22 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
     router.push(`/${locale}/campaigns/create?type=${campaignType}&template=scratch&from_campaign=${campaign.id}`)
   }
 
+  const handleDeleteCampaign = async () => {
+    if (!deleteDialog) return
+
+    setDeleting(true)
+
+    try {
+      await campaignService.delete(deleteDialog.id)
+      setRecentCampaigns(prev => prev.filter(c => c.id !== deleteDialog.id))
+    } catch {
+      console.error('Failed to delete campaign')
+    } finally {
+      setDeleting(false)
+      setDeleteDialog(null)
+    }
+  }
+
   // Split templates: exclude gallery templates AND default Listmonk templates from user list
   const userTemplates = templates.filter(t => !isGalleryTemplate(t) && !isDefaultTemplate(t))
   const galleryTemplates = templates.filter(t => isGalleryTemplate(t))
@@ -155,7 +179,7 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
   const galleryByCategory: Record<string, Template[]> = {}
 
   galleryTemplates.forEach(t => {
-    const cat = parseCategory(t.subject)
+    const cat = parseCategory(t.name)
 
     if (!galleryByCategory[cat]) galleryByCategory[cat] = []
     galleryByCategory[cat].push(t)
@@ -186,8 +210,8 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
 
   // Template card component for both user and gallery templates
   const TemplateCard = ({ template, showCategory }: { template: Template; showCategory?: boolean }) => {
-    const displayName = template.name
-    const category = showCategory ? parseCategory(template.subject) : ''
+    const displayName = getDisplayName(template.name)
+    const category = showCategory ? parseCategory(template.name) : ''
 
     return (
       <Card
@@ -491,21 +515,61 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                   key={campaign.id}
                   sx={{
                     cursor: 'pointer',
+                    position: 'relative',
                     '&:hover': { boxShadow: 4 },
+                    '&:hover .delete-btn': { opacity: 1 },
                     transition: 'box-shadow 0.2s'
                   }}
                   onClick={() => handleUseRecentCampaign(campaign)}
                 >
-                  <Box
+                  <IconButton
+                    className='delete-btn'
+                    size='small'
                     sx={{
-                      height: 140,
-                      bgcolor: 'action.hover',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                      zIndex: 2,
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      bgcolor: 'background.paper',
+                      boxShadow: 2,
+                      '&:hover': { bgcolor: 'error.lightOpacity', color: 'error.main' }
+                    }}
+                    onClick={e => {
+                      e.stopPropagation()
+                      setDeleteDialog(campaign)
                     }}
                   >
-                    <i className='tabler-mail text-[40px]' style={{ color: 'var(--mui-palette-text-disabled)' }} />
+                    <i className='tabler-trash text-[16px]' />
+                  </IconButton>
+                  <Box
+                    sx={{
+                      height: 180,
+                      bgcolor: 'action.hover',
+                      overflow: 'hidden',
+                      position: 'relative'
+                    }}
+                  >
+                    {campaign.body ? (
+                      <iframe
+                        srcDoc={campaign.body}
+                        sandbox=''
+                        style={{
+                          width: '200%',
+                          height: '360px',
+                          border: 'none',
+                          transform: 'scale(0.5)',
+                          transformOrigin: 'top left',
+                          pointerEvents: 'none'
+                        }}
+                        title={campaign.name}
+                      />
+                    ) : (
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        <i className='tabler-mail text-[40px]' style={{ color: 'var(--mui-palette-text-disabled)' }} />
+                      </Box>
+                    )}
                   </Box>
                   <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
                     <Typography variant='body2' fontWeight={500} noWrap>
@@ -521,6 +585,30 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
           )}
         </Box>
       )}
+
+      {/* Delete Campaign Confirmation Dialog */}
+      <Dialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)} maxWidth='xs' fullWidth>
+        <DialogTitle>Delete Campaign</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete <strong>{deleteDialog?.name}</strong>? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog(null)} color='secondary' disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            variant='contained'
+            color='error'
+            onClick={handleDeleteCampaign}
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} /> : <i className='tabler-trash' />}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Template Preview Dialog */}
       <Dialog open={!!previewDialog} onClose={() => setPreviewDialog(null)} maxWidth='md' fullWidth fullScreen={isMobile}>

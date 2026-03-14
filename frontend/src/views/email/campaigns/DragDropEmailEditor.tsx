@@ -1085,6 +1085,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const [testEmailOpen, setTestEmailOpen] = useState(false)
   const [testEmailAddress, setTestEmailAddress] = useState('')
   const [testEmailSending, setTestEmailSending] = useState(false)
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const dragPreviewKeyRef = useRef<string | null>(null)
   const isMobile = useMobileBreakpoint()
   const [loadingTemplate, setLoadingTemplate] = useState(false)
@@ -1213,22 +1214,19 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const handlePreview = () => {
     const unlayer = unlayerRef.current
 
-    if (!unlayer) return
+    if (!unlayer) {
+      setAddedBlockName('Failed: Editor not ready yet')
+      setTimeout(() => setAddedBlockName(null), 3000)
 
-    // Open window immediately (in user-gesture context) to avoid popup blocker
-    const previewWindow = window.open('', '_blank')
+      return
+    }
 
     ;(unlayer as any).exportHtml((data: { html: string }) => {
-      if (previewWindow) {
-        // Use a sandboxed iframe inside the preview window to prevent script execution
-        previewWindow.document.write(
-          '<!DOCTYPE html><html><head><title>Email Preview</title><style>body{margin:0;}</style></head><body>' +
-          '<iframe sandbox="" style="width:100%;height:100vh;border:none;" id="preview"></iframe>' +
-          '<script>document.getElementById("preview").srcdoc=document.getElementById("content").textContent;</script>' +
-          '<template id="content">' + data.html.replace(/<\/template/gi, '&lt;/template') + '</template>' +
-          '</body></html>'
-        )
-        previewWindow.document.close()
+      if (data?.html) {
+        setPreviewHtml(data.html)
+      } else {
+        setAddedBlockName('Failed: Could not export email HTML')
+        setTimeout(() => setAddedBlockName(null), 3000)
       }
     })
   }
@@ -1236,7 +1234,14 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const handleSendTestEmail = () => {
     const unlayer = unlayerRef.current
 
-    if (!unlayer || !testEmailAddress.trim()) return
+    if (!unlayer) {
+      setAddedBlockName('Failed: Editor not ready yet')
+      setTimeout(() => setAddedBlockName(null), 3000)
+
+      return
+    }
+
+    if (!testEmailAddress.trim()) return
 
     setTestEmailSending(true)
 
@@ -1253,6 +1258,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         if (lists.length === 0) {
           setAddedBlockName('Failed: No subscriber lists available')
           setTimeout(() => setAddedBlockName(null), 3000)
+          setTestEmailSending(false)
 
           return
         }
@@ -1307,10 +1313,12 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         setTestEmailAddress('')
         setAddedBlockName('Test email sent')
         setTimeout(() => setAddedBlockName(null), 2000)
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to send test email:', err)
-        setAddedBlockName('Failed to send test email')
-        setTimeout(() => setAddedBlockName(null), 3000)
+        const msg = err?.response?.data?.message || err?.message || 'Failed to send test email'
+
+        setAddedBlockName(`Failed: ${msg}`)
+        setTimeout(() => setAddedBlockName(null), 4000)
       } finally {
         // Clean up temp resources
         if (tempCampaignId) {
@@ -1414,9 +1422,10 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         setAddedBlockName('Template saved successfully!')
         setSaveTemplateOpen(false)
         setSaveTemplateName('')
-      } catch (err) {
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || 'Failed to save template'
         console.error('Failed to save template:', err)
-        setAddedBlockName('Failed to save template')
+        setAddedBlockName(`Failed: ${msg}`)
       } finally {
         setSavingTemplate(false)
       }
@@ -1974,6 +1983,36 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         </DialogActions>
       </Dialog>
 
+      {/* Email Preview dialog */}
+      <Dialog
+        open={!!previewHtml}
+        onClose={() => setPreviewHtml(null)}
+        maxWidth='md'
+        fullWidth
+        fullScreen={isMobile}
+        PaperProps={{ sx: { height: isMobile ? '100%' : '85vh' } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.5, px: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <i className='tabler-eye text-[20px]' />
+            Email Preview
+          </Box>
+          <IconButton onClick={() => setPreviewHtml(null)} size='small'>
+            <i className='tabler-x text-[18px]' />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, overflow: 'hidden' }}>
+          {previewHtml && (
+            <iframe
+              srcDoc={previewHtml}
+              sandbox='allow-same-origin'
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title='Email Preview'
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Save as Template dialog */}
       <Dialog open={saveTemplateOpen} onClose={() => setSaveTemplateOpen(false)} maxWidth='xs' fullWidth fullScreen={isMobile}>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1982,7 +2021,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         </DialogTitle>
         <DialogContent>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-            Save this email design as a reusable template. You can find it under &quot;My templates&quot; in the Template gallery.
+            Save this email design as a reusable template. You can find it under &ldquo;My templates&rdquo; in the Template gallery.
           </Typography>
           <TextField
             autoFocus

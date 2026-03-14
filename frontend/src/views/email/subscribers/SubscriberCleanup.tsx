@@ -174,8 +174,8 @@ const SubscriberCleanup = () => {
             </Button>
           </div>
 
-          <div className='flex gap-3 justify-end mb-4'>
-            <FormControl size='small' sx={{ minWidth: 200 }}>
+          <div className='flex gap-3 justify-end mb-4 flex-wrap'>
+            <FormControl size='small' sx={{ minWidth: { xs: '100%', sm: 200 } }}>
               <Select value={timePeriod} onChange={e => setTimePeriod(e.target.value)}>
                 <MenuItem value='3months'>Inactive for last 3 mo...</MenuItem>
                 <MenuItem value='6months'>Inactive for last 6 mo...</MenuItem>
@@ -184,7 +184,14 @@ const SubscriberCleanup = () => {
             </FormControl>
           </div>
 
-          <TableContainer>
+          {processing && (
+            <div className='flex items-center gap-2 mb-4'>
+              <CircularProgress size={18} />
+              <Typography variant='body2' color='text.secondary'>Processing subscribers...</Typography>
+            </div>
+          )}
+
+          <TableContainer sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead>
                 <TableRow>
@@ -194,11 +201,12 @@ const SubscriberCleanup = () => {
                       checked={allSelected}
                       indeterminate={selectedIds.size > 0 && !allSelected}
                       onChange={e => handleSelectAll(e.target.checked)}
+                      inputProps={{ 'aria-label': 'Select all subscribers' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Subscribed</TableCell>
+                  <TableCell sx={{ fontWeight: 600, minWidth: 180 }}>Email</TableCell>
+                  <TableCell sx={{ fontWeight: 600, minWidth: 80 }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 600, minWidth: 100, display: { xs: 'none', sm: 'table-cell' } }}>Subscribed</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -224,7 +232,7 @@ const SubscriberCleanup = () => {
                       <TableCell>
                         <Typography color='text.secondary'>{sub.status}</Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                         <Typography variant='body2' color='text.secondary'>
                           {new Date(sub.created_at).toLocaleDateString('en-US', {
                             year: 'numeric', month: '2-digit', day: '2-digit'

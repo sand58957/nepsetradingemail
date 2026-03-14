@@ -89,12 +89,13 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           <MenuItem href={`/${locale}/lists`} icon={<i className='tabler-list' />}>
             Lists
           </MenuItem>
-          <MenuItem href={`/${locale}/templates/list`} icon={<i className='tabler-template' />}>
-            Templates
-          </MenuItem>
-          <MenuItem href={`/${locale}/media`} icon={<i className='tabler-photo' />}>
+<MenuItem href={`/${locale}/media`} icon={<i className='tabler-photo' />}>
             Media
           </MenuItem>
+          <SubMenu label='Automations' icon={<i className='tabler-robot' />}>
+            <MenuItem href={`/${locale}/automations/list`}>All Automations</MenuItem>
+            <MenuItem href={`/${locale}/automations/create`}>Create New</MenuItem>
+          </SubMenu>
           <MenuItem href={`/${locale}/dashboards/analytics`} icon={<i className='tabler-chart-bar' />}>
             Analytics
           </MenuItem>
