@@ -1345,12 +1345,23 @@ func (h *SMSHandler) GetOverview(c echo.Context) error {
 		recent = []SMSCampaign{}
 	}
 
-	// Try to fetch credit balance from Aakash SMS
+	// Fetch credit balance from Aakash SMS with a short timeout
 	var creditBalance int
 	client, _, clientErr := h.getClient(accountID)
 	if clientErr == nil {
-		if bal, err := client.GetBalance(); err == nil {
-			creditBalance = bal.AvailableCredit
+		balCh := make(chan int, 1)
+		go func() {
+			if bal, err := client.GetBalance(); err == nil {
+				balCh <- bal.AvailableCredit
+			} else {
+				balCh <- 0
+			}
+		}()
+		select {
+		case bal := <-balCh:
+			creditBalance = bal
+		case <-time.After(3 * time.Second):
+			creditBalance = 0
 		}
 	}
 
