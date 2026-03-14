@@ -73,13 +73,11 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
         renderExpandedMenuItemIcon={{ icon: <i className='tabler-circle text-xs' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
-        {/* Dashboard */}
-        <MenuItem href={`/${locale}/dashboards/email-marketing`} icon={<i className='tabler-smart-home' />}>
-          Dashboard
-        </MenuItem>
-
         {/* Email Marketing Section — visible to admin + user */}
         <MenuSection label='Email Marketing'>
+          <MenuItem href={`/${locale}/dashboards/email-marketing`} icon={<i className='tabler-mail' />}>
+            Dashboard
+          </MenuItem>
           <SubMenu label='Subscribers' icon={<i className='tabler-users' />}>
             <MenuItem href={`/${locale}/subscribers/list`}>All Subscribers</MenuItem>
             <MenuItem href={`/${locale}/subscribers/import`}>Import</MenuItem>
@@ -96,6 +94,9 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           </MenuItem>
           <MenuItem href={`/${locale}/media`} icon={<i className='tabler-photo' />}>
             Media
+          </MenuItem>
+          <MenuItem href={`/${locale}/dashboards/analytics`} icon={<i className='tabler-chart-bar' />}>
+            Analytics
           </MenuItem>
         </MenuSection>
 
@@ -120,13 +121,6 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           </MenuItem>
           <MenuItem href={`/${locale}/whatsapp/settings`} icon={<i className='tabler-settings' />}>
             Settings
-          </MenuItem>
-        </MenuSection>
-
-        {/* Analytics — visible to admin + user */}
-        <MenuSection label='Insights'>
-          <MenuItem href={`/${locale}/dashboards/analytics`} icon={<i className='tabler-chart-bar' />}>
-            Analytics
           </MenuItem>
         </MenuSection>
 

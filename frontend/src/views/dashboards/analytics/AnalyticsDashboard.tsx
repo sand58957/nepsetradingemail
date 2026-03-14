@@ -11,6 +11,8 @@ import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
+import Box from '@mui/material/Box'
+import CircularProgress from '@mui/material/CircularProgress'
 
 // Service Imports
 import analyticsService from '@/services/analytics'
@@ -43,6 +45,48 @@ interface DashboardData {
   recent_campaigns: any[]
   list_stats: any[]
 }
+
+// Delivery Stat Card matching the screenshot design (centered, percentage + count)
+const DeliveryStatCard = ({
+  label,
+  percentage,
+  count,
+  color,
+  loading
+}: {
+  label: string
+  percentage?: string
+  count: number | string
+  color: string
+  loading?: boolean
+}) => (
+  <Card sx={{ textAlign: 'center', height: '100%' }}>
+    <CardContent sx={{ py: 4 }}>
+      <Typography
+        variant='overline'
+        sx={{ letterSpacing: 1.5, color: 'text.secondary', fontWeight: 600, fontSize: '0.7rem' }}
+      >
+        {label}
+      </Typography>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <CircularProgress size={28} />
+        </Box>
+      ) : (
+        <>
+          <Typography variant='h4' sx={{ color, fontWeight: 700, mt: 1 }}>
+            {percentage !== undefined ? percentage : count}
+          </Typography>
+          {percentage !== undefined && (
+            <Typography variant='body2' sx={{ color: 'text.secondary', mt: 0.5 }}>
+              {count}
+            </Typography>
+          )}
+        </>
+      )}
+    </CardContent>
+  </Card>
+)
 
 const AnalyticsDashboard = () => {
   const { data: session, status } = useSession()
@@ -122,6 +166,65 @@ const AnalyticsDashboard = () => {
           </Card>
         </Grid>
       )}
+
+      {/* Row 0: Email Delivery Stats (Requests, Delivered, Opened, Clicked, Bounces, Spam Reports) */}
+      <Grid size={{ xs: 12 }}>
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <DeliveryStatCard
+              label='REQUESTS'
+              count={overviewData?.performance?.total_sent?.toLocaleString() || '0'}
+              color='#555'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <DeliveryStatCard
+              label='DELIVERED'
+              percentage={`${overviewData?.performance?.delivery_rate?.toFixed(2) || '0.00'}%`}
+              count={overviewData?.performance?.total_delivered?.toLocaleString() || '0'}
+              color='#8BC34A'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <DeliveryStatCard
+              label='OPENED'
+              percentage={`${overviewData?.performance?.avg_open_rate?.toFixed(2) || '0.00'}%`}
+              count={overviewData?.performance?.total_opens?.toLocaleString() || '0'}
+              color='#00BCD4'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <DeliveryStatCard
+              label='CLICKED'
+              percentage={`${overviewData?.performance?.avg_click_rate?.toFixed(2) || '0.00'}%`}
+              count={overviewData?.performance?.total_clicks?.toLocaleString() || '0'}
+              color='#9E9E9E'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <DeliveryStatCard
+              label='BOUNCES'
+              percentage={`${overviewData?.performance?.bounce_rate?.toFixed(2) || '0.00'}%`}
+              count={overviewData?.performance?.total_bounces?.toLocaleString() || '0'}
+              color='#FF9800'
+              loading={loading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4, md: 2 }}>
+            <DeliveryStatCard
+              label='SPAM REPORTS'
+              percentage={`${overviewData?.performance?.spam_rate?.toFixed(2) || '0.00'}%`}
+              count={overviewData?.performance?.spam_reports?.toLocaleString() || '0'}
+              color='#F44336'
+              loading={loading}
+            />
+          </Grid>
+        </Grid>
+      </Grid>
 
       {/* Row 1: KPI Stat Cards */}
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>

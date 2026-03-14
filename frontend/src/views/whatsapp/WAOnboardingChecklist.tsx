@@ -29,34 +29,42 @@ interface ChecklistStep {
 
 const steps: ChecklistStep[] = [
   {
-    id: 'create_email',
-    title: 'Create your first email',
-    description: 'Dive into our builder and design your first campaign from scratch or with a template.',
-    buttonLabel: 'Start building',
-    buttonUrl: '/campaigns/create',
-    icon: 'tabler-mail'
+    id: 'connect_whatsapp',
+    title: 'Connect your WhatsApp Business API',
+    description: 'Set up your Gupshup API credentials to start sending WhatsApp messages to your contacts.',
+    buttonLabel: 'Configure API',
+    buttonUrl: '/whatsapp/settings',
+    icon: 'tabler-brand-whatsapp'
   },
   {
-    id: 'add_subscribers',
-    title: 'Add subscribers',
-    description: 'Import your contacts or add subscribers manually to start growing your audience.',
-    buttonLabel: 'Add subscribers',
-    buttonUrl: '/subscribers/list',
+    id: 'import_contacts',
+    title: 'Import your contacts',
+    description: 'Upload your contact list via CSV or add contacts manually to build your WhatsApp audience.',
+    buttonLabel: 'Import contacts',
+    buttonUrl: '/whatsapp/contacts/import',
     icon: 'tabler-users-plus'
   },
   {
-    id: 'connect_domain',
-    title: 'Connect your domain',
-    description: 'Set up your sending domain to improve email deliverability and brand trust.',
-    buttonLabel: 'Connect domain',
-    buttonUrl: '/settings',
-    icon: 'tabler-world'
+    id: 'create_template',
+    title: 'Create a message template',
+    description: 'Design your first WhatsApp message template for campaigns. Choose from our template library or create your own.',
+    buttonLabel: 'Browse templates',
+    buttonUrl: '/whatsapp/templates/library',
+    icon: 'tabler-template'
+  },
+  {
+    id: 'send_campaign',
+    title: 'Send your first campaign',
+    description: 'Create and send your first WhatsApp marketing campaign to engage with your audience.',
+    buttonLabel: 'Create campaign',
+    buttonUrl: '/whatsapp/campaigns/create',
+    icon: 'tabler-send'
   }
 ]
 
-const getStorageKey = (accountId: number | null) => `onboarding_${accountId || 'default'}`
+const getStorageKey = (accountId: number | null) => `wa_onboarding_${accountId || 'default'}`
 
-const OnboardingChecklist = () => {
+const WAOnboardingChecklist = () => {
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
   const [dismissed, setDismissed] = useState(false)
   const [expandedStep, setExpandedStep] = useState<string | null>(null)
@@ -129,13 +137,13 @@ const OnboardingChecklist = () => {
     <Card sx={{ bgcolor: 'action.hover', border: 'none', boxShadow: 'none' }}>
       <CardContent sx={{ p: { xs: 4, sm: 6 } }}>
         <Box sx={{ display: 'flex', gap: { xs: 4, md: 8 }, flexDirection: { xs: 'column', md: 'row' } }}>
-          {/* Left side - Header + illustration */}
+          {/* Left side - Header */}
           <Box sx={{ flex: '0 0 auto', maxWidth: { md: 280 } }}>
             <Typography variant='h5' fontWeight={700} sx={{ mb: 1 }}>
-              Let&apos;s get you started Email Marketing
+              Let&apos;s get you started WhatsApp Marketing
             </Typography>
             <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
-              Use this personalised guide to start your email marketing journey.
+              Use this personalised guide to start your WhatsApp marketing journey.
             </Typography>
             <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
               {completedSteps.length} / {steps.length} steps
@@ -252,4 +260,4 @@ const OnboardingChecklist = () => {
   )
 }
 
-export default OnboardingChecklist
+export default WAOnboardingChecklist

@@ -46,12 +46,17 @@ type ListAnalytics struct {
 }
 
 type PerformanceAnalytics struct {
-	TotalSent    int     `json:"total_sent"`
-	TotalOpens   int     `json:"total_opens"`
-	TotalClicks  int     `json:"total_clicks"`
-	AvgOpenRate  float64 `json:"avg_open_rate"`
-	AvgClickRate float64 `json:"avg_click_rate"`
-	BounceRate   float64 `json:"bounce_rate"`
+	TotalSent      int     `json:"total_sent"`
+	TotalDelivered int     `json:"total_delivered"`
+	TotalOpens     int     `json:"total_opens"`
+	TotalClicks    int     `json:"total_clicks"`
+	TotalBounces   int     `json:"total_bounces"`
+	SpamReports    int     `json:"spam_reports"`
+	AvgOpenRate    float64 `json:"avg_open_rate"`
+	AvgClickRate   float64 `json:"avg_click_rate"`
+	DeliveryRate   float64 `json:"delivery_rate"`
+	BounceRate     float64 `json:"bounce_rate"`
+	SpamRate       float64 `json:"spam_rate"`
 }
 
 func (h *AnalyticsHandler) GetOverview(c echo.Context) error {
@@ -253,22 +258,23 @@ func (h *AnalyticsHandler) GetOverview(c echo.Context) error {
 			}
 			if json.Unmarshal(data, &result) == nil {
 				mu.Lock()
+				totalBounces := 0
 				for _, c := range result.Data.Results {
 					analytics.Performance.TotalSent += c.Sent
 					analytics.Performance.TotalOpens += c.Views
 					analytics.Performance.TotalClicks += c.Clicks
+					totalBounces += c.Bounces
 				}
+				analytics.Performance.TotalBounces = totalBounces
+				analytics.Performance.TotalDelivered = analytics.Performance.TotalSent - totalBounces
+				// Spam reports not available from Listmonk, defaults to 0
+
 				if analytics.Performance.TotalSent > 0 {
 					analytics.Performance.AvgOpenRate = float64(analytics.Performance.TotalOpens) / float64(analytics.Performance.TotalSent) * 100
 					analytics.Performance.AvgClickRate = float64(analytics.Performance.TotalClicks) / float64(analytics.Performance.TotalSent) * 100
-				}
-
-				totalBounces := 0
-				for _, c := range result.Data.Results {
-					totalBounces += c.Bounces
-				}
-				if analytics.Performance.TotalSent > 0 {
 					analytics.Performance.BounceRate = float64(totalBounces) / float64(analytics.Performance.TotalSent) * 100
+					analytics.Performance.DeliveryRate = float64(analytics.Performance.TotalDelivered) / float64(analytics.Performance.TotalSent) * 100
+					analytics.Performance.SpamRate = 0 // Not tracked by Listmonk
 				}
 				mu.Unlock()
 			}

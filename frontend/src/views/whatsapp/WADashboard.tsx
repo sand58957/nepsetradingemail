@@ -26,6 +26,7 @@ import Box from '@mui/material/Box'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
+import WAOnboardingChecklist from './WAOnboardingChecklist'
 
 // Service Imports
 import whatsappService from '@/services/whatsapp'
@@ -131,6 +132,11 @@ const WADashboard = () => {
 
   return (
     <Grid container spacing={6}>
+      {/* Onboarding Checklist */}
+      <Grid size={{ xs: 12 }}>
+        <WAOnboardingChecklist />
+      </Grid>
+
       {/* Stat Cards */}
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard

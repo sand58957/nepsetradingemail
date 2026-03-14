@@ -31,11 +31,16 @@ export interface ListAnalytics {
 
 export interface PerformanceAnalytics {
   total_sent: number
+  total_delivered: number
   total_opens: number
   total_clicks: number
+  total_bounces: number
+  spam_reports: number
   avg_open_rate: number
   avg_click_rate: number
+  delivery_rate: number
   bounce_rate: number
+  spam_rate: number
 }
 
 export interface AnalyticsOverview {
