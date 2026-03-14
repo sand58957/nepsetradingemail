@@ -125,6 +125,26 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           </MenuItem>
         </MenuSection>
 
+        {/* SMS Marketing Section */}
+        <MenuSection label='SMS Marketing'>
+          <MenuItem href={`/${locale}/sms`} icon={<i className='tabler-message' />}>
+            Dashboard
+          </MenuItem>
+          <MenuItem href={`/${locale}/sms/contacts`} icon={<i className='tabler-address-book' />}>
+            Contacts
+          </MenuItem>
+          <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
+            <MenuItem href={`/${locale}/sms/campaigns`}>All Campaigns</MenuItem>
+            <MenuItem href={`/${locale}/sms/campaigns/create`}>Create New</MenuItem>
+          </SubMenu>
+          <MenuItem href={`/${locale}/sms/analytics`} icon={<i className='tabler-chart-dots-3' />}>
+            Analytics
+          </MenuItem>
+          <MenuItem href={`/${locale}/sms/settings`} icon={<i className='tabler-settings' />}>
+            Settings
+          </MenuItem>
+        </MenuSection>
+
         {/* Administration section — admin only */}
         {isAdmin && (
           <MenuSection label='Administration'>

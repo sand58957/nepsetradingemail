@@ -245,6 +245,51 @@ func (s *Server) RegisterRoutes() {
 	waWebhookGroup.POST("/webhooks/whatsapp/:secret", waHandler.WebhookReceive)
 
 	// ==============================================================
+	// SMS Marketing — all authenticated users (account-scoped)
+	// ==============================================================
+	smsHandler := handlers.NewSMSHandler(s.DB)
+
+	// SMS Settings
+	sms := staff.Group("/sms")
+	sms.GET("/settings", smsHandler.GetSettings)
+	sms.PUT("/settings", smsHandler.UpdateSettings)
+	sms.POST("/settings/test", smsHandler.TestConnection)
+
+	// SMS Contacts
+	smsContacts := sms.Group("/contacts")
+	smsContacts.GET("", smsHandler.ListContacts)
+	smsContacts.POST("", smsHandler.CreateContact)
+	smsContacts.PUT("/:id", smsHandler.UpdateContact)
+	smsContacts.DELETE("/:id", smsHandler.DeleteContact)
+	smsContacts.POST("/import", smsHandler.ImportContacts)
+	smsContacts.GET("/export", smsHandler.ExportContacts)
+	smsContacts.GET("/tags", smsHandler.ListContactTags)
+	smsContacts.POST("/tags", smsHandler.CreateContactTag)
+	smsContacts.DELETE("/tags/:tag", smsHandler.DeleteContactTag)
+	smsContacts.GET("/stats", smsHandler.GetContactStats)
+
+	// SMS Credits
+	sms.GET("/credits/balance", smsHandler.GetCreditBalance)
+
+	// SMS Campaigns
+	smsCampaigns := sms.Group("/campaigns")
+	smsCampaigns.GET("", smsHandler.ListCampaigns)
+	smsCampaigns.GET("/:id", smsHandler.GetCampaign)
+	smsCampaigns.POST("", smsHandler.CreateCampaign)
+	smsCampaigns.PUT("/:id", smsHandler.UpdateCampaign)
+	smsCampaigns.DELETE("/:id", smsHandler.DeleteCampaign)
+	smsCampaigns.POST("/:id/send", smsHandler.SendCampaign)
+	smsCampaigns.POST("/:id/test", smsHandler.TestCampaign)
+	smsCampaigns.POST("/:id/pause", smsHandler.PauseCampaign)
+	smsCampaigns.POST("/:id/resume", smsHandler.ResumeCampaign)
+	smsCampaigns.POST("/audience-count", smsHandler.GetAudienceCount)
+
+	// SMS Analytics
+	smsAnalytics := sms.Group("/analytics")
+	smsAnalytics.GET("/overview", smsHandler.GetOverview)
+	smsAnalytics.GET("/campaigns/:id", smsHandler.GetCampaignAnalytics)
+
+	// ==============================================================
 	// Admin-only routes — full platform control
 	// ==============================================================
 	admin := api.Group("")

@@ -21,6 +21,7 @@ import DomainsTab from './DomainsTab'
 import EcommerceTab from './EcommerceTab'
 import LinkTrackingTab from './LinkTrackingTab'
 import WASettings from '@/views/whatsapp/WASettings'
+import SMSSettingsView from '@/views/sms/SMSSettings'
 
 // Services
 import accountSettingsService from '@/services/accountSettings'
@@ -135,6 +136,11 @@ const SettingsPage = () => {
             icon={<i className='tabler-brand-whatsapp text-[20px]' />}
             iconPosition='start'
           />
+          <Tab
+            label='SMS Settings'
+            icon={<i className='tabler-message text-[20px]' />}
+            iconPosition='start'
+          />
         </Tabs>
       </Box>
 
@@ -185,6 +191,9 @@ const SettingsPage = () => {
       )}
       {activeTab === 5 && (
         <WASettings />
+      )}
+      {activeTab === 6 && (
+        <SMSSettingsView />
       )}
 
       {/* Snackbar */}
