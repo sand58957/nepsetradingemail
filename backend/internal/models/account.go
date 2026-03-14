@@ -3,13 +3,14 @@ package models
 import "time"
 
 type Account struct {
-	ID        int       `json:"id" db:"id"`
-	Name      string    `json:"name" db:"name"`
-	LogoURL   string    `json:"logo_url" db:"logo_url"`
-	Plan      string    `json:"plan" db:"plan"`
-	Domain    string    `json:"domain" db:"domain"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID         int       `json:"id" db:"id"`
+	Name       string    `json:"name" db:"name"`
+	LogoURL    string    `json:"logo_url" db:"logo_url"`
+	Plan       string    `json:"plan" db:"plan"`
+	Domain     string    `json:"domain" db:"domain"`
+	APIEnabled bool      `json:"api_enabled" db:"api_enabled"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type AccountMember struct {
