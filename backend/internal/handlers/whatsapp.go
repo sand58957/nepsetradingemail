@@ -1722,3 +1722,295 @@ func (h *WhatsAppHandler) WebhookReceive(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }
+
+// ============================================================
+// Contact Group Handlers
+// ============================================================
+
+type WAContactGroup struct {
+	ID          int       `json:"id" db:"id"`
+	AccountID   int       `json:"account_id" db:"account_id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
+	Color       string    `json:"color" db:"color"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type WAContactGroupWithCount struct {
+	WAContactGroup
+	MemberCount int `json:"member_count" db:"member_count"`
+}
+
+// ListGroups returns all contact groups for the account.
+func (h *WhatsAppHandler) ListGroups(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	var groups []WAContactGroupWithCount
+	err := h.db.Select(&groups, `
+		SELECT g.*, COALESCE(m.cnt, 0) AS member_count
+		FROM wa_contact_groups g
+		LEFT JOIN (SELECT group_id, COUNT(*) AS cnt FROM wa_contact_group_members GROUP BY group_id) m
+			ON m.group_id = g.id
+		WHERE g.account_id = $1
+		ORDER BY g.name ASC
+	`, accountID)
+	if err != nil {
+		return response.InternalError(c, "Failed to fetch groups")
+	}
+	if groups == nil {
+		groups = []WAContactGroupWithCount{}
+	}
+
+	return response.Success(c, groups)
+}
+
+// GetGroup returns a single contact group.
+func (h *WhatsAppHandler) GetGroup(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	var group WAContactGroup
+	if err := h.db.Get(&group, "SELECT * FROM wa_contact_groups WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.NotFound(c, "Group not found")
+	}
+
+	var memberCount int
+	h.db.Get(&memberCount, "SELECT COUNT(*) FROM wa_contact_group_members WHERE group_id = $1", id)
+
+	return response.Success(c, map[string]interface{}{
+		"group":        group,
+		"member_count": memberCount,
+	})
+}
+
+// CreateGroup creates a new contact group.
+func (h *WhatsAppHandler) CreateGroup(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Color       string `json:"color"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+	if req.Name == "" {
+		return response.BadRequest(c, "Group name is required")
+	}
+	if req.Color == "" {
+		req.Color = "#25D366"
+	}
+
+	var group WAContactGroup
+	err := h.db.Get(&group, `
+		INSERT INTO wa_contact_groups (account_id, name, description, color)
+		VALUES ($1, $2, $3, $4)
+		RETURNING *
+	`, accountID, req.Name, req.Description, req.Color)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+			return response.BadRequest(c, "A group with this name already exists")
+		}
+		return response.InternalError(c, "Failed to create group")
+	}
+
+	return response.Created(c, group)
+}
+
+// UpdateGroup updates a contact group.
+func (h *WhatsAppHandler) UpdateGroup(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Color       string `json:"color"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+	if req.Name == "" {
+		return response.BadRequest(c, "Group name is required")
+	}
+
+	result, err2 := h.db.Exec(`
+		UPDATE wa_contact_groups SET name = $1, description = $2, color = $3, updated_at = NOW()
+		WHERE id = $4 AND account_id = $5
+	`, req.Name, req.Description, req.Color, id, accountID)
+	if err2 != nil {
+		if strings.Contains(err2.Error(), "duplicate key") || strings.Contains(err2.Error(), "unique") {
+			return response.BadRequest(c, "A group with this name already exists")
+		}
+		return response.InternalError(c, "Failed to update group")
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return response.NotFound(c, "Group not found")
+	}
+
+	return response.SuccessWithMessage(c, "Group updated", nil)
+}
+
+// DeleteGroup deletes a contact group.
+func (h *WhatsAppHandler) DeleteGroup(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	result, err2 := h.db.Exec("DELETE FROM wa_contact_groups WHERE id = $1 AND account_id = $2", id, accountID)
+	if err2 != nil {
+		return response.InternalError(c, "Failed to delete group")
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return response.NotFound(c, "Group not found")
+	}
+
+	return response.SuccessWithMessage(c, "Group deleted", nil)
+}
+
+// ListGroupMembers returns paginated members of a contact group.
+func (h *WhatsAppHandler) ListGroupMembers(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	var exists int
+	if err := h.db.Get(&exists, "SELECT 1 FROM wa_contact_groups WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.NotFound(c, "Group not found")
+	}
+
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	if page < 1 {
+		page = 1
+	}
+	perPage, _ := strconv.Atoi(c.QueryParam("per_page"))
+	if perPage < 1 || perPage > 100 {
+		perPage = 25
+	}
+	offset := (page - 1) * perPage
+
+	query := c.QueryParam("query")
+
+	var total int
+	var members []WAContact
+
+	if query != "" {
+		search := "%" + query + "%"
+		h.db.Get(&total, `
+			SELECT COUNT(*) FROM wa_contact_group_members gm
+			JOIN wa_contacts wc ON wc.id = gm.contact_id
+			WHERE gm.group_id = $1 AND (wc.phone ILIKE $2 OR wc.name ILIKE $2 OR wc.email ILIKE $2)
+		`, id, search)
+		h.db.Select(&members, `
+			SELECT wc.* FROM wa_contact_group_members gm
+			JOIN wa_contacts wc ON wc.id = gm.contact_id
+			WHERE gm.group_id = $1 AND (wc.phone ILIKE $2 OR wc.name ILIKE $2 OR wc.email ILIKE $2)
+			ORDER BY wc.name ASC, wc.phone ASC
+			LIMIT $3 OFFSET $4
+		`, id, search, perPage, offset)
+	} else {
+		h.db.Get(&total, "SELECT COUNT(*) FROM wa_contact_group_members WHERE group_id = $1", id)
+		h.db.Select(&members, `
+			SELECT wc.* FROM wa_contact_group_members gm
+			JOIN wa_contacts wc ON wc.id = gm.contact_id
+			WHERE gm.group_id = $1
+			ORDER BY wc.name ASC, wc.phone ASC
+			LIMIT $2 OFFSET $3
+		`, id, perPage, offset)
+	}
+
+	if members == nil {
+		members = []WAContact{}
+	}
+
+	return response.Success(c, map[string]interface{}{
+		"results":  members,
+		"total":    total,
+		"page":     page,
+		"per_page": perPage,
+	})
+}
+
+// AddGroupMembers adds contacts to a group.
+func (h *WhatsAppHandler) AddGroupMembers(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	var exists int
+	if err := h.db.Get(&exists, "SELECT 1 FROM wa_contact_groups WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.NotFound(c, "Group not found")
+	}
+
+	var req struct {
+		ContactIDs []int `json:"contact_ids"`
+	}
+	if err := c.Bind(&req); err != nil || len(req.ContactIDs) == 0 {
+		return response.BadRequest(c, "contact_ids is required")
+	}
+
+	added := 0
+	for _, cid := range req.ContactIDs {
+		_, insertErr := h.db.Exec(`
+			INSERT INTO wa_contact_group_members (group_id, contact_id)
+			VALUES ($1, $2) ON CONFLICT DO NOTHING
+		`, id, cid)
+		if insertErr == nil {
+			added++
+		}
+	}
+
+	return response.Success(c, map[string]interface{}{
+		"added": added,
+	})
+}
+
+// RemoveGroupMembers removes contacts from a group.
+func (h *WhatsAppHandler) RemoveGroupMembers(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	var exists int
+	if err := h.db.Get(&exists, "SELECT 1 FROM wa_contact_groups WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.NotFound(c, "Group not found")
+	}
+
+	var req struct {
+		ContactIDs []int `json:"contact_ids"`
+	}
+	if err := c.Bind(&req); err != nil || len(req.ContactIDs) == 0 {
+		return response.BadRequest(c, "contact_ids is required")
+	}
+
+	removed := 0
+	for _, cid := range req.ContactIDs {
+		result, delErr := h.db.Exec("DELETE FROM wa_contact_group_members WHERE group_id = $1 AND contact_id = $2", id, cid)
+		if delErr == nil {
+			rows, _ := result.RowsAffected()
+			removed += int(rows)
+		}
+	}
+
+	return response.Success(c, map[string]interface{}{
+		"removed": removed,
+	})
+}

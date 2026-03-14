@@ -7,7 +7,9 @@ import type {
   WACampaignRecipient,
   WAContactListResponse,
   WACampaignListResponse,
-  WAOverviewStats
+  WAOverviewStats,
+  WAContactGroup,
+  WAContactGroupWithCount
 } from '@/types/whatsapp'
 
 export interface PaginationParams {
@@ -205,6 +207,47 @@ export const whatsappService = {
     }
   }> => {
     const response = await api.get(`/whatsapp/analytics/campaigns/${id}`)
+    return response.data
+  },
+
+  // ==================== Contact Groups ====================
+  getGroups: async (): Promise<{ data: WAContactGroupWithCount[] }> => {
+    const response = await api.get('/whatsapp/groups')
+    return response.data
+  },
+
+  getGroup: async (id: number): Promise<{ data: { group: WAContactGroup; member_count: number } }> => {
+    const response = await api.get(`/whatsapp/groups/${id}`)
+    return response.data
+  },
+
+  createGroup: async (data: { name: string; description?: string; color?: string }): Promise<{ data: WAContactGroup }> => {
+    const response = await api.post('/whatsapp/groups', data)
+    return response.data
+  },
+
+  updateGroup: async (id: number, data: { name: string; description?: string; color?: string }): Promise<void> => {
+    await api.put(`/whatsapp/groups/${id}`, data)
+  },
+
+  deleteGroup: async (id: number): Promise<void> => {
+    await api.delete(`/whatsapp/groups/${id}`)
+  },
+
+  getGroupMembers: async (id: number, params?: { page?: number; per_page?: number; query?: string }): Promise<{
+    data: { results: WAContact[]; total: number; page: number; per_page: number }
+  }> => {
+    const response = await api.get(`/whatsapp/groups/${id}/members`, { params })
+    return response.data
+  },
+
+  addGroupMembers: async (id: number, contactIds: number[]): Promise<{ data: { added: number } }> => {
+    const response = await api.post(`/whatsapp/groups/${id}/members`, { contact_ids: contactIds })
+    return response.data
+  },
+
+  removeGroupMembers: async (id: number, contactIds: number[]): Promise<{ data: { removed: number } }> => {
+    const response = await api.delete(`/whatsapp/groups/${id}/members`, { data: { contact_ids: contactIds } })
     return response.data
   }
 }

@@ -118,6 +118,20 @@ export interface WACampaignListResponse {
   }
 }
 
+export interface WAContactGroup {
+  id: number
+  account_id: number
+  name: string
+  description: string
+  color: string
+  created_at: string
+  updated_at: string
+}
+
+export interface WAContactGroupWithCount extends WAContactGroup {
+  member_count: number
+}
+
 export interface WAOverviewStats {
   contacts: {
     total_contacts: number

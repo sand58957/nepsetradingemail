@@ -113,3 +113,17 @@ export interface SMSNetworkBreakdown {
   count: number
   credits: number
 }
+
+export interface SMSContactGroup {
+  id: number
+  account_id: number
+  name: string
+  description: string
+  color: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SMSContactGroupWithCount extends SMSContactGroup {
+  member_count: number
+}

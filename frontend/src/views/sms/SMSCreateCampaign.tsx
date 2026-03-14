@@ -27,8 +27,14 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import LinearProgress from '@mui/material/LinearProgress'
 
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+
 // Service Imports
 import smsService from '@/services/sms'
+
+// Type Imports
+import type { SMSContactGroupWithCount } from '@/types/sms'
 
 // Helper: detect Unicode/Nepali characters
 const hasUnicode = (text: string): boolean => {
@@ -72,6 +78,8 @@ const SMSCreateCampaign = () => {
   const [audienceCount, setAudienceCount] = useState<number | null>(null)
   const [loadingAudience, setLoadingAudience] = useState(false)
   const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [availableGroups, setAvailableGroups] = useState<SMSContactGroupWithCount[]>([])
+  const [selectedGroups, setSelectedGroups] = useState<number[]>([])
 
   // Test send
   const [testDialogOpen, setTestDialogOpen] = useState(false)
@@ -91,7 +99,7 @@ const SMSCreateCampaign = () => {
   // Calculate credits
   const smsInfo = useMemo(() => calculateSMSCredits(messageText), [messageText])
 
-  // Fetch available tags
+  // Fetch available tags and groups
   useEffect(() => {
     const fetchTags = async () => {
       try {
@@ -104,10 +112,20 @@ const SMSCreateCampaign = () => {
       }
     }
 
+    const fetchGroups = async () => {
+      try {
+        const response = await smsService.getGroups()
+        setAvailableGroups(response.data || [])
+      } catch {
+        // Silently fail
+      }
+    }
+
     fetchTags()
+    fetchGroups()
   }, [])
 
-  // Fetch audience count when tags change
+  // Fetch audience count when tags or groups change
   useEffect(() => {
     const fetchAudienceCount = async () => {
       setLoadingAudience(true)
@@ -117,6 +135,10 @@ const SMSCreateCampaign = () => {
 
         if (tags.length > 0) {
           filter.tags = tags
+        }
+
+        if (selectedGroups.length > 0) {
+          filter.groups = selectedGroups
         }
 
         const response = await smsService.getAudienceCount(filter)
@@ -130,7 +152,7 @@ const SMSCreateCampaign = () => {
     }
 
     fetchAudienceCount()
-  }, [tags])
+  }, [tags, selectedGroups])
 
   // Total credits estimate
   const estimatedCredits = useMemo(() => {
@@ -165,6 +187,10 @@ const SMSCreateCampaign = () => {
 
       if (tags.length > 0) {
         payload.target_filter.tags = tags
+      }
+
+      if (selectedGroups.length > 0) {
+        payload.target_filter.groups = selectedGroups
       }
 
       const response = await smsService.createCampaign(payload)
@@ -212,6 +238,10 @@ const SMSCreateCampaign = () => {
 
       if (tags.length > 0) {
         payload.target_filter.tags = tags
+      }
+
+      if (selectedGroups.length > 0) {
+        payload.target_filter.groups = selectedGroups
       }
 
       // Step 1: Create the campaign
@@ -263,6 +293,10 @@ const SMSCreateCampaign = () => {
 
       if (tags.length > 0) {
         payload.target_filter.tags = tags
+      }
+
+      if (selectedGroups.length > 0) {
+        payload.target_filter.groups = selectedGroups
       }
 
       const response = await smsService.createCampaign(payload)
@@ -424,9 +458,40 @@ const SMSCreateCampaign = () => {
                     />
                   )}
                   <Typography variant='body2' color='text.secondary'>
-                    {tags.length > 0 ? 'Contacts matching selected tags' : 'All opted-in contacts'}
+                    {tags.length > 0 || selectedGroups.length > 0 ? 'Contacts matching selected filters' : 'All opted-in contacts'}
                   </Typography>
                 </div>
+
+                {/* Group filter */}
+                {availableGroups.length > 0 && (
+                  <div>
+                    <Typography variant='body2' className='mb-2'>Filter by Groups</Typography>
+                    <div className='flex gap-2 flex-wrap'>
+                      {availableGroups.map(group => (
+                        <Chip
+                          key={group.id}
+                          label={`${group.name} (${group.member_count})`}
+                          size='small'
+                          variant={selectedGroups.includes(group.id) ? 'filled' : 'outlined'}
+                          color={selectedGroups.includes(group.id) ? 'primary' : 'default'}
+                          onClick={() => {
+                            setSelectedGroups(prev =>
+                              prev.includes(group.id)
+                                ? prev.filter(id => id !== group.id)
+                                : [...prev, group.id]
+                            )
+                          }}
+                          sx={selectedGroups.includes(group.id) ? {} : {
+                            borderLeft: `3px solid ${group.color}`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <Typography variant='caption' color='text.secondary' className='mt-1 block'>
+                      Click to select groups. Contacts in selected groups will receive the campaign.
+                    </Typography>
+                  </div>
+                )}
 
                 <Autocomplete
                   multiple

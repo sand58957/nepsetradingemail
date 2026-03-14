@@ -109,6 +109,9 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           <MenuItem href={`/${locale}/whatsapp/contacts`} icon={<i className='tabler-address-book' />}>
             Contacts
           </MenuItem>
+          <MenuItem href={`/${locale}/whatsapp/groups`} icon={<i className='tabler-users-group' />}>
+            Groups
+          </MenuItem>
           <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
             <MenuItem href={`/${locale}/whatsapp/campaigns`}>All Campaigns</MenuItem>
             <MenuItem href={`/${locale}/whatsapp/campaigns/create`}>Create New</MenuItem>
@@ -132,6 +135,9 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           </MenuItem>
           <MenuItem href={`/${locale}/sms/contacts`} icon={<i className='tabler-address-book' />}>
             Contacts
+          </MenuItem>
+          <MenuItem href={`/${locale}/sms/groups`} icon={<i className='tabler-users-group' />}>
+            Groups
           </MenuItem>
           <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
             <MenuItem href={`/${locale}/sms/campaigns`}>All Campaigns</MenuItem>

@@ -978,14 +978,19 @@ func (h *SMSHandler) SendCampaign(c echo.Context) error {
 	contactArgs := []interface{}{accountID}
 
 	// Apply target filter if present
+	var filterGroups []int
 	if campaign.TargetFilter != nil && string(campaign.TargetFilter) != "{}" && string(campaign.TargetFilter) != "null" {
 		var filter struct {
-			Tags []string `json:"tags"`
+			Tags   []string `json:"tags"`
+			Groups []int    `json:"groups"`
 		}
-		if jsonErr := json.Unmarshal(campaign.TargetFilter, &filter); jsonErr == nil && len(filter.Tags) > 0 {
-			tagJSON, _ := json.Marshal(filter.Tags)
-			contactQuery += " AND tags @> $2::jsonb"
-			contactArgs = append(contactArgs, string(tagJSON))
+		if jsonErr := json.Unmarshal(campaign.TargetFilter, &filter); jsonErr == nil {
+			if len(filter.Tags) > 0 {
+				tagJSON, _ := json.Marshal(filter.Tags)
+				contactQuery += " AND tags @> $2::jsonb"
+				contactArgs = append(contactArgs, string(tagJSON))
+			}
+			filterGroups = filter.Groups
 		}
 	}
 
@@ -993,6 +998,28 @@ func (h *SMSHandler) SendCampaign(c echo.Context) error {
 	if err := h.db.Select(&contacts, contactQuery, contactArgs...); err != nil {
 		log.Printf("[sms] Campaign %s: failed to fetch contacts: %v", id, err)
 		return response.InternalError(c, "Failed to fetch target contacts")
+	}
+
+	// If groups are specified, also include contacts from those groups
+	if len(filterGroups) > 0 {
+		existingIDs := make(map[int]bool)
+		for _, c := range contacts {
+			existingIDs[c.ID] = true
+		}
+		for _, gid := range filterGroups {
+			var groupContacts []SMSContact
+			h.db.Select(&groupContacts, `
+				SELECT sc.* FROM sms_contacts sc
+				JOIN sms_contact_group_members gm ON gm.contact_id = sc.id
+				WHERE sc.account_id = $1 AND sc.opted_in = true AND gm.group_id = $2
+			`, accountID, gid)
+			for _, gc := range groupContacts {
+				if !existingIDs[gc.ID] {
+					contacts = append(contacts, gc)
+					existingIDs[gc.ID] = true
+				}
+			}
+		}
 	}
 
 	if len(contacts) == 0 {
@@ -1420,7 +1447,8 @@ func (h *SMSHandler) GetAudienceCount(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 
 	var body struct {
-		Tags []string `json:"tags"`
+		Tags   []string `json:"tags"`
+		Groups []int    `json:"groups"`
 	}
 	if err := c.Bind(&body); err != nil {
 		// No filter — count all opted-in contacts
@@ -1428,17 +1456,335 @@ func (h *SMSHandler) GetAudienceCount(c echo.Context) error {
 
 	where := "account_id = $1 AND opted_in = true"
 	args := []interface{}{accountID}
+	argIdx := 2
 
 	if len(body.Tags) > 0 {
 		tagJSON, _ := json.Marshal(body.Tags)
-		where += " AND tags @> $2::jsonb"
+		where += fmt.Sprintf(" AND tags @> $%d::jsonb", argIdx)
 		args = append(args, string(tagJSON))
+		argIdx++
+	}
+
+	query := fmt.Sprintf("SELECT COUNT(*) FROM sms_contacts WHERE %s", where)
+
+	// If groups are specified, also count contacts in those groups (OR logic)
+	if len(body.Groups) > 0 {
+		groupPlaceholders := make([]string, len(body.Groups))
+		for i, gid := range body.Groups {
+			groupPlaceholders[i] = fmt.Sprintf("$%d", argIdx)
+			args = append(args, gid)
+			argIdx++
+		}
+		query = fmt.Sprintf(`
+			SELECT COUNT(DISTINCT id) FROM (
+				SELECT id FROM sms_contacts WHERE %s
+				UNION
+				SELECT sc.id FROM sms_contacts sc
+				JOIN sms_contact_group_members gm ON gm.contact_id = sc.id
+				WHERE sc.account_id = $1 AND sc.opted_in = true AND gm.group_id IN (%s)
+			) combined
+		`, where, strings.Join(groupPlaceholders, ","))
 	}
 
 	var count int
-	h.db.Get(&count, fmt.Sprintf("SELECT COUNT(*) FROM sms_contacts WHERE %s", where), args...)
+	h.db.Get(&count, query, args...)
 
 	return response.Success(c, map[string]interface{}{
 		"count": count,
+	})
+}
+
+// ============================================================
+// Contact Group Handlers
+// ============================================================
+
+type SMSContactGroup struct {
+	ID          int       `json:"id" db:"id"`
+	AccountID   int       `json:"account_id" db:"account_id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
+	Color       string    `json:"color" db:"color"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type SMSContactGroupWithCount struct {
+	SMSContactGroup
+	MemberCount int `json:"member_count" db:"member_count"`
+}
+
+// ListGroups returns all contact groups for the account.
+func (h *SMSHandler) ListGroups(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	var groups []SMSContactGroupWithCount
+	err := h.db.Select(&groups, `
+		SELECT g.*, COALESCE(m.cnt, 0) AS member_count
+		FROM sms_contact_groups g
+		LEFT JOIN (SELECT group_id, COUNT(*) AS cnt FROM sms_contact_group_members GROUP BY group_id) m
+			ON m.group_id = g.id
+		WHERE g.account_id = $1
+		ORDER BY g.name ASC
+	`, accountID)
+	if err != nil {
+		return response.InternalError(c, "Failed to fetch groups")
+	}
+	if groups == nil {
+		groups = []SMSContactGroupWithCount{}
+	}
+
+	return response.Success(c, groups)
+}
+
+// GetGroup returns a single contact group with its members.
+func (h *SMSHandler) GetGroup(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	var group SMSContactGroup
+	if err := h.db.Get(&group, "SELECT * FROM sms_contact_groups WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.NotFound(c, "Group not found")
+	}
+
+	var memberCount int
+	h.db.Get(&memberCount, "SELECT COUNT(*) FROM sms_contact_group_members WHERE group_id = $1", id)
+
+	return response.Success(c, map[string]interface{}{
+		"group":        group,
+		"member_count": memberCount,
+	})
+}
+
+// CreateGroup creates a new contact group.
+func (h *SMSHandler) CreateGroup(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Color       string `json:"color"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+	if req.Name == "" {
+		return response.BadRequest(c, "Group name is required")
+	}
+	if req.Color == "" {
+		req.Color = "#1976d2"
+	}
+
+	var group SMSContactGroup
+	err := h.db.Get(&group, `
+		INSERT INTO sms_contact_groups (account_id, name, description, color)
+		VALUES ($1, $2, $3, $4)
+		RETURNING *
+	`, accountID, req.Name, req.Description, req.Color)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+			return response.BadRequest(c, "A group with this name already exists")
+		}
+		return response.InternalError(c, "Failed to create group")
+	}
+
+	return response.Created(c, group)
+}
+
+// UpdateGroup updates a contact group.
+func (h *SMSHandler) UpdateGroup(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Color       string `json:"color"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+	if req.Name == "" {
+		return response.BadRequest(c, "Group name is required")
+	}
+
+	result, err2 := h.db.Exec(`
+		UPDATE sms_contact_groups SET name = $1, description = $2, color = $3, updated_at = NOW()
+		WHERE id = $4 AND account_id = $5
+	`, req.Name, req.Description, req.Color, id, accountID)
+	if err2 != nil {
+		if strings.Contains(err2.Error(), "duplicate key") || strings.Contains(err2.Error(), "unique") {
+			return response.BadRequest(c, "A group with this name already exists")
+		}
+		return response.InternalError(c, "Failed to update group")
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return response.NotFound(c, "Group not found")
+	}
+
+	return response.SuccessWithMessage(c, "Group updated", nil)
+}
+
+// DeleteGroup deletes a contact group.
+func (h *SMSHandler) DeleteGroup(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	result, err2 := h.db.Exec("DELETE FROM sms_contact_groups WHERE id = $1 AND account_id = $2", id, accountID)
+	if err2 != nil {
+		return response.InternalError(c, "Failed to delete group")
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return response.NotFound(c, "Group not found")
+	}
+
+	return response.SuccessWithMessage(c, "Group deleted", nil)
+}
+
+// ListGroupMembers returns paginated members of a contact group.
+func (h *SMSHandler) ListGroupMembers(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	// Verify group belongs to account
+	var exists int
+	if err := h.db.Get(&exists, "SELECT 1 FROM sms_contact_groups WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.NotFound(c, "Group not found")
+	}
+
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	if page < 1 {
+		page = 1
+	}
+	perPage, _ := strconv.Atoi(c.QueryParam("per_page"))
+	if perPage < 1 || perPage > 100 {
+		perPage = 25
+	}
+	offset := (page - 1) * perPage
+
+	query := c.QueryParam("query")
+
+	var total int
+	var members []SMSContact
+
+	if query != "" {
+		search := "%" + query + "%"
+		h.db.Get(&total, `
+			SELECT COUNT(*) FROM sms_contact_group_members gm
+			JOIN sms_contacts sc ON sc.id = gm.contact_id
+			WHERE gm.group_id = $1 AND (sc.phone ILIKE $2 OR sc.name ILIKE $2 OR sc.email ILIKE $2)
+		`, id, search)
+		h.db.Select(&members, `
+			SELECT sc.* FROM sms_contact_group_members gm
+			JOIN sms_contacts sc ON sc.id = gm.contact_id
+			WHERE gm.group_id = $1 AND (sc.phone ILIKE $2 OR sc.name ILIKE $2 OR sc.email ILIKE $2)
+			ORDER BY sc.name ASC, sc.phone ASC
+			LIMIT $3 OFFSET $4
+		`, id, search, perPage, offset)
+	} else {
+		h.db.Get(&total, "SELECT COUNT(*) FROM sms_contact_group_members WHERE group_id = $1", id)
+		h.db.Select(&members, `
+			SELECT sc.* FROM sms_contact_group_members gm
+			JOIN sms_contacts sc ON sc.id = gm.contact_id
+			WHERE gm.group_id = $1
+			ORDER BY sc.name ASC, sc.phone ASC
+			LIMIT $2 OFFSET $3
+		`, id, perPage, offset)
+	}
+
+	if members == nil {
+		members = []SMSContact{}
+	}
+
+	return response.Success(c, map[string]interface{}{
+		"results":  members,
+		"total":    total,
+		"page":     page,
+		"per_page": perPage,
+	})
+}
+
+// AddGroupMembers adds contacts to a group.
+func (h *SMSHandler) AddGroupMembers(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	// Verify group belongs to account
+	var exists int
+	if err := h.db.Get(&exists, "SELECT 1 FROM sms_contact_groups WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.NotFound(c, "Group not found")
+	}
+
+	var req struct {
+		ContactIDs []int `json:"contact_ids"`
+	}
+	if err := c.Bind(&req); err != nil || len(req.ContactIDs) == 0 {
+		return response.BadRequest(c, "contact_ids is required")
+	}
+
+	added := 0
+	for _, cid := range req.ContactIDs {
+		_, insertErr := h.db.Exec(`
+			INSERT INTO sms_contact_group_members (group_id, contact_id)
+			VALUES ($1, $2) ON CONFLICT DO NOTHING
+		`, id, cid)
+		if insertErr == nil {
+			added++
+		}
+	}
+
+	return response.Success(c, map[string]interface{}{
+		"added": added,
+	})
+}
+
+// RemoveGroupMembers removes contacts from a group.
+func (h *SMSHandler) RemoveGroupMembers(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	// Verify group belongs to account
+	var exists int
+	if err := h.db.Get(&exists, "SELECT 1 FROM sms_contact_groups WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		return response.NotFound(c, "Group not found")
+	}
+
+	var req struct {
+		ContactIDs []int `json:"contact_ids"`
+	}
+	if err := c.Bind(&req); err != nil || len(req.ContactIDs) == 0 {
+		return response.BadRequest(c, "contact_ids is required")
+	}
+
+	removed := 0
+	for _, cid := range req.ContactIDs {
+		result, delErr := h.db.Exec("DELETE FROM sms_contact_group_members WHERE group_id = $1 AND contact_id = $2", id, cid)
+		if delErr == nil {
+			rows, _ := result.RowsAffected()
+			removed += int(rows)
+		}
+	}
+
+	return response.Success(c, map[string]interface{}{
+		"removed": removed,
 	})
 }

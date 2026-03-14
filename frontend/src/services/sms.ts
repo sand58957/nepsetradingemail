@@ -7,7 +7,9 @@ import type {
   SMSContactListResponse,
   SMSCampaignListResponse,
   SMSOverviewStats,
-  SMSNetworkBreakdown
+  SMSNetworkBreakdown,
+  SMSContactGroup,
+  SMSContactGroupWithCount
 } from '@/types/sms'
 
 export interface PaginationParams {
@@ -177,6 +179,47 @@ export const smsService = {
 
   getAudienceCount: async (filter: Record<string, any>): Promise<{ data: { count: number } }> => {
     const response = await api.post('/sms/campaigns/audience-count', filter)
+    return response.data
+  },
+
+  // ==================== Contact Groups ====================
+  getGroups: async (): Promise<{ data: SMSContactGroupWithCount[] }> => {
+    const response = await api.get('/sms/groups')
+    return response.data
+  },
+
+  getGroup: async (id: number): Promise<{ data: { group: SMSContactGroup; member_count: number } }> => {
+    const response = await api.get(`/sms/groups/${id}`)
+    return response.data
+  },
+
+  createGroup: async (data: { name: string; description?: string; color?: string }): Promise<{ data: SMSContactGroup }> => {
+    const response = await api.post('/sms/groups', data)
+    return response.data
+  },
+
+  updateGroup: async (id: number, data: { name: string; description?: string; color?: string }): Promise<void> => {
+    await api.put(`/sms/groups/${id}`, data)
+  },
+
+  deleteGroup: async (id: number): Promise<void> => {
+    await api.delete(`/sms/groups/${id}`)
+  },
+
+  getGroupMembers: async (id: number, params?: { page?: number; per_page?: number; query?: string }): Promise<{
+    data: { results: SMSContact[]; total: number; page: number; per_page: number }
+  }> => {
+    const response = await api.get(`/sms/groups/${id}/members`, { params })
+    return response.data
+  },
+
+  addGroupMembers: async (id: number, contactIds: number[]): Promise<{ data: { added: number } }> => {
+    const response = await api.post(`/sms/groups/${id}/members`, { contact_ids: contactIds })
+    return response.data
+  },
+
+  removeGroupMembers: async (id: number, contactIds: number[]): Promise<{ data: { removed: number } }> => {
+    const response = await api.delete(`/sms/groups/${id}/members`, { data: { contact_ids: contactIds } })
     return response.data
   }
 }

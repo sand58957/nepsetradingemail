@@ -233,6 +233,17 @@ func (s *Server) RegisterRoutes() {
 	waCampaigns.POST("/:id/test", waHandler.TestCampaign)
 	waCampaigns.POST("/:id/pause", waHandler.PauseCampaign)
 
+	// WhatsApp Contact Groups
+	waGroups := wa.Group("/groups")
+	waGroups.GET("", waHandler.ListGroups)
+	waGroups.GET("/:id", waHandler.GetGroup)
+	waGroups.POST("", waHandler.CreateGroup)
+	waGroups.PUT("/:id", waHandler.UpdateGroup)
+	waGroups.DELETE("/:id", waHandler.DeleteGroup)
+	waGroups.GET("/:id/members", waHandler.ListGroupMembers)
+	waGroups.POST("/:id/members", waHandler.AddGroupMembers)
+	waGroups.DELETE("/:id/members", waHandler.RemoveGroupMembers)
+
 	// WhatsApp Analytics
 	waAnalytics := wa.Group("/analytics")
 	waAnalytics.GET("/overview", waHandler.GetOverview)
@@ -283,6 +294,17 @@ func (s *Server) RegisterRoutes() {
 	smsCampaigns.POST("/:id/pause", smsHandler.PauseCampaign)
 	smsCampaigns.POST("/:id/resume", smsHandler.ResumeCampaign)
 	smsCampaigns.POST("/audience-count", smsHandler.GetAudienceCount)
+
+	// SMS Contact Groups
+	smsGroups := sms.Group("/groups")
+	smsGroups.GET("", smsHandler.ListGroups)
+	smsGroups.GET("/:id", smsHandler.GetGroup)
+	smsGroups.POST("", smsHandler.CreateGroup)
+	smsGroups.PUT("/:id", smsHandler.UpdateGroup)
+	smsGroups.DELETE("/:id", smsHandler.DeleteGroup)
+	smsGroups.GET("/:id/members", smsHandler.ListGroupMembers)
+	smsGroups.POST("/:id/members", smsHandler.AddGroupMembers)
+	smsGroups.DELETE("/:id/members", smsHandler.RemoveGroupMembers)
 
 	// SMS Analytics
 	smsAnalytics := sms.Group("/analytics")
