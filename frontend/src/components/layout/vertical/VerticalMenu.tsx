@@ -151,11 +151,21 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           </MenuItem>
         </MenuSection>
 
+        {/* API Services Section */}
+        <MenuSection label='API Services'>
+          <MenuItem href={`/${locale}/api-keys`} icon={<i className='tabler-key' />}>
+            API Keys & Credits
+          </MenuItem>
+        </MenuSection>
+
         {/* Administration section — admin only */}
         {isAdmin && (
           <MenuSection label='Administration'>
             <MenuItem href={`/${locale}/admin/users`} icon={<i className='tabler-users-group' />}>
               User Management
+            </MenuItem>
+            <MenuItem href={`/${locale}/admin/credits`} icon={<i className='tabler-credit-card' />}>
+              API Credit Management
             </MenuItem>
             <MenuItem href={`/${locale}/settings`} icon={<i className='tabler-settings' />}>
               Settings
