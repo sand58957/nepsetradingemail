@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 import { useRouter, useParams } from 'next/navigation'
 
@@ -63,6 +63,7 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
   const [previewDialog, setPreviewDialog] = useState<Template | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useMobileBreakpoint()
 
   useEffect(() => {
@@ -130,6 +131,29 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
       setDeleting(false)
       setDeleteDialog(null)
     }
+  }
+
+  const handleUploadTemplate = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+
+    if (!file) return
+
+    const reader = new FileReader()
+
+    reader.onload = (event) => {
+      const html = event.target?.result as string
+
+      if (html) {
+        // Store uploaded HTML in sessionStorage and navigate to editor
+        sessionStorage.setItem('campaign_email_html_upload', html)
+        router.push(`/${locale}/campaigns/create?type=${campaignType}&template=scratch&from_upload=true`)
+      }
+    }
+
+    reader.readAsText(file)
+
+    // Reset input so same file can be re-uploaded
+    e.target.value = ''
   }
 
   // Only show user-created templates (exclude gallery templates and default Listmonk templates)
@@ -241,29 +265,86 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
             </Box>
           )}
 
-          {/* Template Grid */}
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
-                gap: 3
-              }}
-            >
-              {/* Start from scratch Card — always first, goes directly to editor */}
+          {/* Template Grid — always show Start from scratch + Upload cards */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+              gap: 3
+            }}
+          >
+              {/* Start from scratch Card */}
+              <Card
+                sx={{
+                  cursor: 'pointer',
+                  '&:hover': { boxShadow: 6, transform: 'translateY(-2px)' },
+                  transition: 'all 0.2s',
+                  overflow: 'hidden',
+                  borderRadius: 3
+                }}
+                onClick={handleStartFromScratch}
+              >
+                <Box
+                  sx={{
+                    bgcolor: '#f5f5f5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexDirection: 'column',
+                    gap: 2,
+                    py: 5,
+                    px: 3
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <i className='tabler-layout-dashboard text-[40px]' style={{ color: '#555' }} />
+                  </Box>
+                  <Typography variant='subtitle1' fontWeight={700} sx={{ color: '#333' }}>
+                    Start from scratch
+                  </Typography>
+                  <Typography variant='body2' color='text.secondary' sx={{ textAlign: 'center', lineHeight: 1.5 }}>
+                    Create a custom design or<br />use ready-made blocks.
+                  </Typography>
+                  <Button
+                    variant='contained'
+                    color='success'
+                    sx={{
+                      mt: 1,
+                      px: 5,
+                      py: 1,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.95rem'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleStartFromScratch()
+                    }}
+                  >
+                    Choose
+                  </Button>
+                </Box>
+              </Card>
+
+              {/* Upload Email Template Card */}
               <Card
                 sx={{
                   border: '2px dashed',
                   borderColor: 'divider',
                   cursor: 'pointer',
-                  '&:hover': { borderColor: 'success.main', boxShadow: 4 },
+                  '&:hover': { borderColor: 'primary.main', boxShadow: 4, transform: 'translateY(-2px)' },
                   transition: 'all 0.2s'
                 }}
-                onClick={handleStartFromScratch}
+                onClick={() => fileInputRef.current?.click()}
               >
                 <Box
                   sx={{
@@ -287,28 +368,42 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                       justifyContent: 'center'
                     }}
                   >
-                    <i className='tabler-photo text-[32px]' style={{ color: 'var(--mui-palette-primary-main)' }} />
+                    <i className='tabler-upload text-[32px]' style={{ color: 'var(--mui-palette-primary-main)' }} />
                   </Box>
                   <Typography variant='body2' color='text.secondary' fontWeight={500}>
-                    Blank email with hero image
+                    .html or .htm file
                   </Typography>
                 </Box>
                 <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 }, textAlign: 'center' }}>
                   <Typography variant='subtitle2' fontWeight={600}>
-                    Start from scratch
+                    Upload Email Template
                   </Typography>
                   <Typography variant='caption' color='text.secondary'>
-                    Create a custom design with the drag & drop editor
+                    Import an HTML email template file
                   </Typography>
                 </CardContent>
               </Card>
 
+              {/* Hidden file input for template upload */}
+              <input
+                ref={fileInputRef}
+                type='file'
+                accept='.html,.htm'
+                style={{ display: 'none' }}
+                onChange={handleUploadTemplate}
+              />
+
               {/* User Templates */}
-              {filteredUserTemplates.map(template => (
-                <TemplateCard key={`user-${template.id}`} template={template} />
-              ))}
+              {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4, gridColumn: '1 / -1' }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
+                filteredUserTemplates.map(template => (
+                  <TemplateCard key={`user-${template.id}`} template={template} />
+                ))
+              )}
             </Box>
-          )}
         </Box>
       )}
 

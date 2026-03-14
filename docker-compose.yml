@@ -57,6 +57,7 @@ services:
       - LISTMONK_ADMIN_PASSWORD=${LISTMONK_API_TOKEN}
       - JWT_SECRET=${JWT_SECRET}
       - FRONTEND_URL=https://nepalfillings.com
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
       - DKIM_KEYS_DIR=/opt/dkim-keys
     volumes:
       - /opt/dkim-keys:/opt/dkim-keys
