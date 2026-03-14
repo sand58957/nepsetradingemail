@@ -92,6 +92,13 @@ func main() {
 
 	log.Println("Connected to PostgreSQL")
 
+	// Log SendGrid API key status
+	if cfg.SendGridAPIKey != "" {
+		log.Printf("SendGrid API key configured (prefix: %s...)", cfg.SendGridAPIKey[:20])
+	} else {
+		log.Println("WARNING: SENDGRID_API_KEY is not set — email API will fail")
+	}
+
 	// Run database migrations
 	if err := runMigrations(db); err != nil {
 		log.Printf("Warning: Migration error (may be ok if tables exist): %v", err)

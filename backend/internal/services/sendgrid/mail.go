@@ -3,6 +3,7 @@ package sendgrid
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 )
 
 // MailRequest represents an email to send via SendGrid Mail Send API.
@@ -60,14 +61,24 @@ func (c *Client) SendMail(req MailRequest) (*MailResponse, error) {
 		return nil, fmt.Errorf("marshal mail payload: %w", err)
 	}
 
+	// Log API key status for debugging
+	if c.apiKey == "" {
+		log.Println("ERROR: SendGrid API key is empty")
+		return nil, fmt.Errorf("SendGrid API key is not configured")
+	}
+	log.Printf("SendGrid: sending email to=%s from=%s, API key prefix=%s...", req.To, req.From, c.apiKey[:20])
+
 	respBody, statusCode, err := c.doRequest("POST", "/mail/send", body)
 	if err != nil {
 		return nil, fmt.Errorf("send mail: %w", err)
 	}
 
 	if statusCode >= 400 {
+		log.Printf("ERROR: SendGrid API returned %d: %s (key prefix: %s...)", statusCode, string(respBody), c.apiKey[:20])
 		return nil, fmt.Errorf("SendGrid mail error (%d): %s", statusCode, string(respBody))
 	}
+
+	log.Printf("SendGrid: email sent successfully (status %d)", statusCode)
 
 	// SendGrid returns 202 with empty body on success; message ID is in header
 	// but we don't have access to headers through doRequest, so generate our own
