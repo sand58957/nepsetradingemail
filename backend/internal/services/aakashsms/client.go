@@ -38,9 +38,26 @@ type SendResponse struct {
 }
 
 // SendData holds the valid and invalid message results.
+// Aakash SMS returns {"valid":[],"invalid":[]} on success but [] on error,
+// so we need custom unmarshal to handle both cases.
 type SendData struct {
 	Valid   []MessageResult `json:"valid"`
 	Invalid []MessageResult `json:"invalid"`
+}
+
+func (d *SendData) UnmarshalJSON(b []byte) error {
+	// If it's an empty array (error response), leave fields as nil
+	if len(b) > 0 && b[0] == '[' {
+		return nil
+	}
+	// Otherwise unmarshal as object
+	type Alias SendData
+	var a Alias
+	if err := json.Unmarshal(b, &a); err != nil {
+		return err
+	}
+	*d = SendData(a)
+	return nil
 }
 
 // MessageResult represents the result for a single message recipient.
