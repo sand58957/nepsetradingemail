@@ -100,8 +100,8 @@ const SMSSettings = () => {
 
       if (response.data?.connected) {
         setConnectionStatus('connected')
-        setCreditBalance(response.data.balance)
-        setTotalSent(response.data.total_sent)
+        if (response.data.balance) setCreditBalance(response.data.balance)
+        if (response.data.total_sent) setTotalSent(response.data.total_sent)
         setSnackbar({ open: true, message: 'Connection successful!', severity: 'success' })
       } else {
         setConnectionStatus('failed')

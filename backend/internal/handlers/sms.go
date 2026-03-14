@@ -182,7 +182,7 @@ func (h *SMSHandler) UpdateSettings(c echo.Context) error {
 	return response.SuccessWithMessage(c, "SMS settings saved", nil)
 }
 
-// TestConnection verifies the Aakash SMS auth token by fetching credit balance.
+// TestConnection verifies the Aakash SMS auth token is valid.
 func (h *SMSHandler) TestConnection(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 
@@ -191,15 +191,12 @@ func (h *SMSHandler) TestConnection(c echo.Context) error {
 		return response.BadRequest(c, err.Error())
 	}
 
-	balance, err := client.TestConnection()
-	if err != nil {
+	if err := client.TestConnection(); err != nil {
 		return response.Error(c, http.StatusBadGateway, fmt.Sprintf("Connection failed: %v", err))
 	}
 
 	return response.Success(c, map[string]interface{}{
-		"connected":  true,
-		"balance":    fmt.Sprintf("%d", balance.AvailableCredit),
-		"total_sent": balance.TotalSMSSent,
+		"connected": true,
 	})
 }
 
@@ -1172,7 +1169,7 @@ func (h *SMSHandler) executeCampaignSend(campaignID, accountID int) {
 		credits := 0
 		if len(result.Data.Valid) > 0 {
 			v := result.Data.Valid[0]
-			aakashMsgID = fmt.Sprintf("%d", v.ID)
+			aakashMsgID = v.ID
 			network = v.Network
 			credits = v.Credit
 		}
@@ -1260,7 +1257,7 @@ func (h *SMSHandler) TestCampaign(c echo.Context) error {
 
 	msgID := ""
 	if len(result.Data.Valid) > 0 {
-		msgID = fmt.Sprintf("%d", result.Data.Valid[0].ID)
+		msgID = result.Data.Valid[0].ID
 	}
 
 	credits := 0

@@ -62,12 +62,13 @@ func (d *SendData) UnmarshalJSON(b []byte) error {
 
 // MessageResult represents the result for a single message recipient.
 type MessageResult struct {
-	ID      int    `json:"id"`
-	Mobile  string `json:"mobile"`
-	Text    string `json:"text"`
-	Credit  int    `json:"credit"`
-	Network string `json:"network"`
-	Status  string `json:"status"`
+	ID        string `json:"id"`
+	Mobile    string `json:"mobile"`
+	Text      string `json:"text"`
+	Credit    int    `json:"credit"`
+	Network   string `json:"network"`
+	Status    string `json:"status"`
+	Shortcode string `json:"shortcode"`
 }
 
 // BalanceResponse is the response from the credit balance API.
@@ -200,7 +201,38 @@ func (c *Client) GetDeliveryReports(page int) (*ReportResponse, error) {
 	return &result, nil
 }
 
-// TestConnection verifies the auth token is valid by fetching the credit balance.
-func (c *Client) TestConnection() (*BalanceResponse, error) {
-	return c.GetBalance()
+// TestConnection verifies the auth token is valid by sending a test request.
+// Uses the send endpoint with an obviously invalid number to verify auth without
+// actually sending an SMS. A valid token returns {"error":false,...} or
+// {"error":true,"message":"..."} quickly, while an invalid token hangs or errors.
+func (c *Client) TestConnection() error {
+	// Use a short timeout for connection test
+	origTimeout := c.httpClient.Timeout
+	c.httpClient.Timeout = 5 * time.Second
+	defer func() { c.httpClient.Timeout = origTimeout }()
+
+	// Try the send endpoint with invalid number — valid tokens respond quickly
+	formData := url.Values{
+		"to":   {"0000000000"},
+		"text": {"connection_test"},
+	}
+
+	body, _, err := c.doFormRequest("/v3/send", formData)
+	if err != nil {
+		return fmt.Errorf("connection failed: %w", err)
+	}
+
+	// Parse response — any JSON response means the API accepted our auth token
+	var result SendResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		return fmt.Errorf("unexpected API response")
+	}
+
+	// If the API says "The requested ip is not valid", the token is valid but IP isn't whitelisted
+	if result.Error && strings.Contains(result.Message, "ip is not valid") {
+		return fmt.Errorf("API token is valid but your server IP is not whitelisted in Aakash SMS")
+	}
+
+	// Any valid JSON response means auth token works
+	return nil
 }
