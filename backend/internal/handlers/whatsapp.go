@@ -330,6 +330,7 @@ func (h *WhatsAppHandler) CreateContact(c echo.Context) error {
 		Email      string          `json:"email"`
 		Tags       json.RawMessage `json:"tags"`
 		Attributes json.RawMessage `json:"attributes"`
+		GroupIDs   []int           `json:"group_ids"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -367,6 +368,15 @@ func (h *WhatsAppHandler) CreateContact(c echo.Context) error {
 	if err != nil {
 		log.Printf("[whatsapp] Failed to create contact: %v", err)
 		return response.InternalError(c, "Failed to create contact")
+	}
+
+	// Add contact to specified groups
+	for _, gid := range req.GroupIDs {
+		h.db.Exec(`
+			INSERT INTO wa_contact_group_members (group_id, contact_id)
+			SELECT $1, $2 WHERE EXISTS (SELECT 1 FROM wa_contact_groups WHERE id = $1 AND account_id = $3)
+			ON CONFLICT DO NOTHING
+		`, gid, contact.ID, accountID)
 	}
 
 	return response.Created(c, contact)
@@ -479,9 +489,16 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 	emailIdx, hasEmail := colMap["email"]
 	tagsIdx, hasTags := colMap["tags"]
 
+	// Parse group_ids from form data
+	var groupIDs []int
+	if gids := c.FormValue("group_ids"); gids != "" {
+		json.Unmarshal([]byte(gids), &groupIDs)
+	}
+
 	imported := 0
 	skipped := 0
 	now := time.Now()
+	var importedContactIDs []int
 
 	for {
 		record, err := reader.Read()
@@ -522,13 +539,15 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 			}
 		}
 
-		_, err2 := h.db.Exec(`
+		var contactID int
+		err2 := h.db.Get(&contactID, `
 			INSERT INTO wa_contacts (account_id, phone, name, email, opted_in, opted_in_at, tags)
 			VALUES ($1, $2, $3, $4, true, $5, $6::jsonb)
 			ON CONFLICT (account_id, phone) DO UPDATE SET
 				name = CASE WHEN EXCLUDED.name != '' THEN EXCLUDED.name ELSE wa_contacts.name END,
 				email = CASE WHEN EXCLUDED.email != '' THEN EXCLUDED.email ELSE wa_contacts.email END,
 				updated_at = NOW()
+			RETURNING id
 		`, accountID, phone, name, email, now, tags)
 		if err2 != nil {
 			log.Printf("[whatsapp] Import row error: %v", err2)
@@ -536,6 +555,20 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 			continue
 		}
 		imported++
+		if len(groupIDs) > 0 {
+			importedContactIDs = append(importedContactIDs, contactID)
+		}
+	}
+
+	// Add imported contacts to specified groups
+	for _, gid := range groupIDs {
+		for _, cid := range importedContactIDs {
+			h.db.Exec(`
+				INSERT INTO wa_contact_group_members (group_id, contact_id)
+				SELECT $1, $2 WHERE EXISTS (SELECT 1 FROM wa_contact_groups WHERE id = $1 AND account_id = $3)
+				ON CONFLICT DO NOTHING
+			`, gid, cid, accountID)
+		}
 	}
 
 	return response.Success(c, map[string]interface{}{

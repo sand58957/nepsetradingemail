@@ -43,7 +43,7 @@ import Checkbox from '@mui/material/Checkbox'
 import smsService from '@/services/sms'
 
 // Type Imports
-import type { SMSContact } from '@/types/sms'
+import type { SMSContact, SMSContactGroup } from '@/types/sms'
 
 const SMSContactList = () => {
   const router = useRouter()
@@ -73,6 +73,8 @@ const SMSContactList = () => {
   const [editingContact, setEditingContact] = useState<SMSContact | null>(null)
   const [newContact, setNewContact] = useState({ phone: '', name: '', email: '' })
   const [addingContact, setAddingContact] = useState(false)
+  const [availableGroups, setAvailableGroups] = useState<SMSContactGroup[]>([])
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([])
   const [savingEdit, setSavingEdit] = useState(false)
 
   // Bulk delete
@@ -113,6 +115,21 @@ const SMSContactList = () => {
     }
 
     fetchTags()
+  }, [])
+
+  // Fetch groups
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const response = await smsService.getGroups()
+
+        setAvailableGroups(response.data || [])
+      } catch {
+        // Silently fail
+      }
+    }
+
+    fetchGroups()
   }, [])
 
   // Fetch contacts
@@ -194,10 +211,11 @@ const SMSContactList = () => {
     setAddingContact(true)
 
     try {
-      await smsService.createContact(newContact)
+      await smsService.createContact({ ...newContact, group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined })
       setSnackbar({ open: true, message: 'Contact added', severity: 'success' })
       setAddDialogOpen(false)
       setNewContact({ phone: '', name: '', email: '' })
+      setSelectedGroupIds([])
       fetchContacts()
     } catch {
       setSnackbar({ open: true, message: 'Failed to add contact', severity: 'error' })
@@ -568,6 +586,33 @@ const SMSContactList = () => {
               value={newContact.email}
               onChange={e => setNewContact({ ...newContact, email: e.target.value })}
             />
+            {availableGroups.length > 0 && (
+              <FormControl fullWidth size='small'>
+                <InputLabel>Groups</InputLabel>
+                <Select
+                  multiple
+                  value={selectedGroupIds}
+                  label='Groups'
+                  onChange={e => setSelectedGroupIds(e.target.value as number[])}
+                  renderValue={(selected) => (
+                    <div className='flex gap-1 flex-wrap'>
+                      {(selected as number[]).map(id => {
+                        const group = availableGroups.find(g => g.id === id)
+
+                        return group ? <Chip key={id} label={group.name} size='small' /> : null
+                      })}
+                    </div>
+                  )}
+                >
+                  {availableGroups.map(group => (
+                    <MenuItem key={group.id} value={group.id}>
+                      <Checkbox checked={selectedGroupIds.includes(group.id)} />
+                      {group.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           </div>
         </DialogContent>
         <DialogActions>

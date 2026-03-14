@@ -48,7 +48,7 @@ export const whatsappService = {
     return response.data
   },
 
-  createContact: async (data: Partial<WAContact>): Promise<{ data: WAContact }> => {
+  createContact: async (data: Partial<WAContact> & { group_ids?: number[] }): Promise<{ data: WAContact }> => {
     const response = await api.post('/whatsapp/contacts', data)
     return response.data
   },

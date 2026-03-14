@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -15,9 +15,18 @@ import CircularProgress from '@mui/material/CircularProgress'
 import LinearProgress from '@mui/material/LinearProgress'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import Chip from '@mui/material/Chip'
+import Checkbox from '@mui/material/Checkbox'
 
 // Service Imports
 import whatsappService from '@/services/whatsapp'
+
+// Type Imports
+import type { WAContactGroup } from '@/types/whatsapp'
 
 const WAContactImport = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -26,11 +35,28 @@ const WAContactImport = () => {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null)
 
+  const [availableGroups, setAvailableGroups] = useState<WAContactGroup[]>([])
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([])
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
     severity: 'success'
   })
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const response = await whatsappService.getGroups()
+
+        setAvailableGroups(response.data || [])
+      } catch {
+        // Silently fail
+      }
+    }
+
+    fetchGroups()
+  }, [])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -60,6 +86,10 @@ const WAContactImport = () => {
       const formData = new FormData()
 
       formData.append('file', selectedFile)
+
+      if (selectedGroupIds.length > 0) {
+        formData.append('group_ids', JSON.stringify(selectedGroupIds))
+      }
 
       const response = await whatsappService.importContacts(formData)
 
@@ -123,6 +153,35 @@ const WAContactImport = () => {
                   onChange={handleFileSelect}
                   style={{ display: 'none' }}
                 />
+
+                {/* Group Assignment */}
+                {availableGroups.length > 0 && (
+                  <FormControl fullWidth size='small'>
+                    <InputLabel>Add to Groups</InputLabel>
+                    <Select
+                      multiple
+                      value={selectedGroupIds}
+                      label='Add to Groups'
+                      onChange={e => setSelectedGroupIds(e.target.value as number[])}
+                      renderValue={(selected) => (
+                        <div className='flex gap-1 flex-wrap'>
+                          {(selected as number[]).map(id => {
+                            const group = availableGroups.find(g => g.id === id)
+
+                            return group ? <Chip key={id} label={group.name} size='small' /> : null
+                          })}
+                        </div>
+                      )}
+                    >
+                      {availableGroups.map(group => (
+                        <MenuItem key={group.id} value={group.id}>
+                          <Checkbox checked={selectedGroupIds.includes(group.id)} />
+                          {group.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
 
                 {/* Progress */}
                 {importing && (

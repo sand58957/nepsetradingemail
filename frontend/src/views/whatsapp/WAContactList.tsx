@@ -34,12 +34,13 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import InputAdornment from '@mui/material/InputAdornment'
 import Grid from '@mui/material/Grid'
+import Checkbox from '@mui/material/Checkbox'
 
 // Service Imports
 import whatsappService from '@/services/whatsapp'
 
 // Type Imports
-import type { WAContact } from '@/types/whatsapp'
+import type { WAContact, WAContactGroup } from '@/types/whatsapp'
 
 const WAContactList = () => {
   // State
@@ -58,6 +59,8 @@ const WAContactList = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [newContact, setNewContact] = useState({ phone: '', name: '', email: '' })
   const [addingContact, setAddingContact] = useState(false)
+  const [availableGroups, setAvailableGroups] = useState<WAContactGroup[]>([])
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([])
 
   // Action menu
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -68,6 +71,21 @@ const WAContactList = () => {
     message: '',
     severity: 'success'
   })
+
+  // Fetch groups
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const response = await whatsappService.getGroups()
+
+        setAvailableGroups(response.data || [])
+      } catch {
+        // Silently fail
+      }
+    }
+
+    fetchGroups()
+  }, [])
 
   // Debounced search
   useEffect(() => {
@@ -130,10 +148,11 @@ const WAContactList = () => {
     setAddingContact(true)
 
     try {
-      await whatsappService.createContact(newContact)
+      await whatsappService.createContact({ ...newContact, group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined })
       setSnackbar({ open: true, message: 'Contact added', severity: 'success' })
       setAddDialogOpen(false)
       setNewContact({ phone: '', name: '', email: '' })
+      setSelectedGroupIds([])
       fetchContacts()
     } catch {
       setSnackbar({ open: true, message: 'Failed to add contact', severity: 'error' })
@@ -382,6 +401,33 @@ const WAContactList = () => {
               value={newContact.email}
               onChange={e => setNewContact({ ...newContact, email: e.target.value })}
             />
+            {availableGroups.length > 0 && (
+              <FormControl fullWidth size='small'>
+                <InputLabel>Groups</InputLabel>
+                <Select
+                  multiple
+                  value={selectedGroupIds}
+                  label='Groups'
+                  onChange={e => setSelectedGroupIds(e.target.value as number[])}
+                  renderValue={(selected) => (
+                    <div className='flex gap-1 flex-wrap'>
+                      {(selected as number[]).map(id => {
+                        const group = availableGroups.find(g => g.id === id)
+
+                        return group ? <Chip key={id} label={group.name} size='small' /> : null
+                      })}
+                    </div>
+                  )}
+                >
+                  {availableGroups.map(group => (
+                    <MenuItem key={group.id} value={group.id}>
+                      <Checkbox checked={selectedGroupIds.includes(group.id)} />
+                      {group.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           </div>
         </DialogContent>
         <DialogActions>

@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -26,9 +26,13 @@ import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import Chip from '@mui/material/Chip'
+import Checkbox from '@mui/material/Checkbox'
 
 // Service Imports
 import smsService from '@/services/sms'
+
+// Type Imports
+import type { SMSContactGroup } from '@/types/sms'
 
 interface ParsedRow {
   [key: string]: string
@@ -47,11 +51,28 @@ const SMSContactImport = () => {
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({})
   const [showPreview, setShowPreview] = useState(false)
 
+  const [availableGroups, setAvailableGroups] = useState<SMSContactGroup[]>([])
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([])
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
     severity: 'success'
   })
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const response = await smsService.getGroups()
+
+        setAvailableGroups(response.data || [])
+      } catch {
+        // Silently fail
+      }
+    }
+
+    fetchGroups()
+  }, [])
 
   const targetFields = [
     { value: '', label: 'Skip' },
@@ -160,6 +181,10 @@ const SMSContactImport = () => {
 
       formData.append('file', selectedFile)
       formData.append('column_mapping', JSON.stringify(columnMapping))
+
+      if (selectedGroupIds.length > 0) {
+        formData.append('group_ids', JSON.stringify(selectedGroupIds))
+      }
 
       const response = await smsService.importContacts(formData)
 
@@ -301,6 +326,35 @@ const SMSContactImport = () => {
                       </Table>
                     </TableContainer>
                   </Card>
+                )}
+
+                {/* Group Assignment */}
+                {availableGroups.length > 0 && (
+                  <FormControl fullWidth size='small'>
+                    <InputLabel>Add to Groups</InputLabel>
+                    <Select
+                      multiple
+                      value={selectedGroupIds}
+                      label='Add to Groups'
+                      onChange={e => setSelectedGroupIds(e.target.value as number[])}
+                      renderValue={(selected) => (
+                        <div className='flex gap-1 flex-wrap'>
+                          {(selected as number[]).map(id => {
+                            const group = availableGroups.find(g => g.id === id)
+
+                            return group ? <Chip key={id} label={group.name} size='small' /> : null
+                          })}
+                        </div>
+                      )}
+                    >
+                      {availableGroups.map(group => (
+                        <MenuItem key={group.id} value={group.id}>
+                          <Checkbox checked={selectedGroupIds.includes(group.id)} />
+                          {group.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 )}
 
                 {/* Progress */}

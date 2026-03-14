@@ -48,7 +48,7 @@ export const smsService = {
     return response.data
   },
 
-  createContact: async (data: Partial<SMSContact>): Promise<{ data: SMSContact }> => {
+  createContact: async (data: Partial<SMSContact> & { group_ids?: number[] }): Promise<{ data: SMSContact }> => {
     const response = await api.post('/sms/contacts', data)
     return response.data
   },
