@@ -1092,7 +1092,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
   const [saveTemplateName, setSaveTemplateName] = useState('')
   const [savingTemplate, setSavingTemplate] = useState(false)
-  const [rightPanelOpen, setRightPanelOpen] = useState(true)
+  // Unlayer's right panel (Content/Blocks/Body tabs) is always visible
   const fromCampaignId = searchParams.get('from_campaign')
   const fromTemplateId = searchParams.get('from_template')
   const fromCampaignLoadedRef = useRef(false)
@@ -1482,23 +1482,6 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
     })
   }
 
-  // Toggle Unlayer's right panel (Content/Blocks/Body tabs)
-  const toggleRightPanel = () => {
-    const unlayer = unlayerRef.current
-
-    if (!unlayer) return
-
-    const newState = !rightPanelOpen
-
-    setRightPanelOpen(newState)
-
-    ;(unlayer as any).updateTabs({
-      content: { enabled: newState },
-      blocks: { enabled: newState },
-      body: { enabled: newState },
-      uploads: { enabled: newState }
-    })
-  }
 
   const activeCat = blockCategories.find(c => c.name === activeCategory)
 
@@ -1544,15 +1527,6 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
               sx={{ color: drawerOpen ? '#4caf50' : 'rgba(255,255,255,0.5)' }}
             >
               <i className='tabler-layout-sidebar-left-collapse text-[20px]' />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={rightPanelOpen ? 'Hide settings panel' : 'Show settings panel'}>
-            <IconButton
-              size='small'
-              onClick={toggleRightPanel}
-              sx={{ color: rightPanelOpen ? '#4caf50' : 'rgba(255,255,255,0.5)' }}
-            >
-              <i className='tabler-layout-sidebar-right-collapse text-[20px]' />
             </IconButton>
           </Tooltip>
         </Box>
@@ -1923,9 +1897,10 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
                 theme: 'modern_light'
               },
               tabs: {
-                content: { enabled: true },
+                content: { enabled: true, active: true },
                 blocks: { enabled: true },
-                body: { enabled: true, active: true },
+                body: { enabled: true },
+                images: { enabled: true },
                 uploads: { enabled: true }
               },
               tools: {
@@ -1951,28 +1926,6 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           />
         </Box>
 
-        {/* Right panel toggle chevron */}
-        <Box
-          onClick={toggleRightPanel}
-          sx={{
-            width: 20,
-            minWidth: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            bgcolor: '#f0f0f0',
-            borderLeft: '1px solid',
-            borderColor: 'divider',
-            '&:hover': { bgcolor: '#e0e0e0' },
-            transition: 'background-color 0.2s'
-          }}
-        >
-          <i
-            className={`tabler-chevron-${rightPanelOpen ? 'right' : 'left'} text-[14px]`}
-            style={{ color: '#757575' }}
-          />
-        </Box>
       </Box>
 
       {/* Success/error snackbar */}
