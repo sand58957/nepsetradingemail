@@ -397,7 +397,7 @@ func (s *Server) RegisterRoutes() {
 	admin.DELETE("/keys/:id", authHandler.DeleteAPIKey)
 
 	// Admin Credit Management
-	adminCredits := admin.Group("/api-credits")
+	adminCredits := admin.Group("/admin-credits")
 	adminCredits.GET("", creditHandler.AdminListCredits)
 	adminCredits.GET("/transactions", creditHandler.AdminListTransactions)
 	adminCredits.GET("/messages", creditHandler.AdminListAPIMessages)
