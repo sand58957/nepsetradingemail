@@ -159,6 +159,12 @@ func (h *SMSHandler) UpdateSettings(c echo.Context) error {
 		req.SendRate = 10
 	}
 
+	// If the token contains asterisks, it's the masked version from GetSettings — don't overwrite
+	authToken := req.AuthToken
+	if strings.Contains(authToken, "*") {
+		authToken = ""
+	}
+
 	_, err := h.db.Exec(`
 		INSERT INTO sms_settings (account_id, auth_token, sender_id, send_rate, updated_at)
 		VALUES ($1, $2, $3, $4, NOW())
@@ -167,7 +173,7 @@ func (h *SMSHandler) UpdateSettings(c echo.Context) error {
 			sender_id = EXCLUDED.sender_id,
 			send_rate = EXCLUDED.send_rate,
 			updated_at = NOW()
-	`, accountID, req.AuthToken, req.SenderID, req.SendRate)
+	`, accountID, authToken, req.SenderID, req.SendRate)
 	if err != nil {
 		log.Printf("[sms] Failed to save settings: %v", err)
 		return response.InternalError(c, "Failed to save settings")
