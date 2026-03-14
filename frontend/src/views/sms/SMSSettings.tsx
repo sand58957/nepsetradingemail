@@ -38,8 +38,6 @@ const SMSSettings = () => {
   const [configured, setConfigured] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'untested' | 'connected' | 'failed'>('untested')
-  const [creditBalance, setCreditBalance] = useState<number | null>(null)
-  const [totalSent, setTotalSent] = useState<number | null>(null)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
     open: false,
@@ -100,8 +98,6 @@ const SMSSettings = () => {
 
       if (response.data?.connected) {
         setConnectionStatus('connected')
-        if (response.data.balance) setCreditBalance(response.data.balance)
-        if (response.data.total_sent) setTotalSent(response.data.total_sent)
         setSnackbar({ open: true, message: 'Connection successful!', severity: 'success' })
       } else {
         setConnectionStatus('failed')
@@ -147,12 +143,6 @@ const SMSSettings = () => {
                   )}
                   {connectionStatus === 'failed' && (
                     <Chip label='Disconnected' color='error' variant='tonal' icon={<i className='tabler-x' />} />
-                  )}
-                  {creditBalance !== null && (
-                    <Chip label={`Credits: ${creditBalance.toLocaleString()}`} color='info' variant='tonal' />
-                  )}
-                  {totalSent !== null && (
-                    <Chip label={`Total Sent: ${totalSent.toLocaleString()}`} color='success' variant='tonal' />
                   )}
                 </div>
               </div>

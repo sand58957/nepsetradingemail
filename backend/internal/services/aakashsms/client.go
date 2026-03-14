@@ -1,6 +1,7 @@
 package aakashsms
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -98,11 +99,16 @@ type DeliveryReport struct {
 // doFormRequest sends a form-urlencoded POST request to the Aakash SMS API.
 // The auth_token is always included as a form parameter.
 func (c *Client) doFormRequest(endpoint string, formData url.Values) ([]byte, int, error) {
+	return c.doFormRequestCtx(context.Background(), endpoint, formData)
+}
+
+// doFormRequestCtx sends a form-urlencoded POST request with context support for cancellation/timeouts.
+func (c *Client) doFormRequestCtx(ctx context.Context, endpoint string, formData url.Values) ([]byte, int, error) {
 	// Always include auth_token in form data
 	formData.Set("auth_token", c.authToken)
 
 	reqURL := fmt.Sprintf("%s%s", c.baseURL, endpoint)
-	req, err := http.NewRequest(http.MethodPost, reqURL, strings.NewReader(formData.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, strings.NewReader(formData.Encode()))
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -159,9 +165,14 @@ func (c *Client) SendBulkSMS(numbers []string, text string) (*SendResponse, erro
 
 // GetBalance fetches the current credit balance.
 func (c *Client) GetBalance() (*BalanceResponse, error) {
+	return c.GetBalanceCtx(context.Background())
+}
+
+// GetBalanceCtx fetches the current credit balance with context support for cancellation/timeouts.
+func (c *Client) GetBalanceCtx(ctx context.Context) (*BalanceResponse, error) {
 	formData := url.Values{}
 
-	body, statusCode, err := c.doFormRequest("/v1/credit", formData)
+	body, statusCode, err := c.doFormRequestCtx(ctx, "/v1/credit", formData)
 	if err != nil {
 		return nil, err
 	}
@@ -203,36 +214,33 @@ func (c *Client) GetDeliveryReports(page int) (*ReportResponse, error) {
 
 // TestConnection verifies the auth token is valid by sending a test request.
 // Uses the send endpoint with an obviously invalid number to verify auth without
-// actually sending an SMS. A valid token returns {"error":false,...} or
-// {"error":true,"message":"..."} quickly, while an invalid token hangs or errors.
+// actually sending an SMS. A valid token returns a quick JSON response, while
+// an invalid token hangs or errors.
 func (c *Client) TestConnection() error {
-	// Use a short timeout for connection test
-	origTimeout := c.httpClient.Timeout
-	c.httpClient.Timeout = 5 * time.Second
-	defer func() { c.httpClient.Timeout = origTimeout }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	// Try the send endpoint with invalid number — valid tokens respond quickly
+	// Reuse SendSMS logic via the context-aware form request
 	formData := url.Values{
 		"to":   {"0000000000"},
 		"text": {"connection_test"},
 	}
 
-	body, _, err := c.doFormRequest("/v3/send", formData)
+	body, _, err := c.doFormRequestCtx(ctx, "/v3/send", formData)
 	if err != nil {
 		return fmt.Errorf("connection failed: %w", err)
 	}
 
-	// Parse response — any JSON response means the API accepted our auth token
+	// Any JSON response means the API accepted our auth token
 	var result SendResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		return fmt.Errorf("unexpected API response")
 	}
 
-	// If the API says "The requested ip is not valid", the token is valid but IP isn't whitelisted
+	// Token is valid but server IP isn't whitelisted
 	if result.Error && strings.Contains(result.Message, "ip is not valid") {
 		return fmt.Errorf("API token is valid but your server IP is not whitelisted in Aakash SMS")
 	}
 
-	// Any valid JSON response means auth token works
 	return nil
 }

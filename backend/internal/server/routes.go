@@ -312,6 +312,70 @@ func (s *Server) RegisterRoutes() {
 	smsAnalytics.GET("/campaigns/:id", smsHandler.GetCampaignAnalytics)
 
 	// ==============================================================
+	// API Key Management — authenticated users manage their own keys
+	// ==============================================================
+	apiKeyHandler := handlers.NewAPIKeyHandler(s.DB)
+	apiKeys := staff.Group("/api-keys")
+	apiKeys.GET("", apiKeyHandler.ListKeys)
+	apiKeys.POST("", apiKeyHandler.CreateKey)
+	apiKeys.PUT("/:id", apiKeyHandler.UpdateKey)
+	apiKeys.PUT("/:id/toggle", apiKeyHandler.ToggleKey)
+	apiKeys.DELETE("/:id", apiKeyHandler.DeleteKey)
+
+	// API Credits — authenticated users view their own credits
+	creditHandler := handlers.NewCreditHandler(s.DB)
+	apiCredits := staff.Group("/api-credits")
+	apiCredits.GET("", creditHandler.GetMyCredits)
+	apiCredits.GET("/transactions", creditHandler.GetMyTransactions)
+
+	// ==============================================================
+	// Public API — SMS (API key auth, separate from JWT)
+	// ==============================================================
+	publicSMSHandler := handlers.NewPublicSMSHandler(s.DB)
+	publicSMSLimiter := middleware.NewRateLimiter(30, 60)
+	publicSMS := api.Group("/v1/sms")
+	publicSMS.Use(publicSMSLimiter.Middleware())
+	publicSMS.Use(middleware.APIKeyAuth(s.DB, "sms"))
+	publicSMS.POST("/send", publicSMSHandler.Send)
+	publicSMS.POST("/send/bulk", publicSMSHandler.SendBulk)
+	publicSMS.GET("/messages", publicSMSHandler.ListMessages)
+	publicSMS.GET("/messages/:id", publicSMSHandler.GetMessage)
+	publicSMS.GET("/balance", publicSMSHandler.GetBalance)
+	publicSMS.GET("/status", publicSMSHandler.GetStatus)
+
+	// ==============================================================
+	// Public API — WhatsApp (API key auth, separate from JWT)
+	// ==============================================================
+	publicWAHandler := handlers.NewPublicWhatsAppHandler(s.DB)
+	publicWALimiter := middleware.NewRateLimiter(30, 60)
+	publicWA := api.Group("/v1/whatsapp")
+	publicWA.Use(publicWALimiter.Middleware())
+	publicWA.Use(middleware.APIKeyAuth(s.DB, "whatsapp"))
+	publicWA.POST("/send", publicWAHandler.Send)
+	publicWA.POST("/send/bulk", publicWAHandler.SendBulk)
+	publicWA.GET("/messages", publicWAHandler.ListMessages)
+	publicWA.GET("/messages/:id", publicWAHandler.GetMessage)
+	publicWA.GET("/balance", publicWAHandler.GetBalance)
+	publicWA.GET("/status", publicWAHandler.GetStatus)
+	publicWA.GET("/templates", publicWAHandler.ListTemplates)
+
+	// ==============================================================
+	// Public API — Email (API key auth, separate from JWT)
+	// ==============================================================
+	publicEmailHandler := handlers.NewPublicEmailHandler(s.DB, s.Config.SendGridAPIKey)
+	publicEmailLimiter := middleware.NewRateLimiter(30, 60)
+	publicEmail := api.Group("/v1/email")
+	publicEmail.Use(publicEmailLimiter.Middleware())
+	publicEmail.Use(middleware.APIKeyAuth(s.DB, "email"))
+	publicEmail.POST("/send", publicEmailHandler.Send)
+	publicEmail.POST("/send/bulk", publicEmailHandler.SendBulk)
+	publicEmail.GET("/messages", publicEmailHandler.ListMessages)
+	publicEmail.GET("/messages/:id", publicEmailHandler.GetMessage)
+	publicEmail.GET("/balance", publicEmailHandler.GetBalance)
+	publicEmail.GET("/status", publicEmailHandler.GetStatus)
+	publicEmail.GET("/domains", publicEmailHandler.ListDomains)
+
+	// ==============================================================
 	// Admin-only routes — full platform control
 	// ==============================================================
 	admin := api.Group("")
@@ -327,10 +391,19 @@ func (s *Server) RegisterRoutes() {
 	users.DELETE("/:id", authHandler.DeleteUser)
 	users.PUT("/:id/role", authHandler.UpdateUserRole)
 
-	// API Keys
+	// API Keys (legacy)
 	admin.GET("/keys", authHandler.ListAPIKeys)
 	admin.POST("/keys", authHandler.CreateAPIKey)
 	admin.DELETE("/keys/:id", authHandler.DeleteAPIKey)
+
+	// Admin Credit Management
+	adminCredits := admin.Group("/api-credits")
+	adminCredits.GET("", creditHandler.AdminListCredits)
+	adminCredits.GET("/transactions", creditHandler.AdminListTransactions)
+	adminCredits.GET("/messages", creditHandler.AdminListAPIMessages)
+	adminCredits.GET("/:account_id", creditHandler.AdminGetAccountCredits)
+	adminCredits.POST("/:account_id/adjust", creditHandler.AdminAdjustCredits)
+	adminCredits.POST("/:account_id/toggle-api", creditHandler.AdminToggleAPI)
 
 	// Settings (Listmonk proxy)
 	settings := admin.Group("/settings")

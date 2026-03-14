@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -1310,11 +1311,6 @@ func (h *SMSHandler) GetOverview(c echo.Context) error {
 		TotalCampaigns int `json:"total_campaigns" db:"total_campaigns"`
 	}
 
-	h.db.Get(&stats.TotalContacts, "SELECT COUNT(*) FROM sms_contacts WHERE account_id = $1", accountID)
-	h.db.Get(&stats.OptedIn, "SELECT COUNT(*) FROM sms_contacts WHERE account_id = $1 AND opted_in = true", accountID)
-	h.db.Get(&stats.TotalCampaigns, "SELECT COUNT(*) FROM sms_campaigns WHERE account_id = $1", accountID)
-
-	// Aggregate message stats across all campaigns for this account
 	var msgStats struct {
 		TotalSent      int `json:"total_sent" db:"total_sent"`
 		TotalDelivered int `json:"total_delivered" db:"total_delivered"`
@@ -1322,44 +1318,66 @@ func (h *SMSHandler) GetOverview(c echo.Context) error {
 		TotalCredits   int `json:"total_credits" db:"total_credits"`
 	}
 
-	h.db.Get(&msgStats, `
-		SELECT
-			COALESCE(SUM(sent_count), 0) as total_sent,
-			COALESCE(SUM(delivered_count), 0) as total_delivered,
-			COALESCE(SUM(failed_count), 0) as total_failed,
-			COALESCE(SUM(credits_used), 0) as total_credits
-		FROM sms_campaigns WHERE account_id = $1
-	`, accountID)
-
-	// Recent campaigns
 	var recent []SMSCampaign
-	h.db.Select(&recent, `
-		SELECT * FROM sms_campaigns WHERE account_id = $1
-		ORDER BY created_at DESC LIMIT 5
-	`, accountID)
+	var creditBalance int
+
+	// Run all queries concurrently
+	var wg sync.WaitGroup
+	wg.Add(4)
+
+	// 1. Contact stats — merged into single query
+	go func() {
+		defer wg.Done()
+		h.db.Get(&stats, `
+			SELECT
+				COUNT(*) as total_contacts,
+				COUNT(*) FILTER (WHERE opted_in = true) as opted_in,
+				0 as total_campaigns
+			FROM sms_contacts WHERE account_id = $1
+		`, accountID)
+		h.db.Get(&stats.TotalCampaigns, "SELECT COUNT(*) FROM sms_campaigns WHERE account_id = $1", accountID)
+	}()
+
+	// 2. Message stats
+	go func() {
+		defer wg.Done()
+		h.db.Get(&msgStats, `
+			SELECT
+				COALESCE(SUM(sent_count), 0) as total_sent,
+				COALESCE(SUM(delivered_count), 0) as total_delivered,
+				COALESCE(SUM(failed_count), 0) as total_failed,
+				COALESCE(SUM(credits_used), 0) as total_credits
+			FROM sms_campaigns WHERE account_id = $1
+		`, accountID)
+	}()
+
+	// 3. Recent campaigns
+	go func() {
+		defer wg.Done()
+		h.db.Select(&recent, `
+			SELECT * FROM sms_campaigns WHERE account_id = $1
+			ORDER BY created_at DESC LIMIT 5
+		`, accountID)
+	}()
+
+	// 4. Credit balance — context-based timeout so the HTTP call is actually cancelled
+	go func() {
+		defer wg.Done()
+		client, _, clientErr := h.getClient(accountID)
+		if clientErr != nil {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if bal, err := client.GetBalanceCtx(ctx); err == nil {
+			creditBalance = bal.AvailableCredit
+		}
+	}()
+
+	wg.Wait()
 
 	if recent == nil {
 		recent = []SMSCampaign{}
-	}
-
-	// Fetch credit balance from Aakash SMS with a short timeout
-	var creditBalance int
-	client, _, clientErr := h.getClient(accountID)
-	if clientErr == nil {
-		balCh := make(chan int, 1)
-		go func() {
-			if bal, err := client.GetBalance(); err == nil {
-				balCh <- bal.AvailableCredit
-			} else {
-				balCh <- 0
-			}
-		}()
-		select {
-		case bal := <-balCh:
-			creditBalance = bal
-		case <-time.After(3 * time.Second):
-			creditBalance = 0
-		}
 	}
 
 	return response.Success(c, map[string]interface{}{

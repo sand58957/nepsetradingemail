@@ -32,7 +32,7 @@ export const smsService = {
     await api.put('/sms/settings', data)
   },
 
-  testConnection: async (): Promise<{ data: { connected: boolean; balance: number; total_sent: number } }> => {
+  testConnection: async (): Promise<{ data: { connected: boolean } }> => {
     const response = await api.post('/sms/settings/test')
     return response.data
   },
