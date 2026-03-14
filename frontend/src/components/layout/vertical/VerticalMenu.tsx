@@ -1,8 +1,15 @@
+'use client'
+
+// React Imports
+import { useState, useEffect } from 'react'
+
 // Next Imports
 import { useParams } from 'next/navigation'
 
 // MUI Imports
 import { useTheme } from '@mui/material/styles'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 
 // Third-party Imports
 import PerfectScrollbar from 'react-perfect-scrollbar'
@@ -35,6 +42,20 @@ type Props = {
   role: string
 }
 
+type SectionVisibility = {
+  email: boolean
+  whatsapp: boolean
+  sms: boolean
+}
+
+const VISIBILITY_KEY = 'sidebar_section_visibility'
+
+const getDefaultVisibility = (): SectionVisibility => ({
+  email: true,
+  whatsapp: true,
+  sms: true
+})
+
 const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) => (
   <StyledVerticalNavExpandIcon open={open} transitionDuration={transitionDuration}>
     <i className='tabler-chevron-right' />
@@ -51,6 +72,52 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
   const { lang: locale } = params
   const isAdmin = role === 'admin'
+
+  // Section visibility state
+  const [visibility, setVisibility] = useState<SectionVisibility>(getDefaultVisibility())
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    try {
+      const saved = localStorage.getItem(VISIBILITY_KEY)
+
+      if (saved) {
+        setVisibility({ ...getDefaultVisibility(), ...JSON.parse(saved) })
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const toggleSection = (section: keyof SectionVisibility) => {
+    setVisibility(prev => {
+      const updated = { ...prev, [section]: !prev[section] }
+
+      try {
+        localStorage.setItem(VISIBILITY_KEY, JSON.stringify(updated))
+      } catch {
+        // ignore
+      }
+
+      return updated
+    })
+  }
+
+  const SectionToggle = ({ section, visible }: { section: keyof SectionVisibility; visible: boolean }) => (
+    <Tooltip title={visible ? 'Hide section' : 'Show section'} placement='right'>
+      <IconButton
+        size='small'
+        onClick={e => {
+          e.stopPropagation()
+          toggleSection(section)
+        }}
+        sx={{ ml: 'auto', opacity: 0.5, '&:hover': { opacity: 1 }, p: 0.25 }}
+      >
+        <i className={visible ? 'tabler-eye-off' : 'tabler-eye'} style={{ fontSize: 14 }} />
+      </IconButton>
+    </Tooltip>
+  )
 
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
 
@@ -73,82 +140,130 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
         renderExpandedMenuItemIcon={{ icon: <i className='tabler-circle text-xs' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
-        {/* Email Marketing Section — visible to admin + user */}
-        <MenuSection label='Email Marketing'>
-          <MenuItem href={`/${locale}/dashboards/email-marketing`} icon={<i className='tabler-mail' />}>
-            Dashboard
-          </MenuItem>
-          <SubMenu label='Subscribers' icon={<i className='tabler-users' />}>
-            <MenuItem href={`/${locale}/subscribers/list`}>All Subscribers</MenuItem>
-            <MenuItem href={`/${locale}/subscribers/import`}>Import</MenuItem>
-          </SubMenu>
-          <SubMenu label='Campaigns' icon={<i className='tabler-send' />}>
-            <MenuItem href={`/${locale}/campaigns/list`}>All Campaigns</MenuItem>
-            <MenuItem href={`/${locale}/campaigns/create`}>Create New</MenuItem>
-          </SubMenu>
-          <MenuItem href={`/${locale}/lists`} icon={<i className='tabler-list' />}>
-            Lists
-          </MenuItem>
-<MenuItem href={`/${locale}/media`} icon={<i className='tabler-photo' />}>
-            Media
-          </MenuItem>
-          <SubMenu label='Automations' icon={<i className='tabler-robot' />}>
-            <MenuItem href={`/${locale}/automations/list`}>All Automations</MenuItem>
-            <MenuItem href={`/${locale}/automations/create`}>Create New</MenuItem>
-          </SubMenu>
-          <MenuItem href={`/${locale}/dashboards/analytics`} icon={<i className='tabler-chart-bar' />}>
-            Analytics
-          </MenuItem>
+        {/* Email Marketing Section */}
+        <MenuSection label={
+          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            Email Marketing
+            <SectionToggle section='email' visible={visibility.email} />
+          </span>
+        }>
+          {visibility.email ? (
+            <>
+              <MenuItem href={`/${locale}/dashboards/email-marketing`} icon={<i className='tabler-mail' />}>
+                Dashboard
+              </MenuItem>
+              <SubMenu label='Subscribers' icon={<i className='tabler-users' />}>
+                <MenuItem href={`/${locale}/subscribers/list`}>All Subscribers</MenuItem>
+                <MenuItem href={`/${locale}/subscribers/import`}>Import</MenuItem>
+              </SubMenu>
+              <SubMenu label='Campaigns' icon={<i className='tabler-send' />}>
+                <MenuItem href={`/${locale}/campaigns/list`}>All Campaigns</MenuItem>
+                <MenuItem href={`/${locale}/campaigns/create`}>Create New</MenuItem>
+              </SubMenu>
+              <MenuItem href={`/${locale}/lists`} icon={<i className='tabler-list' />}>
+                Lists
+              </MenuItem>
+              <MenuItem href={`/${locale}/media`} icon={<i className='tabler-photo' />}>
+                Media
+              </MenuItem>
+              <SubMenu label='Automations' icon={<i className='tabler-robot' />}>
+                <MenuItem href={`/${locale}/automations/list`}>All Automations</MenuItem>
+                <MenuItem href={`/${locale}/automations/create`}>Create New</MenuItem>
+              </SubMenu>
+              <MenuItem href={`/${locale}/dashboards/analytics`} icon={<i className='tabler-chart-bar' />}>
+                Analytics
+              </MenuItem>
+            </>
+          ) : (
+            <MenuItem
+              icon={<i className='tabler-eye' />}
+              onClick={() => toggleSection('email')}
+            >
+              Show Email Marketing
+            </MenuItem>
+          )}
         </MenuSection>
 
-        {/* WhatsApp Marketing Section — visible to admin + user */}
-        <MenuSection label='WhatsApp Marketing'>
-          <MenuItem href={`/${locale}/whatsapp`} icon={<i className='tabler-brand-whatsapp' />}>
-            Dashboard
-          </MenuItem>
-          <MenuItem href={`/${locale}/whatsapp/contacts`} icon={<i className='tabler-address-book' />}>
-            Contacts
-          </MenuItem>
-          <MenuItem href={`/${locale}/whatsapp/groups`} icon={<i className='tabler-users-group' />}>
-            Groups
-          </MenuItem>
-          <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
-            <MenuItem href={`/${locale}/whatsapp/campaigns`}>All Campaigns</MenuItem>
-            <MenuItem href={`/${locale}/whatsapp/campaigns/create`}>Create New</MenuItem>
-          </SubMenu>
-          <SubMenu label='Templates' icon={<i className='tabler-template' />}>
-            <MenuItem href={`/${locale}/whatsapp/templates`}>My Templates</MenuItem>
-            <MenuItem href={`/${locale}/whatsapp/templates/library`}>Template Library</MenuItem>
-          </SubMenu>
-          <MenuItem href={`/${locale}/whatsapp/analytics`} icon={<i className='tabler-chart-dots-3' />}>
-            Analytics
-          </MenuItem>
-          <MenuItem href={`/${locale}/whatsapp/settings`} icon={<i className='tabler-settings' />}>
-            Settings
-          </MenuItem>
+        {/* WhatsApp Marketing Section */}
+        <MenuSection label={
+          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            WhatsApp Marketing
+            <SectionToggle section='whatsapp' visible={visibility.whatsapp} />
+          </span>
+        }>
+          {visibility.whatsapp ? (
+            <>
+              <MenuItem href={`/${locale}/whatsapp`} icon={<i className='tabler-brand-whatsapp' />}>
+                Dashboard
+              </MenuItem>
+              <MenuItem href={`/${locale}/whatsapp/contacts`} icon={<i className='tabler-address-book' />}>
+                Contacts
+              </MenuItem>
+              <MenuItem href={`/${locale}/whatsapp/groups`} icon={<i className='tabler-users-group' />}>
+                Groups
+              </MenuItem>
+              <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
+                <MenuItem href={`/${locale}/whatsapp/campaigns`}>All Campaigns</MenuItem>
+                <MenuItem href={`/${locale}/whatsapp/campaigns/create`}>Create New</MenuItem>
+              </SubMenu>
+              <SubMenu label='Templates' icon={<i className='tabler-template' />}>
+                <MenuItem href={`/${locale}/whatsapp/templates`}>My Templates</MenuItem>
+                <MenuItem href={`/${locale}/whatsapp/templates/library`}>Template Library</MenuItem>
+              </SubMenu>
+              <MenuItem href={`/${locale}/whatsapp/analytics`} icon={<i className='tabler-chart-dots-3' />}>
+                Analytics
+              </MenuItem>
+              <MenuItem href={`/${locale}/whatsapp/settings`} icon={<i className='tabler-settings' />}>
+                Settings
+              </MenuItem>
+            </>
+          ) : (
+            <MenuItem
+              icon={<i className='tabler-eye' />}
+              onClick={() => toggleSection('whatsapp')}
+            >
+              Show WhatsApp Marketing
+            </MenuItem>
+          )}
         </MenuSection>
 
         {/* SMS Marketing Section */}
-        <MenuSection label='SMS Marketing'>
-          <MenuItem href={`/${locale}/sms`} icon={<i className='tabler-message' />}>
-            Dashboard
-          </MenuItem>
-          <MenuItem href={`/${locale}/sms/contacts`} icon={<i className='tabler-address-book' />}>
-            Contacts
-          </MenuItem>
-          <MenuItem href={`/${locale}/sms/groups`} icon={<i className='tabler-users-group' />}>
-            Groups
-          </MenuItem>
-          <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
-            <MenuItem href={`/${locale}/sms/campaigns`}>All Campaigns</MenuItem>
-            <MenuItem href={`/${locale}/sms/campaigns/create`}>Create New</MenuItem>
-          </SubMenu>
-          <MenuItem href={`/${locale}/sms/analytics`} icon={<i className='tabler-chart-dots-3' />}>
-            Analytics
-          </MenuItem>
-          <MenuItem href={`/${locale}/sms/settings`} icon={<i className='tabler-settings' />}>
-            Settings
-          </MenuItem>
+        <MenuSection label={
+          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            SMS Marketing
+            <SectionToggle section='sms' visible={visibility.sms} />
+          </span>
+        }>
+          {visibility.sms ? (
+            <>
+              <MenuItem href={`/${locale}/sms`} icon={<i className='tabler-message' />}>
+                Dashboard
+              </MenuItem>
+              <MenuItem href={`/${locale}/sms/contacts`} icon={<i className='tabler-address-book' />}>
+                Contacts
+              </MenuItem>
+              <MenuItem href={`/${locale}/sms/groups`} icon={<i className='tabler-users-group' />}>
+                Groups
+              </MenuItem>
+              <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
+                <MenuItem href={`/${locale}/sms/campaigns`}>All Campaigns</MenuItem>
+                <MenuItem href={`/${locale}/sms/campaigns/create`}>Create New</MenuItem>
+              </SubMenu>
+              <MenuItem href={`/${locale}/sms/analytics`} icon={<i className='tabler-chart-dots-3' />}>
+                Analytics
+              </MenuItem>
+              <MenuItem href={`/${locale}/sms/settings`} icon={<i className='tabler-settings' />}>
+                Settings
+              </MenuItem>
+            </>
+          ) : (
+            <MenuItem
+              icon={<i className='tabler-eye' />}
+              onClick={() => toggleSection('sms')}
+            >
+              Show SMS Marketing
+            </MenuItem>
+          )}
         </MenuSection>
 
         {/* API Services Section */}

@@ -28,6 +28,7 @@ import Tooltip from '@mui/material/Tooltip'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
+import SMSOnboardingChecklist from './SMSOnboardingChecklist'
 
 // Service Imports
 import smsService from '@/services/sms'
@@ -151,6 +152,11 @@ const SMSDashboard = () => {
 
   return (
     <Grid container spacing={6}>
+      {/* Onboarding Checklist */}
+      <Grid size={{ xs: 12 }}>
+        <SMSOnboardingChecklist />
+      </Grid>
+
       {/* Stat Cards */}
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard
@@ -237,6 +243,13 @@ const SMSDashboard = () => {
                   onClick={() => router.push(`/${locale}/sms/contacts/import`)}
                 >
                   Import Contacts
+                </Button>
+                <Button
+                  variant='outlined'
+                  startIcon={<i className='tabler-settings' />}
+                  onClick={() => router.push(`/${locale}/sms/settings`)}
+                >
+                  Settings
                 </Button>
               </div>
             </div>

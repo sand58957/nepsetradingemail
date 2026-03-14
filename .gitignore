@@ -83,3 +83,4 @@ listmonk/
 coverage/
 dist/
 backend/main
+backend/nepse-backend

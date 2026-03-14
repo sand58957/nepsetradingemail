@@ -325,16 +325,17 @@ const WACampaignList = () => {
           <i className='tabler-eye text-[18px] mr-2' />
           View Details
         </MenuItem>
-        {menuCampaign && ['draft', 'cancelled', 'failed'].includes(menuCampaign.status) && (
-          <MenuItem onClick={() => {
-            setAnchorEl(null)
+        <MenuItem onClick={() => {
+          setAnchorEl(null)
+
+          if (menuCampaign) {
             setDeletingId(menuCampaign.id)
             setDeleteDialogOpen(true)
-          }}>
-            <i className='tabler-trash text-[18px] mr-2' />
-            Delete
-          </MenuItem>
-        )}
+          }
+        }}>
+          <i className='tabler-trash text-[18px] mr-2' />
+          Delete
+        </MenuItem>
       </Menu>
 
       {/* Delete Dialog */}

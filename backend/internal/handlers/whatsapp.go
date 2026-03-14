@@ -1229,17 +1229,20 @@ func (h *WhatsAppHandler) DeleteCampaign(c echo.Context) error {
 		return err
 	}
 
-	// Only allow deleting draft/cancelled campaigns
-	var currentStatus string
-	h.db.Get(&currentStatus, "SELECT status FROM wa_campaigns WHERE id = $1 AND account_id = $2", id, accountID)
-	if currentStatus != "draft" && currentStatus != "cancelled" && currentStatus != "failed" {
-		return response.BadRequest(c, "Only draft, cancelled, or failed campaigns can be deleted")
-	}
-
-	_, err2 := h.db.Exec("DELETE FROM wa_campaigns WHERE id = $1 AND account_id = $2", id, accountID)
+	// Delete campaign and its messages
+	tx, _ := h.db.Beginx()
+	tx.Exec("DELETE FROM wa_campaign_messages WHERE campaign_id = $1", id)
+	result, err2 := tx.Exec("DELETE FROM wa_campaigns WHERE id = $1 AND account_id = $2", id, accountID)
 	if err2 != nil {
+		tx.Rollback()
 		return response.InternalError(c, "Failed to delete campaign")
 	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		tx.Rollback()
+		return response.NotFound(c, "Campaign not found")
+	}
+	tx.Commit()
 
 	return response.SuccessWithMessage(c, "Campaign deleted", nil)
 }
