@@ -58,6 +58,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - FRONTEND_URL=https://nepalfillings.com
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - DKIM_KEYS_DIR=/opt/dkim-keys
     volumes:
       - /opt/dkim-keys:/opt/dkim-keys

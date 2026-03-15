@@ -312,6 +312,66 @@ func (s *Server) RegisterRoutes() {
 	smsAnalytics.GET("/campaigns/:id", smsHandler.GetCampaignAnalytics)
 
 	// ==============================================================
+	// Telegram Marketing — all authenticated users (account-scoped)
+	// ==============================================================
+	tgHandler := handlers.NewTelegramHandler(s.DB)
+
+	// Telegram Settings
+	tg := staff.Group("/telegram")
+	tg.GET("/settings", tgHandler.GetSettings)
+	tg.PUT("/settings", tgHandler.UpdateSettings)
+	tg.POST("/settings/test", tgHandler.TestConnection)
+
+	// Telegram Contacts
+	tgContacts := tg.Group("/contacts")
+	tgContacts.GET("", tgHandler.ListContacts)
+	tgContacts.GET("/:id", tgHandler.GetContact)
+	tgContacts.POST("", tgHandler.CreateContact)
+	tgContacts.PUT("/:id", tgHandler.UpdateContact)
+	tgContacts.DELETE("/:id", tgHandler.DeleteContact)
+	tgContacts.POST("/import", tgHandler.ImportContacts)
+	tgContacts.GET("/export", tgHandler.ExportContacts)
+	tgContacts.GET("/tags", tgHandler.ListContactTags)
+	tgContacts.POST("/tags", tgHandler.CreateContactTag)
+	tgContacts.DELETE("/tags/:tag", tgHandler.DeleteContactTag)
+	tgContacts.GET("/stats", tgHandler.GetContactStats)
+
+	// Telegram Campaigns
+	tgCampaigns := tg.Group("/campaigns")
+	tgCampaigns.GET("", tgHandler.ListCampaigns)
+	tgCampaigns.GET("/:id", tgHandler.GetCampaign)
+	tgCampaigns.POST("", tgHandler.CreateCampaign)
+	tgCampaigns.PUT("/:id", tgHandler.UpdateCampaign)
+	tgCampaigns.DELETE("/:id", tgHandler.DeleteCampaign)
+	tgCampaigns.POST("/:id/send", tgHandler.SendCampaign)
+	tgCampaigns.POST("/:id/test", tgHandler.TestCampaign)
+	tgCampaigns.POST("/:id/pause", tgHandler.PauseCampaign)
+	tgCampaigns.POST("/:id/resume", tgHandler.ResumeCampaign)
+	tgCampaigns.POST("/audience-count", tgHandler.GetAudienceCount)
+
+	// Telegram Contact Groups
+	tgGroups := tg.Group("/groups")
+	tgGroups.GET("", tgHandler.ListGroups)
+	tgGroups.GET("/:id", tgHandler.GetGroup)
+	tgGroups.POST("", tgHandler.CreateGroup)
+	tgGroups.PUT("/:id", tgHandler.UpdateGroup)
+	tgGroups.DELETE("/:id", tgHandler.DeleteGroup)
+	tgGroups.GET("/:id/members", tgHandler.ListGroupMembers)
+	tgGroups.POST("/:id/members", tgHandler.AddGroupMembers)
+	tgGroups.DELETE("/:id/members", tgHandler.RemoveGroupMembers)
+
+	// Telegram Analytics
+	tgAnalytics := tg.Group("/analytics")
+	tgAnalytics.GET("/overview", tgHandler.GetOverview)
+	tgAnalytics.GET("/campaigns/:id", tgHandler.GetCampaignAnalytics)
+
+	// Telegram Webhook — Public endpoint (no auth, verified by secret)
+	tgWebhookLimiter := middleware.NewRateLimiter(50, 100)
+	tgWebhookGroup := api.Group("")
+	tgWebhookGroup.Use(tgWebhookLimiter.Middleware())
+	tgWebhookGroup.POST("/webhooks/telegram/:secret", tgHandler.WebhookReceive)
+
+	// ==============================================================
 	// API Key Management — authenticated users manage their own keys
 	// ==============================================================
 	apiKeyHandler := handlers.NewAPIKeyHandler(s.DB)

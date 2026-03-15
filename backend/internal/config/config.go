@@ -18,6 +18,7 @@ type Config struct {
 	RefreshExpiry    int // in hours
 	FrontendURL      string
 	SendGridAPIKey   string
+	TelegramBotToken string
 }
 
 func Load() (*Config, error) {
@@ -48,6 +49,7 @@ func Load() (*Config, error) {
 		RefreshExpiry:    refreshExpiry,
 		FrontendURL:      getEnv("FRONTEND_URL", "https://nepalfillings.com"),
 		SendGridAPIKey:   getEnv("SENDGRID_API_KEY", ""),
+		TelegramBotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
 	}
 
 	if cfg.JWTSecret == "" {

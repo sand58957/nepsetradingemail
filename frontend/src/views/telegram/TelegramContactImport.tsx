@@ -1,0 +1,480 @@
+'use client'
+
+// React Imports
+import { useState, useRef, useEffect } from 'react'
+
+// MUI Imports
+import Card from '@mui/material/Card'
+import CardHeader from '@mui/material/CardHeader'
+import CardContent from '@mui/material/CardContent'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import Alert from '@mui/material/Alert'
+import Snackbar from '@mui/material/Snackbar'
+import CircularProgress from '@mui/material/CircularProgress'
+import LinearProgress from '@mui/material/LinearProgress'
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import Chip from '@mui/material/Chip'
+import Checkbox from '@mui/material/Checkbox'
+
+// Service Imports
+import telegramService from '@/services/telegram'
+
+// Type Imports
+import type { TelegramContactGroup } from '@/types/telegram'
+
+interface ParsedRow {
+  [key: string]: string
+}
+
+const TelegramContactImport = () => {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null)
+
+  // Preview state
+  const [previewData, setPreviewData] = useState<ParsedRow[]>([])
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([])
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({})
+  const [showPreview, setShowPreview] = useState(false)
+
+  const [availableGroups, setAvailableGroups] = useState<TelegramContactGroup[]>([])
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([])
+
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const response = await telegramService.getGroups()
+
+        setAvailableGroups(response.data || [])
+      } catch {
+        // Silently fail
+      }
+    }
+
+    fetchGroups()
+  }, [])
+
+  const targetFields = [
+    { value: '', label: 'Skip' },
+    { value: 'chat_id', label: 'Chat ID' },
+    { value: 'username', label: 'Username' },
+    { value: 'first_name', label: 'First Name' },
+    { value: 'last_name', label: 'Last Name' },
+    { value: 'tags', label: 'Tags' }
+  ]
+
+  const parseCSV = (text: string): { headers: string[]; rows: ParsedRow[] } => {
+    const lines = text.split('\n').filter(line => line.trim())
+
+    if (lines.length < 2) return { headers: [], rows: [] }
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''))
+    const rows: ParsedRow[] = []
+
+    for (let i = 1; i < Math.min(lines.length, 6); i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/^["']|["']$/g, ''))
+      const row: ParsedRow = {}
+
+      headers.forEach((h, idx) => {
+        row[h] = values[idx] || ''
+      })
+
+      rows.push(row)
+    }
+
+    return { headers, rows }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+
+    if (file) {
+      if (!file.name.endsWith('.csv')) {
+        setSnackbar({ open: true, message: 'Please select a CSV file', severity: 'error' })
+
+        return
+      }
+
+      setSelectedFile(file)
+      setImportResult(null)
+      setShowPreview(false)
+
+      // Parse preview
+      const reader = new FileReader()
+
+      reader.onload = (event) => {
+        const text = event.target?.result as string
+
+        if (text) {
+          const { headers, rows } = parseCSV(text)
+
+          setCsvHeaders(headers)
+          setPreviewData(rows)
+
+          // Auto-map columns
+          const mapping: Record<string, string> = {}
+
+          headers.forEach(h => {
+            const lower = h.toLowerCase()
+
+            if (lower === 'chat_id' || lower === 'chatid' || lower === 'telegram_id') {
+              mapping[h] = 'chat_id'
+            } else if (lower === 'username' || lower === 'user_name') {
+              mapping[h] = 'username'
+            } else if (lower === 'first_name' || lower === 'firstname' || lower === 'name') {
+              mapping[h] = 'first_name'
+            } else if (lower === 'last_name' || lower === 'lastname' || lower === 'surname') {
+              mapping[h] = 'last_name'
+            } else if (lower === 'tags' || lower === 'tag') {
+              mapping[h] = 'tags'
+            } else {
+              mapping[h] = ''
+            }
+          })
+
+          setColumnMapping(mapping)
+          setShowPreview(true)
+        }
+      }
+
+      reader.readAsText(file)
+    }
+  }
+
+  const handleImport = async () => {
+    if (!selectedFile) {
+      setSnackbar({ open: true, message: 'Please select a file first', severity: 'error' })
+
+      return
+    }
+
+    // Validate chat_id column is mapped
+    const hasChatId = Object.values(columnMapping).includes('chat_id')
+
+    if (!hasChatId) {
+      setSnackbar({ open: true, message: 'Please map at least the Chat ID column', severity: 'error' })
+
+      return
+    }
+
+    setImporting(true)
+
+    try {
+      const formData = new FormData()
+
+      formData.append('file', selectedFile)
+      formData.append('column_mapping', JSON.stringify(columnMapping))
+
+      if (selectedGroupIds.length > 0) {
+        formData.append('group_ids', JSON.stringify(selectedGroupIds))
+      }
+
+      const response = await telegramService.importContacts(formData)
+
+      setImportResult(response.data)
+      setSnackbar({
+        open: true,
+        message: `Imported ${response.data.imported} contacts (${response.data.skipped} skipped)`,
+        severity: 'success'
+      })
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to import contacts', severity: 'error' })
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  return (
+    <>
+      <Grid container spacing={6}>
+        {/* Upload Card */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Card>
+            <CardHeader title='Upload CSV File' />
+            <CardContent>
+              <div className='flex flex-col gap-4'>
+                {/* Drop Zone */}
+                <Box
+                  className='flex flex-col items-center justify-center p-8 rounded-lg cursor-pointer'
+                  sx={{
+                    border: '2px dashed',
+                    borderColor: selectedFile ? 'success.main' : 'divider',
+                    backgroundColor: selectedFile ? 'success.lighter' : 'action.hover',
+                    '&:hover': { borderColor: 'primary.main' }
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <i className={`${selectedFile ? 'tabler-file-check' : 'tabler-cloud-upload'} text-[48px] mb-2`}
+                    style={{ color: selectedFile ? 'var(--mui-palette-success-main)' : 'var(--mui-palette-text-secondary)' }}
+                  />
+                  {selectedFile ? (
+                    <>
+                      <Typography className='font-medium'>{selectedFile.name}</Typography>
+                      <Typography variant='body2' color='text.secondary'>
+                        {(selectedFile.size / 1024).toFixed(1)} KB -- Click to change
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <Typography className='font-medium'>Click to select CSV file</Typography>
+                      <Typography variant='body2' color='text.secondary'>
+                        Supported format: .csv
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+
+                <input
+                  ref={fileInputRef}
+                  type='file'
+                  accept='.csv'
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                />
+
+                {/* Column Mapping */}
+                {showPreview && csvHeaders.length > 0 && (
+                  <Card variant='outlined'>
+                    <CardHeader
+                      title='Column Mapping'
+                      subheader='Map your CSV columns to contact fields'
+                    />
+                    <CardContent>
+                      <Grid container spacing={3}>
+                        {csvHeaders.map(header => (
+                          <Grid key={header} size={{ xs: 12, sm: 6 }}>
+                            <FormControl fullWidth size='small'>
+                              <InputLabel>{header}</InputLabel>
+                              <Select
+                                value={columnMapping[header] || ''}
+                                label={header}
+                                onChange={e => setColumnMapping(prev => ({
+                                  ...prev,
+                                  [header]: e.target.value
+                                }))}
+                              >
+                                {targetFields.map(f => (
+                                  <MenuItem key={f.value} value={f.value}>
+                                    {f.label}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Preview Table */}
+                {showPreview && previewData.length > 0 && (
+                  <Card variant='outlined'>
+                    <CardHeader
+                      title='Preview'
+                      subheader={`Showing first ${previewData.length} rows`}
+                    />
+                    <TableContainer>
+                      <Table size='small'>
+                        <TableHead>
+                          <TableRow>
+                            {csvHeaders.map(h => (
+                              <TableCell key={h}>
+                                <div className='flex flex-col'>
+                                  <Typography variant='caption' color='text.secondary'>{h}</Typography>
+                                  {columnMapping[h] && (
+                                    <Chip
+                                      label={targetFields.find(f => f.value === columnMapping[h])?.label || columnMapping[h]}
+                                      size='small'
+                                      color='primary'
+                                      variant='outlined'
+                                    />
+                                  )}
+                                </div>
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {previewData.map((row, idx) => (
+                            <TableRow key={idx}>
+                              {csvHeaders.map(h => (
+                                <TableCell key={h}>
+                                  <Typography variant='body2'>{row[h] || '-'}</Typography>
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Card>
+                )}
+
+                {/* Group Assignment */}
+                {availableGroups.length > 0 && (
+                  <FormControl fullWidth size='small'>
+                    <InputLabel>Add to Groups</InputLabel>
+                    <Select
+                      multiple
+                      value={selectedGroupIds}
+                      label='Add to Groups'
+                      onChange={e => setSelectedGroupIds(e.target.value as number[])}
+                      renderValue={(selected) => (
+                        <div className='flex gap-1 flex-wrap'>
+                          {(selected as number[]).map(id => {
+                            const group = availableGroups.find(g => g.id === id)
+
+                            return group ? <Chip key={id} label={group.name} size='small' /> : null
+                          })}
+                        </div>
+                      )}
+                    >
+                      {availableGroups.map(group => (
+                        <MenuItem key={group.id} value={group.id}>
+                          <Checkbox checked={selectedGroupIds.includes(group.id)} />
+                          {group.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+
+                {/* Progress */}
+                {importing && (
+                  <Box>
+                    <LinearProgress />
+                    <Typography variant='body2' color='text.secondary' className='mt-2'>
+                      Importing contacts...
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Result */}
+                {importResult && (
+                  <Alert severity='success' className='mt-2'>
+                    Successfully imported <strong>{importResult.imported}</strong> contacts.
+                    {importResult.skipped > 0 && ` ${importResult.skipped} duplicates skipped.`}
+                  </Alert>
+                )}
+
+                {/* Actions */}
+                <div className='flex gap-3'>
+                  <Button
+                    variant='contained'
+                    onClick={handleImport}
+                    disabled={!selectedFile || importing}
+                    startIcon={importing ? <CircularProgress size={18} /> : <i className='tabler-upload' />}
+                  >
+                    {importing ? 'Importing...' : 'Import Contacts'}
+                  </Button>
+                  {importResult && (
+                    <Button
+                      variant='outlined'
+                      onClick={() => {
+                        setSelectedFile(null)
+                        setImportResult(null)
+                        setShowPreview(false)
+                        setPreviewData([])
+                        setCsvHeaders([])
+                        setColumnMapping({})
+                      }}
+                      startIcon={<i className='tabler-refresh' />}
+                    >
+                      Import More
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Instructions */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card>
+            <CardHeader title='CSV Format' />
+            <CardContent>
+              <div className='flex flex-col gap-3'>
+                <Alert severity='info'>
+                  Your CSV file should have headers in the first row.
+                </Alert>
+
+                <Typography variant='subtitle2'>Required Columns:</Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  <strong>chat_id</strong> -- Telegram chat ID (numeric, e.g. 123456789)
+                </Typography>
+
+                <Typography variant='subtitle2' className='mt-2'>Optional Columns:</Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  <strong>username</strong> -- Telegram username (without @)
+                </Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  <strong>first_name</strong> -- First name
+                </Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  <strong>last_name</strong> -- Last name
+                </Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  <strong>tags</strong> -- Comma-separated tags
+                </Typography>
+
+                <Typography variant='subtitle2' className='mt-2'>Example:</Typography>
+                <Box
+                  className='p-3 rounded'
+                  sx={{ backgroundColor: 'action.hover', fontFamily: 'monospace', fontSize: '0.75rem' }}
+                >
+                  chat_id,username,first_name,last_name,tags<br />
+                  123456789,johndoe,John,Doe,&quot;vip,investor&quot;<br />
+                  987654321,janedoe,Jane,Doe,trader
+                </Box>
+
+                <Typography variant='caption' color='text.secondary' className='mt-2'>
+                  Duplicate chat IDs will be skipped. Existing contacts will not be overwritten.
+                </Typography>
+              </div>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant='filled'
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
+  )
+}
+
+export default TelegramContactImport

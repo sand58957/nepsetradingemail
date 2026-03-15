@@ -46,6 +46,7 @@ type SectionVisibility = {
   email: boolean
   whatsapp: boolean
   sms: boolean
+  telegram: boolean
 }
 
 const VISIBILITY_KEY = 'sidebar_section_visibility'
@@ -53,7 +54,8 @@ const VISIBILITY_KEY = 'sidebar_section_visibility'
 const getDefaultVisibility = (): SectionVisibility => ({
   email: true,
   whatsapp: true,
-  sms: true
+  sms: true,
+  telegram: true
 })
 
 const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) => (
@@ -262,6 +264,45 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
               onClick={() => toggleSection('sms')}
             >
               Show SMS Marketing
+            </MenuItem>
+          )}
+        </MenuSection>
+
+        {/* Telegram Marketing Section */}
+        <MenuSection label={
+          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            Telegram Marketing
+            <SectionToggle section='telegram' visible={visibility.telegram} />
+          </span>
+        }>
+          {visibility.telegram ? (
+            <>
+              <MenuItem href={`/${locale}/telegram`} icon={<i className='tabler-brand-telegram' />}>
+                Dashboard
+              </MenuItem>
+              <MenuItem href={`/${locale}/telegram/contacts`} icon={<i className='tabler-address-book' />}>
+                Contacts
+              </MenuItem>
+              <MenuItem href={`/${locale}/telegram/groups`} icon={<i className='tabler-users-group' />}>
+                Groups
+              </MenuItem>
+              <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
+                <MenuItem href={`/${locale}/telegram/campaigns`}>All Campaigns</MenuItem>
+                <MenuItem href={`/${locale}/telegram/campaigns/create`}>Create New</MenuItem>
+              </SubMenu>
+              <MenuItem href={`/${locale}/telegram/analytics`} icon={<i className='tabler-chart-dots-3' />}>
+                Analytics
+              </MenuItem>
+              <MenuItem href={`/${locale}/telegram/settings`} icon={<i className='tabler-settings' />}>
+                Settings
+              </MenuItem>
+            </>
+          ) : (
+            <MenuItem
+              icon={<i className='tabler-eye' />}
+              onClick={() => toggleSection('telegram')}
+            >
+              Show Telegram Marketing
             </MenuItem>
           )}
         </MenuSection>
