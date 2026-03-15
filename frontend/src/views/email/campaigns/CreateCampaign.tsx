@@ -181,6 +181,13 @@ const CreateCampaign = () => {
     return fromEmail.trim()
   }
 
+  // Check if the body is a full HTML document (has <!DOCTYPE> or <html> tags)
+  const isFullHtmlDocument = (html: string): boolean => {
+    const trimmed = html.trim().toLowerCase()
+
+    return trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')
+  }
+
   // Inject preheader into HTML body (HTML-encode to prevent injection)
   const assembleBody = () => {
     if (!preheader.trim()) return body
@@ -202,21 +209,40 @@ const CreateCampaign = () => {
     return preheaderHtml + body
   }
 
+  // Build campaign payload with correct template_id
+  // When the body is a full HTML document, use the passthrough template
+  // to avoid nesting HTML documents inside the default template wrapper
+  const buildCampaignPayload = () => {
+    const payload: any = {
+      name,
+      subject,
+      from_email: assembleFromEmail(),
+      type: campaignType as any,
+      content_type: 'html',
+      body: assembleBody(),
+      lists: selectedLists,
+    }
+
+    // Full HTML documents need the passthrough template (no wrapper)
+    if (isFullHtmlDocument(body)) {
+      payload.template_id = 155
+    }
+
+    return payload
+  }
+
   // Save as draft
   const handleSaveAsDraft = async () => {
     setSaving(true)
 
     try {
-      const result = await campaignService.create({
-        name,
-        subject,
-        from_email: assembleFromEmail(),
-        type: campaignType as any,
-        content_type: 'html',
-        body: assembleBody(),
-        lists: selectedLists,
-        send_at: !sendNow && scheduledDate ? new Date(scheduledDate).toISOString() : undefined
-      })
+      const payload = buildCampaignPayload()
+
+      if (!sendNow && scheduledDate) {
+        payload.send_at = new Date(scheduledDate).toISOString()
+      }
+
+      const result = await campaignService.create(payload)
 
       // Clean up sessionStorage
       sessionStorage.removeItem('campaign_email_html')
@@ -236,16 +262,13 @@ const CreateCampaign = () => {
     setSaving(true)
 
     try {
-      const result = await campaignService.create({
-        name,
-        subject,
-        from_email: assembleFromEmail(),
-        type: campaignType as any,
-        content_type: 'html',
-        body: assembleBody(),
-        lists: selectedLists,
-        send_at: !sendNow && scheduledDate ? new Date(scheduledDate).toISOString() : undefined
-      })
+      const payload = buildCampaignPayload()
+
+      if (!sendNow && scheduledDate) {
+        payload.send_at = new Date(scheduledDate).toISOString()
+      }
+
+      const result = await campaignService.create(payload)
 
       const status = sendNow ? 'running' : 'scheduled'
 

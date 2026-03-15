@@ -224,6 +224,7 @@ export interface CreateCampaignPayload {
   lists: number[]
   tags?: string[]
   send_at?: string
+  template_id?: number
 }
 
 export interface UpdateCampaignPayload {
