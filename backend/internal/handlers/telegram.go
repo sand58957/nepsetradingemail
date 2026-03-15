@@ -217,6 +217,7 @@ func (h *TelegramHandler) TestConnection(c echo.Context) error {
 // ListContacts returns a paginated list of Telegram contacts.
 func (h *TelegramHandler) ListContacts(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
+	log.Printf("[telegram] ListContacts called with accountID=%d, user_email=%v", accountID, c.Get("user_email"))
 
 	page, _ := strconv.Atoi(c.QueryParam("page"))
 	if page < 1 {
