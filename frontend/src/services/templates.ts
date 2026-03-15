@@ -38,6 +38,21 @@ export const templateService = {
 
   setDefault: async (id: number): Promise<void> => {
     await api.put(`/templates/${id}/default`)
+  },
+
+  // SendGrid Import
+  listSendGrid: async (): Promise<{ data: any[] }> => {
+    const response = await api.get('/templates/sendgrid')
+
+    return response.data
+  },
+
+  importSendGrid: async (templateIds?: string[]): Promise<{
+    data: { imported: number; skipped: number; errors: string[]; total: number }
+  }> => {
+    const response = await api.post('/templates/sendgrid/import', templateIds ? { template_ids: templateIds } : {})
+
+    return response.data
   }
 }
 

@@ -1,22 +1,28 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/sandeep/nepsetradingemail/backend/internal/config"
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/listmonk"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
 
 type TemplateHandler struct {
-	lm *listmonk.Client
+	lm  *listmonk.Client
+	cfg *config.Config
 }
 
-func NewTemplateHandler(lm *listmonk.Client) *TemplateHandler {
-	return &TemplateHandler{lm: lm}
+func NewTemplateHandler(lm *listmonk.Client, cfg *config.Config) *TemplateHandler {
+	return &TemplateHandler{lm: lm, cfg: cfg}
 }
 
 // validateTemplateID validates that the path param is a numeric ID
@@ -168,4 +174,230 @@ func (h *TemplateHandler) SetDefault(c echo.Context) error {
 	}
 
 	return c.JSONBlob(statusCode, data)
+}
+
+// ============================================================
+// SendGrid Template Import
+// ============================================================
+
+type sendGridTemplate struct {
+	ID         string                `json:"id"`
+	Name       string                `json:"name"`
+	Generation string                `json:"generation"`
+	UpdatedAt  string                `json:"updated_at"`
+	Versions   []sendGridVersion     `json:"versions"`
+}
+
+type sendGridVersion struct {
+	ID           string `json:"id"`
+	TemplateID   string `json:"template_id"`
+	Active       int    `json:"active"`
+	Name         string `json:"name"`
+	Subject      string `json:"subject"`
+	HTMLContent  string `json:"html_content"`
+	PlainContent string `json:"plain_content"`
+	Editor       string `json:"editor"`
+	ThumbnailURL string `json:"thumbnail_url"`
+	UpdatedAt    string `json:"updated_at"`
+}
+
+type sendGridListResponse struct {
+	Result   []sendGridTemplate `json:"result"`
+	Metadata struct {
+		Count int `json:"count"`
+	} `json:"_metadata"`
+}
+
+// ListSendGridTemplates lists available SendGrid templates without importing
+func (h *TemplateHandler) ListSendGridTemplates(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
+	apiKey := h.cfg.SendGridAPIKey
+	if apiKey == "" {
+		return response.BadRequest(c, "SendGrid API key not configured")
+	}
+
+	templates, err := fetchSendGridTemplates(apiKey)
+	if err != nil {
+		log.Printf("[templates] Failed to fetch SendGrid templates: %v", err)
+		return response.InternalError(c, "Failed to fetch templates from SendGrid")
+	}
+
+	return response.Success(c, templates)
+}
+
+// ImportSendGridTemplates fetches templates from SendGrid and imports them into Listmonk
+func (h *TemplateHandler) ImportSendGridTemplates(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
+	apiKey := h.cfg.SendGridAPIKey
+	if apiKey == "" {
+		return response.BadRequest(c, "SendGrid API key not configured")
+	}
+
+	// Optionally filter by template IDs
+	var req struct {
+		TemplateIDs []string `json:"template_ids"`
+	}
+	c.Bind(&req)
+
+	// Fetch all SendGrid dynamic templates
+	templates, err := fetchSendGridTemplates(apiKey)
+	if err != nil {
+		log.Printf("[templates] Failed to fetch SendGrid templates: %v", err)
+		return response.InternalError(c, "Failed to fetch templates from SendGrid")
+	}
+
+	imported := 0
+	skipped := 0
+	var errors []string
+
+	for _, tpl := range templates {
+		// Filter by IDs if specified
+		if len(req.TemplateIDs) > 0 {
+			found := false
+			for _, tid := range req.TemplateIDs {
+				if tid == tpl.ID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		// Find active version (or most recent)
+		var bestVersion *sendGridVersion
+		for i := range tpl.Versions {
+			if tpl.Versions[i].Active == 1 {
+				bestVersion = &tpl.Versions[i]
+				break
+			}
+		}
+		if bestVersion == nil && len(tpl.Versions) > 0 {
+			bestVersion = &tpl.Versions[0]
+		}
+		if bestVersion == nil {
+			skipped++
+			continue
+		}
+
+		// Fetch full version content (includes html_content)
+		versionDetail, err := fetchSendGridVersion(apiKey, tpl.ID, bestVersion.ID)
+		if err != nil {
+			log.Printf("[templates] Failed to fetch SendGrid version %s/%s: %v", tpl.ID, bestVersion.ID, err)
+			errors = append(errors, fmt.Sprintf("Failed to fetch %s: %v", tpl.Name, err))
+			continue
+		}
+
+		htmlContent := versionDetail.HTMLContent
+		if htmlContent == "" {
+			skipped++
+			continue
+		}
+
+		// Create template in Listmonk
+		subject := versionDetail.Subject
+		if subject == "" {
+			subject = tpl.Name
+		}
+
+		templateName := fmt.Sprintf("%s (SendGrid)", tpl.Name)
+
+		payload := map[string]interface{}{
+			"name":    templateName,
+			"type":    "campaign",
+			"subject": subject,
+			"body":    htmlContent,
+		}
+
+		_, statusCode, err := h.lm.Post("/templates", payload)
+		if err != nil || statusCode >= 400 {
+			log.Printf("[templates] Failed to create Listmonk template '%s': status=%d err=%v", templateName, statusCode, err)
+			errors = append(errors, fmt.Sprintf("Failed to import %s", tpl.Name))
+			continue
+		}
+
+		imported++
+		log.Printf("[templates] Imported SendGrid template: %s (version: %s)", tpl.Name, bestVersion.Name)
+	}
+
+	return response.Success(c, map[string]interface{}{
+		"imported": imported,
+		"skipped":  skipped,
+		"errors":   errors,
+		"total":    len(templates),
+	})
+}
+
+func fetchSendGridTemplates(apiKey string) ([]sendGridTemplate, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+
+	req, err := http.NewRequest("GET", "https://api.sendgrid.com/v3/templates?generations=dynamic&page_size=200", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("SendGrid API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result sendGridListResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse SendGrid response: %w", err)
+	}
+
+	return result.Result, nil
+}
+
+func fetchSendGridVersion(apiKey, templateID, versionID string) (*sendGridVersion, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+
+	url := fmt.Sprintf("https://api.sendgrid.com/v3/templates/%s/versions/%s", templateID, versionID)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("SendGrid API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var version sendGridVersion
+	if err := json.Unmarshal(body, &version); err != nil {
+		return nil, fmt.Errorf("failed to parse version response: %w", err)
+	}
+
+	return &version, nil
 }

@@ -17,7 +17,7 @@ func (s *Server) RegisterRoutes() {
 	subscriberHandler := handlers.NewSubscriberHandler(s.LM, s.DB)
 	campaignHandler := handlers.NewCampaignHandler(s.LM)
 	listHandler := handlers.NewListHandler(s.LM)
-	templateHandler := handlers.NewTemplateHandler(s.LM)
+	templateHandler := handlers.NewTemplateHandler(s.LM, s.Config)
 	mediaHandler := handlers.NewMediaHandler(s.LM)
 	settingsHandler := handlers.NewSettingsHandler(s.LM)
 	automationHandler := handlers.NewAutomationHandler(s.DB)
@@ -156,6 +156,8 @@ func (s *Server) RegisterRoutes() {
 	// Templates
 	templates := staff.Group("/templates")
 	templates.GET("", templateHandler.List)
+	templates.GET("/sendgrid", templateHandler.ListSendGridTemplates)
+	templates.POST("/sendgrid/import", templateHandler.ImportSendGridTemplates)
 	templates.GET("/:id", templateHandler.Get)
 	templates.POST("", templateHandler.Create)
 	templates.PUT("/:id", templateHandler.Update)

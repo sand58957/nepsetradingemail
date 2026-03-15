@@ -69,6 +69,13 @@ const TemplateGrid = () => {
   const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(null)
   const [creating, setCreating] = useState(false)
 
+  // SendGrid Import
+  const [sendGridDialogOpen, setSendGridDialogOpen] = useState(false)
+  const [sendGridTemplates, setSendGridTemplates] = useState<any[]>([])
+  const [sendGridLoading, setSendGridLoading] = useState(false)
+  const [sendGridImporting, setSendGridImporting] = useState(false)
+  const [selectedSendGrid, setSelectedSendGrid] = useState<string[]>([])
+
   const [newTemplate, setNewTemplate] = useState({
     name: '',
     type: 'richtext' as ContentType
@@ -165,6 +172,60 @@ const TemplateGrid = () => {
     }
   }
 
+  // SendGrid Import handlers
+  const handleOpenSendGrid = async () => {
+    setSendGridDialogOpen(true)
+    setSendGridLoading(true)
+    setSelectedSendGrid([])
+
+    try {
+      const response = await templateService.listSendGrid()
+
+      setSendGridTemplates(response.data || [])
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Failed to load SendGrid templates',
+        severity: 'error'
+      })
+      setSendGridDialogOpen(false)
+    } finally {
+      setSendGridLoading(false)
+    }
+  }
+
+  const handleToggleSendGrid = (id: string) => {
+    setSelectedSendGrid(prev =>
+      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
+    )
+  }
+
+  const handleImportSendGrid = async () => {
+    setSendGridImporting(true)
+
+    try {
+      const ids = selectedSendGrid.length > 0 ? selectedSendGrid : undefined
+      const response = await templateService.importSendGrid(ids)
+      const result = response.data
+
+      setSendGridDialogOpen(false)
+      setSnackbar({
+        open: true,
+        message: `Imported ${result.imported} template(s)${result.skipped > 0 ? `, ${result.skipped} skipped` : ''}`,
+        severity: 'success'
+      })
+      fetchTemplates()
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || 'Failed to import SendGrid templates',
+        severity: 'error'
+      })
+    } finally {
+      setSendGridImporting(false)
+    }
+  }
+
   if (loading && templates.length === 0) {
     return (
       <div className='flex justify-center items-center py-16'>
@@ -181,13 +242,22 @@ const TemplateGrid = () => {
           title='Email Templates'
           sx={{ flexWrap: 'wrap', rowGap: 2 }}
           action={
-            <Button
-              variant='contained'
-              startIcon={<i className='tabler-plus' />}
-              onClick={() => setCreateDialogOpen(true)}
-            >
-              Create Template
-            </Button>
+            <div className='flex gap-2 flex-wrap'>
+              <Button
+                variant='outlined'
+                startIcon={<i className='tabler-download' />}
+                onClick={handleOpenSendGrid}
+              >
+                Import from SendGrid
+              </Button>
+              <Button
+                variant='contained'
+                startIcon={<i className='tabler-plus' />}
+                onClick={() => setCreateDialogOpen(true)}
+              >
+                Create Template
+              </Button>
+            </div>
           }
         />
         <CardContent>
@@ -343,6 +413,97 @@ const TemplateGrid = () => {
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleDelete} color='error' variant='contained'>
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* SendGrid Import Dialog */}
+      <Dialog open={sendGridDialogOpen} onClose={() => setSendGridDialogOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+        <DialogTitle>Import from SendGrid</DialogTitle>
+        <DialogContent>
+          {sendGridLoading ? (
+            <div className='flex justify-center items-center py-8'>
+              <CircularProgress size={32} />
+              <Typography className='ml-3' color='text.secondary'>Loading SendGrid templates...</Typography>
+            </div>
+          ) : sendGridTemplates.length === 0 ? (
+            <Typography color='text.secondary' className='py-4'>
+              No dynamic templates found in your SendGrid account.
+            </Typography>
+          ) : (
+            <>
+              <DialogContentText className='mb-4'>
+                Select templates to import from SendGrid. The active version of each template will be imported.
+              </DialogContentText>
+              {sendGridTemplates.map((tpl: any) => {
+                const activeVersion = tpl.versions?.find((v: any) => v.active === 1) || tpl.versions?.[0]
+                const isSelected = selectedSendGrid.includes(tpl.id)
+
+                return (
+                  <Card
+                    key={tpl.id}
+                    className='mb-3 cursor-pointer'
+                    onClick={() => handleToggleSendGrid(tpl.id)}
+                    sx={{
+                      border: '2px solid',
+                      borderColor: isSelected ? 'primary.main' : 'divider',
+                      backgroundColor: isSelected ? 'primary.lighter' : 'background.paper',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <CardContent className='flex items-center gap-4'>
+                      <div className='flex items-center'>
+                        <input
+                          type='checkbox'
+                          checked={isSelected}
+                          onChange={() => handleToggleSendGrid(tpl.id)}
+                          onClick={e => e.stopPropagation()}
+                          style={{ width: 18, height: 18 }}
+                        />
+                      </div>
+                      {activeVersion?.thumbnail_url && (
+                        <img
+                          src={`https:${activeVersion.thumbnail_url}`}
+                          alt={tpl.name}
+                          style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--mui-palette-divider)' }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      )}
+                      <div className='grow'>
+                        <Typography className='font-medium'>{tpl.name}</Typography>
+                        {activeVersion && (
+                          <Typography variant='body2' color='text.secondary'>
+                            Subject: {activeVersion.subject || 'N/A'}
+                          </Typography>
+                        )}
+                        <div className='flex gap-1 mt-1'>
+                          <Chip label={tpl.generation || 'dynamic'} size='small' variant='outlined' color='info' />
+                          <Chip
+                            label={`${tpl.versions?.length || 0} version(s)`}
+                            size='small'
+                            variant='outlined'
+                            color='secondary'
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSendGridDialogOpen(false)} color='secondary'>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleImportSendGrid}
+            variant='contained'
+            disabled={sendGridImporting || sendGridLoading || sendGridTemplates.length === 0}
+            startIcon={sendGridImporting ? <CircularProgress size={18} /> : <i className='tabler-download' />}
+          >
+            {sendGridImporting ? 'Importing...' : selectedSendGrid.length > 0 ? `Import Selected (${selectedSendGrid.length})` : 'Import All'}
           </Button>
         </DialogActions>
       </Dialog>
