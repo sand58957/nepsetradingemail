@@ -59,6 +59,10 @@ services:
       - FRONTEND_URL=https://nepalfillings.com
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - BUNNY_CDN_STORAGE_URL=https://sg.storage.bunnycdn.com
+      - BUNNY_CDN_STORAGE_ZONE=nepalfilling
+      - BUNNY_CDN_STORAGE_KEY=${BUNNY_CDN_STORAGE_KEY}
+      - BUNNY_CDN_PULL_URL=https://my-pull-zone-name-nepalfilling.b-cdn.net
       - DKIM_KEYS_DIR=/opt/dkim-keys
     volumes:
       - /opt/dkim-keys:/opt/dkim-keys

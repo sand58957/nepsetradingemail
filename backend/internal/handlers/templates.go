@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -335,8 +337,8 @@ func (h *TemplateHandler) ImportSendGridTemplates(c echo.Context) error {
 	})
 }
 
-// UploadMedia accepts a single image file and uploads it to Listmonk's media storage,
-// returning the hosted URL. This avoids base64-inlining images in email HTML.
+// UploadMedia accepts a single image file and uploads it to Bunny CDN storage,
+// returning the hosted CDN URL. This avoids base64-inlining images in email HTML.
 func (h *TemplateHandler) UploadMedia(c echo.Context) error {
 	if !isAdmin(c) {
 		return adminOnly(c)
@@ -367,32 +369,48 @@ func (h *TemplateHandler) UploadMedia(c echo.Context) error {
 	}
 	defer src.Close()
 
-	data, statusCode, err := h.lm.PostMultipart("/media", "file", file.Filename, src, nil)
+	fileData, err := io.ReadAll(src)
 	if err != nil {
-		log.Printf("[templates] Failed to upload media to Listmonk: %v", err)
-		return response.InternalError(c, "Failed to upload media")
+		return response.InternalError(c, "Failed to read file data")
 	}
 
-	if statusCode >= 400 {
-		log.Printf("[templates] Listmonk media upload returned %d: %s", statusCode, string(data))
-		return response.InternalError(c, "Failed to upload media to storage")
+	// Generate unique filename with timestamp
+	timestamp := time.Now().UnixMilli()
+	safeName := strings.ReplaceAll(file.Filename, " ", "-")
+	storagePath := fmt.Sprintf("email-images/%d-%s", timestamp, safeName)
+
+	// Upload to Bunny CDN Storage
+	storageURL := fmt.Sprintf("%s/%s/%s", h.cfg.BunnyCDNStorageURL, h.cfg.BunnyCDNStorageZone, storagePath)
+
+	req, err := http.NewRequest("PUT", storageURL, bytes.NewReader(fileData))
+	if err != nil {
+		log.Printf("[templates] Failed to create Bunny CDN request: %v", err)
+		return response.InternalError(c, "Failed to upload image")
 	}
 
-	// Parse Listmonk response to extract the URL
-	var lmResp struct {
-		Data struct {
-			URI      string `json:"uri"`
-			Filename string `json:"filename"`
-		} `json:"data"`
+	req.Header.Set("AccessKey", h.cfg.BunnyCDNStorageKey)
+	req.Header.Set("Content-Type", contentType)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[templates] Failed to upload to Bunny CDN: %v", err)
+		return response.InternalError(c, "Failed to upload image to CDN")
 	}
-	if err := json.Unmarshal(data, &lmResp); err != nil {
-		log.Printf("[templates] Failed to parse media response: %v", err)
-		return response.InternalError(c, "Failed to parse media upload response")
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 201 {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("[templates] Bunny CDN returned %d: %s", resp.StatusCode, string(body))
+		return response.InternalError(c, "CDN upload failed")
 	}
+
+	// Return the public CDN URL
+	cdnURL := fmt.Sprintf("%s/%s", h.cfg.BunnyCDNPullURL, storagePath)
 
 	return response.Success(c, map[string]string{
-		"url":      lmResp.Data.URI,
-		"filename": lmResp.Data.Filename,
+		"url":      cdnURL,
+		"filename": file.Filename,
 	})
 }
 

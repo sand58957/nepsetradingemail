@@ -18,7 +18,11 @@ type Config struct {
 	RefreshExpiry    int // in hours
 	FrontendURL      string
 	SendGridAPIKey   string
-	TelegramBotToken string
+	TelegramBotToken   string
+	BunnyCDNStorageURL string
+	BunnyCDNStorageZone string
+	BunnyCDNStorageKey string
+	BunnyCDNPullURL    string
 }
 
 func Load() (*Config, error) {
@@ -49,7 +53,11 @@ func Load() (*Config, error) {
 		RefreshExpiry:    refreshExpiry,
 		FrontendURL:      getEnv("FRONTEND_URL", "https://nepalfillings.com"),
 		SendGridAPIKey:   getEnv("SENDGRID_API_KEY", ""),
-		TelegramBotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
+		TelegramBotToken:    getEnv("TELEGRAM_BOT_TOKEN", ""),
+		BunnyCDNStorageURL:  getEnv("BUNNY_CDN_STORAGE_URL", "https://sg.storage.bunnycdn.com"),
+		BunnyCDNStorageZone: getEnv("BUNNY_CDN_STORAGE_ZONE", "nepalfilling"),
+		BunnyCDNStorageKey:  getEnv("BUNNY_CDN_STORAGE_KEY", ""),
+		BunnyCDNPullURL:     getEnv("BUNNY_CDN_PULL_URL", "https://my-pull-zone-name-nepalfilling.b-cdn.net"),
 	}
 
 	if cfg.JWTSecret == "" {
