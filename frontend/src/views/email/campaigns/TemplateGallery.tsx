@@ -63,6 +63,8 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
   const [previewDialog, setPreviewDialog] = useState<Template | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useMobileBreakpoint()
 
@@ -138,11 +140,23 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
 
     if (!file) return
 
-    const fileName = file.name.toLowerCase()
+    // Reset input so same file can be re-uploaded
+    e.target.value = ''
 
-    if (fileName.endsWith('.zip')) {
-      // Handle ZIP file - extract HTML and images
-      try {
+    const fileName = file.name.toLowerCase()
+    const mimeMap: Record<string, string> = {
+      png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+      gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp', ico: 'image/x-icon'
+    }
+
+    setUploading(true)
+    setUploadProgress('Processing template...')
+
+    try {
+      let html = ''
+
+      if (fileName.endsWith('.zip')) {
+        // Handle ZIP file - extract HTML and upload images to server
         const JSZip = (await import('jszip')).default
         const zip = await JSZip.loadAsync(file)
         const files = Object.keys(zip.files)
@@ -152,13 +166,14 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
 
         if (!htmlFile) {
           alert('No HTML file found in the ZIP archive. Please include an .html or .htm file.')
+          setUploading(false)
 
           return
         }
 
-        let html = await zip.files[htmlFile].async('string')
+        html = await zip.files[htmlFile].async('string')
 
-        // Find and convert images to base64 data URIs
+        // Find image files in the ZIP
         const imageFiles = files.filter(f => {
           const ext = f.toLowerCase()
 
@@ -166,52 +181,103 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                  ext.endsWith('.gif') || ext.endsWith('.svg') || ext.endsWith('.webp') || ext.endsWith('.ico')
         })
 
-        for (const imgPath of imageFiles) {
-          const imgData = await zip.files[imgPath].async('base64')
-          const ext = imgPath.split('.').pop()?.toLowerCase() || 'png'
-          const mimeMap: Record<string, string> = {
-            png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
-            gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp', ico: 'image/x-icon'
+        // Upload images to server (3 at a time for speed)
+        for (let i = 0; i < imageFiles.length; i += 3) {
+          const chunk = imageFiles.slice(i, i + 3)
+
+          setUploadProgress(`Uploading images ${i + 1}-${Math.min(i + 3, imageFiles.length)} of ${imageFiles.length}...`)
+
+          const results = await Promise.allSettled(chunk.map(async (imgPath) => {
+            const imgData = await zip.files[imgPath].async('blob')
+            const ext = imgPath.split('.').pop()?.toLowerCase() || 'png'
+            const mime = mimeMap[ext] || 'image/png'
+            const imgFileName = imgPath.split('/').pop() || imgPath
+            const imageFile = new File([imgData], imgFileName, { type: mime })
+
+            const result = await templateService.uploadMedia(imageFile)
+
+            return { imgPath, imgFileName, url: result.data.url }
+          }))
+
+          for (const result of results) {
+            if (result.status === 'fulfilled') {
+              const { imgPath, imgFileName, url } = result.value
+              const escapedPath = imgPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              const escapedName = imgFileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+              html = html.replace(new RegExp(escapedPath, 'g'), url)
+              html = html.replace(new RegExp(`(?<=[\"'])([^\"']*/?)?${escapedName}(?=[\"'])`, 'g'), url)
+            } else {
+              console.error('Failed to upload image:', result.reason)
+            }
           }
-          const mime = mimeMap[ext] || 'image/png'
-          const dataUri = `data:${mime};base64,${imgData}`
-
-          // Replace all references to this image file (relative paths, with or without folder)
-          const imgFileName = imgPath.split('/').pop() || imgPath
-          const escapedPath = imgPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-          const escapedName = imgFileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-          // Replace full path references
-          html = html.replace(new RegExp(escapedPath, 'g'), dataUri)
-
-          // Replace filename-only references (e.g., src="image.png" or src="images/image.png")
-          html = html.replace(new RegExp(`(?<=[\"'])([^\"']*/?)?${escapedName}(?=[\"'])`, 'g'), dataUri)
         }
+      } else {
+        // Handle regular HTML file
+        html = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
 
-        sessionStorage.setItem('campaign_email_html_upload', html)
-        router.push(`/${locale}/campaigns/create?type=${campaignType}&template=scratch&from_upload=true`)
-      } catch (err) {
-        console.error('Failed to process ZIP file:', err)
-        alert('Failed to process the ZIP file. Please ensure it contains a valid HTML template.')
-      }
-    } else {
-      // Handle regular HTML file
-      const reader = new FileReader()
+          reader.onload = (event) => {
+            const content = event.target?.result as string
 
-      reader.onload = (event) => {
-        const html = event.target?.result as string
+            if (content) resolve(content)
+            else reject(new Error('Empty file'))
+          }
 
-        if (html) {
-          sessionStorage.setItem('campaign_email_html_upload', html)
-          router.push(`/${locale}/campaigns/create?type=${campaignType}&template=scratch&from_upload=true`)
+          reader.onerror = reject
+          reader.readAsText(file)
+        })
+
+        // Extract and upload any base64-embedded images
+        const base64Regex = /data:(image\/[a-z+]+);base64,([A-Za-z0-9+/=]+)/g
+        const matches = [...html.matchAll(base64Regex)]
+
+        if (matches.length > 0) {
+          setUploadProgress(`Uploading ${matches.length} embedded images...`)
+
+          for (let i = 0; i < matches.length; i++) {
+            const [fullMatch, mime, base64Data] = matches[i]
+            const extMap: Record<string, string> = {
+              'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif',
+              'image/webp': 'webp', 'image/svg+xml': 'svg'
+            }
+            const ext = extMap[mime] || 'png'
+
+            try {
+              // Convert base64 to File
+              const byteString = atob(base64Data)
+              const ab = new ArrayBuffer(byteString.length)
+              const ia = new Uint8Array(ab)
+
+              for (let j = 0; j < byteString.length; j++) {
+                ia[j] = byteString.charCodeAt(j)
+              }
+
+              const blob = new Blob([ab], { type: mime })
+              const imageFile = new File([blob], `image-${i}.${ext}`, { type: mime })
+
+              setUploadProgress(`Uploading image ${i + 1} of ${matches.length}...`)
+
+              const result = await templateService.uploadMedia(imageFile)
+
+              html = html.replace(fullMatch, result.data.url)
+            } catch (err) {
+              console.error(`Failed to upload embedded image ${i}:`, err)
+              // Keep original base64 if upload fails
+            }
+          }
         }
       }
 
-      reader.readAsText(file)
+      sessionStorage.setItem('campaign_email_html_upload', html)
+      router.push(`/${locale}/campaigns/create?type=${campaignType}&template=scratch&from_upload=true`)
+    } catch (err) {
+      console.error('Failed to process template file:', err)
+      alert('Failed to process the template file. Please try again.')
+    } finally {
+      setUploading(false)
+      setUploadProgress('')
     }
-
-    // Reset input so same file can be re-uploaded
-    e.target.value = ''
   }
 
   // Only show user-created templates (exclude gallery templates and default Listmonk templates)
@@ -397,12 +463,13 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
               <Card
                 sx={{
                   border: '2px dashed',
-                  borderColor: 'divider',
-                  cursor: 'pointer',
-                  '&:hover': { borderColor: 'primary.main', boxShadow: 4, transform: 'translateY(-2px)' },
-                  transition: 'all 0.2s'
+                  borderColor: uploading ? 'primary.main' : 'divider',
+                  cursor: uploading ? 'default' : 'pointer',
+                  '&:hover': uploading ? {} : { borderColor: 'primary.main', boxShadow: 4, transform: 'translateY(-2px)' },
+                  transition: 'all 0.2s',
+                  opacity: uploading ? 0.8 : 1
                 }}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => !uploading && fileInputRef.current?.click()}
               >
                 <Box
                   sx={{
@@ -415,26 +482,37 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                     gap: 1.5
                   }}
                 >
-                  <Box
-                    sx={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: 2,
-                      bgcolor: 'action.hover',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <i className='tabler-upload text-[32px]' style={{ color: 'var(--mui-palette-primary-main)' }} />
-                  </Box>
-                  <Typography variant='body2' color='text.secondary' fontWeight={500}>
-                    .html, .htm or .zip file
-                  </Typography>
+                  {uploading ? (
+                    <>
+                      <CircularProgress size={48} />
+                      <Typography variant='body2' color='primary.main' fontWeight={500} textAlign='center' px={2}>
+                        {uploadProgress}
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <Box
+                        sx={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: 2,
+                          bgcolor: 'action.hover',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <i className='tabler-upload text-[32px]' style={{ color: 'var(--mui-palette-primary-main)' }} />
+                      </Box>
+                      <Typography variant='body2' color='text.secondary' fontWeight={500}>
+                        .html, .htm or .zip file
+                      </Typography>
+                    </>
+                  )}
                 </Box>
                 <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 }, textAlign: 'center' }}>
                   <Typography variant='subtitle2' fontWeight={600}>
-                    Upload Email Template
+                    {uploading ? 'Processing...' : 'Upload Email Template'}
                   </Typography>
                   <Typography variant='caption' color='text.secondary'>
                     Import HTML or ZIP with images

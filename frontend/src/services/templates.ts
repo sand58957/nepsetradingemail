@@ -53,6 +53,20 @@ export const templateService = {
     const response = await api.post('/templates/sendgrid/import', templateIds ? { template_ids: templateIds } : {})
 
     return response.data
+  },
+
+  // Upload a single image file to Listmonk media storage, returns hosted URL
+  uploadMedia: async (file: File): Promise<{ data: { url: string; filename: string } }> => {
+    const formData = new FormData()
+
+    formData.append('file', file)
+
+    const response = await api.post('/templates/upload-media', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000
+    })
+
+    return response.data
   }
 }
 

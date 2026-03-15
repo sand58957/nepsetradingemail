@@ -156,6 +156,7 @@ func (s *Server) RegisterRoutes() {
 	// Templates
 	templates := staff.Group("/templates")
 	templates.GET("", templateHandler.List)
+	templates.POST("/upload-media", templateHandler.UploadMedia)
 	templates.GET("/sendgrid", templateHandler.ListSendGridTemplates)
 	templates.POST("/sendgrid/import", templateHandler.ImportSendGridTemplates)
 	templates.GET("/:id", templateHandler.Get)

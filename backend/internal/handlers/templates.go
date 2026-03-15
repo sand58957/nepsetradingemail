@@ -335,6 +335,67 @@ func (h *TemplateHandler) ImportSendGridTemplates(c echo.Context) error {
 	})
 }
 
+// UploadMedia accepts a single image file and uploads it to Listmonk's media storage,
+// returning the hosted URL. This avoids base64-inlining images in email HTML.
+func (h *TemplateHandler) UploadMedia(c echo.Context) error {
+	if !isAdmin(c) {
+		return adminOnly(c)
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		return response.BadRequest(c, "No file provided")
+	}
+
+	if file.Size > maxUploadSize {
+		return response.BadRequest(c, "File too large. Maximum size is 10MB")
+	}
+
+	// Validate image MIME type
+	contentType := file.Header.Get("Content-Type")
+	allowedTypes := map[string]bool{
+		"image/jpeg": true, "image/png": true, "image/gif": true,
+		"image/webp": true, "image/svg+xml": true, "image/x-icon": true,
+	}
+	if !allowedTypes[contentType] {
+		return response.BadRequest(c, "Only image files are allowed")
+	}
+
+	src, err := file.Open()
+	if err != nil {
+		return response.InternalError(c, "Failed to read uploaded file")
+	}
+	defer src.Close()
+
+	data, statusCode, err := h.lm.PostMultipart("/media", "file", file.Filename, src, nil)
+	if err != nil {
+		log.Printf("[templates] Failed to upload media to Listmonk: %v", err)
+		return response.InternalError(c, "Failed to upload media")
+	}
+
+	if statusCode >= 400 {
+		log.Printf("[templates] Listmonk media upload returned %d: %s", statusCode, string(data))
+		return response.InternalError(c, "Failed to upload media to storage")
+	}
+
+	// Parse Listmonk response to extract the URL
+	var lmResp struct {
+		Data struct {
+			URI      string `json:"uri"`
+			Filename string `json:"filename"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &lmResp); err != nil {
+		log.Printf("[templates] Failed to parse media response: %v", err)
+		return response.InternalError(c, "Failed to parse media upload response")
+	}
+
+	return response.Success(c, map[string]string{
+		"url":      lmResp.Data.URI,
+		"filename": lmResp.Data.Filename,
+	})
+}
+
 func fetchSendGridTemplates(apiKey string) ([]sendGridTemplate, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 
