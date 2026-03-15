@@ -332,6 +332,7 @@ func (s *Server) RegisterRoutes() {
 	tgContacts.POST("", tgHandler.CreateContact)
 	tgContacts.PUT("/:id", tgHandler.UpdateContact)
 	tgContacts.DELETE("/:id", tgHandler.DeleteContact)
+	tgContacts.GET("/:id/groups", tgHandler.GetContactGroups)
 	tgContacts.POST("/import", tgHandler.ImportContacts)
 	tgContacts.GET("/export", tgHandler.ExportContacts)
 	tgContacts.GET("/tags", tgHandler.ListContactTags)

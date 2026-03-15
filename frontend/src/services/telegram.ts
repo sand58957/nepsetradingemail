@@ -52,8 +52,13 @@ export const telegramService = {
     return response.data
   },
 
-  updateContact: async (id: number, data: Partial<TelegramContact>): Promise<void> => {
+  updateContact: async (id: number, data: Partial<TelegramContact> & { group_ids?: number[] }): Promise<void> => {
     await api.put(`/telegram/contacts/${id}`, data)
+  },
+
+  getContactGroups: async (id: number): Promise<{ data: number[] }> => {
+    const response = await api.get(`/telegram/contacts/${id}/groups`)
+    return response.data
   },
 
   deleteContact: async (id: number): Promise<void> => {

@@ -382,6 +382,7 @@ func (h *TelegramHandler) UpdateContact(c echo.Context) error {
 		OptedIn    *bool           `json:"opted_in"`
 		Tags       json.RawMessage `json:"tags"`
 		Attributes json.RawMessage `json:"attributes"`
+		GroupIDs   *[]int          `json:"group_ids"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -416,7 +417,53 @@ func (h *TelegramHandler) UpdateContact(c echo.Context) error {
 		return response.InternalError(c, "Failed to update contact")
 	}
 
+	// Sync group memberships if group_ids provided
+	if req.GroupIDs != nil {
+		// Remove from all groups first
+		h.db.Exec(`
+			DELETE FROM telegram_contact_group_members
+			WHERE contact_id = $1
+			AND group_id IN (SELECT id FROM telegram_contact_groups WHERE account_id = $2)
+		`, id, accountID)
+		// Add to specified groups
+		for _, gid := range *req.GroupIDs {
+			h.db.Exec(`
+				INSERT INTO telegram_contact_group_members (group_id, contact_id)
+				SELECT $1, $2 WHERE EXISTS (SELECT 1 FROM telegram_contact_groups WHERE id = $1 AND account_id = $3)
+				ON CONFLICT DO NOTHING
+			`, gid, id, accountID)
+		}
+	}
+
 	return response.SuccessWithMessage(c, "Contact updated", nil)
+}
+
+// GetContactGroups returns the group IDs a contact belongs to.
+func (h *TelegramHandler) GetContactGroups(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+	id, err := validateParamID(c, "id")
+	if err != nil {
+		return err
+	}
+
+	var exists bool
+	h.db.Get(&exists, "SELECT EXISTS(SELECT 1 FROM telegram_contacts WHERE id = $1 AND account_id = $2)", id, accountID)
+	if !exists {
+		return response.NotFound(c, "Contact not found")
+	}
+
+	var groupIDs []int
+	h.db.Select(&groupIDs, `
+		SELECT gm.group_id FROM telegram_contact_group_members gm
+		JOIN telegram_contact_groups g ON g.id = gm.group_id
+		WHERE gm.contact_id = $1 AND g.account_id = $2
+	`, id, accountID)
+
+	if groupIDs == nil {
+		groupIDs = []int{}
+	}
+
+	return response.Success(c, groupIDs)
 }
 
 // DeleteContact removes a Telegram contact.

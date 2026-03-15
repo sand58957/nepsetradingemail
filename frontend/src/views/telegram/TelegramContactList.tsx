@@ -224,6 +224,27 @@ const TelegramContactList = () => {
     }
   }
 
+  // State for edit group selection
+  const [editGroupIds, setEditGroupIds] = useState<number[]>([])
+  const [loadingEditGroups, setLoadingEditGroups] = useState(false)
+
+  // Open edit dialog and fetch contact's current groups
+  const openEditDialog = async (contact: TelegramContact) => {
+    setEditingContact({ ...contact })
+    setEditDialogOpen(true)
+    setLoadingEditGroups(true)
+
+    try {
+      const response = await telegramService.getContactGroups(contact.id)
+
+      setEditGroupIds(response.data || [])
+    } catch {
+      setEditGroupIds([])
+    } finally {
+      setLoadingEditGroups(false)
+    }
+  }
+
   // Edit contact
   const handleEditContact = async () => {
     if (!editingContact) return
@@ -235,12 +256,14 @@ const TelegramContactList = () => {
         chat_id: editingContact.chat_id,
         username: editingContact.username,
         first_name: editingContact.first_name,
-        last_name: editingContact.last_name
+        last_name: editingContact.last_name,
+        group_ids: editGroupIds
       })
 
       setSnackbar({ open: true, message: 'Contact updated', severity: 'success' })
       setEditDialogOpen(false)
       setEditingContact(null)
+      setEditGroupIds([])
       fetchContacts()
     } catch {
       setSnackbar({ open: true, message: 'Failed to update contact', severity: 'error' })
@@ -519,8 +542,7 @@ const TelegramContactList = () => {
           setAnchorEl(null)
 
           if (menuContact) {
-            setEditingContact({ ...menuContact })
-            setEditDialogOpen(true)
+            openEditDialog(menuContact)
           }
         }}>
           <i className='tabler-edit text-[18px] mr-2' />
@@ -677,6 +699,41 @@ const TelegramContactList = () => {
                 value={editingContact.last_name || ''}
                 onChange={e => setEditingContact({ ...editingContact, last_name: e.target.value })}
               />
+              {loadingEditGroups ? (
+                <Box display='flex' justifyContent='center' py={1}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : availableGroups.length > 0 ? (
+                <FormControl fullWidth size='small'>
+                  <InputLabel>Groups</InputLabel>
+                  <Select
+                    multiple
+                    value={editGroupIds}
+                    label='Groups'
+                    onChange={e => setEditGroupIds(e.target.value as number[])}
+                    renderValue={(selected) => (
+                      <div className='flex gap-1 flex-wrap'>
+                        {(selected as number[]).map(id => {
+                          const group = availableGroups.find(g => g.id === id)
+
+                          return group ? <Chip key={id} label={group.name} size='small' /> : null
+                        })}
+                      </div>
+                    )}
+                  >
+                    {availableGroups.map(group => (
+                      <MenuItem key={group.id} value={group.id}>
+                        <Checkbox checked={editGroupIds.includes(group.id)} />
+                        {group.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : (
+                <Typography variant='body2' color='text.secondary'>
+                  No groups created yet. Create groups from the Groups page first.
+                </Typography>
+              )}
             </div>
           )}
         </DialogContent>
@@ -685,7 +742,7 @@ const TelegramContactList = () => {
           <Button
             variant='contained'
             onClick={handleEditContact}
-            disabled={savingEdit}
+            disabled={savingEdit || loadingEditGroups}
             startIcon={savingEdit ? <CircularProgress size={18} /> : undefined}
           >
             {savingEdit ? 'Saving...' : 'Save Changes'}
