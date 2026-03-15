@@ -67,6 +67,7 @@
     "fs-extra": "11.3.3",
     "input-otp": "1.4.2",
     "isomorphic-dompurify": "^3.1.0",
+    "jszip": "^3.10.1",
     "keen-slider": "6.8.6",
     "mapbox-gl": "3.17.0",
     "negotiator": "1.0.0",
