@@ -317,13 +317,15 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	// Telegram Marketing — all authenticated users (account-scoped)
 	// ==============================================================
-	tgHandler := handlers.NewTelegramHandler(s.DB)
+	tgHandler := handlers.NewTelegramHandler(s.DB, s.Config)
 
 	// Telegram Settings
 	tg := staff.Group("/telegram")
 	tg.GET("/settings", tgHandler.GetSettings)
 	tg.PUT("/settings", tgHandler.UpdateSettings)
 	tg.POST("/settings/test", tgHandler.TestConnection)
+	tg.POST("/settings/qr", tgHandler.UploadQR)
+	tg.DELETE("/settings/qr", tgHandler.DeleteQR)
 
 	// Telegram Contacts
 	tgContacts := tg.Group("/contacts")

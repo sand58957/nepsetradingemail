@@ -36,6 +36,19 @@ export const telegramService = {
     return response.data
   },
 
+  uploadQR: async (file: File): Promise<{ data: { url: string } }> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await api.post('/telegram/settings/qr', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
+  },
+
+  deleteQR: async (): Promise<void> => {
+    await api.delete('/telegram/settings/qr')
+  },
+
   // ==================== Contacts ====================
   getContacts: async (params?: PaginationParams): Promise<TelegramContactListResponse> => {
     const response = await api.get('/telegram/contacts', { params })

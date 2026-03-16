@@ -6,6 +6,7 @@ export interface TelegramSettings {
   webhook_secret: string
   send_rate: number
   is_active: boolean
+  qr_code_url: string
   created_at: string
   updated_at: string
 }

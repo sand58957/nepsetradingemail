@@ -38,6 +38,12 @@ import InputLabel from '@mui/material/InputLabel'
 import InputAdornment from '@mui/material/InputAdornment'
 import Grid from '@mui/material/Grid'
 import Checkbox from '@mui/material/Checkbox'
+import Divider from '@mui/material/Divider'
+import Stepper from '@mui/material/Stepper'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import StepContent from '@mui/material/StepContent'
+import Collapse from '@mui/material/Collapse'
 
 // Service Imports
 import telegramService from '@/services/telegram'
@@ -86,11 +92,82 @@ const TelegramContactList = () => {
   const [menuContactId, setMenuContactId] = useState<number | null>(null)
   const [menuContact, setMenuContact] = useState<TelegramContact | null>(null)
 
+  // QR Code & Guide
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
+  const [uploadingQR, setUploadingQR] = useState(false)
+  const [botUsername, setBotUsername] = useState<string>('')
+  const [showGuide, setShowGuide] = useState(true)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
     severity: 'success'
   })
+
+  // Fetch settings (QR code URL & bot username)
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await telegramService.getSettings()
+
+        if (response.data?.settings) {
+          setQrCodeUrl(response.data.settings.qr_code_url || '')
+          setBotUsername(response.data.settings.bot_username || '')
+        }
+      } catch {
+        // Silently fail
+      }
+    }
+
+    fetchSettings()
+  }, [])
+
+  // Handle QR code upload
+  const handleQRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+
+    if (!file) return
+
+    // Validate
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setSnackbar({ open: true, message: 'Only PNG, JPEG, and WebP images are allowed', severity: 'error' })
+
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSnackbar({ open: true, message: 'File too large (max 5MB)', severity: 'error' })
+
+      return
+    }
+
+    setUploadingQR(true)
+
+    try {
+      const response = await telegramService.uploadQR(file)
+
+      setQrCodeUrl(response.data.url)
+      setSnackbar({ open: true, message: 'QR code uploaded successfully', severity: 'success' })
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to upload QR code', severity: 'error' })
+    } finally {
+      setUploadingQR(false)
+    }
+
+    // Reset input
+    e.target.value = ''
+  }
+
+  // Handle QR code delete
+  const handleQRDelete = async () => {
+    try {
+      await telegramService.deleteQR()
+      setQrCodeUrl('')
+      setSnackbar({ open: true, message: 'QR code removed', severity: 'success' })
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to remove QR code', severity: 'error' })
+    }
+  }
 
   // Debounced search
   useEffect(() => {
@@ -318,6 +395,171 @@ const TelegramContactList = () => {
 
   return (
     <>
+      {/* Subscription Guide & QR Code Section */}
+      <Card className='mb-6'>
+        <CardHeader
+          title='How to Subscribe'
+          subheader='Share these steps with your audience to grow your Telegram subscriber list'
+          action={
+            <Button
+              size='small'
+              variant='text'
+              onClick={() => setShowGuide(!showGuide)}
+              startIcon={<i className={showGuide ? 'tabler-chevron-up' : 'tabler-chevron-down'} />}
+            >
+              {showGuide ? 'Hide' : 'Show'}
+            </Button>
+          }
+        />
+        <Collapse in={showGuide}>
+          <CardContent>
+            <Grid container spacing={6}>
+              {/* Left: Step-by-step Guide */}
+              <Grid size={{ xs: 12, md: 7 }}>
+                <Typography variant='subtitle1' className='font-semibold mb-4'>
+                  Subscription Steps
+                </Typography>
+                <Stepper orientation='vertical' activeStep={-1}>
+                  <Step active expanded>
+                    <StepLabel>
+                      <Typography className='font-medium'>Open Telegram</Typography>
+                    </StepLabel>
+                    <StepContent>
+                      <Typography variant='body2' color='text.secondary'>
+                        Open the Telegram app on your phone or desktop. If you don&apos;t have it, download it from{' '}
+                        <a href='https://telegram.org' target='_blank' rel='noopener noreferrer' className='text-primary'>
+                          telegram.org
+                        </a>
+                      </Typography>
+                    </StepContent>
+                  </Step>
+                  <Step active expanded>
+                    <StepLabel>
+                      <Typography className='font-medium'>Find the Bot</Typography>
+                    </StepLabel>
+                    <StepContent>
+                      <Typography variant='body2' color='text.secondary'>
+                        {botUsername ? (
+                          <>Search for <strong>@{botUsername}</strong> in Telegram, or scan the QR code shown here.</>
+                        ) : (
+                          <>Search for the bot username in Telegram, or scan the QR code shown here.</>
+                        )}
+                      </Typography>
+                      {botUsername && (
+                        <Box className='mt-2'>
+                          <Chip
+                            label={`t.me/${botUsername}`}
+                            color='primary'
+                            size='small'
+                            variant='outlined'
+                            onClick={() => window.open(`https://t.me/${botUsername}`, '_blank')}
+                            icon={<i className='tabler-brand-telegram text-[16px]' />}
+                          />
+                        </Box>
+                      )}
+                    </StepContent>
+                  </Step>
+                  <Step active expanded>
+                    <StepLabel>
+                      <Typography className='font-medium'>Start the Bot</Typography>
+                    </StepLabel>
+                    <StepContent>
+                      <Typography variant='body2' color='text.secondary'>
+                        Tap the <strong>&quot;START&quot;</strong> button or send <strong>/start</strong> to subscribe. You&apos;ll be automatically added to the contact list.
+                      </Typography>
+                    </StepContent>
+                  </Step>
+                  <Step active expanded>
+                    <StepLabel>
+                      <Typography className='font-medium'>Done!</Typography>
+                    </StepLabel>
+                    <StepContent>
+                      <Typography variant='body2' color='text.secondary'>
+                        You&apos;re now subscribed and will receive messages via campaigns. To unsubscribe, send <strong>/stop</strong> or block the bot.
+                      </Typography>
+                    </StepContent>
+                  </Step>
+                </Stepper>
+              </Grid>
+
+              {/* Right: QR Code Upload/Display */}
+              <Grid size={{ xs: 12, md: 5 }}>
+                <Typography variant='subtitle1' className='font-semibold mb-4'>
+                  Bot QR Code
+                </Typography>
+                <Box
+                  className='flex flex-col items-center gap-4 p-6 border-2 border-dashed rounded-lg'
+                  sx={{ borderColor: 'divider', backgroundColor: 'action.hover' }}
+                >
+                  {qrCodeUrl ? (
+                    <>
+                      <Box
+                        component='img'
+                        src={qrCodeUrl}
+                        alt='Telegram Bot QR Code'
+                        sx={{
+                          maxWidth: 220,
+                          maxHeight: 220,
+                          width: '100%',
+                          borderRadius: 2,
+                          boxShadow: 2
+                        }}
+                      />
+                      <Typography variant='body2' color='text.secondary' align='center'>
+                        {botUsername ? `@${botUsername}` : 'Scan to subscribe'}
+                      </Typography>
+                      <Box className='flex gap-2'>
+                        <Button
+                          size='small'
+                          variant='outlined'
+                          component='label'
+                          startIcon={uploadingQR ? <CircularProgress size={16} /> : <i className='tabler-replace' />}
+                          disabled={uploadingQR}
+                        >
+                          Replace
+                          <input type='file' hidden accept='image/png,image/jpeg,image/webp' onChange={handleQRUpload} />
+                        </Button>
+                        <Button
+                          size='small'
+                          variant='outlined'
+                          color='error'
+                          startIcon={<i className='tabler-trash' />}
+                          onClick={handleQRDelete}
+                        >
+                          Remove
+                        </Button>
+                      </Box>
+                    </>
+                  ) : (
+                    <>
+                      <Box sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.5 }}>
+                        <i className='tabler-qrcode' />
+                      </Box>
+                      <Typography variant='body2' color='text.secondary' align='center'>
+                        Upload your Telegram bot QR code to display here
+                      </Typography>
+                      <Button
+                        variant='contained'
+                        size='small'
+                        component='label'
+                        startIcon={uploadingQR ? <CircularProgress size={16} /> : <i className='tabler-upload' />}
+                        disabled={uploadingQR}
+                      >
+                        {uploadingQR ? 'Uploading...' : 'Upload QR Code'}
+                        <input type='file' hidden accept='image/png,image/jpeg,image/webp' onChange={handleQRUpload} />
+                      </Button>
+                      <Typography variant='caption' color='text.secondary'>
+                        PNG, JPEG, or WebP (max 5MB)
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Collapse>
+      </Card>
+
       <Card>
         <CardHeader
           title={`${totalCount} contacts`}

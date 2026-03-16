@@ -12,9 +12,12 @@ import (
 	"sync"
 	"time"
 
+	"bytes"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 
+	"github.com/sandeep/nepsetradingemail/backend/internal/config"
 	mw "github.com/sandeep/nepsetradingemail/backend/internal/middleware"
 	tgclient "github.com/sandeep/nepsetradingemail/backend/internal/services/telegram"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
@@ -22,12 +25,13 @@ import (
 
 // TelegramHandler manages all Telegram marketing endpoints.
 type TelegramHandler struct {
-	db *sqlx.DB
+	db  *sqlx.DB
+	cfg *config.Config
 }
 
 // NewTelegramHandler creates a new Telegram handler.
-func NewTelegramHandler(db *sqlx.DB) *TelegramHandler {
-	return &TelegramHandler{db: db}
+func NewTelegramHandler(db *sqlx.DB, cfg *config.Config) *TelegramHandler {
+	return &TelegramHandler{db: db, cfg: cfg}
 }
 
 // ============================================================
@@ -42,6 +46,7 @@ type TelegramSettings struct {
 	WebhookSecret string    `json:"webhook_secret" db:"webhook_secret"`
 	SendRate      int       `json:"send_rate" db:"send_rate"`
 	IsActive      bool      `json:"is_active" db:"is_active"`
+	QRCodeURL     string    `json:"qr_code_url" db:"qr_code_url"`
 	CreatedAt     time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -190,6 +195,93 @@ func (h *TelegramHandler) UpdateSettings(c echo.Context) error {
 	}
 
 	return response.SuccessWithMessage(c, "Telegram settings saved", nil)
+}
+
+// UploadQR uploads a QR code image to Bunny CDN and saves the URL in settings.
+func (h *TelegramHandler) UploadQR(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		return response.BadRequest(c, "No file uploaded")
+	}
+
+	// Validate file type
+	contentType := file.Header.Get("Content-Type")
+	if contentType != "image/png" && contentType != "image/jpeg" && contentType != "image/webp" {
+		return response.BadRequest(c, "Only PNG, JPEG, and WebP images are allowed")
+	}
+
+	// Max 5MB
+	if file.Size > 5*1024*1024 {
+		return response.BadRequest(c, "File too large (max 5MB)")
+	}
+
+	src, err := file.Open()
+	if err != nil {
+		return response.InternalError(c, "Failed to read file")
+	}
+	defer src.Close()
+
+	fileData, err := io.ReadAll(src)
+	if err != nil {
+		return response.InternalError(c, "Failed to read file data")
+	}
+
+	// Upload to Bunny CDN
+	timestamp := time.Now().UnixMilli()
+	safeName := strings.ReplaceAll(file.Filename, " ", "-")
+	storagePath := fmt.Sprintf("telegram-qr/%d-%s", timestamp, safeName)
+	storageURL := fmt.Sprintf("%s/%s/%s", h.cfg.BunnyCDNStorageURL, h.cfg.BunnyCDNStorageZone, storagePath)
+
+	req, err := http.NewRequest("PUT", storageURL, bytes.NewReader(fileData))
+	if err != nil {
+		return response.InternalError(c, "Failed to create upload request")
+	}
+	req.Header.Set("AccessKey", h.cfg.BunnyCDNStorageKey)
+	req.Header.Set("Content-Type", contentType)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return response.InternalError(c, "Failed to upload to CDN")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("[telegram] Bunny CDN upload failed: %d %s", resp.StatusCode, string(body))
+		return response.InternalError(c, "CDN upload failed")
+	}
+
+	cdnURL := fmt.Sprintf("%s/%s", h.cfg.BunnyCDNPullURL, storagePath)
+
+	// Save to database
+	_, err = h.db.Exec(`
+		INSERT INTO telegram_settings (account_id, qr_code_url, updated_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (account_id) DO UPDATE SET
+			qr_code_url = EXCLUDED.qr_code_url,
+			updated_at = NOW()
+	`, accountID, cdnURL)
+	if err != nil {
+		log.Printf("[telegram] Failed to save QR URL: %v", err)
+		return response.InternalError(c, "Failed to save QR code URL")
+	}
+
+	return response.Success(c, map[string]string{"url": cdnURL})
+}
+
+// DeleteQR removes the QR code URL from settings.
+func (h *TelegramHandler) DeleteQR(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	_, err := h.db.Exec(`UPDATE telegram_settings SET qr_code_url = '', updated_at = NOW() WHERE account_id = $1`, accountID)
+	if err != nil {
+		return response.InternalError(c, "Failed to remove QR code")
+	}
+
+	return response.SuccessWithMessage(c, "QR code removed", nil)
 }
 
 // TestConnection verifies the Telegram bot token is valid.
