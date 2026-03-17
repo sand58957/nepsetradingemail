@@ -9,6 +9,9 @@ export interface MessengerSettings {
   webhook_secret: string
   send_rate: number
   is_active: boolean
+  opt_in_keyword: string
+  welcome_message: string
+  keyword_prompt: string
   created_at: string
   updated_at: string
 }

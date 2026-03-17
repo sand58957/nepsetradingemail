@@ -32,7 +32,10 @@ const MessengerSettings = () => {
     app_id: '',
     app_secret: '',
     verify_token: '',
-    send_rate: 10
+    send_rate: 10,
+    opt_in_keyword: '',
+    welcome_message: '',
+    keyword_prompt: ''
   })
 
   const [loading, setLoading] = useState(true)
@@ -256,6 +259,46 @@ const MessengerSettings = () => {
                   onChange={e => setSettings({ ...settings, send_rate: parseInt(e.target.value) || 10 })}
                   helperText='Maximum messages per second during campaign sending'
                   slotProps={{ htmlInput: { min: 1, max: 100 } }}
+                />
+
+                <Divider />
+
+                <Typography variant='subtitle1' className='font-medium'>
+                  Opt-in Keyword Settings
+                </Typography>
+                <Typography variant='body2' color='text.secondary' className='-mt-3'>
+                  Require users to send a secret keyword before adding them as contacts. Leave empty to auto-subscribe all users who message the page.
+                </Typography>
+
+                <TextField
+                  fullWidth
+                  label='Opt-in Keyword'
+                  placeholder='e.g. JOIN, SUBSCRIBE, NEPSE2024'
+                  value={settings.opt_in_keyword || ''}
+                  onChange={e => setSettings({ ...settings, opt_in_keyword: e.target.value })}
+                  helperText='Users must send this exact keyword to get subscribed. Leave empty to auto-subscribe everyone.'
+                />
+
+                <TextField
+                  fullWidth
+                  label='Keyword Prompt Message'
+                  placeholder='e.g. Welcome! To subscribe, please send the keyword: JOIN'
+                  value={settings.keyword_prompt || ''}
+                  onChange={e => setSettings({ ...settings, keyword_prompt: e.target.value })}
+                  multiline
+                  rows={2}
+                  helperText='Message sent to users who message without the correct keyword. Leave empty for default.'
+                />
+
+                <TextField
+                  fullWidth
+                  label='Welcome Message'
+                  placeholder='e.g. You have been successfully subscribed! Send STOP to unsubscribe.'
+                  value={settings.welcome_message || ''}
+                  onChange={e => setSettings({ ...settings, welcome_message: e.target.value })}
+                  multiline
+                  rows={2}
+                  helperText='Message sent to users after successful subscription. Leave empty for default.'
                 />
 
                 <div className='flex gap-3 mt-2'>

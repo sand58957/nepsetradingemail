@@ -48,6 +48,9 @@ type MessengerSettings struct {
 	WebhookSecret   string    `json:"webhook_secret" db:"webhook_secret"`
 	SendRate        int       `json:"send_rate" db:"send_rate"`
 	IsActive        bool      `json:"is_active" db:"is_active"`
+	OptInKeyword    string    `json:"opt_in_keyword" db:"opt_in_keyword"`
+	WelcomeMessage  string    `json:"welcome_message" db:"welcome_message"`
+	KeywordPrompt   string    `json:"keyword_prompt" db:"keyword_prompt"`
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -159,6 +162,9 @@ func (h *MessengerHandler) UpdateSettings(c echo.Context) error {
 		AppSecret       string `json:"app_secret"`
 		VerifyToken     string `json:"verify_token"`
 		SendRate        int    `json:"send_rate"`
+		OptInKeyword    string `json:"opt_in_keyword"`
+		WelcomeMessage  string `json:"welcome_message"`
+		KeywordPrompt   string `json:"keyword_prompt"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -186,8 +192,8 @@ func (h *MessengerHandler) UpdateSettings(c echo.Context) error {
 	}
 
 	_, err := h.db.Exec(`
-		INSERT INTO messenger_settings (account_id, page_id, page_access_token, app_id, app_secret, verify_token, webhook_secret, send_rate, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+		INSERT INTO messenger_settings (account_id, page_id, page_access_token, app_id, app_secret, verify_token, webhook_secret, send_rate, opt_in_keyword, welcome_message, keyword_prompt, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
 		ON CONFLICT (account_id) DO UPDATE SET
 			page_id = EXCLUDED.page_id,
 			page_access_token = CASE WHEN EXCLUDED.page_access_token = '' THEN messenger_settings.page_access_token ELSE EXCLUDED.page_access_token END,
@@ -195,8 +201,11 @@ func (h *MessengerHandler) UpdateSettings(c echo.Context) error {
 			app_secret = CASE WHEN EXCLUDED.app_secret = '' THEN messenger_settings.app_secret ELSE EXCLUDED.app_secret END,
 			verify_token = EXCLUDED.verify_token,
 			send_rate = EXCLUDED.send_rate,
+			opt_in_keyword = EXCLUDED.opt_in_keyword,
+			welcome_message = EXCLUDED.welcome_message,
+			keyword_prompt = EXCLUDED.keyword_prompt,
 			updated_at = NOW()
-	`, accountID, req.PageID, pageAccessToken, req.AppID, appSecret, req.VerifyToken, existingSecret, req.SendRate)
+	`, accountID, req.PageID, pageAccessToken, req.AppID, appSecret, req.VerifyToken, existingSecret, req.SendRate, req.OptInKeyword, req.WelcomeMessage, req.KeywordPrompt)
 	if err != nil {
 		log.Printf("[messenger] Failed to save settings: %v", err)
 		return response.InternalError(c, "Failed to save settings")
@@ -382,13 +391,56 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 
 func (h *MessengerHandler) handleIncomingMessage(accountID int, psid, text string, client *messenger.Client) {
 	now := time.Now()
+	lower := strings.ToLower(strings.TrimSpace(text))
+
+	// Get settings for opt-in keyword
+	var settings MessengerSettings
+	h.db.Get(&settings, "SELECT * FROM messenger_settings WHERE account_id = $1", accountID)
+
+	optInKeyword := strings.ToLower(strings.TrimSpace(settings.OptInKeyword))
 
 	// Check if contact exists
 	var exists bool
 	h.db.Get(&exists, "SELECT EXISTS(SELECT 1 FROM messenger_contacts WHERE account_id = $1 AND psid = $2)", accountID, psid)
 
 	if !exists {
-		// Fetch profile info
+		// If opt-in keyword is set, only add contact when they send the keyword
+		if optInKeyword != "" {
+			if lower == optInKeyword {
+				// Keyword matches — subscribe the contact
+				name := ""
+				profilePic := ""
+				if profile, err := client.GetUserProfile(psid); err == nil {
+					name = strings.TrimSpace(profile.FirstName + " " + profile.LastName)
+					profilePic = profile.ProfilePic
+				}
+
+				h.db.Exec(`
+					INSERT INTO messenger_contacts (account_id, psid, name, profile_pic, opted_in, opted_in_at)
+					VALUES ($1, $2, $3, $4, true, $5)
+					ON CONFLICT (account_id, psid) DO NOTHING
+				`, accountID, psid, name, profilePic, now)
+
+				log.Printf("[messenger] New contact subscribed via keyword: %s (%s) for account %d", name, psid, accountID)
+
+				// Send welcome message
+				welcomeMsg := settings.WelcomeMessage
+				if welcomeMsg == "" {
+					welcomeMsg = "You have been successfully subscribed! Send STOP to unsubscribe."
+				}
+				client.SendTextMessage(psid, welcomeMsg)
+			} else {
+				// Wrong keyword — send prompt
+				promptMsg := settings.KeywordPrompt
+				if promptMsg == "" {
+					promptMsg = fmt.Sprintf("Welcome! To subscribe, please send the keyword: %s", settings.OptInKeyword)
+				}
+				client.SendTextMessage(psid, promptMsg)
+			}
+			return
+		}
+
+		// No keyword set — auto-subscribe (original behavior)
 		name := ""
 		profilePic := ""
 		if profile, err := client.GetUserProfile(psid); err == nil {
@@ -396,7 +448,6 @@ func (h *MessengerHandler) handleIncomingMessage(accountID int, psid, text strin
 			profilePic = profile.ProfilePic
 		}
 
-		// Create new contact
 		h.db.Exec(`
 			INSERT INTO messenger_contacts (account_id, psid, name, profile_pic, opted_in, opted_in_at)
 			VALUES ($1, $2, $3, $4, true, $5)
@@ -404,20 +455,24 @@ func (h *MessengerHandler) handleIncomingMessage(accountID int, psid, text strin
 		`, accountID, psid, name, profilePic, now)
 
 		log.Printf("[messenger] New contact subscribed: %s (%s) for account %d", name, psid, accountID)
+
+		if settings.WelcomeMessage != "" {
+			client.SendTextMessage(psid, settings.WelcomeMessage)
+		}
 	}
 
 	// Handle stop/unsubscribe commands
-	lower := strings.ToLower(strings.TrimSpace(text))
 	if lower == "stop" || lower == "unsubscribe" {
 		h.db.Exec(`
 			UPDATE messenger_contacts SET opted_in = false, opted_out_at = $1, updated_at = NOW()
 			WHERE account_id = $2 AND psid = $3
 		`, now, accountID, psid)
 		log.Printf("[messenger] Contact unsubscribed: %s for account %d", psid, accountID)
+		client.SendTextMessage(psid, "You have been unsubscribed. Send START to re-subscribe.")
 	}
 
-	// Handle start/subscribe commands
-	if lower == "start" || lower == "subscribe" {
+	// Handle start/subscribe commands (re-subscribe or keyword-based subscribe for existing opted-out contacts)
+	if lower == "start" || lower == "subscribe" || (optInKeyword != "" && lower == optInKeyword) {
 		h.db.Exec(`
 			UPDATE messenger_contacts SET opted_in = true, opted_in_at = $1, opted_out_at = NULL, updated_at = NOW()
 			WHERE account_id = $2 AND psid = $3
