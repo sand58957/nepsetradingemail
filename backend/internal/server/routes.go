@@ -378,6 +378,66 @@ func (s *Server) RegisterRoutes() {
 	tgWebhookGroup.POST("/webhooks/telegram/:secret", tgHandler.WebhookReceive)
 
 	// ==============================================================
+	// Messenger Marketing — all authenticated users (account-scoped)
+	// ==============================================================
+	msgHandler := handlers.NewMessengerHandler(s.DB)
+
+	// Messenger Settings
+	msg := staff.Group("/messenger")
+	msg.GET("/settings", msgHandler.GetSettings)
+	msg.PUT("/settings", msgHandler.UpdateSettings)
+	msg.POST("/settings/test", msgHandler.TestConnection)
+
+	// Messenger Contacts
+	msgContacts := msg.Group("/contacts")
+	msgContacts.GET("", msgHandler.ListContacts)
+	msgContacts.POST("", msgHandler.CreateContact)
+	msgContacts.PUT("/:id", msgHandler.UpdateContact)
+	msgContacts.DELETE("/:id", msgHandler.DeleteContact)
+	msgContacts.POST("/import", msgHandler.ImportContacts)
+	msgContacts.GET("/export", msgHandler.ExportContacts)
+	msgContacts.GET("/tags", msgHandler.ListContactTags)
+	msgContacts.POST("/tags", msgHandler.CreateContactTag)
+	msgContacts.DELETE("/tags/:tag", msgHandler.DeleteContactTag)
+	msgContacts.GET("/stats", msgHandler.GetContactStats)
+
+	// Messenger Campaigns
+	msgCampaigns := msg.Group("/campaigns")
+	msgCampaigns.GET("", msgHandler.ListCampaigns)
+	msgCampaigns.GET("/:id", msgHandler.GetCampaign)
+	msgCampaigns.POST("", msgHandler.CreateCampaign)
+	msgCampaigns.PUT("/:id", msgHandler.UpdateCampaign)
+	msgCampaigns.DELETE("/:id", msgHandler.DeleteCampaign)
+	msgCampaigns.POST("/:id/send", msgHandler.SendCampaign)
+	msgCampaigns.POST("/:id/test", msgHandler.TestCampaign)
+	msgCampaigns.POST("/:id/pause", msgHandler.PauseCampaign)
+	msgCampaigns.POST("/:id/resume", msgHandler.ResumeCampaign)
+	msgCampaigns.POST("/audience-count", msgHandler.GetAudienceCount)
+
+	// Messenger Contact Groups
+	msgGroups := msg.Group("/groups")
+	msgGroups.GET("", msgHandler.ListGroups)
+	msgGroups.GET("/:id", msgHandler.GetGroup)
+	msgGroups.POST("", msgHandler.CreateGroup)
+	msgGroups.PUT("/:id", msgHandler.UpdateGroup)
+	msgGroups.DELETE("/:id", msgHandler.DeleteGroup)
+	msgGroups.GET("/:id/members", msgHandler.ListGroupMembers)
+	msgGroups.POST("/:id/members", msgHandler.AddGroupMembers)
+	msgGroups.DELETE("/:id/members", msgHandler.RemoveGroupMembers)
+
+	// Messenger Analytics
+	msgAnalytics := msg.Group("/analytics")
+	msgAnalytics.GET("/overview", msgHandler.GetOverview)
+	msgAnalytics.GET("/campaigns/:id", msgHandler.GetCampaignAnalytics)
+
+	// Messenger Webhook — Public endpoints (no auth, verified by signature/token)
+	msgWebhookLimiter := middleware.NewRateLimiter(50, 100)
+	msgWebhookGroup := api.Group("/webhooks/messenger")
+	msgWebhookGroup.Use(msgWebhookLimiter.Middleware())
+	msgWebhookGroup.GET("/:account_id", msgHandler.WebhookVerify)
+	msgWebhookGroup.POST("/:account_id", msgHandler.WebhookReceive)
+
+	// ==============================================================
 	// API Key Management — authenticated users manage their own keys
 	// ==============================================================
 	apiKeyHandler := handlers.NewAPIKeyHandler(s.DB)
