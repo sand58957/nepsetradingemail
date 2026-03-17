@@ -47,6 +47,7 @@ type SectionVisibility = {
   whatsapp: boolean
   sms: boolean
   telegram: boolean
+  messenger: boolean
 }
 
 const VISIBILITY_KEY = 'sidebar_section_visibility'
@@ -55,7 +56,8 @@ const getDefaultVisibility = (): SectionVisibility => ({
   email: true,
   whatsapp: true,
   sms: true,
-  telegram: true
+  telegram: true,
+  messenger: true
 })
 
 const RenderExpandIcon = ({ open, transitionDuration }: RenderExpandIconProps) => (
@@ -303,6 +305,45 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
               onClick={() => toggleSection('telegram')}
             >
               Show Telegram Marketing
+            </MenuItem>
+          )}
+        </MenuSection>
+
+        {/* Messenger Marketing Section */}
+        <MenuSection label={
+          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            Messenger Marketing
+            <SectionToggle section='messenger' visible={visibility.messenger} />
+          </span>
+        }>
+          {visibility.messenger ? (
+            <>
+              <MenuItem href={`/${locale}/messenger`} icon={<i className='tabler-brand-facebook' />}>
+                Dashboard
+              </MenuItem>
+              <MenuItem href={`/${locale}/messenger/contacts`} icon={<i className='tabler-address-book' />}>
+                Contacts
+              </MenuItem>
+              <MenuItem href={`/${locale}/messenger/groups`} icon={<i className='tabler-users-group' />}>
+                Groups
+              </MenuItem>
+              <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
+                <MenuItem href={`/${locale}/messenger/campaigns`}>All Campaigns</MenuItem>
+                <MenuItem href={`/${locale}/messenger/campaigns/create`}>Create New</MenuItem>
+              </SubMenu>
+              <MenuItem href={`/${locale}/messenger/analytics`} icon={<i className='tabler-chart-dots-3' />}>
+                Analytics
+              </MenuItem>
+              <MenuItem href={`/${locale}/messenger/settings`} icon={<i className='tabler-settings' />}>
+                Settings
+              </MenuItem>
+            </>
+          ) : (
+            <MenuItem
+              icon={<i className='tabler-eye' />}
+              onClick={() => toggleSection('messenger')}
+            >
+              Show Messenger Marketing
             </MenuItem>
           )}
         </MenuSection>
