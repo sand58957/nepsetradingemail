@@ -34,7 +34,7 @@ import DialogActions from '@mui/material/DialogActions'
 import whatsappService from '@/services/whatsapp'
 
 // Type Imports
-import type { WATemplate } from '@/types/whatsapp'
+import type { WATemplate, WAContactGroupWithCount } from '@/types/whatsapp'
 
 const WACreateCampaign = () => {
   const router = useRouter()
@@ -52,6 +52,8 @@ const WACreateCampaign = () => {
   // Data
   const [templates, setTemplates] = useState<WATemplate[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(true)
+  const [availableGroups, setAvailableGroups] = useState<WAContactGroupWithCount[]>([])
+  const [selectedGroups, setSelectedGroups] = useState<number[]>([])
 
   // UI
   const [creating, setCreating] = useState(false)
@@ -77,7 +79,17 @@ const WACreateCampaign = () => {
       }
     }
 
+    const fetchGroups = async () => {
+      try {
+        const response = await whatsappService.getGroups()
+        setAvailableGroups(response.data || [])
+      } catch {
+        // Silently fail
+      }
+    }
+
     fetchTemplates()
+    fetchGroups()
   }, [])
 
   // Create campaign
@@ -114,6 +126,10 @@ const WACreateCampaign = () => {
 
       if (tags.length > 0) {
         payload.target_filter.tags = tags
+      }
+
+      if (selectedGroups.length > 0) {
+        payload.target_filter.groups = selectedGroups
       }
 
       const response = await whatsappService.createCampaign(payload)
@@ -169,6 +185,10 @@ const WACreateCampaign = () => {
 
       if (tags.length > 0) {
         payload.target_filter.tags = tags
+      }
+
+      if (selectedGroups.length > 0) {
+        payload.target_filter.groups = selectedGroups
       }
 
       // Step 1: Create the campaign
@@ -409,8 +429,39 @@ const WACreateCampaign = () => {
                 {/* Target Audience */}
                 <Typography variant='subtitle1'>Target Audience</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  Filter contacts by tags. Leave empty to send to all opted-in contacts.
+                  Filter contacts by tags or groups. Leave empty to send to all opted-in contacts.
                 </Typography>
+
+                {/* Group filter */}
+                {availableGroups.length > 0 && (
+                  <div>
+                    <Typography variant='body2' className='mb-2'>Filter by Groups</Typography>
+                    <div className='flex gap-2 flex-wrap'>
+                      {availableGroups.map(group => (
+                        <Chip
+                          key={group.id}
+                          label={`${group.name} (${group.member_count})`}
+                          size='small'
+                          variant={selectedGroups.includes(group.id) ? 'filled' : 'outlined'}
+                          color={selectedGroups.includes(group.id) ? 'primary' : 'default'}
+                          onClick={() => {
+                            setSelectedGroups(prev =>
+                              prev.includes(group.id)
+                                ? prev.filter(id => id !== group.id)
+                                : [...prev, group.id]
+                            )
+                          }}
+                          sx={selectedGroups.includes(group.id) ? {} : {
+                            borderLeft: `3px solid ${group.color}`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <Typography variant='caption' color='text.secondary' className='mt-1 block'>
+                      Click to select groups. Contacts in selected groups will receive the campaign.
+                    </Typography>
+                  </div>
+                )}
 
                 <Autocomplete
                   multiple
@@ -536,7 +587,12 @@ const WACreateCampaign = () => {
                 </Typography>
               )}
               <Typography variant='body2'>
-                <strong>Audience:</strong> {tags.length > 0 ? `Contacts with tags: ${tags.join(', ')}` : 'All opted-in contacts'}
+                <strong>Audience:</strong> {tags.length > 0 || selectedGroups.length > 0
+                  ? [
+                      tags.length > 0 ? `Tags: ${tags.join(', ')}` : '',
+                      selectedGroups.length > 0 ? `Groups: ${availableGroups.filter(g => selectedGroups.includes(g.id)).map(g => g.name).join(', ')}` : ''
+                    ].filter(Boolean).join(' + ')
+                  : 'All opted-in contacts'}
               </Typography>
             </Box>
             <Alert severity='warning'>
