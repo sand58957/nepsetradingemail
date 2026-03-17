@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/',
-        destination: '/en/dashboards/email-marketing',
+        destination: '/front-pages/landing-page',
         permanent: true,
         locale: false
       },
