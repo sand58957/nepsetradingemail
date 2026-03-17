@@ -239,12 +239,12 @@ func (h *MessengerHandler) TestConnection(c echo.Context) error {
 
 // WebhookVerify handles the Facebook webhook verification (GET request).
 func (h *MessengerHandler) WebhookVerify(c echo.Context) error {
-	secret := c.Param("secret")
+	accountID := c.Param("account_id")
 
 	var settings MessengerSettings
-	err := h.db.Get(&settings, "SELECT * FROM messenger_settings WHERE webhook_secret = $1", secret)
+	err := h.db.Get(&settings, "SELECT * FROM messenger_settings WHERE account_id = $1", accountID)
 	if err != nil {
-		return c.String(http.StatusForbidden, "Invalid webhook secret")
+		return c.String(http.StatusForbidden, "Invalid account")
 	}
 
 	mode := c.QueryParam("hub.mode")
@@ -261,10 +261,10 @@ func (h *MessengerHandler) WebhookVerify(c echo.Context) error {
 
 // WebhookReceive handles incoming Messenger webhook events (POST request).
 func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
-	secret := c.Param("secret")
+	accountID := c.Param("account_id")
 
 	var settings MessengerSettings
-	err := h.db.Get(&settings, "SELECT * FROM messenger_settings WHERE webhook_secret = $1", secret)
+	err := h.db.Get(&settings, "SELECT * FROM messenger_settings WHERE account_id = $1", accountID)
 	if err != nil {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ignored"})
 	}
