@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 60">
+  <text x="10" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="30" fill="#00695C">MetLife</text>
+  <rect x="155" y="18" width="4" height="26" rx="2" fill="#00695C"/>
+  <rect x="163" y="24" width="4" height="20" rx="2" fill="#00897B"/>
+  <rect x="171" y="14" width="4" height="30" rx="2" fill="#26A69A"/>
+</svg>

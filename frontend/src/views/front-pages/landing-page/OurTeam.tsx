@@ -3,60 +3,36 @@ import { useEffect, useRef } from 'react'
 
 // MUI Imports
 import Typography from '@mui/material/Typography'
-import Grid from '@mui/material/Grid'
 import Chip from '@mui/material/Chip'
-import { styled } from '@mui/material/styles'
 
 // Third-party Imports
 import classnames from 'classnames'
-
-// Type Imports
-import type { ThemeColor } from '@core/types'
 
 // Hook Imports
 import { useIntersection } from '@/hooks/useIntersection'
 
 // Styles Imports
 import frontCommonStyles from '@views/front-pages/styles.module.css'
-import styles from './styles.module.css'
 
-// Data
-const team = [
-  {
-    name: 'Sophie Gilbert',
-    position: 'Project Manager',
-    image: '/images/front-pages/landing-page/sophie.png',
-    color: 'var(--mui-palette-primary-mainOpacity)'
-  },
-  {
-    name: 'Paul Miles',
-    position: 'UI Designer',
-    image: '/images/front-pages/landing-page/paul.png',
-    color: 'var(--mui-palette-info-mainOpacity)'
-  },
-  {
-    name: 'Nannie Ford',
-    position: 'Development Lead',
-    image: '/images/front-pages/landing-page/nannie.png',
-    color: 'var(--mui-palette-error-mainOpacity)'
-  },
-  {
-    name: 'Chris Watkins',
-    position: 'Marketing Manager',
-    image: '/images/front-pages/landing-page/chris.png',
-    color: 'var(--mui-palette-success-mainOpacity)'
-  }
+// Payment Partner Logos - official scraped logos
+const partners = [
+  { src: '/images/front-pages/landing-page/partners/esewa_official.png', alt: 'eSewa', width: 130 },
+  { src: '/images/front-pages/landing-page/partners/khalti_official.png', alt: 'Khalti', width: 120 },
+  { src: '/images/front-pages/landing-page/partners/connectips_official.png', alt: 'ConnectIPS', width: 100 },
+  { src: '/images/front-pages/landing-page/partners/imepay_official.jpg', alt: 'IME Pay', width: 110 },
+  { src: '/images/front-pages/landing-page/partners/fonepay_official.png', alt: 'FonePay', width: 120 },
+  { src: '/images/front-pages/landing-page/partners/namastepay_official.png', alt: 'Namaste Pay', width: 70 },
+  { src: '/images/front-pages/landing-page/partners/prabhupay_official.png', alt: 'Prabhu Pay', width: 130 },
+  { src: '/images/front-pages/landing-page/partners/visa_official.png', alt: 'Visa', width: 100 },
+  { src: '/images/front-pages/landing-page/partners/mastercard_official.png', alt: 'Mastercard', width: 80 },
+  { src: '/images/front-pages/landing-page/partners/unionpay_official.png', alt: 'UnionPay', width: 110 },
+  { src: '/images/front-pages/landing-page/partners/paypal_official.png', alt: 'PayPal', width: 120 },
+  { src: '/images/front-pages/landing-page/partners/nmb_official.png', alt: 'NMB Bank', width: 110 },
+  { src: '/images/front-pages/landing-page/partners/civilbank_official.jpg', alt: 'Civil Bank', width: 110 },
+  { src: '/images/front-pages/landing-page/partners/laxmisunrise_official.png', alt: 'Laxmi Sunrise Bank', width: 130 },
 ]
 
-const Card = styled('div')`
-  border-color: ${(props: { color: ThemeColor }) => props.color};
-  border-start-start-radius: 90px;
-  border-start-end-radius: 20px;
-  border-end-start-radius: 6px;
-  border-end-end-radius: 6px;
-`
-
-const OurTeam = () => {
+const PaymentPartners = () => {
   // Refs
   const skipIntersection = useRef(true)
   const ref = useRef<null | HTMLDivElement>(null)
@@ -83,55 +59,94 @@ const OurTeam = () => {
   }, [])
 
   return (
-    <section id='team' className='plb-[100px] bg-backgroundPaper' ref={ref}>
+    <section
+      id='team'
+      className='plb-[100px]'
+      ref={ref}
+      style={{
+        background: 'linear-gradient(180deg, #0a0e1a 0%, #121829 50%, #0a0e1a 100%)'
+      }}
+    >
       <div className={frontCommonStyles.layoutSpacing}>
         <div className='flex flex-col gap-y-4 items-center justify-center'>
-          <Chip size='small' variant='tonal' color='primary' label='Our Great Team' />
+          <Chip
+            size='small'
+            variant='tonal'
+            color='primary'
+            label='Trusted Payment Partners'
+          />
           <div className='flex flex-col items-center gap-y-1 justify-center flex-wrap'>
             <div className='flex items-center gap-x-2'>
-              <Typography color='text.primary' variant='h4'>
+              <Typography variant='h4' style={{ color: '#fff' }}>
                 <span className='relative z-[1] font-extrabold'>
-                  Supported
+                  Payment
                   <img
                     src='/images/front-pages/landing-page/bg-shape.png'
                     alt='bg-shape'
                     className='absolute block-end-0 z-[1] bs-[40%] is-[132%] -inline-start-[19%] block-start-[17px]'
                   />
                 </span>{' '}
-                by Real People
+                Partners
               </Typography>
             </div>
-            <Typography className='text-center'>Who is behind these great-looking interfaces?</Typography>
+            <Typography style={{ color: 'rgba(255,255,255,0.6)' }} className='text-center'>
+              Secure and seamless payments through Nepal&apos;s most trusted payment gateways and banks.
+            </Typography>
           </div>
         </div>
-        <Grid container rowSpacing={16} columnSpacing={6} className='pbs-[100px]'>
-          {team.map((member, index) => (
-            <Grid size={{ xs: 12, md: 6, lg: 3 }} key={index}>
-              <Card className='border overflow-visible' color={member.color as ThemeColor}>
-                <div className='flex flex-col items-center justify-center p-0'>
-                  <div
-                    className={classnames(
-                      'flex justify-center is-full mli-auto text-center bs-[189px] relative overflow-visible',
-                      styles.teamCard
-                    )}
-                    style={{ backgroundColor: member.color }}
-                  >
-                    <img src={member.image} alt={member.name} className='bs-[240px] absolute block-start-[-50px]' />
-                  </div>
-                  <div className='flex flex-col gap-3 p-5 is-full'>
-                    <div className='text-center'>
-                      <Typography variant='h5'>{member.name}</Typography>
-                      <Typography color='text.disabled'>{member.position}</Typography>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </Grid>
+        <div
+          className={classnames(
+            'flex flex-wrap items-center justify-center gap-5 pbs-[60px]'
+          )}
+        >
+          {partners.map((partner, index) => (
+            <div
+              key={index}
+              className='flex items-center justify-center'
+              style={{
+                minWidth: 110,
+                height: 60,
+                padding: '12px 22px',
+                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: 14,
+                backdropFilter: 'blur(10px)',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLDivElement
+
+                el.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'
+                el.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                el.style.transform = 'translateY(-3px)'
+                el.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.3)'
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLDivElement
+
+                el.style.backgroundColor = 'rgba(255, 255, 255, 0.06)'
+                el.style.borderColor = 'rgba(255, 255, 255, 0.08)'
+                el.style.transform = 'translateY(0)'
+                el.style.boxShadow = 'none'
+              }}
+            >
+              <img
+                src={partner.src}
+                alt={partner.alt}
+                style={{
+                  maxWidth: partner.width,
+                  maxHeight: 40,
+                  objectFit: 'contain',
+                  filter: 'brightness(1.6) contrast(1.1)',
+                  opacity: 0.9
+                }}
+              />
+            </div>
           ))}
-        </Grid>
+        </div>
       </div>
     </section>
   )
 }
 
-export default OurTeam
+export default PaymentPartners

@@ -5,6 +5,7 @@ import CardContent from '@mui/material/CardContent'
 import Chip from '@mui/material/Chip'
 import Rating from '@mui/material/Rating'
 import Divider from '@mui/material/Divider'
+import { useColorScheme } from '@mui/material/styles'
 
 // Third-party Imports
 import { useKeenSlider } from 'keen-slider/react'
@@ -17,104 +18,175 @@ import CustomAvatar from '@core/components/mui/Avatar'
 // Styled Component Imports
 import AppKeenSlider from '@/libs/styles/AppKeenSlider'
 
-// SVG Imports
-import HubSpot from '@assets/svg/front-pages/landing-page/HubSpot'
-import Pinterest from '@assets/svg/front-pages/landing-page/Pinterest'
-import Dribbble from '@assets/svg/front-pages/landing-page/Dribbble'
-import Airbnb from '@assets/svg/front-pages/landing-page/Airbnb'
-import Coinbase from '@assets/svg/front-pages/landing-page/Coinbase'
-import Netflix from '@assets/svg/front-pages/landing-page/Netflix'
-
 // Styles Imports
 import frontCommonStyles from '@views/front-pages/styles.module.css'
 import styles from './styles.module.css'
 
-// Data
+// Company Logo Component
+const CompanyLogo = ({ src, alt }: { src: string; alt: string }) => (
+  <img src={src} alt={alt} style={{ height: 40, maxWidth: 140, objectFit: 'contain' }} />
+)
+
+// Data - Nepali Companies
 const data = [
   {
-    desc: "I've never used a theme as versatile and flexible as Vuexy. It's my go to for building dashboard sites on almost any project.",
-    svg: <Pinterest color='#ee7676' />,
+    desc: 'Nepal Fillings has completely transformed our email marketing. We can now reach thousands of customers across Nepal with a single campaign. The delivery rates are outstanding!',
+    logo: '/images/front-pages/landing-page/reviews/daraz.svg',
+    company: 'Daraz',
     rating: 5,
-    name: 'Eugenia Moore',
-    position: 'Founder of Pinterest',
+    name: 'Rajesh Sharma',
+    position: 'Marketing Head, Daraz Nepal',
     avatarSrc: '/images/avatars/1.png'
   },
   {
-    desc: 'Materio is awesome, and I particularly enjoy knowing that if I get stuck on something.',
-    svg: <Netflix color='#d34c4d' />,
+    desc: 'The Telegram marketing feature is a game-changer for our food delivery alerts. Our customers love getting instant notifications about offers and deals directly on Telegram.',
+    logo: '/images/front-pages/landing-page/reviews/foodmandu.svg',
+    company: 'Foodmandu',
     rating: 5,
-    name: 'Tommy haffman',
-    position: 'Founder of Netflix',
+    name: 'Srijana Thapa',
+    position: 'CEO, Foodmandu',
     avatarSrc: '/images/avatars/2.png'
   },
   {
-    desc: "This template is superior in so many ways. The code, the design, the regular updates, the support.. It's the whole package. Excellent Work.",
-    svg: <Airbnb color='#FF5A60' />,
-    rating: 4,
-    name: 'Eugenia Moore',
-    position: 'CTO of Airbnb',
+    desc: 'We switched from manual WhatsApp messaging to Nepal Fillings and our engagement rate doubled. The bulk SMS feature helps us reach customers even in remote areas of Nepal.',
+    logo: '/images/front-pages/landing-page/reviews/bhojdeal.svg',
+    company: 'Bhoj Deal',
+    rating: 5,
+    name: 'Ankit Paudel',
+    position: 'Founder, Bhoj Deal',
     avatarSrc: '/images/avatars/3.png'
   },
   {
-    desc: "All the requirements for developers have been taken into consideration, so I'm able to build any interface I want.",
-    svg: <Coinbase color='#0199ff' />,
+    desc: 'As a beauty brand, visual email campaigns are essential. Nepal Fillings makes it easy to design stunning emails with their template gallery. Our sales increased by 40% after using their platform.',
+    logo: '/images/front-pages/landing-page/reviews/foreveryng_dark.svg',
+    company: 'Foreveryng',
     rating: 5,
-    name: 'Sara Smith',
-    position: 'Founder of Coinbase',
+    name: 'Priya Karki',
+    position: 'Digital Manager, Foreveryng',
     avatarSrc: '/images/avatars/4.png'
   },
   {
-    desc: "I've never used a theme as versatile and flexible as Vuexy. It's my go to for building dashboard sites on almost any project.",
-    svg: <Dribbble color='#ea4c89' />,
-    rating: 5,
-    name: 'Tommy haffman',
-    position: 'Founder of Dribble',
+    desc: 'The API integration is incredibly easy. We automated our order confirmation messages through SMS and email — all from one dashboard. Best digital marketing tool made for Nepal!',
+    logo: '/images/front-pages/landing-page/reviews/ultima.svg',
+    company: 'Ultima Lifestyle',
+    rating: 4,
+    name: 'Bikash Adhikari',
+    position: 'CTO, Ultima Lifestyle',
     avatarSrc: '/images/avatars/5.png'
   },
   {
-    desc: "I've never used a theme as versatile and flexible as Vuexy. It's my go to for building dashboard sites on almost any project.",
-    svg: <Pinterest color='#ee7676' />,
+    desc: 'Nepal Fillings helped us streamline our admission notifications. We send bulk SMS and email updates to thousands of students. The platform is reliable and affordable for educational institutions.',
+    logo: '/images/front-pages/landing-page/reviews/ioe.svg',
+    company: 'IOE Pulchowk',
     rating: 5,
-    name: 'Eugenia Moore',
-    position: 'Founder of Pinterest',
+    name: 'Dr. Ram Prasad',
+    position: 'Admin, IOE Pulchowk',
     avatarSrc: '/images/avatars/6.png'
   },
   {
-    desc: 'Materio is awesome, and I particularly enjoy knowing that if I get stuck on something.',
-    svg: <HubSpot color='#FF5C35' />,
+    desc: 'Our institute uses Nepal Fillings for sending class schedules, exam notices, and fee reminders via SMS and Telegram. Students find it very convenient. Highly recommended!',
+    logo: '/images/front-pages/landing-page/reviews/name.svg',
+    company: 'NAME Institute',
     rating: 5,
-    name: 'Tommy haffman',
-    position: 'Founder of HubSpot',
+    name: 'Suresh Maharjan',
+    position: 'Director, NAME Institute',
     avatarSrc: '/images/avatars/7.png'
   },
   {
-    desc: "This template is superior in so many ways. The code, the design, the regular updates, the support.. It's the whole package. Excellent Work.",
-    svg: <Airbnb color='#FF5A60' />,
-    rating: 4,
-    name: 'Eugenia Moore',
-    position: 'CTO of Airbnb',
+    desc: 'Payment confirmation emails and SMS reminders have become effortless with Nepal Fillings. The multi-channel approach ensures our users never miss important payment deadlines.',
+    logo: '/images/front-pages/landing-page/reviews/neb.svg',
+    company: 'NEB Payment',
+    rating: 5,
+    name: 'Kumari Shrestha',
+    position: 'IT Head, NEB Payment',
     avatarSrc: '/images/avatars/8.png'
   },
   {
-    desc: "All the requirements for developers have been taken into consideration, so I'm able to build any interface I want.",
-    svg: <Coinbase color='#0199ff' />,
+    desc: 'As the stock exchange platform, we need instant market alerts. Nepal Fillings Telegram bot integration lets us push real-time NEPSE updates to thousands of traders simultaneously.',
+    logo: '/images/front-pages/landing-page/reviews/tms.svg',
+    company: 'TMS (NEPSE)',
     rating: 5,
-    name: 'Sara Smith',
-    position: 'Founder of Coinbase',
+    name: 'Dipak Gurung',
+    position: 'Tech Lead, TMS',
     avatarSrc: '/images/avatars/9.png'
   },
   {
-    desc: 'Materio is awesome, and I particularly enjoy knowing that if I get stuck on something.',
-    svg: <Dribbble color='#ea4c89' />,
-    rating: 5,
-    name: 'Tommy haffman',
-    position: 'Founder of Dribbble',
+    desc: 'We use Nepal Fillings for flight booking confirmations, delay notifications, and promotional campaigns. The WhatsApp integration has improved our customer satisfaction significantly.',
+    logo: '/images/front-pages/landing-page/reviews/nepalair.svg',
+    company: 'Nepal Airlines',
+    rating: 4,
+    name: 'Captain Binod KC',
+    position: 'Marketing, Nepal Airlines',
     avatarSrc: '/images/avatars/10.png'
+  },
+  {
+    desc: 'Nepal Fillings has been instrumental in our policyholder communication. Automated SMS and email reminders for premium payments have reduced our lapse rate by 35%. A must-have for insurance companies!',
+    logo: '/images/front-pages/landing-page/reviews/nepallife.svg',
+    company: 'Nepal Life Insurance',
+    rating: 5,
+    name: 'Hari Bahadur KC',
+    position: 'IT Director, Nepal Life Insurance',
+    avatarSrc: '/images/avatars/1.png'
+  },
+  {
+    desc: 'As a global brand operating in Nepal, we needed a reliable local platform for customer engagement. Nepal Fillings delivers professional email campaigns with excellent tracking and analytics.',
+    logo: '/images/front-pages/landing-page/reviews/metlife.svg',
+    company: 'MetLife Nepal',
+    rating: 5,
+    name: 'Anil Joshi',
+    position: 'Digital Lead, MetLife Nepal',
+    avatarSrc: '/images/avatars/3.png'
+  },
+  {
+    desc: 'Bulk SMS campaigns for festival greetings and new product launches have become effortless with Nepal Fillings. The Telegram bot feature helps us share insurance tips with our subscriber community.',
+    logo: '/images/front-pages/landing-page/reviews/asianlife.svg',
+    company: 'Asian Life Insurance',
+    rating: 4,
+    name: 'Binita Rana',
+    position: 'VP Marketing, Asian Life',
+    avatarSrc: '/images/avatars/4.png'
   }
+]
+
+// Bottom logo bar - dark versions for light backgrounds, light versions for dark backgrounds
+const bottomLogosDark = [
+  { src: '/images/front-pages/landing-page/reviews/daraz.svg', alt: 'Daraz' },
+  { src: '/images/front-pages/landing-page/reviews/foodmandu.svg', alt: 'Foodmandu' },
+  { src: '/images/front-pages/landing-page/reviews/bhojdeal.svg', alt: 'Bhoj Deal' },
+  { src: '/images/front-pages/landing-page/reviews/foreveryng.svg', alt: 'Foreveryng' },
+  { src: '/images/front-pages/landing-page/reviews/ultima.svg', alt: 'Ultima Lifestyle' },
+  { src: '/images/front-pages/landing-page/reviews/ioe.svg', alt: 'IOE Pulchowk' },
+  { src: '/images/front-pages/landing-page/reviews/name.svg', alt: 'NAME Institute' },
+  { src: '/images/front-pages/landing-page/reviews/neb.svg', alt: 'NEB' },
+  { src: '/images/front-pages/landing-page/reviews/tms.svg', alt: 'TMS (NEPSE)' },
+  { src: '/images/front-pages/landing-page/reviews/nepalair.svg', alt: 'Nepal Airlines' },
+  { src: '/images/front-pages/landing-page/reviews/nepallife.svg', alt: 'Nepal Life Insurance' },
+  { src: '/images/front-pages/landing-page/reviews/metlife.svg', alt: 'MetLife Nepal' },
+  { src: '/images/front-pages/landing-page/reviews/asianlife.svg', alt: 'Asian Life Insurance' }
+]
+
+const bottomLogosLight = [
+  { src: '/images/front-pages/landing-page/reviews/daraz_light.svg', alt: 'Daraz' },
+  { src: '/images/front-pages/landing-page/reviews/foodmandu_light.svg', alt: 'Foodmandu' },
+  { src: '/images/front-pages/landing-page/reviews/bhojdeal_light.svg', alt: 'Bhoj Deal' },
+  { src: '/images/front-pages/landing-page/reviews/foreveryng_dark.svg', alt: 'Foreveryng' },
+  { src: '/images/front-pages/landing-page/reviews/ultima_light.svg', alt: 'Ultima Lifestyle' },
+  { src: '/images/front-pages/landing-page/reviews/ioe_light.svg', alt: 'IOE Pulchowk' },
+  { src: '/images/front-pages/landing-page/reviews/name_light.svg', alt: 'NAME Institute' },
+  { src: '/images/front-pages/landing-page/reviews/neb_light.svg', alt: 'NEB' },
+  { src: '/images/front-pages/landing-page/reviews/tms_light.svg', alt: 'TMS (NEPSE)' },
+  { src: '/images/front-pages/landing-page/reviews/nepalair_light.svg', alt: 'Nepal Airlines' },
+  { src: '/images/front-pages/landing-page/reviews/nepallife_light.svg', alt: 'Nepal Life Insurance' },
+  { src: '/images/front-pages/landing-page/reviews/metlife_light.svg', alt: 'MetLife Nepal' },
+  { src: '/images/front-pages/landing-page/reviews/asianlife_light.svg', alt: 'Asian Life Insurance' }
 ]
 
 const CustomerReviews = () => {
   // Hooks
+  const { mode: muiMode } = useColorScheme()
+  const isLightMode = muiMode === 'light'
+  const bottomLogos = isLightMode ? bottomLogosDark : bottomLogosLight
+
   const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>(
     {
       loop: true,
@@ -207,19 +279,16 @@ const CustomerReviews = () => {
                   <Card elevation={8} className='flex items-start'>
                     <CardContent className='p-8 items-center mlb-auto'>
                       <div className='flex flex-col gap-4 items-start'>
-                        {item.svg}
+                        <CompanyLogo src={item.logo} alt={item.company} />
                         <Typography>{item.desc}</Typography>
                         <Rating value={item.rating} readOnly />
-                        <div className='flex items-center gap-x-3'>
-                          <CustomAvatar size={32} src={item.avatarSrc} alt={item.name} />
-                          <div className='flex flex-col items-start'>
-                            <Typography color='text.primary' className='font-medium'>
-                              {item.name}
-                            </Typography>
-                            <Typography variant='body2' color='text.disabled'>
-                              {item.position}
-                            </Typography>
-                          </div>
+                        <div className='flex flex-col items-start'>
+                          <Typography color='text.primary' className='font-medium'>
+                            {item.name}
+                          </Typography>
+                          <Typography variant='body2' color='text.disabled'>
+                            {item.position}
+                          </Typography>
                         </div>
                       </div>
                     </CardContent>
@@ -231,12 +300,15 @@ const CustomerReviews = () => {
         </div>
       </div>
       <Divider />
-      <div className='flex flex-wrap items-center justify-center gap-x-16 gap-y-6 mli-3'>
-        <Airbnb color='var(--mui-palette-text-secondary)' />
-        <Netflix color='var(--mui-palette-text-secondary)' />
-        <Dribbble color='var(--mui-palette-text-secondary)' />
-        <Coinbase color='var(--mui-palette-text-secondary)' />
-        <Pinterest color='var(--mui-palette-text-secondary)' />
+      <div className='flex flex-wrap items-center justify-center gap-x-10 gap-y-6 mli-3 pbs-4'>
+        {bottomLogos.map((item, index) => (
+          <img
+            key={index}
+            src={item.src}
+            alt={item.alt}
+            style={{ height: 44, maxWidth: 150, objectFit: 'contain', ...(isLightMode ? {} : { filter: 'brightness(1.8) contrast(1.1)' }) }}
+          />
+        ))}
       </div>
     </section>
   )

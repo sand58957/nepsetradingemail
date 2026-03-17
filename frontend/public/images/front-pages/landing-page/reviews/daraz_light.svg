@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+  <path d="M30 10 L45 30 L30 50 L15 30 Z" fill="#F85606"/>
+  <path d="M30 10 L45 30 L30 30 Z" fill="#FF7733"/>
+  <text x="55" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="32" fill="#FFFFFF">Daraz</text>
+</svg>

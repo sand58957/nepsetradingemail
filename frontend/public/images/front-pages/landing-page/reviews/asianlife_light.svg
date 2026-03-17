@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 60">
+  <polygon points="20,45 25,8 30,45" fill="#FFB300"/>
+  <polygon points="14,45 25,15 36,45" fill="none" stroke="#FFB300" stroke-width="2"/>
+  <circle cx="25" cy="25" r="4" fill="#FFD54F"/>
+  <text x="45" y="30" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="#FFB300">ASIAN</text>
+  <text x="105" y="30" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="#CE93D8">Life</text>
+  <text x="45" y="46" font-family="Arial, sans-serif" font-size="10" fill="#BDBDBD">Insurance Company</text>
+</svg>

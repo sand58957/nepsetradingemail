@@ -72,22 +72,20 @@ const Header = ({ mode }: { mode: Mode }) => {
               <CustomIconButton
                 component={Link}
                 variant='contained'
-                href='https://1.envato.market/vuexy_admin'
+                href='/en/dashboards/crm'
                 color='primary'
-                target='_blank'
               >
-                <i className='tabler-shopping-cart text-xl' />
+                <i className='tabler-layout-dashboard text-xl' />
               </CustomIconButton>
             ) : (
               <Button
                 component={Link}
                 variant='contained'
-                href='https://1.envato.market/vuexy_admin'
-                startIcon={<i className='tabler-shopping-cart text-xl' />}
+                href='/en/dashboards/crm'
+                startIcon={<i className='tabler-layout-dashboard text-xl' />}
                 className='whitespace-nowrap'
-                target='_blank'
               >
-                Purchase Now
+                Dashboard
               </Button>
             )}
           </div>

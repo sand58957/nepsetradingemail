@@ -27,33 +27,33 @@ import frontCommonStyles from '@views/front-pages/styles.module.css'
 const feature = [
   {
     icon: <LaptopCharging color='var(--mui-palette-primary-main)' />,
-    title: 'Quality Code',
-    description: 'Code structure that all developers will easily understand and fall in love with.'
+    title: 'Email Marketing',
+    description: 'Design beautiful campaigns with drag-and-drop templates, track opens, clicks and deliveries in real-time.'
   },
   {
     icon: <Rocket color='var(--mui-palette-primary-main)' />,
-    title: 'Continuous Updates',
-    description: 'Free updates for the next 12 months, including new demos and features.'
+    title: 'Telegram Marketing',
+    description: 'Auto-subscribe users via bot, send bulk alerts to NEPSE traders, and manage contacts with group segmentation.'
   },
   {
     icon: <Paper color='var(--mui-palette-primary-main)' />,
-    title: 'Stater-Kit',
-    description: 'Start your project quickly without having to remove unnecessary features.'
+    title: 'SMS Campaigns',
+    description: 'Reach customers instantly with bulk SMS via Nepal Telecom and Ncell networks with high delivery rates.'
   },
   {
     icon: <Check color='var(--mui-palette-primary-main)' />,
-    title: 'API Ready',
-    description: 'Just change the endpoint and see your own data loaded within seconds.'
+    title: 'API Integration',
+    description: 'RESTful APIs for all channels — automate campaign sending, manage contacts, and track analytics programmatically.'
   },
   {
     icon: <User color='var(--mui-palette-primary-main)' />,
-    title: 'Excellent Support',
-    description: 'An easy-to-follow doc with lots of references and code examples.'
+    title: 'WhatsApp & Messenger',
+    description: 'Engage customers on WhatsApp Business and Facebook Messenger with automated responses and broadcast campaigns.'
   },
   {
     icon: <Document color='var(--mui-palette-primary-main)' />,
-    title: 'Well Documented',
-    description: 'An easy-to-follow doc with lots of references and code examples.'
+    title: 'Analytics & Reporting',
+    description: 'Comprehensive dashboards with delivery rates, engagement metrics, and campaign performance across all channels.'
   }
 ]
 
@@ -87,23 +87,23 @@ const UsefulFeature = () => {
     <section id='features' ref={ref} className='bg-backgroundPaper'>
       <div className={classnames('flex flex-col gap-12 pbs-12 pbe-[100px]', frontCommonStyles.layoutSpacing)}>
         <div className='flex flex-col gap-y-4 items-center justify-center'>
-          <Chip size='small' variant='tonal' color='primary' label='Useful Feature' />
+          <Chip size='small' variant='tonal' color='primary' label='Marketing Channels' />
           <div className='flex flex-col items-center gap-y-1 justify-center flex-wrap'>
             <div className='flex items-center gap-x-2'>
               <Typography color='text.primary' variant='h4' className='text-center'>
                 <span className='relative z-[1] font-extrabold'>
-                  Everything you need
+                  5 Powerful Channels
                   <img
                     src='/images/front-pages/landing-page/bg-shape.png'
                     alt='bg-shape'
                     className='absolute block-end-0 z-[1] bs-[40%] is-[125%] sm:is-[132%] -inline-start-[13%] sm:inline-start-[-19%] block-start-[17px]'
                   />
                 </span>{' '}
-                to start your next project
+                to grow your business
               </Typography>
             </div>
             <Typography className='text-center'>
-              Not just a set of tools, the package includes ready-to-deploy conceptual application.
+              Email, SMS, Telegram, WhatsApp &amp; Messenger — manage all your marketing from one unified platform.
             </Typography>
           </div>
         </div>

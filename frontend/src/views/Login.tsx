@@ -191,7 +191,51 @@ const Login = ({ mode }: { mode: SystemMode }) => {
             : undefined
         }
       >
-        <LoginIllustration src={characterIllustration} alt='character-illustration' />
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Glowing orbital ring */}
+          <div style={{
+            position: 'absolute', width: 420, height: 420, borderRadius: '50%',
+            border: '1px solid rgba(115, 103, 240, 0.15)',
+            boxShadow: '0 0 60px rgba(115, 103, 240, 0.08), inset 0 0 60px rgba(115, 103, 240, 0.04)'
+          }} />
+          <div style={{
+            position: 'absolute', width: 560, height: 560, borderRadius: '50%',
+            border: '1px dashed rgba(115, 103, 240, 0.08)'
+          }} />
+          {/* Character */}
+          <LoginIllustration src='/images/illustrations/characters/5.png' alt='character-illustration' />
+          {/* Floating icon bubbles positioned around the orbital ring */}
+          {[
+            { icon: 'tabler-mail', label: 'Email', color: '#7367f0', glow: 'rgba(115,103,240,0.4)', top: '-5%', left: '15%' },
+            { icon: 'tabler-message-2', label: 'SMS', color: '#28c76f', glow: 'rgba(40,199,111,0.4)', top: '5%', right: '-5%' },
+            { icon: 'tabler-brand-whatsapp', label: 'WhatsApp', color: '#25D366', glow: 'rgba(37,211,102,0.4)', top: '42%', left: '-12%' },
+            { icon: 'tabler-brand-telegram', label: 'Telegram', color: '#0088cc', glow: 'rgba(0,136,204,0.4)', top: '38%', right: '-8%' },
+            { icon: 'tabler-brand-messenger', label: 'Messenger', color: '#0084ff', glow: 'rgba(0,132,255,0.4)', bottom: '12%', left: '5%' }
+          ].map((ch, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              ...(ch.top ? { top: ch.top } : {}),
+              ...(ch.bottom ? { bottom: ch.bottom } : {}),
+              ...(ch.left ? { left: ch.left } : {}),
+              ...(ch.right ? { right: ch.right } : {}),
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6
+            }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: 16,
+                background: `linear-gradient(135deg, ${ch.color}22, ${ch.color}44)`,
+                border: `1.5px solid ${ch.color}66`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 4px 24px ${ch.glow}, 0 0 40px ${ch.color}15`,
+                backdropFilter: 'blur(8px)'
+              }}>
+                <i className={ch.icon} style={{ fontSize: 26, color: ch.color }} />
+              </div>
+              <Typography variant='caption' style={{ fontWeight: 600, color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                {ch.label}
+              </Typography>
+            </div>
+          ))}
+        </div>
         {!hidden && <MaskImg alt='mask' src={authBackground} />}
       </div>
       <div

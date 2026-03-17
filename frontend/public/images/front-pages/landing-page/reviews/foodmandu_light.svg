@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 60">
+  <path d="M20 15 C20 15 25 8 30 12 C35 16 28 22 28 22 L22 28 C22 28 16 22 12 18 C8 14 15 8 20 15Z" fill="#F5A623"/>
+  <path d="M28 22 C28 22 32 18 36 22 C40 26 34 32 34 32 L28 38 C28 38 22 32 18 28 C14 24 22 18 28 22Z" fill="#F5A623"/>
+  <text x="48" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="28" fill="#FFFFFF">Foodmandu</text>
+</svg>

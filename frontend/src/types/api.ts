@@ -2,7 +2,7 @@
 export interface APIKey {
   id: number
   account_id: number
-  channel: 'sms' | 'whatsapp' | 'email'
+  channel: 'sms' | 'whatsapp' | 'email' | 'telegram'
   key_prefix: string
   name: string
   is_test: boolean
@@ -14,7 +14,7 @@ export interface APIKey {
 }
 
 export interface APIKeyCreateRequest {
-  channel: 'sms' | 'whatsapp' | 'email'
+  channel: 'sms' | 'whatsapp' | 'email' | 'telegram'
   name: string
   is_test: boolean
   rate_limit?: number
@@ -70,7 +70,7 @@ export interface AdminCreditEntry {
 }
 
 export interface AdminAdjustRequest {
-  channel: 'sms' | 'whatsapp' | 'email'
+  channel: 'sms' | 'whatsapp' | 'email' | 'telegram'
   amount: number
   description: string
 }

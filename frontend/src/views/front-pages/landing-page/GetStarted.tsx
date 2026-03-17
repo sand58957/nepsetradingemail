@@ -32,30 +32,30 @@ const GetStarted = ({ mode }: { mode: SystemMode }) => {
         alt='background-image'
         className='absolute is-full flex pointer-events-none bs-full block-end-0'
       />
-      <div
-        className={classnames(
-          'flex items-center flex-wrap justify-center lg:justify-between gap-y-4 gap-x-28',
-          frontCommonStyles.layoutSpacing
-        )}
-      >
-        <div className='flex flex-col items-center lg:items-start gap-y-8 pbs-9 lg:plb-9 z-1'>
-          <div className='flex flex-col gap-1 max-lg:items-center'>
-            <Typography variant='h3' color='primary.main' className='font-bold text-[2.125rem] max-sm:text-center'>
-              Ready to Get Started?
+      <div className={classnames('flex flex-col gap-8 plb-12', frontCommonStyles.layoutSpacing)}>
+        <div className='flex flex-col items-center gap-y-6 z-1'>
+          <div className='flex flex-col gap-1 items-center'>
+            <Typography variant='h3' color='primary.main' className='font-bold text-[2.125rem] text-center'>
+              Ready to Grow Your Business?
             </Typography>
-            <Typography variant='h5' color='text.secondary' className='max-sm:text-center'>
-              Start your project with a 14-day free trial
+            <Typography variant='h5' color='text.secondary' className='text-center'>
+              Start sending campaigns today — no monthly fees, pay only for what you use
             </Typography>
           </div>
-          <Button component={Link} href='/front-pages/payment' variant='contained'>
-            Get Started
+          <Button component={Link} href='/en/register' variant='contained'>
+            Create Free Account
           </Button>
         </div>
-        <div className='flex pbs-4 lg:pbs-[60px] md:pie-4 z-1'>
+        <div className='z-1' style={{ display: 'flex', flexDirection: 'row', gap: '24px', justifyContent: 'center' }}>
           <img
-            src='/images/front-pages/landing-page/crm-dashboard.png'
-            alt='dashboard-image'
-            className='max-is-[600px] is-full rounded-bs'
+            src='/images/front-pages/landing-page/dashboard-email.png'
+            alt='Email Marketing Dashboard'
+            style={{ width: '48%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', objectFit: 'contain' }}
+          />
+          <img
+            src='/images/front-pages/landing-page/dashboard-telegram.png'
+            alt='Telegram Marketing Dashboard'
+            style={{ width: '48%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', objectFit: 'contain' }}
           />
         </div>
       </div>

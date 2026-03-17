@@ -46,9 +46,10 @@ type TelegramSettings struct {
 	WebhookSecret string    `json:"webhook_secret" db:"webhook_secret"`
 	SendRate      int       `json:"send_rate" db:"send_rate"`
 	IsActive      bool      `json:"is_active" db:"is_active"`
-	QRCodeURL     string    `json:"qr_code_url" db:"qr_code_url"`
-	CreatedAt     time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
+	QRCodeURL        string    `json:"qr_code_url" db:"qr_code_url"`
+	SubscriptionCode string    `json:"subscription_code" db:"subscription_code"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type TelegramContact struct {
@@ -152,8 +153,9 @@ func (h *TelegramHandler) UpdateSettings(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 
 	var req struct {
-		BotToken string `json:"bot_token"`
-		SendRate int    `json:"send_rate"`
+		BotToken         string `json:"bot_token"`
+		SendRate         int    `json:"send_rate"`
+		SubscriptionCode string `json:"subscription_code"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -181,14 +183,15 @@ func (h *TelegramHandler) UpdateSettings(c echo.Context) error {
 	}
 
 	_, err := h.db.Exec(`
-		INSERT INTO telegram_settings (account_id, bot_token, bot_username, send_rate, updated_at)
-		VALUES ($1, $2, $3, $4, NOW())
+		INSERT INTO telegram_settings (account_id, bot_token, bot_username, send_rate, subscription_code, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW())
 		ON CONFLICT (account_id) DO UPDATE SET
 			bot_token = CASE WHEN EXCLUDED.bot_token = '' THEN telegram_settings.bot_token ELSE EXCLUDED.bot_token END,
 			bot_username = CASE WHEN EXCLUDED.bot_username = '' THEN telegram_settings.bot_username ELSE EXCLUDED.bot_username END,
 			send_rate = EXCLUDED.send_rate,
+			subscription_code = EXCLUDED.subscription_code,
 			updated_at = NOW()
-	`, accountID, botToken, botUsername, req.SendRate)
+	`, accountID, botToken, botUsername, req.SendRate, req.SubscriptionCode)
 	if err != nil {
 		log.Printf("[telegram] Failed to save settings: %v", err)
 		return response.InternalError(c, "Failed to save settings")
@@ -1952,7 +1955,7 @@ func (h *TelegramHandler) WebhookReceive(c echo.Context) error {
 
 	accountID := settings.AccountID
 
-	// Handle /start command — auto-subscribe
+	// Handle /start command — auto-subscribe with password gate
 	if update.Message != nil && strings.HasPrefix(update.Message.Text, "/start") {
 		chatID := update.Message.Chat.ID
 		firstName := update.Message.Chat.FirstName
@@ -1960,17 +1963,32 @@ func (h *TelegramHandler) WebhookReceive(c echo.Context) error {
 		username := update.Message.Chat.Username
 		name := strings.TrimSpace(firstName + " " + lastName)
 
-		// Extract deep link payload
-		source := ""
+		// Extract the code/payload after /start
+		code := ""
 		parts := strings.SplitN(update.Message.Text, " ", 2)
 		if len(parts) > 1 {
-			source = parts[1]
+			code = strings.TrimSpace(parts[1])
+		}
+
+		// Look up the subscription code from telegram_settings
+		var subscriptionCode string
+		h.db.QueryRow(`SELECT COALESCE(subscription_code, '') FROM telegram_settings WHERE account_id = $1`, accountID).Scan(&subscriptionCode)
+
+		// If a subscription code is set, validate it
+		if subscriptionCode != "" && code != subscriptionCode {
+			client := tgclient.NewClient(settings.BotToken)
+			if code == "" {
+				client.SendMessage(chatID, "⛔ A subscription code is required to join.\n\nPlease send:\n/start YOUR_CODE\n\nContact the admin if you don't have a code.", "", nil)
+			} else {
+				client.SendMessage(chatID, "❌ Invalid subscription code. Please try again with the correct code.\n\nSend:\n/start YOUR_CODE", "", nil)
+			}
+			return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 		}
 
 		now := time.Now()
 		attrs := "{}"
-		if source != "" {
-			attrsJSON, _ := json.Marshal(map[string]string{"source": source})
+		if code != "" && code != subscriptionCode {
+			attrsJSON, _ := json.Marshal(map[string]string{"source": code})
 			attrs = string(attrsJSON)
 		}
 
@@ -1989,7 +2007,7 @@ func (h *TelegramHandler) WebhookReceive(c echo.Context) error {
 
 		// Send welcome message
 		client := tgclient.NewClient(settings.BotToken)
-		client.SendMessage(chatID, "Welcome! You have been subscribed to our updates. Send /stop to unsubscribe.", "", nil)
+		client.SendMessage(chatID, "✅ Welcome! You have been subscribed to our updates.\n\nSend /stop to unsubscribe anytime.", "", nil)
 	}
 
 	// Handle /stop command — unsubscribe
@@ -2001,7 +2019,7 @@ func (h *TelegramHandler) WebhookReceive(c echo.Context) error {
 		`, accountID, chatID)
 
 		client := tgclient.NewClient(settings.BotToken)
-		client.SendMessage(chatID, "You have been unsubscribed. Send /start to subscribe again.", "", nil)
+		client.SendMessage(chatID, "You have been unsubscribed. Send /start CODE to subscribe again.", "", nil)
 	}
 
 	// Handle bot blocked/kicked

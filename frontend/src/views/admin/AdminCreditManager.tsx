@@ -45,7 +45,7 @@ const AdminCreditManager = () => {
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [adjustAccountId, setAdjustAccountId] = useState(0)
   const [adjustAccountName, setAdjustAccountName] = useState('')
-  const [adjustChannel, setAdjustChannel] = useState<'sms' | 'whatsapp' | 'email'>('sms')
+  const [adjustChannel, setAdjustChannel] = useState<'sms' | 'whatsapp' | 'email' | 'telegram'>('sms')
   const [adjustAmount, setAdjustAmount] = useState('')
   const [adjustDescription, setAdjustDescription] = useState('')
 
@@ -118,16 +118,17 @@ const AdminCreditManager = () => {
     }
   }
 
-  const openAdjust = (accountId: number, accountName: string, channel: 'sms' | 'whatsapp' | 'email') => {
+  const openAdjust = (accountId: number, accountName: string, channel: 'sms' | 'whatsapp' | 'email' | 'telegram') => {
     setAdjustAccountId(accountId)
     setAdjustAccountName(accountName)
     setAdjustChannel(channel)
     setAdjustOpen(true)
   }
 
-  const getChannelColor = (channel: string): 'primary' | 'success' | 'warning' => {
+  const getChannelColor = (channel: string): 'primary' | 'success' | 'warning' | 'info' => {
     if (channel === 'sms') return 'primary'
     if (channel === 'whatsapp') return 'success'
+    if (channel === 'telegram') return 'info'
     return 'warning'
   }
 
@@ -171,7 +172,7 @@ const AdminCreditManager = () => {
                       </Box>
                       <Grid container spacing={2}>
                         {acCredits.map(credit => (
-                          <Grid size={{ xs: 12, sm: 4 }} key={credit.channel}>
+                          <Grid size={{ xs: 12, sm: 3 }} key={credit.channel}>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
                               <Box>
                                 <Chip label={credit.channel.toUpperCase()} color={getChannelColor(credit.channel)} size='small' />
@@ -311,6 +312,7 @@ const AdminCreditManager = () => {
                   <MenuItem value='sms'>SMS</MenuItem>
                   <MenuItem value='whatsapp'>WhatsApp</MenuItem>
                   <MenuItem value='email'>Email</MenuItem>
+                  <MenuItem value='telegram'>Telegram</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

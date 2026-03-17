@@ -24,7 +24,19 @@ const nextConfig: NextConfig = {
         locale: false
       },
       {
-        source: '/:path((?!en|fr|ar|front-pages|images|api|favicon.ico).*)*',
+        source: '/privacy',
+        destination: '/front-pages/privacy',
+        permanent: true,
+        locale: false
+      },
+      {
+        source: '/terms',
+        destination: '/front-pages/terms',
+        permanent: true,
+        locale: false
+      },
+      {
+        source: '/:path((?!en|fr|ar|front-pages|images|api|favicon.ico|privacy|terms).*)*',
         destination: '/en/:path*',
         permanent: true,
         locale: false

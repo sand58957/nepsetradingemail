@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+  <rect x="10" y="8" width="180" height="44" rx="8" fill="#0066B3"/>
+  <text x="100" y="29" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#FFFFFF" text-anchor="middle" opacity="0.9">connect</text>
+  <text x="100" y="48" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle">IPS</text>
+</svg>

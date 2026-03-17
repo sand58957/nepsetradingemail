@@ -461,11 +461,17 @@ const TelegramContactList = () => {
                   </Step>
                   <Step active expanded>
                     <StepLabel>
-                      <Typography className='font-medium'>Start the Bot</Typography>
+                      <Typography className='font-medium'>Subscribe with Code</Typography>
                     </StepLabel>
                     <StepContent>
                       <Typography variant='body2' color='text.secondary'>
-                        Tap the <strong>&quot;START&quot;</strong> button or send <strong>/start</strong> to subscribe. You&apos;ll be automatically added to the contact list.
+                        Send the subscription command with your access code:
+                      </Typography>
+                      <Box className='mt-2 p-2 rounded' sx={{ bgcolor: 'action.hover', fontFamily: 'monospace', fontSize: 14 }}>
+                        /start PAID4283
+                      </Box>
+                      <Typography variant='caption' color='text.secondary' className='mt-1 block'>
+                        Without the correct code, the bot will not subscribe you.
                       </Typography>
                     </StepContent>
                   </Step>
@@ -475,7 +481,7 @@ const TelegramContactList = () => {
                     </StepLabel>
                     <StepContent>
                       <Typography variant='body2' color='text.secondary'>
-                        You&apos;re now subscribed and will receive messages via campaigns. To unsubscribe, send <strong>/stop</strong> or block the bot.
+                        You&apos;ll receive a confirmation message. You&apos;re now subscribed and will receive campaign messages. To unsubscribe, send <strong>/stop</strong> or block the bot.
                       </Typography>
                     </StepContent>
                   </Step>

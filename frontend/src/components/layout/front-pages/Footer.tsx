@@ -4,7 +4,6 @@
 import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 
 // Third-party Imports
@@ -48,8 +47,8 @@ const Footer = ({ mode }: { mode: Mode }) => {
                   <Logo color='var(--mui-palette-common-white)' />
                 </Link>
                 <Typography color='white' className='md:max-is-[390px] opacity-[0.78]'>
-                  Most Powerful & Comprehensive React NextJS Admin Template with Elegant Material Design & Unique
-                  Layouts.
+                  Nepal Fillings - Multi-channel digital marketing platform for Email, SMS, Telegram, WhatsApp &
+                  Messenger campaigns. Powered by Marketminds Investment Group Pvt Ltd.
                 </Typography>
                 <div className='flex items-end'>
                   <CustomTextField
@@ -85,81 +84,95 @@ const Footer = ({ mode }: { mode: Mode }) => {
             </Grid>
             <Grid size={{ xs: 12, sm: 3, lg: 2 }}>
               <Typography color='white' className='font-medium mbe-6 opacity-[0.92]'>
-                Pages
+                Platform
               </Typography>
               <div className='flex flex-col gap-4'>
-                <Typography component={Link} href='/front-pages/pricing' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/front-pages/landing-page' color='white' className='opacity-[0.78]'>
+                  Home
+                </Typography>
+                <Typography component={Link} href='/front-pages/landing-page#pricing-plans' color='white' className='opacity-[0.78]'>
                   Pricing
                 </Typography>
-                <Link href='/front-pages/payment' className='flex items-center gap-[10px]'>
-                  <Typography color='white' className='opacity-[0.78]'>
-                    Payment
-                  </Typography>
-                  <Chip label='New' color='primary' size='small' />
-                </Link>
-                <Typography
-                  component={Link}
-                  href='/pages/misc/under-maintenance'
-                  color='white'
-                  className='opacity-[0.78]'
-                >
-                  Maintenance
+                <Typography component={Link} href='/front-pages/landing-page#features' color='white' className='opacity-[0.78]'>
+                  Features
                 </Typography>
-                <Typography component={Link} href='/pages/misc/coming-soon' color='white' className='opacity-[0.78]'>
-                  Coming Soon
+                <Typography component={Link} href='/front-pages/landing-page#faq' color='white' className='opacity-[0.78]'>
+                  FAQ
+                </Typography>
+                <Typography component={Link} href='/front-pages/landing-page#contact-us' color='white' className='opacity-[0.78]'>
+                  Contact Us
                 </Typography>
               </div>
             </Grid>
             <Grid size={{ xs: 12, sm: 3, lg: 2 }}>
               <Typography color='white' className='font-medium mbe-6 opacity-[0.92]'>
-                Products
+                Channels
               </Typography>
               <div className='flex flex-col gap-4'>
-                <Typography component={Link} href='/front-pages/landing-page' color='white' className='opacity-[0.78]'>
-                  Page builder
+                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                  Email Marketing
                 </Typography>
-                <Typography component={Link} href='/front-pages/landing-page' color='white' className='opacity-[0.78]'>
-                  Admin Dashboards
+                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                  SMS Marketing
                 </Typography>
-                <Typography component={Link} href='/front-pages/landing-page' color='white' className='opacity-[0.78]'>
-                  UI Kits
+                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                  Telegram Marketing
                 </Typography>
-                <Typography component={Link} href='/front-pages/landing-page' color='white' className='opacity-[0.78]'>
-                  Illustrations
+                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                  WhatsApp Marketing
+                </Typography>
+                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                  Messenger Marketing
                 </Typography>
               </div>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
               <Typography color='white' className='font-medium mbe-6 opacity-[0.92]'>
-                Download our App
+                Legal & Contact
               </Typography>
               <div className='flex flex-col gap-4'>
-                <Link className='bg-[#282C3E] bs-[56px] is-[211px] rounded'>
-                  <div className='flex items-center pli-5 plb-[7px] gap-6'>
-                    <img src='/images/front-pages/apple-icon.png' alt='apple store' className='bs-[34px]' />
-                    <div className='flex flex-col items-start'>
-                      <Typography variant='body2' color='white' className='opacity-75'>
-                        Download on the
-                      </Typography>
-                      <Typography color='white' className='font-medium opacity-[0.92]'>
-                        App Store
-                      </Typography>
-                    </div>
-                  </div>
-                </Link>
-                <Link className='bg-[#282C3E] bs-[56px] is-[211px] rounded'>
-                  <div className='flex items-center pli-5 plb-[7px] gap-6'>
-                    <img src='/images/front-pages/google-play-icon.png' alt='Google play' className='bs-[34px]' />
-                    <div className='flex flex-col items-start'>
-                      <Typography variant='body2' color='white' className='opacity-75'>
-                        Download on the
-                      </Typography>
-                      <Typography color='white' className='font-medium opacity-[0.92]'>
-                        Google Play
-                      </Typography>
-                    </div>
-                  </div>
-                </Link>
+                <Typography
+                  component={Link}
+                  href='/front-pages/privacy'
+                  color='white'
+                  className='opacity-[0.78]'
+                >
+                  Privacy Policy
+                </Typography>
+                <Typography
+                  component={Link}
+                  href='/front-pages/terms'
+                  color='white'
+                  className='opacity-[0.78]'
+                >
+                  Terms of Service
+                </Typography>
+                <Typography
+                  component={Link}
+                  href='mailto:admin@nepsetrading.com'
+                  color='white'
+                  className='opacity-[0.78]'
+                >
+                  admin@nepsetrading.com
+                </Typography>
+                <Typography
+                  component={Link}
+                  href='https://nepalfillings.com'
+                  target='_blank'
+                  color='white'
+                  className='opacity-[0.78]'
+                >
+                  nepalfillings.com
+                </Typography>
+                <Typography
+                  component={Link}
+                  href='https://nepsetrading.com'
+                  target='_blank'
+                  color='white'
+                  className='opacity-[0.78]'
+                >
+                  nepsetrading.com
+                </Typography>
               </div>
             </Grid>
           </Grid>
@@ -173,31 +186,37 @@ const Footer = ({ mode }: { mode: Mode }) => {
           )}
         >
           <Typography className='text-white' variant='body2'>
-            <span>{`© ${new Date().getFullYear()}, Made with `}</span>
-            <span>love</span>
-            <span>{` by `}</span>
-            <Link href='https://pixinvent.com/' target='_blank' className='font-medium text-white'>
-              Pixinvent
+            <span>{`\u00A9 ${new Date().getFullYear()} `}</span>
+            <Link href='https://nepsetrading.com' target='_blank' className='font-medium text-white'>
+              Marketminds Investment Group Pvt Ltd
             </Link>
+            <span>{`. All rights reserved.`}</span>
           </Typography>
-          <div className='flex gap-1.5 items-center'>
-            <IconButton component={Link} size='small' href='https://github.com/pixinvent' target='_blank'>
-              <i className='tabler-brand-github-filled text-white text-lg' />
-            </IconButton>
-            <IconButton component={Link} size='small' href='https://www.facebook.com/pixinvents/' target='_blank'>
-              <i className='tabler-brand-facebook-filled text-white text-lg' />
-            </IconButton>
-            <IconButton component={Link} size='small' href='https://x.com/pixinvents' target='_blank'>
-              <i className='tabler-brand-twitter-filled text-white text-lg' />
-            </IconButton>
-            <IconButton
+          <div className='flex gap-4 items-center'>
+            <Typography
               component={Link}
-              size='small'
-              href='https://www.youtube.com/channel/UClOcB3o1goJ293ri_Hxpklg'
-              target='_blank'
+              href='/front-pages/privacy'
+              variant='body2'
+              className='text-white opacity-[0.78]'
             >
-              <i className='tabler-brand-youtube-filled text-white text-lg' />
-            </IconButton>
+              Privacy
+            </Typography>
+            <Typography
+              component={Link}
+              href='/front-pages/terms'
+              variant='body2'
+              className='text-white opacity-[0.78]'
+            >
+              Terms
+            </Typography>
+            <div className='flex gap-1.5 items-center'>
+              <IconButton component={Link} size='small' href='https://www.facebook.com/profile.php?id=100063477431390' target='_blank'>
+                <i className='tabler-brand-facebook-filled text-white text-lg' />
+              </IconButton>
+              <IconButton component={Link} size='small' href='https://t.me/nepsemarket_alert_bot' target='_blank'>
+                <i className='tabler-brand-telegram text-white text-lg' />
+              </IconButton>
+            </div>
           </div>
         </div>
       </div>

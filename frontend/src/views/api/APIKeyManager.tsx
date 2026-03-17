@@ -49,7 +49,7 @@ const APIKeyManager = () => {
 
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false)
-  const [createChannel, setCreateChannel] = useState<'sms' | 'whatsapp' | 'email'>('sms')
+  const [createChannel, setCreateChannel] = useState<'sms' | 'whatsapp' | 'email' | 'telegram'>('sms')
   const [createName, setCreateName] = useState('')
   const [createIsTest, setCreateIsTest] = useState(false)
   const [createWebhook, setCreateWebhook] = useState('')
@@ -133,9 +133,10 @@ const APIKeyManager = () => {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const getChannelColor = (channel: string): 'primary' | 'success' | 'warning' => {
+  const getChannelColor = (channel: string): 'primary' | 'success' | 'warning' | 'info' => {
     if (channel === 'sms') return 'primary'
     if (channel === 'whatsapp') return 'success'
+    if (channel === 'telegram') return 'info'
     return 'warning'
   }
 
@@ -148,10 +149,10 @@ const APIKeyManager = () => {
       {/* Credit Balances */}
       <Grid size={{ xs: 12 }}>
         <Grid container spacing={4}>
-          {['sms', 'whatsapp', 'email'].map(ch => {
+          {['sms', 'whatsapp', 'email', 'telegram'].map(ch => {
             const credit = getCreditForChannel(ch)
             return (
-              <Grid size={{ xs: 12, sm: 4 }} key={ch}>
+              <Grid size={{ xs: 12, sm: 3 }} key={ch}>
                 <Card>
                   <CardContent sx={{ textAlign: 'center', py: 4 }}>
                     <Chip
@@ -201,6 +202,7 @@ const APIKeyManager = () => {
                     <MenuItem value='sms'>SMS</MenuItem>
                     <MenuItem value='whatsapp'>WhatsApp</MenuItem>
                     <MenuItem value='email'>Email</MenuItem>
+                    <MenuItem value='telegram'>Telegram</MenuItem>
                   </Select>
                 </FormControl>
                 <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => setCreateOpen(true)}>
@@ -376,6 +378,32 @@ const APIKeyManager = () => {
                     { method: 'GET', path: '/balance', desc: 'Check credit balance' },
                     { method: 'GET', path: '/domains', desc: 'List verified domains' }
                   ]
+                },
+                {
+                  title: 'Telegram Bot API',
+                  base: '/api/v1/telegram',
+                  endpoints: [
+                    { method: 'GET', path: '/settings', desc: 'Get bot settings (token, username, webhook)' },
+                    { method: 'PUT', path: '/settings', desc: 'Update bot settings (token, send rate)' },
+                    { method: 'POST', path: '/settings/test', desc: 'Test bot connection' },
+                    { method: 'GET', path: '/contacts', desc: 'List all subscribers (paginated)' },
+                    { method: 'POST', path: '/contacts', desc: 'Add a new contact manually' },
+                    { method: 'PUT', path: '/contacts/:id', desc: 'Update contact details & groups' },
+                    { method: 'DELETE', path: '/contacts/:id', desc: 'Delete a contact' },
+                    { method: 'POST', path: '/contacts/import', desc: 'Import contacts from CSV' },
+                    { method: 'GET', path: '/contacts/export', desc: 'Export contacts to CSV' },
+                    { method: 'GET', path: '/contacts/stats', desc: 'Get subscriber statistics' },
+                    { method: 'GET', path: '/groups', desc: 'List contact groups' },
+                    { method: 'POST', path: '/groups', desc: 'Create a new group' },
+                    { method: 'PUT', path: '/groups/:id', desc: 'Update group details' },
+                    { method: 'DELETE', path: '/groups/:id', desc: 'Delete a group' },
+                    { method: 'POST', path: '/groups/:id/members', desc: 'Add members to group' },
+                    { method: 'DELETE', path: '/groups/:id/members', desc: 'Remove members from group' },
+                    { method: 'GET', path: '/campaigns', desc: 'List campaigns' },
+                    { method: 'POST', path: '/campaigns', desc: 'Create a new campaign' },
+                    { method: 'POST', path: '/campaigns/:id/send', desc: 'Send a campaign' },
+                    { method: 'GET', path: '/overview', desc: 'Dashboard overview stats' }
+                  ]
                 }
               ].map(section => (
                 <Box key={section.title} sx={{ mb: 4 }}>
@@ -422,6 +450,104 @@ const APIKeyManager = () => {
     "message": "Hello from API!"
   }'`}
               </Box>
+
+              <Divider sx={{ my: 3 }} />
+              <Typography variant='h6' gutterBottom>Telegram Bot Integration</Typography>
+
+              <Alert severity='info' sx={{ mb: 3 }}>
+                <Typography variant='subtitle2' gutterBottom>Subscription Method (Password-Gated)</Typography>
+                <Typography variant='body2'>
+                  Users subscribe to your Telegram bot by sending <strong>/start PAID4283</strong> (with the subscription code).
+                  Without the correct code, the bot will reject the subscription. They are automatically added to your contact list upon valid code.
+                  When they send <strong>/stop</strong>, they are automatically opted out.
+                </Typography>
+              </Alert>
+
+              <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                  <i className='tabler-settings' style={{ marginRight: 8, verticalAlign: 'middle' }} />
+                  Bot Setup Details
+                </Typography>
+                <Table size='small'>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Bot Username</TableCell>
+                      <TableCell><code>@nepsemarket_alert_bot</code></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Bot Link</TableCell>
+                      <TableCell><a href='https://t.me/nepsemarket_alert_bot' target='_blank' rel='noopener'>https://t.me/nepsemarket_alert_bot</a></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Webhook Endpoint</TableCell>
+                      <TableCell><code>POST /telegram/:webhook_secret</code></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Subscribe Command</TableCell>
+                      <TableCell><code>/start PAID4283</code> — Requires valid code to subscribe</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Subscription Code</TableCell>
+                      <TableCell><code>PAID4283</code> — Required access code for new subscribers</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Unsubscribe Command</TableCell>
+                      <TableCell><code>/stop</code> — Opts out user from campaigns</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Auto-Captured Data</TableCell>
+                      <TableCell>Chat ID, Username, First Name, Last Name</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </Box>
+
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>Send Telegram Message Example</Typography>
+              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
+{`curl -X POST https://nepalfillings.com/api/v1/telegram/campaigns \\
+  -H "Authorization: Bearer nf_telegram_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Market Alert",
+    "message_text": "NEPSE is up 2.5% today! 📈",
+    "message_type": "text",
+    "target_filter": {
+      "opted_in": true
+    }
+  }'`}
+              </Box>
+
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>List Subscribers Example</Typography>
+              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
+{`curl https://nepalfillings.com/api/v1/telegram/contacts \\
+  -H "Authorization: Bearer nf_telegram_your_key"
+
+# Response:
+{
+  "results": [
+    {
+      "chat_id": 5835919308,
+      "username": "tarkaraj",
+      "name": "Tarka Raj",
+      "opted_in": true,
+      "opted_in_at": "2025-12-15T10:30:00Z"
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "per_page": 50
+}`}
+              </Box>
+
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Add Contact to Group Example</Typography>
+              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
+{`curl -X POST https://nepalfillings.com/api/v1/telegram/groups/1/members \\
+  -H "Authorization: Bearer nf_telegram_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "contact_ids": [1, 2, 3]
+  }'`}
+              </Box>
             </CardContent>
           )}
         </Card>
@@ -439,6 +565,7 @@ const APIKeyManager = () => {
                   <MenuItem value='sms'>SMS (Aakash SMS)</MenuItem>
                   <MenuItem value='whatsapp'>WhatsApp (Gupshup)</MenuItem>
                   <MenuItem value='email'>Email (SendGrid)</MenuItem>
+                  <MenuItem value='telegram'>Telegram (Bot API)</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

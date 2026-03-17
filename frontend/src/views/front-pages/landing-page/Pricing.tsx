@@ -1,5 +1,5 @@
 // React Imports
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 
 // Next Imports
@@ -21,6 +21,9 @@ import classnames from 'classnames'
 // Components Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 
+// Hook Imports
+import { useIntersection } from '@/hooks/useIntersection'
+
 // Styles Imports
 import frontCommonStyles from '@views/front-pages/styles.module.css'
 import styles from './styles.module.css'
@@ -29,49 +32,89 @@ const pricingPlans = [
   {
     title: 'Basic',
     img: '/images/front-pages/landing-page/pricing-basic.png',
-    monthlyPay: 19,
-    annualPay: 14,
-    perYearPay: 168,
-    features: ['Timeline', 'Basic search', 'Live chat widget', 'Email marketing', 'Custom Forms', 'Traffic analytics'],
+    monthlyPay: 5000,
+    annualPay: 4000,
+    perYearPay: 48000,
+    currency: 'NPR',
+    features: [
+      'Email Marketing (Unlimited)',
+      'Telegram Marketing',
+      'Contact Management',
+      'Campaign Analytics',
+      'Email Template Builder',
+      'Subscriber Management',
+      'Basic Reporting'
+    ],
     current: false
   },
   {
-    title: 'Team',
+    title: 'Premium',
     img: '/images/front-pages/landing-page/pricing-team.png',
-    monthlyPay: 29,
-    annualPay: 22,
-    perYearPay: 264,
+    monthlyPay: 7000,
+    annualPay: 5500,
+    perYearPay: 66000,
+    currency: 'NPR',
     features: [
-      'Everything in basic',
-      'Timeline with database',
-      'Advanced search',
-      'Marketing automation',
-      'Advanced chatbot',
-      'Campaign management'
+      'Everything in Basic',
+      'WhatsApp Marketing',
+      'Messenger Marketing',
+      'Advanced Analytics Dashboard',
+      'Campaign Automation',
+      'A/B Testing',
+      'Priority Support',
+      'Custom Email Templates'
     ],
     current: true
   },
   {
-    title: 'Enterprise',
+    title: 'Elite',
     img: '/images/front-pages/landing-page/pricing-enterprise.png',
-    monthlyPay: 49,
-    annualPay: 37,
-    perYearPay: 444,
+    monthlyPay: 10000,
+    annualPay: 8000,
+    perYearPay: 96000,
+    currency: 'NPR',
     features: [
-      'Campaign management',
-      'Timeline with database',
-      'Fuzzy search',
-      'A/B testing sanbox',
-      'Custom permissions',
-      'Social media automation'
+      'Everything in Premium',
+      'Bulk SMS Marketing',
+      'API Access & Integration',
+      'Dedicated Account Manager',
+      'Custom Branding',
+      'Advanced Segmentation',
+      'Real-time Delivery Reports',
+      'Multi-user Team Access'
     ],
     current: false
   }
 ]
 
 const PricingPlan = () => {
+  // Refs
+  const skipIntersection = useRef(true)
+  const ref = useRef<null | HTMLDivElement>(null)
+
   // States
   const [pricingPlan, setPricingPlan] = useState<'monthly' | 'annually'>('annually')
+
+  // Hooks
+  const { updateIntersections } = useIntersection()
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (skipIntersection.current) {
+          skipIntersection.current = false
+
+          return
+        }
+
+        updateIntersections({ [entry.target.id]: entry.isIntersecting })
+      },
+      { threshold: 0.35 }
+    )
+
+    ref.current && observer.observe(ref.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleChange = (e: ChangeEvent<{ checked: boolean }>) => {
     if (e.target.checked) {
@@ -84,6 +127,7 @@ const PricingPlan = () => {
   return (
     <section
       id='pricing-plans'
+      ref={ref}
       className={classnames(
         'flex flex-col gap-8 lg:gap-12 plb-[100px] bg-backgroundDefault rounded-[60px]',
         styles.sectionStartRadius
@@ -107,9 +151,9 @@ const PricingPlan = () => {
               </Typography>
             </div>
             <Typography className='text-center'>
-              All plans include 40+ advanced tools and features to boost your product.
+              All plans include powerful digital marketing tools for Nepal.
               <br />
-              Choose the best plan to fit your needs.
+              Choose the best plan to grow your business.
             </Typography>
           </div>
         </div>
@@ -139,8 +183,8 @@ const PricingPlan = () => {
                       {plan.title}
                     </Typography>
                     <div className='flex items-baseline gap-x-1'>
-                      <Typography variant='h2' color='primary.main' className='font-extrabold'>
-                        ${pricingPlan === 'monthly' ? plan.monthlyPay : plan.annualPay}
+                      <Typography variant='h4' color='primary.main' className='font-extrabold'>
+                        NPR {(pricingPlan === 'monthly' ? plan.monthlyPay : plan.annualPay).toLocaleString()}
                       </Typography>
                       <Typography color='text.disabled' className='font-medium'>
                         /mo
@@ -148,7 +192,7 @@ const PricingPlan = () => {
                     </div>
                     {pricingPlan === 'annually' && (
                       <Typography color='text.disabled' className='absolute block-start-[100%]'>
-                        ${plan.perYearPay} / year
+                        NPR {plan.perYearPay.toLocaleString()} / year
                       </Typography>
                     )}
                   </div>

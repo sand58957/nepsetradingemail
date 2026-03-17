@@ -23,9 +23,6 @@ import type { Mode } from '@core/types'
 // Hook Imports
 import { useIntersection } from '@/hooks/useIntersection'
 
-// Component Imports
-import DropdownMenu from './DropdownMenu'
-
 type Props = {
   mode: Mode
   isDrawerOpen: boolean
@@ -95,7 +92,7 @@ const FrontMenu = (props: Props) => {
         className={classnames('font-medium plb-3 pli-1.5 hover:text-primary', {
           'text-primary':
             !intersections.features &&
-            !intersections.team &&
+            !intersections['pricing-plans'] &&
             !intersections.faq &&
             !intersections['contact-us'] &&
             pathname === '/front-pages/landing-page'
@@ -116,12 +113,12 @@ const FrontMenu = (props: Props) => {
       <Typography
         color='text.primary'
         component={Link}
-        href='/front-pages/landing-page#team'
+        href='/front-pages/landing-page#pricing-plans'
         className={classnames('font-medium plb-3 pli-1.5 hover:text-primary', {
-          'text-primary': intersections.team
+          'text-primary': intersections['pricing-plans']
         })}
       >
-        Team
+        Pricing
       </Typography>
       <Typography
         color='text.primary'
@@ -143,20 +140,21 @@ const FrontMenu = (props: Props) => {
       >
         Contact us
       </Typography>
-      <DropdownMenu
-        mode={mode}
-        isBelowLgScreen={isBelowLgScreen}
-        isDrawerOpen={isDrawerOpen}
-        setIsDrawerOpen={setIsDrawerOpen}
-      />
       <Typography
         component={Link}
         color='text.primary'
-        href='/'
-        target='_blank'
+        href='/en/login'
         className='font-medium plb-3 pli-1.5 hover:text-primary'
       >
-        Admin
+        Login
+      </Typography>
+      <Typography
+        component={Link}
+        color='text.primary'
+        href='/en/register'
+        className='font-medium plb-3 pli-1.5 hover:text-primary'
+      >
+        Register
       </Typography>
     </Wrapper>
   )

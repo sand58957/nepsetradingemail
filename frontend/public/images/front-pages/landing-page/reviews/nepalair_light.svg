@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 60">
+  <polygon points="15,45 25,10 35,45" fill="#5C6BC0"/>
+  <polygon points="20,35 25,20 30,35" fill="#FFFFFF"/>
+  <circle cx="25" cy="28" r="3" fill="#EF5350"/>
+  <text x="45" y="35" font-family="Arial, sans-serif" font-weight="bold" font-size="20" fill="#FFFFFF">Nepal Airlines</text>
+  <text x="45" y="48" font-family="Arial, sans-serif" font-size="10" fill="#90CAF9">National Flag Carrier</text>
+</svg>

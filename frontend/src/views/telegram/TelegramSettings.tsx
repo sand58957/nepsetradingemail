@@ -201,6 +201,17 @@ const TelegramSettings = () => {
                   slotProps={{ htmlInput: { min: 1, max: 30 } }}
                 />
 
+                <Divider />
+
+                <TextField
+                  fullWidth
+                  label='Subscription Code (Password Gate)'
+                  value={settings.subscription_code || ''}
+                  onChange={e => setSettings({ ...settings, subscription_code: e.target.value.toUpperCase() })}
+                  helperText='Users must send /start CODE to subscribe. Leave empty to allow open subscription without a code.'
+                  placeholder='e.g. PAID4283'
+                />
+
                 <div className='flex gap-3 mt-2'>
                   <Button
                     variant='contained'

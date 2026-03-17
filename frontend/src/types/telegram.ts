@@ -7,6 +7,7 @@ export interface TelegramSettings {
   send_rate: number
   is_active: boolean
   qr_code_url: string
+  subscription_code: string
   created_at: string
   updated_at: string
 }
