@@ -148,19 +148,6 @@ const data = [
   }
 ]
 
-// Bottom logo bar - use official PNG logos for all modes
-const bottomLogos = [
-  { src: '/images/front-pages/landing-page/reviews/daraz_official.png', alt: 'Daraz' },
-  { src: '/images/front-pages/landing-page/reviews/foodmandu_official.png', alt: 'Foodmandu' },
-  { src: '/images/front-pages/landing-page/reviews/bhojdeal_official.png', alt: 'Bhoj Deal' },
-  { src: '/images/front-pages/landing-page/reviews/foreveryng_official.svg', alt: 'Foreveryng' },
-  { src: '/images/front-pages/landing-page/reviews/ioe_official.png', alt: 'IOE Pulchowk' },
-  { src: '/images/front-pages/landing-page/reviews/neb_official.png', alt: 'NEB Payment' },
-  { src: '/images/front-pages/landing-page/reviews/nepalair_official.png', alt: 'Nepal Airlines' },
-  { src: '/images/front-pages/landing-page/reviews/nepallife_official.png', alt: 'Nepal Life Insurance' },
-  { src: '/images/front-pages/landing-page/reviews/metlife_official.png', alt: 'MetLife Nepal' },
-  { src: '/images/front-pages/landing-page/reviews/asianlife_official.png', alt: 'Asian Life Insurance' }
-]
 
 const CustomerReviews = () => {
 
@@ -278,7 +265,16 @@ const CustomerReviews = () => {
       </div>
       <Divider />
       <div className='flex flex-wrap items-center justify-center gap-x-8 gap-y-5 mli-3 pbs-4'>
-        {bottomLogos.map((item, index) => (
+        {[
+          { src: '/images/front-pages/landing-page/reviews/daraz_official.png', alt: 'Daraz' },
+          { src: '/images/front-pages/landing-page/reviews/foodmandu_official.png', alt: 'Foodmandu' },
+          { src: '/images/front-pages/landing-page/reviews/bhojdeal_official.png', alt: 'Bhoj Deal' },
+          { src: '/images/front-pages/landing-page/reviews/foreveryng_official.svg', alt: 'Foreveryng' },
+          { src: '/images/front-pages/landing-page/reviews/ioe_official.png', alt: 'IOE Pulchowk' },
+          { src: '/images/front-pages/landing-page/reviews/nepalair_official.png', alt: 'Nepal Airlines' },
+          { src: '/images/front-pages/landing-page/reviews/nepallife_official.png', alt: 'Nepal Life Insurance' },
+          { src: '/images/front-pages/landing-page/reviews/asianlife_official.png', alt: 'Asian Life Insurance' }
+        ].map((item, index) => (
           <img
             key={index}
             src={item.src}

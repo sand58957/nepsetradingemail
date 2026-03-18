@@ -441,6 +441,67 @@ func (s *Server) RegisterRoutes() {
 	msgWebhookGroup.POST("/:account_id", msgHandler.WebhookReceive)
 
 	// ==============================================================
+	// Blog CMS
+	// ==============================================================
+	blogHandler := handlers.NewBlogHandler(s.DB, s.Config)
+
+	blog := staff.Group("/blog")
+
+	// Blog Posts
+	blogPosts := blog.Group("/posts")
+	blogPosts.GET("", blogHandler.ListPosts)
+	blogPosts.GET("/:id", blogHandler.GetPost)
+	blogPosts.POST("", blogHandler.CreatePost)
+	blogPosts.PUT("/:id", blogHandler.UpdatePost)
+	blogPosts.DELETE("/:id", blogHandler.DeletePost)
+	blogPosts.POST("/:id/publish", blogHandler.PublishPost)
+	blogPosts.POST("/:id/unpublish", blogHandler.UnpublishPost)
+
+	// Blog Post FAQs
+	blogPosts.GET("/:id/faqs", blogHandler.ListPostFAQs)
+	blogPosts.POST("/:id/faqs", blogHandler.CreatePostFAQ)
+	blogPosts.PUT("/:id/faqs/:faq_id", blogHandler.UpdatePostFAQ)
+	blogPosts.DELETE("/:id/faqs/:faq_id", blogHandler.DeletePostFAQ)
+
+	// Blog Categories
+	blogCats := blog.Group("/categories")
+	blogCats.GET("", blogHandler.ListCategories)
+	blogCats.POST("", blogHandler.CreateCategory)
+	blogCats.PUT("/:id", blogHandler.UpdateCategory)
+	blogCats.DELETE("/:id", blogHandler.DeleteCategory)
+
+	// Blog Tags
+	blogTags := blog.Group("/tags")
+	blogTags.GET("", blogHandler.ListTags)
+	blogTags.POST("", blogHandler.CreateTag)
+	blogTags.DELETE("/:id", blogHandler.DeleteTag)
+
+	// Blog Authors
+	blogAuthors := blog.Group("/authors")
+	blogAuthors.GET("", blogHandler.ListAuthors)
+	blogAuthors.GET("/:id", blogHandler.GetAuthor)
+	blogAuthors.POST("", blogHandler.CreateAuthor)
+	blogAuthors.PUT("/:id", blogHandler.UpdateAuthor)
+	blogAuthors.DELETE("/:id", blogHandler.DeleteAuthor)
+
+	// Blog Settings
+	blog.GET("/settings", blogHandler.GetBlogSettings)
+	blog.PUT("/settings", blogHandler.UpdateBlogSettings)
+
+	// Blog Dashboard Stats
+	blog.GET("/stats", blogHandler.GetDashboardStats)
+
+	// Public Blog Endpoints (no auth)
+	publicBlog := api.Group("/public/blog")
+	publicBlog.GET("/posts", blogHandler.PublicListPosts)
+	publicBlog.GET("/posts/:slug", blogHandler.PublicGetPost)
+	publicBlog.GET("/categories/:slug", blogHandler.PublicListByCategory)
+	publicBlog.GET("/authors/:slug", blogHandler.PublicListByAuthor)
+	publicBlog.GET("/tags/:slug", blogHandler.PublicListByTag)
+	publicBlog.GET("/sitemap.xml", blogHandler.PublicGetSitemap)
+	publicBlog.GET("/robots.txt", blogHandler.PublicGetRobotsTxt)
+
+	// ==============================================================
 	// API Key Management — authenticated users manage their own keys
 	// ==============================================================
 	apiKeyHandler := handlers.NewAPIKeyHandler(s.DB)

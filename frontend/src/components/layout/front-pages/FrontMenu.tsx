@@ -74,7 +74,8 @@ const menuItems = [
   { label: 'Features', href: '/front-pages/landing-page#features', icon: 'tabler-sparkles', section: 'features' },
   { label: 'Pricing', href: '/front-pages/landing-page#pricing-plans', icon: 'tabler-currency-dollar', section: 'pricing-plans' },
   { label: 'FAQ', href: '/front-pages/landing-page#faq', icon: 'tabler-help-circle', section: 'faq' },
-  { label: 'Contact', href: '/front-pages/landing-page#contact-us', icon: 'tabler-mail', section: 'contact-us' }
+  { label: 'Contact', href: '/front-pages/landing-page#contact-us', icon: 'tabler-mail', section: 'contact-us' },
+  { label: 'Blog', href: '/blog', icon: 'tabler-article', section: null }
 ]
 
 const FrontMenu = (props: Props) => {
@@ -94,6 +95,10 @@ const FrontMenu = (props: Props) => {
   }, [isBelowLgScreen])
 
   const isActive = (item: (typeof menuItems)[0]) => {
+    if (item.label === 'Blog') {
+      return pathname.startsWith('/blog')
+    }
+
     if (item.section) {
       return intersections[item.section]
     }

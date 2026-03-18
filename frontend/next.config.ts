@@ -9,6 +9,18 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname)
   },
+  rewrites: async () => {
+    return [
+      {
+        source: '/blog',
+        destination: '/front-pages/blog'
+      },
+      {
+        source: '/blog/:path*',
+        destination: '/front-pages/blog/:path*'
+      }
+    ]
+  },
   redirects: async () => {
     return [
       {
@@ -42,7 +54,7 @@ const nextConfig: NextConfig = {
         locale: false
       },
       {
-        source: '/:path((?!en|fr|ar|front-pages|images|api|favicon.ico|privacy|terms|dashboards).*)*',
+        source: '/:path((?!en|fr|ar|front-pages|blog|images|api|favicon.ico|privacy|terms|dashboards).*)*',
         destination: '/en/:path*',
         permanent: false,
         locale: false
