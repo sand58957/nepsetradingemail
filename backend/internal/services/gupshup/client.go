@@ -208,6 +208,7 @@ type CreateTemplateRequest struct {
 	Content     string `json:"content"`
 	Example     string `json:"example"`
 	Vertical    string `json:"vertical"` // TEXT, IMAGE, VIDEO, DOCUMENT
+	Buttons     string `json:"buttons"`  // Optional JSON string for buttons
 }
 
 // CreateTemplateResponse holds the response after creating a template.
@@ -236,6 +237,17 @@ func (c *Client) CreateTemplate(appID string, req CreateTemplateRequest) (*Creat
 		"example":                      {req.Example},
 		"enableSample":                 {"true"},
 		"allowTemplateCategoryChange":  {"true"},
+	}
+
+	// For AUTHENTICATION category, add OTP button automatically
+	if strings.EqualFold(req.Category, "AUTHENTICATION") {
+		otpButtons := `[{"type":"OTP","otp_type":"COPY_CODE","text":"Copy Code"}]`
+		formData.Set("buttons", otpButtons)
+	}
+
+	// If caller provided custom buttons, use those instead
+	if req.Buttons != "" {
+		formData.Set("buttons", req.Buttons)
 	}
 
 	httpReq, err := http.NewRequest(http.MethodPost, fullURL, strings.NewReader(formData.Encode()))

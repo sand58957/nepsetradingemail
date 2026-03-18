@@ -177,6 +177,9 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
               <MenuItem href={`/${locale}/dashboards/analytics`} icon={<i className='tabler-chart-bar' />}>
                 Analytics
               </MenuItem>
+              <MenuItem href={`/${locale}/settings`} icon={<i className='tabler-settings' />}>
+                Settings
+              </MenuItem>
             </>
           ) : (
             <MenuItem
@@ -348,31 +351,33 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           )}
         </MenuSection>
 
-        {/* Blog CMS Section */}
-        <MenuSection label='Blog CMS'>
-          <MenuItem href={`/${locale}/blog`} icon={<i className='tabler-article' />}>
-            Dashboard
-          </MenuItem>
-          <SubMenu label='Posts' icon={<i className='tabler-file-text' />}>
-            <MenuItem href={`/${locale}/blog/posts`}>All Posts</MenuItem>
-            <MenuItem href={`/${locale}/blog/posts/create`}>Create New</MenuItem>
-          </SubMenu>
-          <MenuItem href={`/${locale}/blog/categories`} icon={<i className='tabler-category' />}>
-            Categories
-          </MenuItem>
-          <MenuItem href={`/${locale}/blog/tags`} icon={<i className='tabler-tags' />}>
-            Tags
-          </MenuItem>
-          <MenuItem href={`/${locale}/blog/authors`} icon={<i className='tabler-user-edit' />}>
-            Authors
-          </MenuItem>
-          <MenuItem href={`/${locale}/blog/analytics`} icon={<i className='tabler-chart-bar' />}>
-            Analytics
-          </MenuItem>
-          <MenuItem href={`/${locale}/blog/settings`} icon={<i className='tabler-settings-2' />}>
-            Settings
-          </MenuItem>
-        </MenuSection>
+        {/* Blog CMS Section — admin only */}
+        {isAdmin && (
+          <MenuSection label='Blog CMS'>
+            <MenuItem href={`/${locale}/blog`} icon={<i className='tabler-article' />}>
+              Dashboard
+            </MenuItem>
+            <SubMenu label='Posts' icon={<i className='tabler-file-text' />}>
+              <MenuItem href={`/${locale}/blog/posts`}>All Posts</MenuItem>
+              <MenuItem href={`/${locale}/blog/posts/create`}>Create New</MenuItem>
+            </SubMenu>
+            <MenuItem href={`/${locale}/blog/categories`} icon={<i className='tabler-category' />}>
+              Categories
+            </MenuItem>
+            <MenuItem href={`/${locale}/blog/tags`} icon={<i className='tabler-tags' />}>
+              Tags
+            </MenuItem>
+            <MenuItem href={`/${locale}/blog/authors`} icon={<i className='tabler-user-edit' />}>
+              Authors
+            </MenuItem>
+            <MenuItem href={`/${locale}/blog/analytics`} icon={<i className='tabler-chart-bar' />}>
+              Analytics
+            </MenuItem>
+            <MenuItem href={`/${locale}/blog/settings`} icon={<i className='tabler-settings-2' />}>
+              Settings
+            </MenuItem>
+          </MenuSection>
+        )}
 
         {/* API Services Section */}
         <MenuSection label='API Services'>
