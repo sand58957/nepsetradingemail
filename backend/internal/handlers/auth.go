@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net/http"
 	"regexp"
@@ -266,8 +267,8 @@ func (h *AuthHandler) SendOTP(c echo.Context) error {
 	var rateLimitCount int
 	err := h.db.Get(&rateLimitCount,
 		`SELECT request_count FROM otp_rate_limits
-		 WHERE phone = $1 AND window_start > NOW() - INTERVAL '10 minutes'`,
-		req.Phone,
+		 WHERE phone = $1 AND channel = $2 AND window_start > NOW() - INTERVAL '10 minutes'`,
+		req.Phone, req.Channel,
 	)
 	if err != nil && err != sql.ErrNoRows {
 		return response.InternalError(c, "Failed to check rate limit")
@@ -278,9 +279,9 @@ func (h *AuthHandler) SendOTP(c echo.Context) error {
 
 	// Upsert rate limit counter
 	_, err = h.db.Exec(
-		`INSERT INTO otp_rate_limits (phone, request_count, window_start)
-		 VALUES ($1, 1, NOW())
-		 ON CONFLICT (phone) DO UPDATE SET
+		`INSERT INTO otp_rate_limits (phone, channel, request_count, window_start)
+		 VALUES ($1, $2, 1, NOW())
+		 ON CONFLICT (phone, channel) DO UPDATE SET
 		   request_count = CASE
 		     WHEN otp_rate_limits.window_start > NOW() - INTERVAL '10 minutes'
 		     THEN otp_rate_limits.request_count + 1
@@ -291,7 +292,7 @@ func (h *AuthHandler) SendOTP(c echo.Context) error {
 		     THEN otp_rate_limits.window_start
 		     ELSE NOW()
 		   END`,
-		req.Phone,
+		req.Phone, req.Channel,
 	)
 	if err != nil {
 		return response.InternalError(c, "Failed to update rate limit")
@@ -340,7 +341,9 @@ func (h *AuthHandler) SendOTP(c echo.Context) error {
 			return response.InternalError(c, "WhatsApp OTP service is not configured")
 		}
 		waClient := gupshup.NewClient(h.cfg.GupshupOTPKey, h.cfg.GupshupOTPAppName, h.cfg.GupshupOTPSourcePhone)
-		_, err = waClient.SendTextMessage(req.Phone, otpMessage)
+		// Add Nepal country code (977) for WhatsApp delivery
+		waPhone := "977" + req.Phone
+		_, err = waClient.SendTextMessage(waPhone, otpMessage)
 		if err != nil {
 			return response.InternalError(c, "Failed to send OTP via WhatsApp")
 		}
@@ -433,6 +436,232 @@ func (h *AuthHandler) VerifyOTP(c echo.Context) error {
 	}
 
 	return response.Success(c, authResp)
+}
+
+// resetEmailRegex is a simple check for email-like identifiers in password reset
+var resetEmailRegex = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+
+func (h *AuthHandler) PasswordResetRequest(c echo.Context) error {
+	var req models.PasswordResetRequest
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if req.Identifier == "" {
+		return response.BadRequest(c, "Identifier is required")
+	}
+	if req.Channel != "email" && req.Channel != "sms" && req.Channel != "whatsapp" {
+		return response.BadRequest(c, "Channel must be email, sms, or whatsapp")
+	}
+
+	// Determine lookup field based on channel
+	var lookupField, lookupValue, rateLimitKey string
+	if req.Channel == "email" {
+		if !resetEmailRegex.MatchString(req.Identifier) {
+			// Return generic message to not reveal whether account exists
+			return response.SuccessWithMessage(c, "If an account exists, a reset code has been sent", nil)
+		}
+		lookupField = "email"
+		lookupValue = req.Identifier
+		rateLimitKey = req.Identifier
+	} else {
+		// sms or whatsapp — identifier is phone
+		if !nepalPhoneRegex.MatchString(req.Identifier) {
+			return response.SuccessWithMessage(c, "If an account exists, a reset code has been sent", nil)
+		}
+		lookupField = "phone"
+		lookupValue = req.Identifier
+		rateLimitKey = req.Identifier
+	}
+
+	// Check rate limit (reuse otp_rate_limits table)
+	var rateLimitCount int
+	err := h.db.Get(&rateLimitCount,
+		`SELECT request_count FROM otp_rate_limits
+		 WHERE phone = $1 AND channel = $2 AND window_start > NOW() - INTERVAL '10 minutes'`,
+		rateLimitKey, req.Channel,
+	)
+	if err != nil && err != sql.ErrNoRows {
+		return response.InternalError(c, "Failed to check rate limit")
+	}
+	if rateLimitCount >= 3 {
+		return response.Error(c, http.StatusTooManyRequests, "Too many reset requests. Please try again in 10 minutes")
+	}
+
+	// Look up user — if not found, return generic success to avoid user enumeration
+	var user models.User
+	query := fmt.Sprintf("SELECT * FROM app_users WHERE %s = $1 AND is_active = true", lookupField)
+	err = h.db.Get(&user, query, lookupValue)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return response.SuccessWithMessage(c, "If an account exists, a reset code has been sent", nil)
+		}
+		return response.InternalError(c, "Failed to query user")
+	}
+
+	// Upsert rate limit counter
+	_, err = h.db.Exec(
+		`INSERT INTO otp_rate_limits (phone, channel, request_count, window_start)
+		 VALUES ($1, $2, 1, NOW())
+		 ON CONFLICT (phone, channel) DO UPDATE SET
+		   request_count = CASE
+		     WHEN otp_rate_limits.window_start > NOW() - INTERVAL '10 minutes'
+		     THEN otp_rate_limits.request_count + 1
+		     ELSE 1
+		   END,
+		   window_start = CASE
+		     WHEN otp_rate_limits.window_start > NOW() - INTERVAL '10 minutes'
+		     THEN otp_rate_limits.window_start
+		     ELSE NOW()
+		   END`,
+		rateLimitKey, req.Channel,
+	)
+	if err != nil {
+		return response.InternalError(c, "Failed to update rate limit")
+	}
+
+	// Generate 6-digit OTP code
+	code, err := generateOTPCode()
+	if err != nil {
+		return response.InternalError(c, "Failed to generate OTP code")
+	}
+
+	// Delete previous unverified OTPs for this identifier+channel
+	_, err = h.db.Exec(
+		`DELETE FROM otp_codes WHERE phone = $1 AND channel = $2 AND is_verified = false`,
+		rateLimitKey, req.Channel,
+	)
+	if err != nil {
+		return response.InternalError(c, "Failed to clean up old OTPs")
+	}
+
+	// Insert new OTP
+	_, err = h.db.Exec(
+		`INSERT INTO otp_codes (phone, channel, code, expires_at, is_verified, attempts, created_at)
+		 VALUES ($1, $2, $3, NOW() + INTERVAL '5 minutes', false, 0, NOW())`,
+		rateLimitKey, req.Channel, code,
+	)
+	if err != nil {
+		return response.InternalError(c, "Failed to create OTP")
+	}
+
+	// Send OTP via selected channel
+	otpMessage := fmt.Sprintf("Your password reset code is: %s. Valid for 5 minutes.", code)
+
+	switch req.Channel {
+	case "sms":
+		if h.cfg.AakashOTPToken == "" {
+			return response.InternalError(c, "SMS OTP service is not configured")
+		}
+		smsClient := aakashsms.NewClient(h.cfg.AakashOTPToken)
+		_, err = smsClient.SendSMS(req.Identifier, otpMessage)
+		if err != nil {
+			return response.InternalError(c, "Failed to send OTP via SMS")
+		}
+	case "whatsapp":
+		if h.cfg.GupshupOTPKey == "" {
+			return response.InternalError(c, "WhatsApp OTP service is not configured")
+		}
+		waClient := gupshup.NewClient(h.cfg.GupshupOTPKey, h.cfg.GupshupOTPAppName, h.cfg.GupshupOTPSourcePhone)
+		waPhone := "977" + req.Identifier
+		_, err = waClient.SendTextMessage(waPhone, otpMessage)
+		if err != nil {
+			return response.InternalError(c, "Failed to send OTP via WhatsApp")
+		}
+	case "email":
+		// For now, log the code. SMTP email delivery can be added later.
+		log.Printf("[PASSWORD RESET] Email OTP for %s: %s", req.Identifier, code)
+	}
+
+	return response.SuccessWithMessage(c, "If an account exists, a reset code has been sent", map[string]interface{}{
+		"identifier": req.Identifier,
+		"channel":    req.Channel,
+	})
+}
+
+func (h *AuthHandler) PasswordResetVerify(c echo.Context) error {
+	var req models.PasswordResetVerify
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if req.Identifier == "" || req.Code == "" || req.Channel == "" || req.NewPassword == "" {
+		return response.BadRequest(c, "Identifier, code, channel, and new_password are required")
+	}
+	if len(req.Code) != 6 {
+		return response.BadRequest(c, "Reset code must be 6 digits")
+	}
+	if req.Channel != "email" && req.Channel != "sms" && req.Channel != "whatsapp" {
+		return response.BadRequest(c, "Channel must be email, sms, or whatsapp")
+	}
+	if len(req.NewPassword) < 5 {
+		return response.BadRequest(c, "New password must be at least 5 characters")
+	}
+
+	// The otp_codes table uses "phone" column to store the identifier (email or phone)
+	rateLimitKey := req.Identifier
+
+	// Verify OTP
+	var otpID int
+	err := h.db.Get(&otpID,
+		`SELECT id FROM otp_codes
+		 WHERE phone = $1 AND channel = $2 AND code = $3
+		   AND is_verified = false AND expires_at > NOW() AND attempts < 5`,
+		rateLimitKey, req.Channel, req.Code,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Increment attempts on the most recent OTP
+			h.db.Exec(
+				`UPDATE otp_codes SET attempts = attempts + 1
+				 WHERE id = (
+				   SELECT id FROM otp_codes
+				   WHERE phone = $1 AND channel = $2 AND is_verified = false
+				   ORDER BY created_at DESC LIMIT 1
+				 )`,
+				rateLimitKey, req.Channel,
+			)
+			return response.Unauthorized(c, "Invalid or expired reset code")
+		}
+		return response.InternalError(c, "Failed to verify reset code")
+	}
+
+	// Mark OTP as verified
+	_, err = h.db.Exec(`UPDATE otp_codes SET is_verified = true WHERE id = $1`, otpID)
+	if err != nil {
+		return response.InternalError(c, "Failed to mark OTP as verified")
+	}
+
+	// Look up user by email or phone based on channel
+	var user models.User
+	if req.Channel == "email" {
+		err = h.db.Get(&user, `SELECT * FROM app_users WHERE email = $1 AND is_active = true`, req.Identifier)
+	} else {
+		err = h.db.Get(&user, `SELECT * FROM app_users WHERE phone = $1 AND is_active = true`, req.Identifier)
+	}
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return response.NotFound(c, "User not found")
+		}
+		return response.InternalError(c, "Failed to query user")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return response.InternalError(c, "Failed to hash password")
+	}
+
+	// Update user's password
+	_, err = h.db.Exec(
+		`UPDATE app_users SET password_hash = $1, updated_at = NOW() WHERE id = $2`,
+		string(hashedPassword), user.ID,
+	)
+	if err != nil {
+		return response.InternalError(c, "Failed to update password")
+	}
+
+	return response.SuccessWithMessage(c, "Password has been reset successfully", nil)
 }
 
 func (h *AuthHandler) GoogleAuth(c echo.Context) error {

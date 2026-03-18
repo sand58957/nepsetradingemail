@@ -48,6 +48,8 @@ func (s *Server) RegisterRoutes() {
 	auth.POST("/otp/send", authHandler.SendOTP)
 	auth.POST("/otp/verify", authHandler.VerifyOTP)
 	auth.POST("/google", authHandler.GoogleAuth)
+	auth.POST("/password/reset-request", authHandler.PasswordResetRequest)
+	auth.POST("/password/reset-verify", authHandler.PasswordResetVerify)
 
 	// Public form submission (rate-limited: 3 requests/second, burst of 5)
 	formLimiter := middleware.NewRateLimiter(3, 5)

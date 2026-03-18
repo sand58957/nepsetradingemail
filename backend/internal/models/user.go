@@ -94,3 +94,15 @@ type OTPVerifyRequest struct {
 type GoogleAuthRequest struct {
 	IDToken string `json:"id_token" validate:"required"`
 }
+
+type PasswordResetRequest struct {
+	Identifier string `json:"identifier" validate:"required"`
+	Channel    string `json:"channel" validate:"required,oneof=email sms whatsapp"`
+}
+
+type PasswordResetVerify struct {
+	Identifier  string `json:"identifier" validate:"required"`
+	Channel     string `json:"channel" validate:"required,oneof=email sms whatsapp"`
+	Code        string `json:"code" validate:"required,len=6"`
+	NewPassword string `json:"new_password" validate:"required,min=5"`
+}

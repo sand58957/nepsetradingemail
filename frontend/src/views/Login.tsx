@@ -386,6 +386,17 @@ const Login = ({ mode }: { mode: SystemMode }) => {
               <Button fullWidth variant='contained' type='submit' disabled={isLoading}>
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
+              <div className='flex justify-end'>
+                <Typography
+                  variant='body2'
+                  component={Link}
+                  href={getLocalizedUrl('/forgot-password', locale as Locale)}
+                  color='primary.main'
+                  sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                >
+                  Forgot Password?
+                </Typography>
+              </div>
             </form>
           )}
 
