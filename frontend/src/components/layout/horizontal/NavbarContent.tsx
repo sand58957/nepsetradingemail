@@ -128,7 +128,7 @@ const NavbarContent = () => {
         <NavToggle />
         {/* Hide Logo on Smaller screens */}
         {!isBreakpointReached && (
-          <Link href={getLocalizedUrl('/', locale as Locale)}>
+          <Link href='/front-pages/landing-page'>
             <Logo />
           </Link>
         )}

@@ -117,7 +117,7 @@ const Navigation = (props: Props) => {
     >
       {/* Nav Header including Logo & nav toggle icons  */}
       <NavHeader>
-        <Link href={getLocalizedUrl('/', locale as Locale)}>
+        <Link href='/front-pages/landing-page'>
           <Logo />
         </Link>
         {!(isCollapsed && !isHovered) && (

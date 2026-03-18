@@ -4,8 +4,12 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -16,6 +20,8 @@ import (
 	"github.com/sandeep/nepsetradingemail/backend/internal/config"
 	mw "github.com/sandeep/nepsetradingemail/backend/internal/middleware"
 	"github.com/sandeep/nepsetradingemail/backend/internal/models"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/aakashsms"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/gupshup"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/validator"
 )
@@ -105,67 +111,9 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return response.InternalError(c, "Failed to hash password")
 	}
 
-	// Use a transaction for user creation + account setup
-	tx, err := h.db.Beginx()
-	if err != nil {
-		return response.InternalError(c, "Failed to start transaction")
-	}
-	defer tx.Rollback()
-
-	var user models.User
-	err = tx.QueryRowx(
-		`INSERT INTO app_users (email, password_hash, name, role, is_active, created_at, updated_at)
-		 VALUES ($1, $2, $3, 'user', true, NOW(), NOW())
-		 RETURNING id, email, password_hash, name, role, is_active, current_account_id, created_at, updated_at, preferences`,
-		req.Email, string(hashedPassword), req.Name,
-	).StructScan(&user)
+	user, account, err := h.createUserWithAccount(req.Email, string(hashedPassword), req.Name, "email", nil, nil)
 	if err != nil {
 		return response.InternalError(c, "Failed to create user")
-	}
-
-	// Auto-create a default account for the new user
-	accountName := req.Name + "'s Account"
-	if req.Name == "" {
-		accountName = req.Email + "'s Account"
-	}
-
-	var account models.Account
-	err = tx.QueryRowx(
-		`INSERT INTO app_accounts (name, plan, created_at, updated_at)
-		 VALUES ($1, 'Free', NOW(), NOW())
-		 RETURNING *`,
-		accountName,
-	).StructScan(&account)
-	if err != nil {
-		return response.InternalError(c, "Failed to create account")
-	}
-
-	// Add user as owner of the account
-	_, err = tx.Exec(
-		`INSERT INTO app_account_members (account_id, user_id, role, created_at)
-		 VALUES ($1, $2, 'owner', NOW())`,
-		account.ID, user.ID,
-	)
-	if err != nil {
-		return response.InternalError(c, "Failed to add account member")
-	}
-
-	// Set as current account
-	_, err = tx.Exec(
-		`UPDATE app_users SET current_account_id = $1, updated_at = NOW() WHERE id = $2`,
-		account.ID, user.ID,
-	)
-	if err != nil {
-		return response.InternalError(c, "Failed to set current account")
-	}
-
-	if err := tx.Commit(); err != nil {
-		return response.InternalError(c, "Failed to commit transaction")
-	}
-
-	// Re-fetch user to get updated current_account_id
-	if err := h.db.Get(&user, "SELECT * FROM app_users WHERE id = $1", user.ID); err != nil {
-		return response.InternalError(c, "Failed to fetch updated user")
 	}
 
 	accessToken, err := h.generateToken(user, "access", time.Duration(h.cfg.JWTExpiry)*time.Hour)
@@ -184,6 +132,409 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		User:         user,
 		Account:      &account,
 	})
+}
+
+// createUserWithAccount creates a new user and a default account in a single transaction.
+// It returns the user, account, and any error.
+func (h *AuthHandler) createUserWithAccount(email, passwordHash, name, authProvider string, phone *string, googleID *string) (models.User, models.Account, error) {
+	tx, err := h.db.Beginx()
+	if err != nil {
+		return models.User{}, models.Account{}, fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	var user models.User
+	err = tx.QueryRowx(
+		`INSERT INTO app_users (email, password_hash, name, role, is_active, auth_provider, phone, google_id, created_at, updated_at)
+		 VALUES ($1, $2, $3, 'user', true, $4, $5, $6, NOW(), NOW())
+		 RETURNING *`,
+		email, passwordHash, name, authProvider, phone, googleID,
+	).StructScan(&user)
+	if err != nil {
+		return models.User{}, models.Account{}, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Auto-create a default account for the new user
+	accountName := name + "'s Account"
+	if name == "" {
+		accountName = email + "'s Account"
+	}
+
+	var account models.Account
+	err = tx.QueryRowx(
+		`INSERT INTO app_accounts (name, plan, created_at, updated_at)
+		 VALUES ($1, 'Free', NOW(), NOW())
+		 RETURNING *`,
+		accountName,
+	).StructScan(&account)
+	if err != nil {
+		return models.User{}, models.Account{}, fmt.Errorf("failed to create account: %w", err)
+	}
+
+	// Add user as owner of the account
+	_, err = tx.Exec(
+		`INSERT INTO app_account_members (account_id, user_id, role, created_at)
+		 VALUES ($1, $2, 'owner', NOW())`,
+		account.ID, user.ID,
+	)
+	if err != nil {
+		return models.User{}, models.Account{}, fmt.Errorf("failed to add account member: %w", err)
+	}
+
+	// Set as current account
+	_, err = tx.Exec(
+		`UPDATE app_users SET current_account_id = $1, updated_at = NOW() WHERE id = $2`,
+		account.ID, user.ID,
+	)
+	if err != nil {
+		return models.User{}, models.Account{}, fmt.Errorf("failed to set current account: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return models.User{}, models.Account{}, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Re-fetch user to get updated current_account_id
+	if err := h.db.Get(&user, "SELECT * FROM app_users WHERE id = $1", user.ID); err != nil {
+		return models.User{}, models.Account{}, fmt.Errorf("failed to fetch updated user: %w", err)
+	}
+
+	return user, account, nil
+}
+
+// generateTokens generates access and refresh tokens for a user and returns an AuthResponse.
+func (h *AuthHandler) generateTokens(user models.User) (*models.AuthResponse, error) {
+	accessToken, err := h.generateToken(user, "access", time.Duration(h.cfg.JWTExpiry)*time.Hour)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	refreshToken, err := h.generateToken(user, "refresh", time.Duration(h.cfg.RefreshExpiry)*time.Hour)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	// Load current account if set
+	var account *models.Account
+	if user.CurrentAccountID != nil {
+		var acc models.Account
+		if err := h.db.Get(&acc, "SELECT * FROM app_accounts WHERE id = $1", *user.CurrentAccountID); err == nil {
+			account = &acc
+		}
+	}
+
+	return &models.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         user,
+		Account:      account,
+	}, nil
+}
+
+// nepalPhoneRegex validates Nepal phone numbers: 10 digits starting with 9
+var nepalPhoneRegex = regexp.MustCompile(`^9\d{9}$`)
+
+// generateOTPCode generates a cryptographically random 6-digit OTP code.
+func generateOTPCode() (string, error) {
+	max := big.NewInt(1000000)
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%06d", n.Int64()), nil
+}
+
+func (h *AuthHandler) SendOTP(c echo.Context) error {
+	var req models.OTPSendRequest
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if req.Phone == "" {
+		return response.BadRequest(c, "Phone number is required")
+	}
+	if req.Channel != "sms" && req.Channel != "whatsapp" {
+		return response.BadRequest(c, "Channel must be sms or whatsapp")
+	}
+
+	// Validate Nepal phone number: 10 digits starting with 9
+	if !nepalPhoneRegex.MatchString(req.Phone) {
+		return response.BadRequest(c, "Invalid Nepal phone number. Must be 10 digits starting with 9")
+	}
+
+	// Check rate limit
+	var rateLimitCount int
+	err := h.db.Get(&rateLimitCount,
+		`SELECT request_count FROM otp_rate_limits
+		 WHERE phone = $1 AND window_start > NOW() - INTERVAL '10 minutes'`,
+		req.Phone,
+	)
+	if err != nil && err != sql.ErrNoRows {
+		return response.InternalError(c, "Failed to check rate limit")
+	}
+	if rateLimitCount >= 3 {
+		return response.Error(c, http.StatusTooManyRequests, "Too many OTP requests. Please try again in 10 minutes")
+	}
+
+	// Upsert rate limit counter
+	_, err = h.db.Exec(
+		`INSERT INTO otp_rate_limits (phone, request_count, window_start)
+		 VALUES ($1, 1, NOW())
+		 ON CONFLICT (phone) DO UPDATE SET
+		   request_count = CASE
+		     WHEN otp_rate_limits.window_start > NOW() - INTERVAL '10 minutes'
+		     THEN otp_rate_limits.request_count + 1
+		     ELSE 1
+		   END,
+		   window_start = CASE
+		     WHEN otp_rate_limits.window_start > NOW() - INTERVAL '10 minutes'
+		     THEN otp_rate_limits.window_start
+		     ELSE NOW()
+		   END`,
+		req.Phone,
+	)
+	if err != nil {
+		return response.InternalError(c, "Failed to update rate limit")
+	}
+
+	// Generate 6-digit OTP code
+	code, err := generateOTPCode()
+	if err != nil {
+		return response.InternalError(c, "Failed to generate OTP code")
+	}
+
+	// Delete previous unverified OTPs for this phone+channel
+	_, err = h.db.Exec(
+		`DELETE FROM otp_codes WHERE phone = $1 AND channel = $2 AND is_verified = false`,
+		req.Phone, req.Channel,
+	)
+	if err != nil {
+		return response.InternalError(c, "Failed to clean up old OTPs")
+	}
+
+	// Insert new OTP
+	_, err = h.db.Exec(
+		`INSERT INTO otp_codes (phone, channel, code, expires_at, is_verified, attempts, created_at)
+		 VALUES ($1, $2, $3, NOW() + INTERVAL '5 minutes', false, 0, NOW())`,
+		req.Phone, req.Channel, code,
+	)
+	if err != nil {
+		return response.InternalError(c, "Failed to create OTP")
+	}
+
+	// Send OTP via the selected channel
+	otpMessage := fmt.Sprintf("Your Nepal Fillings verification code is: %s. Valid for 5 minutes.", code)
+
+	if req.Channel == "sms" {
+		if h.cfg.AakashOTPToken == "" {
+			return response.InternalError(c, "SMS OTP service is not configured")
+		}
+		smsClient := aakashsms.NewClient(h.cfg.AakashOTPToken)
+		_, err = smsClient.SendSMS(req.Phone, otpMessage)
+		if err != nil {
+			return response.InternalError(c, "Failed to send OTP via SMS")
+		}
+	} else {
+		// WhatsApp via Gupshup
+		if h.cfg.GupshupOTPKey == "" {
+			return response.InternalError(c, "WhatsApp OTP service is not configured")
+		}
+		waClient := gupshup.NewClient(h.cfg.GupshupOTPKey, h.cfg.GupshupOTPAppName, h.cfg.GupshupOTPSourcePhone)
+		_, err = waClient.SendTextMessage(req.Phone, otpMessage)
+		if err != nil {
+			return response.InternalError(c, "Failed to send OTP via WhatsApp")
+		}
+	}
+
+	return response.SuccessWithMessage(c, "OTP sent successfully", map[string]interface{}{
+		"phone":   req.Phone,
+		"channel": req.Channel,
+	})
+}
+
+func (h *AuthHandler) VerifyOTP(c echo.Context) error {
+	var req models.OTPVerifyRequest
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if req.Phone == "" || req.Code == "" || req.Channel == "" {
+		return response.BadRequest(c, "Phone, code, and channel are required")
+	}
+	if len(req.Code) != 6 {
+		return response.BadRequest(c, "OTP code must be 6 digits")
+	}
+	if req.Channel != "sms" && req.Channel != "whatsapp" {
+		return response.BadRequest(c, "Channel must be sms or whatsapp")
+	}
+
+	// Query for a matching valid OTP
+	var otpID int
+	err := h.db.Get(&otpID,
+		`SELECT id FROM otp_codes
+		 WHERE phone = $1 AND channel = $2 AND code = $3
+		   AND is_verified = false AND expires_at > NOW() AND attempts < 5`,
+		req.Phone, req.Channel, req.Code,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Increment attempts on the most recent OTP for this phone+channel
+			h.db.Exec(
+				`UPDATE otp_codes SET attempts = attempts + 1
+				 WHERE id = (
+				   SELECT id FROM otp_codes
+				   WHERE phone = $1 AND channel = $2 AND is_verified = false
+				   ORDER BY created_at DESC LIMIT 1
+				 )`,
+				req.Phone, req.Channel,
+			)
+			return response.Unauthorized(c, "Invalid or expired OTP code")
+		}
+		return response.InternalError(c, "Failed to verify OTP")
+	}
+
+	// Mark OTP as verified
+	_, err = h.db.Exec(`UPDATE otp_codes SET is_verified = true WHERE id = $1`, otpID)
+	if err != nil {
+		return response.InternalError(c, "Failed to mark OTP as verified")
+	}
+
+	// Look up user by phone
+	var user models.User
+	err = h.db.Get(&user, `SELECT * FROM app_users WHERE phone = $1 AND is_active = true`, req.Phone)
+	if err != nil && err != sql.ErrNoRows {
+		return response.InternalError(c, "Failed to query user")
+	}
+
+	if err == sql.ErrNoRows {
+		// Create a new user with phone as identifier
+		phone := req.Phone
+		email := fmt.Sprintf("%s@phone.local", req.Phone)
+		name := "User " + req.Phone[len(req.Phone)-4:]
+
+		newUser, account, createErr := h.createUserWithAccount(email, "", name, "phone", &phone, nil)
+		if createErr != nil {
+			return response.InternalError(c, "Failed to create user")
+		}
+
+		authResp, err := h.generateTokens(newUser)
+		if err != nil {
+			return response.InternalError(c, "Failed to generate tokens")
+		}
+		authResp.Account = &account
+
+		return response.Created(c, authResp)
+	}
+
+	// Existing user — generate tokens
+	authResp, err := h.generateTokens(user)
+	if err != nil {
+		return response.InternalError(c, "Failed to generate tokens")
+	}
+
+	return response.Success(c, authResp)
+}
+
+func (h *AuthHandler) GoogleAuth(c echo.Context) error {
+	var req models.GoogleAuthRequest
+	if err := c.Bind(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if req.IDToken == "" {
+		return response.BadRequest(c, "ID token is required")
+	}
+
+	// Verify Google ID token via Google's tokeninfo endpoint
+	tokenInfoURL := fmt.Sprintf("https://oauth2.googleapis.com/tokeninfo?id_token=%s", req.IDToken)
+	httpResp, err := http.Get(tokenInfoURL)
+	if err != nil {
+		return response.InternalError(c, "Failed to verify Google token")
+	}
+	defer httpResp.Body.Close()
+
+	body, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return response.InternalError(c, "Failed to read Google token response")
+	}
+
+	if httpResp.StatusCode != http.StatusOK {
+		return response.Unauthorized(c, "Invalid Google ID token")
+	}
+
+	var tokenInfo struct {
+		Sub           string `json:"sub"`
+		Email         string `json:"email"`
+		EmailVerified string `json:"email_verified"`
+		Name          string `json:"name"`
+		Aud           string `json:"aud"`
+	}
+	if err := json.Unmarshal(body, &tokenInfo); err != nil {
+		return response.InternalError(c, "Failed to parse Google token info")
+	}
+
+	// Validate the audience matches our Google Client ID
+	if h.cfg.GoogleClientID != "" && tokenInfo.Aud != h.cfg.GoogleClientID {
+		return response.Unauthorized(c, "Google token audience mismatch")
+	}
+
+	if tokenInfo.Email == "" || tokenInfo.Sub == "" {
+		return response.BadRequest(c, "Google token missing required fields")
+	}
+
+	// Look up user by google_id first
+	var user models.User
+	err = h.db.Get(&user, `SELECT * FROM app_users WHERE google_id = $1 AND is_active = true`, tokenInfo.Sub)
+	if err != nil && err != sql.ErrNoRows {
+		return response.InternalError(c, "Failed to query user")
+	}
+
+	if err == sql.ErrNoRows {
+		// Try by email
+		err = h.db.Get(&user, `SELECT * FROM app_users WHERE email = $1 AND is_active = true`, tokenInfo.Email)
+		if err != nil && err != sql.ErrNoRows {
+			return response.InternalError(c, "Failed to query user")
+		}
+
+		if err == sql.ErrNoRows {
+			// Create new user
+			googleID := tokenInfo.Sub
+			newUser, account, createErr := h.createUserWithAccount(tokenInfo.Email, "", tokenInfo.Name, "google", nil, &googleID)
+			if createErr != nil {
+				return response.InternalError(c, "Failed to create user")
+			}
+
+			authResp, err := h.generateTokens(newUser)
+			if err != nil {
+				return response.InternalError(c, "Failed to generate tokens")
+			}
+			authResp.Account = &account
+
+			return response.Created(c, authResp)
+		}
+
+		// Existing user found by email — update google_id
+		_, err = h.db.Exec(
+			`UPDATE app_users SET google_id = $1, auth_provider = 'google', updated_at = NOW() WHERE id = $2`,
+			tokenInfo.Sub, user.ID,
+		)
+		if err != nil {
+			return response.InternalError(c, "Failed to update user Google ID")
+		}
+
+		// Re-fetch user with updated google_id
+		if err := h.db.Get(&user, "SELECT * FROM app_users WHERE id = $1", user.ID); err != nil {
+			return response.InternalError(c, "Failed to fetch updated user")
+		}
+	}
+
+	// Generate tokens for existing user
+	authResp, err := h.generateTokens(user)
+	if err != nil {
+		return response.InternalError(c, "Failed to generate tokens")
+	}
+
+	return response.Success(c, authResp)
 }
 
 func (h *AuthHandler) RefreshToken(c echo.Context) error {

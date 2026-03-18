@@ -421,8 +421,12 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 			ID        string `json:"id"`
 			Time      int64  `json:"time"`
 			Messaging []struct {
-				Sender    struct{ ID string } `json:"sender"`
-				Recipient struct{ ID string } `json:"recipient"`
+				Sender    struct {
+					ID string `json:"id"`
+				} `json:"sender"`
+				Recipient struct {
+					ID string `json:"id"`
+				} `json:"recipient"`
 				Timestamp int64               `json:"timestamp"`
 				Message   *struct {
 					MID  string `json:"mid"`
@@ -451,18 +455,27 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "parse_error"})
 	}
 
+	log.Printf("[messenger] Webhook received: object=%s, entries=%d, body_len=%d", webhook.Object, len(webhook.Entry), len(body))
+
 	if webhook.Object != "page" {
+		log.Printf("[messenger] Skipping: object is '%s', not 'page'", webhook.Object)
 		return c.JSON(http.StatusOK, map[string]string{"status": "not_page"})
 	}
 
 	client := messenger.NewClient(settings.PageAccessToken, settings.PageID)
 
 	for _, entry := range webhook.Entry {
+		log.Printf("[messenger] Entry: id=%s, messaging_count=%d", entry.ID, len(entry.Messaging))
 		for _, event := range entry.Messaging {
 			senderID := event.Sender.ID
+			log.Printf("[messenger] Event: sender=%s, has_message=%v, has_delivery=%v, has_read=%v, has_postback=%v", senderID, event.Message != nil, event.Delivery != nil, event.Read != nil, event.Postback != nil)
+			if event.Message != nil {
+				log.Printf("[messenger] Message text: '%s'", event.Message.Text)
+			}
 
 			// Skip messages from our own page
 			if senderID == settings.PageID {
+				log.Printf("[messenger] Skipping: sender is our page (%s)", settings.PageID)
 				continue
 			}
 
@@ -598,6 +611,13 @@ func (h *MessengerHandler) handleIncomingMessage(accountID int, psid, text strin
 			WHERE account_id = $2 AND psid = $3
 		`, now, accountID, psid)
 		log.Printf("[messenger] Contact re-subscribed: %s for account %d", psid, accountID)
+
+		// Send welcome message on re-subscribe
+		welcomeMsg := settings.WelcomeMessage
+		if welcomeMsg == "" {
+			welcomeMsg = "You have been successfully subscribed! Send STOP to unsubscribe."
+		}
+		client.SendTextMessage(psid, welcomeMsg)
 	}
 }
 

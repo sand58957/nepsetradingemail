@@ -23,6 +23,12 @@ type Config struct {
 	BunnyCDNStorageZone string
 	BunnyCDNStorageKey string
 	BunnyCDNPullURL    string
+	GoogleClientID     string
+	GoogleClientSecret string
+	AakashOTPToken       string
+	GupshupOTPKey        string
+	GupshupOTPAppName    string
+	GupshupOTPSourcePhone string
 }
 
 func Load() (*Config, error) {
@@ -57,7 +63,13 @@ func Load() (*Config, error) {
 		BunnyCDNStorageURL:  getEnv("BUNNY_CDN_STORAGE_URL", "https://sg.storage.bunnycdn.com"),
 		BunnyCDNStorageZone: getEnv("BUNNY_CDN_STORAGE_ZONE", "nepalfilling"),
 		BunnyCDNStorageKey:  getEnv("BUNNY_CDN_STORAGE_KEY", ""),
-		BunnyCDNPullURL:     getEnv("BUNNY_CDN_PULL_URL", "https://my-pull-zone-name-nepalfilling.b-cdn.net"),
+		BunnyCDNPullURL:       getEnv("BUNNY_CDN_PULL_URL", "https://my-pull-zone-name-nepalfilling.b-cdn.net"),
+		GoogleClientID:        getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:    getEnv("GOOGLE_CLIENT_SECRET", ""),
+		AakashOTPToken:        getEnv("AAKASH_OTP_TOKEN", ""),
+		GupshupOTPKey:         getEnv("GUPSHUP_OTP_KEY", ""),
+		GupshupOTPAppName:     getEnv("GUPSHUP_OTP_APP_NAME", ""),
+		GupshupOTPSourcePhone: getEnv("GUPSHUP_OTP_SOURCE_PHONE", ""),
 	}
 
 	if cfg.JWTSecret == "" {

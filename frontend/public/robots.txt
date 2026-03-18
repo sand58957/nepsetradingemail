@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /en/login
+Disallow: /en/register
+Disallow: /en/dashboards/
+Disallow: /en/forgot-password
+
+User-agent: GPTBot
+Allow: /blog/
+Allow: /front-pages/
+
+User-agent: Google-Extended
+Allow: /blog/
+Allow: /front-pages/
+
+User-agent: ChatGPT-User
+Allow: /blog/
+Allow: /front-pages/
+
+User-agent: PerplexityBot
+Allow: /blog/
+Allow: /front-pages/
+
+Sitemap: https://nepalfillings.com/api/public/blog/sitemap.xml

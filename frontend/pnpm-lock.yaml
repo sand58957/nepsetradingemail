@@ -82,6 +82,9 @@ importers:
       '@prisma/client':
         specifier: 6.19.1
         version: 6.19.1(prisma@6.19.0(typescript@5.9.3))(typescript@5.9.3)
+      '@react-oauth/google':
+        specifier: ^0.13.4
+        version: 0.13.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@reduxjs/toolkit':
         specifier: 2.11.2
         version: 2.11.2(react-redux@9.2.0(@types/react@19.2.7)(react@19.2.3)(redux@5.0.1))(react@19.2.3)
@@ -1520,6 +1523,12 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@react-oauth/google@0.13.4':
+    resolution: {integrity: sha512-hGKyNEH+/PK8M0sFEuo3MAEk0txtHpgs94tDQit+s2LXg7b6z53NtzHfqDvoB2X8O6lGB+FRg80hY//X6hfD+w==}
+    peerDependencies:
+      react: 19.2.3
+      react-dom: 19.2.3
 
   '@reduxjs/toolkit@2.11.2':
     resolution: {integrity: sha512-Kd6kAHTA6/nUpp8mySPqj3en3dm0tdMIgbttnQ1xFMVpufoj+ADi8pXLBsd4xzTRHQa7t/Jv8W5UnCuW4kuWMQ==}
@@ -4910,8 +4919,8 @@ packages:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
 
-  unlayer-types@1.388.0:
-    resolution: {integrity: sha512-Vu6x//ywOcz/QzIbme+8kJBNBtZFZzqErKd0ybF4eFgDqPxXFFagBFp4Yr1L5iogeh0Jur8setJlNB/TlYjkBg==}
+  unlayer-types@1.389.0:
+    resolution: {integrity: sha512-37fB8pduGWOqqCpCsEJbnCYiQlYYpYgSBBmDM4WvQapCfrqletgyzjDIIb6tV4iTjywLGlXw9Bq24HCpK+n8lQ==}
 
   update-browserslist-db@1.2.3:
     resolution: {integrity: sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w==}
@@ -6105,6 +6114,11 @@ snapshots:
       react: 19.2.3
     optionalDependencies:
       '@types/react': 19.2.7
+
+  '@react-oauth/google@0.13.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
 
   '@reduxjs/toolkit@2.11.2(react-redux@9.2.0(@types/react@19.2.7)(react@19.2.3)(redux@5.0.1))(react@19.2.3)':
     dependencies:
@@ -9126,7 +9140,7 @@ snapshots:
   react-email-editor@1.7.11(react@19.2.3):
     dependencies:
       react: 19.2.3
-      unlayer-types: 1.388.0
+      unlayer-types: 1.389.0
 
   react-hook-form@7.69.0(react@19.2.3):
     dependencies:
@@ -9925,7 +9939,7 @@ snapshots:
 
   universalify@2.0.1: {}
 
-  unlayer-types@1.388.0: {}
+  unlayer-types@1.389.0: {}
 
   update-browserslist-db@1.2.3(browserslist@4.28.1):
     dependencies:

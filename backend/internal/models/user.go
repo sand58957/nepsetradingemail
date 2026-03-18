@@ -14,6 +14,9 @@ type User struct {
 	IsActive         bool            `json:"is_active" db:"is_active"`
 	CurrentAccountID *int            `json:"current_account_id,omitempty" db:"current_account_id"`
 	Preferences      json.RawMessage `json:"preferences,omitempty" db:"preferences"`
+	Phone            *string         `json:"phone,omitempty" db:"phone"`
+	GoogleID         *string         `json:"google_id,omitempty" db:"google_id"`
+	AuthProvider     string          `json:"auth_provider" db:"auth_provider"`
 	CreatedAt        time.Time       `json:"created_at" db:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at" db:"updated_at"`
 }
@@ -75,4 +78,19 @@ type UpdateUserRequest struct {
 
 type UpdateRoleRequest struct {
 	Role string `json:"role"`
+}
+
+type OTPSendRequest struct {
+	Phone   string `json:"phone" validate:"required"`
+	Channel string `json:"channel" validate:"required,oneof=sms whatsapp"`
+}
+
+type OTPVerifyRequest struct {
+	Phone   string `json:"phone" validate:"required"`
+	Code    string `json:"code" validate:"required,len=6"`
+	Channel string `json:"channel" validate:"required,oneof=sms whatsapp"`
+}
+
+type GoogleAuthRequest struct {
+	IDToken string `json:"id_token" validate:"required"`
 }

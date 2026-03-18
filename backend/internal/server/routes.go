@@ -45,6 +45,9 @@ func (s *Server) RegisterRoutes() {
 	auth.POST("/login", authHandler.Login)
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/refresh", authHandler.RefreshToken)
+	auth.POST("/otp/send", authHandler.SendOTP)
+	auth.POST("/otp/verify", authHandler.VerifyOTP)
+	auth.POST("/google", authHandler.GoogleAuth)
 
 	// Public form submission (rate-limited: 3 requests/second, burst of 5)
 	formLimiter := middleware.NewRateLimiter(3, 5)
