@@ -13,6 +13,8 @@ import Drawer from '@mui/material/Drawer'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import IconButton from '@mui/material/IconButton'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -64,8 +66,16 @@ const Wrapper = (props: WrapperProps) => {
     )
   }
 
-  return <div className={classnames('flex items-center flex-wrap gap-x-4 gap-y-3', className)}>{children}</div>
+  return <div className={classnames('flex items-center flex-wrap gap-x-1 gap-y-3', className)}>{children}</div>
 }
+
+const menuItems = [
+  { label: 'Home', href: '/front-pages/landing-page', icon: 'tabler-home', section: null },
+  { label: 'Features', href: '/front-pages/landing-page#features', icon: 'tabler-sparkles', section: 'features' },
+  { label: 'Pricing', href: '/front-pages/landing-page#pricing-plans', icon: 'tabler-currency-dollar', section: 'pricing-plans' },
+  { label: 'FAQ', href: '/front-pages/landing-page#faq', icon: 'tabler-help-circle', section: 'faq' },
+  { label: 'Contact', href: '/front-pages/landing-page#contact-us', icon: 'tabler-mail', section: 'contact-us' }
+]
 
 const FrontMenu = (props: Props) => {
   // Props
@@ -83,79 +93,53 @@ const FrontMenu = (props: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBelowLgScreen])
 
+  const isActive = (item: (typeof menuItems)[0]) => {
+    if (item.section) {
+      return intersections[item.section]
+    }
+
+    return (
+      !intersections.features &&
+      !intersections['pricing-plans'] &&
+      !intersections.faq &&
+      !intersections['contact-us'] &&
+      pathname === '/front-pages/landing-page'
+    )
+  }
+
   return (
     <Wrapper isBelowLgScreen={isBelowLgScreen} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen}>
-      <Typography
-        color='text.primary'
-        component={Link}
-        href='/front-pages/landing-page'
-        className={classnames('font-medium plb-3 pli-1.5 hover:text-primary', {
-          'text-primary':
-            !intersections.features &&
-            !intersections['pricing-plans'] &&
-            !intersections.faq &&
-            !intersections['contact-us'] &&
-            pathname === '/front-pages/landing-page'
-        })}
-      >
-        Home
-      </Typography>
-      <Typography
-        color='text.primary'
-        component={Link}
-        href='/front-pages/landing-page#features'
-        className={classnames('font-medium plb-3 pli-1.5 hover:text-primary', {
-          'text-primary': intersections.features
-        })}
-      >
-        Features
-      </Typography>
-      <Typography
-        color='text.primary'
-        component={Link}
-        href='/front-pages/landing-page#pricing-plans'
-        className={classnames('font-medium plb-3 pli-1.5 hover:text-primary', {
-          'text-primary': intersections['pricing-plans']
-        })}
-      >
-        Pricing
-      </Typography>
-      <Typography
-        color='text.primary'
-        component={Link}
-        href='/front-pages/landing-page#faq'
-        className={classnames('font-medium plb-3 pli-1.5 hover:text-primary', {
-          'text-primary': intersections.faq
-        })}
-      >
-        FAQ
-      </Typography>
-      <Typography
-        color='text.primary'
-        component={Link}
-        href='/front-pages/landing-page#contact-us'
-        className={classnames('font-medium plb-3 pli-1.5 hover:text-primary', {
-          'text-primary': intersections['contact-us']
-        })}
-      >
-        Contact us
-      </Typography>
-      <Typography
-        component={Link}
-        color='text.primary'
-        href='/en/login'
-        className='font-medium plb-3 pli-1.5 hover:text-primary'
-      >
-        Login
-      </Typography>
-      <Typography
-        component={Link}
-        color='text.primary'
-        href='/en/register'
-        className='font-medium plb-3 pli-1.5 hover:text-primary'
-      >
-        Register
-      </Typography>
+      {menuItems.map(item => (
+        <Box
+          key={item.label}
+          component={Link}
+          href={item.href}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            px: 2,
+            py: 0.75,
+            borderRadius: '50px',
+            textDecoration: 'none',
+            fontWeight: 500,
+            fontSize: '0.9rem',
+            color: isActive(item) ? 'primary.main' : 'text.primary',
+            backgroundColor: isActive(item)
+              ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)'
+              : 'transparent',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              color: 'primary.main',
+              backgroundColor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)',
+              transform: 'translateY(-1px)'
+            }
+          }}
+        >
+          <i className={classnames(item.icon, 'text-[1.1rem]')} />
+          {item.label}
+        </Box>
+      ))}
     </Wrapper>
   )
 }

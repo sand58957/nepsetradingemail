@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -18,6 +18,7 @@ import Chip from '@mui/material/Chip'
 import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
 import Divider from '@mui/material/Divider'
+import Box from '@mui/material/Box'
 
 // Service Imports
 import messengerService from '@/services/messenger'
@@ -35,7 +36,8 @@ const MessengerSettings = () => {
     send_rate: 10,
     opt_in_keyword: '',
     welcome_message: '',
-    keyword_prompt: ''
+    keyword_prompt: '',
+    qr_code_url: ''
   })
 
   const [loading, setLoading] = useState(true)
@@ -46,6 +48,9 @@ const MessengerSettings = () => {
   const [showAppSecret, setShowAppSecret] = useState(false)
   const [pageName, setPageName] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'untested' | 'connected' | 'failed'>('untested')
+  const [generatingKeyword, setGeneratingKeyword] = useState(false)
+  const [uploadingQR, setUploadingQR] = useState(false)
+  const qrFileRef = useRef<HTMLInputElement>(null)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
     open: false,
@@ -125,6 +130,72 @@ const MessengerSettings = () => {
       setSnackbar({ open: true, message: 'Connection test failed. Check your credentials.', severity: 'error' })
     } finally {
       setTesting(false)
+    }
+  }
+
+  const handleGenerateKeyword = async () => {
+    setGeneratingKeyword(true)
+
+    try {
+      const response = await messengerService.generateKeyword()
+
+      if (response.data?.keyword) {
+        setSettings({ ...settings, opt_in_keyword: response.data.keyword })
+        setSnackbar({ open: true, message: `Generated keyword: ${response.data.keyword}`, severity: 'success' })
+      }
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to generate keyword', severity: 'error' })
+    } finally {
+      setGeneratingKeyword(false)
+    }
+  }
+
+  const handleQRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+
+    if (!file) return
+
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setSnackbar({ open: true, message: 'Only PNG, JPEG, and WebP images are allowed', severity: 'error' })
+
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSnackbar({ open: true, message: 'File too large (max 5MB)', severity: 'error' })
+
+      return
+    }
+
+    setUploadingQR(true)
+
+    try {
+      const formData = new FormData()
+
+      formData.append('file', file)
+
+      const response = await messengerService.uploadQR(formData)
+
+      if (response.data?.url) {
+        setSettings({ ...settings, qr_code_url: response.data.url })
+        setSnackbar({ open: true, message: 'QR code uploaded successfully', severity: 'success' })
+      }
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to upload QR code', severity: 'error' })
+    } finally {
+      setUploadingQR(false)
+
+      if (qrFileRef.current) qrFileRef.current.value = ''
+    }
+  }
+
+  const handleDeleteQR = async () => {
+    try {
+      await messengerService.deleteQR()
+      setSettings({ ...settings, qr_code_url: '' })
+      setSnackbar({ open: true, message: 'QR code removed', severity: 'success' })
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to remove QR code', severity: 'error' })
     }
   }
 
@@ -270,14 +341,25 @@ const MessengerSettings = () => {
                   Require users to send a secret keyword before adding them as contacts. Leave empty to auto-subscribe all users who message the page.
                 </Typography>
 
-                <TextField
-                  fullWidth
-                  label='Opt-in Keyword'
-                  placeholder='e.g. JOIN, SUBSCRIBE, NEPSE2024'
-                  value={settings.opt_in_keyword || ''}
-                  onChange={e => setSettings({ ...settings, opt_in_keyword: e.target.value })}
-                  helperText='Users must send this exact keyword to get subscribed. Leave empty to auto-subscribe everyone.'
-                />
+                <div className='flex gap-3 items-start'>
+                  <TextField
+                    fullWidth
+                    label='Opt-in Keyword'
+                    placeholder='e.g. JOIN, SUBSCRIBE, NEPSE2024'
+                    value={settings.opt_in_keyword || ''}
+                    onChange={e => setSettings({ ...settings, opt_in_keyword: e.target.value })}
+                    helperText='Users must send this exact keyword to get subscribed. Leave empty to auto-subscribe everyone.'
+                  />
+                  <Button
+                    variant='outlined'
+                    onClick={handleGenerateKeyword}
+                    disabled={generatingKeyword}
+                    sx={{ mt: 0.5, minWidth: 160, height: 56 }}
+                    startIcon={generatingKeyword ? <CircularProgress size={16} /> : <i className='tabler-refresh' />}
+                  >
+                    {generatingKeyword ? 'Generating...' : 'Generate Key'}
+                  </Button>
+                </div>
 
                 <TextField
                   fullWidth
@@ -326,38 +408,183 @@ const MessengerSettings = () => {
 
         {/* Help / Info */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Card>
-            <CardHeader title='Setup Guide' />
-            <CardContent>
-              <div className='flex flex-col gap-4'>
-                <Alert severity='info' icon={<i className='tabler-info-circle' />}>
-                  You need a Facebook App with Messenger product to use this feature.
-                </Alert>
+          <div className='flex flex-col gap-6'>
+            <Card>
+              <CardHeader title='Setup Guide' subheader='Follow these steps to connect your Facebook Page' />
+              <CardContent>
+                <div className='flex flex-col gap-4'>
+                  <Alert severity='info' icon={<i className='tabler-info-circle' />}>
+                    You need a Facebook App with Messenger product to use this feature.
+                  </Alert>
 
-                <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 1:</strong> Go to developers.facebook.com and create a new Facebook App (or use an existing one)
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 2:</strong> Add the Messenger product to your app from the App Dashboard
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 3:</strong> Generate a Page Access Token by linking your Facebook Page to the app
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 4:</strong> Configure the webhook URL in your app&apos;s Messenger settings and use your Verify Token
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 5:</strong> Click &ldquo;Test Connection&rdquo; to verify your credentials
-                </Typography>
+                  <Typography variant='subtitle2' color='primary'>Step 1: Create a Facebook App</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Go to{' '}
+                    <a href='https://developers.facebook.com/apps/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                      developers.facebook.com/apps
+                    </a>
+                    {' '}&rarr; Click <strong>&ldquo;Create App&rdquo;</strong> &rarr; Select <strong>&ldquo;Business&rdquo;</strong> type &rarr; Enter app name &rarr; Click <strong>&ldquo;Create&rdquo;</strong>.
+                  </Typography>
 
-                <Divider />
+                  <Divider />
 
-                <Alert severity='success' icon={<i className='tabler-free-rights' />}>
-                  Messenger messaging is free within the 24-hour window.
-                </Alert>
-              </div>
-            </CardContent>
-          </Card>
+                  <Typography variant='subtitle2' color='primary'>Step 2: Add Messenger Product</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    In your App Dashboard &rarr; Click <strong>&ldquo;Use Cases&rdquo;</strong> in sidebar &rarr; Select <strong>&ldquo;Messenger from Meta&rdquo;</strong> &rarr; Click <strong>&ldquo;Messenger API Settings&rdquo;</strong>.
+                  </Typography>
+
+                  <Divider />
+
+                  <Typography variant='subtitle2' color='primary'>Step 3: Get App ID &amp; App Secret</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    In your app at{' '}
+                    <a href='https://developers.facebook.com/apps/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                      developers.facebook.com
+                    </a>
+                    {' '}&rarr; Sidebar &rarr; <strong>&ldquo;App Settings&rdquo;</strong> &rarr; <strong>&ldquo;Basic&rdquo;</strong>. Copy the <strong>App ID</strong> and click <strong>&ldquo;Show&rdquo;</strong> next to App Secret to copy it.
+                  </Typography>
+
+                  <Divider />
+
+                  <Typography variant='subtitle2' color='primary'>Step 4: Get Page ID</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Go to your Facebook Page &rarr; Click <strong>&ldquo;About&rdquo;</strong> &rarr; Scroll to <strong>&ldquo;Page Transparency&rdquo;</strong> section &rarr; Copy the <strong>Page ID</strong> (numeric). Or use Graph API Explorer: select your page and the ID shows in the response.
+                  </Typography>
+
+                  <Divider />
+
+                  <Typography variant='subtitle2' color='primary'>Step 5: Generate Page Access Token</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Go to{' '}
+                    <a href='https://developers.facebook.com/tools/explorer/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                      Graph API Explorer
+                    </a>
+                    {' '}&rarr; Select your app &rarr; Add permissions: <strong>pages_messaging, pages_manage_metadata, pages_read_engagement, pages_show_list</strong> &rarr; Click <strong>&ldquo;Generate Access Token&rdquo;</strong> &rarr; Approve all permissions &rarr; Change dropdown from <strong>&ldquo;User Token&rdquo;</strong> to <strong>&ldquo;Page Token&rdquo;</strong> &rarr; Select your page &rarr; Copy the token.
+                  </Typography>
+                  <Alert severity='warning' variant='outlined' sx={{ py: 0.5 }}>
+                    <Typography variant='caption'>
+                      Short-lived tokens expire in ~2 hours. For production, generate a long-lived token from the Messenger API Settings page under &ldquo;Generate access tokens&rdquo;.
+                    </Typography>
+                  </Alert>
+
+                  <Divider />
+
+                  <Typography variant='subtitle2' color='primary'>Step 6: Configure Webhook</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    In Messenger API Settings &rarr; <strong>&ldquo;Configure webhooks&rdquo;</strong> &rarr; Click <strong>&ldquo;Edit&rdquo;</strong> &rarr; Set Callback URL to: <strong>https://nepalfillings.com/api/webhooks/messenger/YOUR_ACCOUNT_ID</strong> &rarr; Set Verify Token to the same value entered here &rarr; Click <strong>&ldquo;Verify and Save&rdquo;</strong>.
+                  </Typography>
+
+                  <Divider />
+
+                  <Typography variant='subtitle2' color='primary'>Step 7: Subscribe Page to Webhook</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    In Messenger API Settings &rarr; <strong>&ldquo;Generate access tokens&rdquo;</strong> section &rarr; Find your page &rarr; Click <strong>&ldquo;Subscribe&rdquo;</strong> button next to it. Ensure <strong>messages, messaging_postbacks, messaging_optins</strong> are checked.
+                  </Typography>
+
+                  <Divider />
+
+                  <Typography variant='subtitle2' color='primary'>Step 8: Test Connection</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Fill all fields above &rarr; Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click <strong>&ldquo;Test Connection&rdquo;</strong>. If successful, your Page name will appear. Then send a message from your personal Messenger to test the webhook.
+                  </Typography>
+
+                  <Divider />
+
+                  <Alert severity='success' icon={<i className='tabler-free-rights' />}>
+                    Messenger messaging is free within the 24-hour window. After 24 hours since user&apos;s last message, you need a Message Tag to send.
+                  </Alert>
+
+                  <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
+                    <Typography variant='caption'>
+                      <strong>Note:</strong> In Development mode, only app admins, developers, and testers can receive messages. Go to <strong>App Roles</strong> to add testers, or submit for <strong>App Review</strong> to go live.
+                    </Typography>
+                  </Alert>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* QR Code Upload */}
+            <Card>
+              <CardHeader title='QR Code' subheader='Upload a QR code for customers to scan and message your page' />
+              <CardContent>
+                <div className='flex flex-col gap-4'>
+                  {settings.qr_code_url ? (
+                    <Box className='flex flex-col items-center gap-3'>
+                      <Box
+                        component='img'
+                        src={settings.qr_code_url}
+                        alt='Messenger QR Code'
+                        sx={{
+                          maxWidth: 220,
+                          maxHeight: 220,
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          p: 1
+                        }}
+                      />
+                      <Button
+                        variant='outlined'
+                        color='error'
+                        size='small'
+                        onClick={handleDeleteQR}
+                        startIcon={<i className='tabler-trash' />}
+                      >
+                        Remove QR Code
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Box
+                      className='flex flex-col items-center justify-center gap-2'
+                      sx={{
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 2,
+                        p: 4,
+                        cursor: 'pointer',
+                        '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' }
+                      }}
+                      onClick={() => qrFileRef.current?.click()}
+                    >
+                      <i className='tabler-qrcode text-[48px]' style={{ opacity: 0.4 }} />
+                      <Typography variant='body2' color='text.secondary'>
+                        Click to upload QR code
+                      </Typography>
+                      <Typography variant='caption' color='text.disabled'>
+                        PNG, JPEG, WebP (max 5MB)
+                      </Typography>
+                    </Box>
+                  )}
+
+                  <input
+                    ref={qrFileRef}
+                    type='file'
+                    accept='image/png,image/jpeg,image/webp'
+                    hidden
+                    onChange={handleQRUpload}
+                  />
+
+                  {!settings.qr_code_url && (
+                    <Button
+                      variant='outlined'
+                      onClick={() => qrFileRef.current?.click()}
+                      disabled={uploadingQR}
+                      startIcon={uploadingQR ? <CircularProgress size={16} /> : <i className='tabler-upload' />}
+                      fullWidth
+                    >
+                      {uploadingQR ? 'Uploading...' : 'Upload QR Code'}
+                    </Button>
+                  )}
+
+                  <Alert severity='info' variant='outlined'>
+                    <Typography variant='caption'>
+                      Share this QR code with customers. When they scan it, it will open Messenger and they can send the opt-in keyword to subscribe.
+                    </Typography>
+                  </Alert>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </Grid>
       </Grid>
 

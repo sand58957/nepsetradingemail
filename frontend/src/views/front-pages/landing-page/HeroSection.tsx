@@ -77,6 +77,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
       <div className={classnames('pbs-[88px] overflow-hidden', frontCommonStyles.layoutSpacing)}>
         <div className='md:max-is-[700px] mbs-0 mbe-7 mli-auto text-center relative'>
           <Typography
+            variant='h1'
             className={classnames('font-extrabold sm:text-[42px] text-3xl mbe-4 leading-[48px]', styles.heroText)}
           >
             All in One Digital Marketing Platform in Nepal

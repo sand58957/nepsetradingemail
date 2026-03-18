@@ -238,30 +238,70 @@ const TelegramSettings = () => {
         {/* Help / Info */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Card>
-            <CardHeader title='Setup Guide' />
+            <CardHeader title='Setup Guide' subheader='Follow these steps to connect your Telegram Bot' />
             <CardContent>
               <div className='flex flex-col gap-4'>
                 <Alert severity='info' icon={<i className='tabler-info-circle' />}>
                   You need a Telegram Bot to use this feature.
                 </Alert>
 
+                <Typography variant='subtitle2' color='primary'>Step 1: Open BotFather</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 1:</strong> Open Telegram and search for @BotFather
+                  Open Telegram and go to{' '}
+                  <a href='https://t.me/BotFather' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    t.me/BotFather
+                  </a>
+                  {' '}or search for <strong>@BotFather</strong> in Telegram. This is the official bot for creating and managing Telegram bots.
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 2: Create a New Bot</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 2:</strong> Send /newbot and follow the instructions to create your bot
+                  Send <strong>/newbot</strong> to @BotFather &rarr; Enter a <strong>display name</strong> for your bot (e.g. &ldquo;NEPSE Trading Bot&rdquo;) &rarr; Enter a <strong>username</strong> ending in &ldquo;bot&rdquo; (e.g. &ldquo;nepse_trading_bot&rdquo;).
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 3: Copy the Bot Token</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 3:</strong> Copy the bot token provided by @BotFather and paste it here
+                  BotFather will reply with your <strong>bot token</strong> (looks like <code>123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11</code>). Copy this token and paste it in the <strong>Bot Token</strong> field on the left.
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 4: Set Subscription Code (Optional)</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 4:</strong> Click &ldquo;Test Connection&rdquo; to verify your bot token
+                  Enter a <strong>Subscription Code</strong> to require users to send <code>/start CODE</code> to subscribe. Leave empty to allow anyone to subscribe with just <code>/start</code>.
+                </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 5: Save &amp; Test</Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click <strong>&ldquo;Test Connection&rdquo;</strong>. If successful, your bot username will appear. Then share your bot link: <strong>t.me/your_bot_username</strong>
+                </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 6: Customize Your Bot (Optional)</Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  Back in @BotFather: Send <strong>/setdescription</strong> to add a bot description &rarr; Send <strong>/setuserpic</strong> to set a profile photo &rarr; Send <strong>/setcommands</strong> to add menu commands.
                 </Typography>
 
                 <Divider />
 
                 <Alert severity='success' icon={<i className='tabler-free-rights' />}>
-                  Telegram messaging is free! There are no per-message credits or charges.
+                  Telegram messaging is completely free! No per-message charges. Limit: 30 messages/second.
+                </Alert>
+
+                <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
+                  <Typography variant='caption'>
+                    <strong>Telegram Bot API Docs:</strong>{' '}
+                    <a href='https://core.telegram.org/bots/api' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                      core.telegram.org/bots/api
+                    </a>
+                  </Typography>
                 </Alert>
               </div>
             </CardContent>

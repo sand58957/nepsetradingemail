@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 // Next Imports
 import { useRouter, useParams } from 'next/navigation'
@@ -39,12 +39,18 @@ import InputAdornment from '@mui/material/InputAdornment'
 import Grid from '@mui/material/Grid'
 import Checkbox from '@mui/material/Checkbox'
 import Avatar from '@mui/material/Avatar'
+import Collapse from '@mui/material/Collapse'
+import Stepper from '@mui/material/Stepper'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import StepContent from '@mui/material/StepContent'
+import Divider from '@mui/material/Divider'
 
 // Service Imports
 import messengerService from '@/services/messenger'
 
 // Type Imports
-import type { MessengerContact, MessengerContactGroup } from '@/types/messenger'
+import type { MessengerContact, MessengerContactGroup, MessengerSettings } from '@/types/messenger'
 
 const MessengerContactList = () => {
   const router = useRouter()
@@ -90,11 +96,145 @@ const MessengerContactList = () => {
   // Edit group selection
   const [editGroupIds, setEditGroupIds] = useState<number[]>([])
 
+  // QR code & settings
+  const [qrCodeUrl, setQrCodeUrl] = useState('')
+  const [optInKeyword, setOptInKeyword] = useState('')
+  const [uploadingQR, setUploadingQR] = useState(false)
+  const [generatingQR, setGeneratingQR] = useState(false)
+  const qrFileRef = useRef<HTMLInputElement>(null)
+  const [showGuide, setShowGuide] = useState(true)
+  const [pageName, setPageName] = useState('')
+  const [pageId, setPageId] = useState('')
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
     severity: 'success'
   })
+
+  // Fetch settings for QR code display
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await messengerService.getSettings()
+
+        if (response.data?.settings) {
+          setQrCodeUrl(response.data.settings.qr_code_url || '')
+          setOptInKeyword(response.data.settings.opt_in_keyword || '')
+          setPageName((response.data.settings as any).page_name || '')
+          setPageId(response.data.settings.page_id || '')
+        }
+      } catch {
+        // Silently fail
+      }
+    }
+
+    fetchSettings()
+  }, [])
+
+  // QR upload handler
+  const handleQRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+
+    if (!file) return
+
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setSnackbar({ open: true, message: 'Only PNG, JPEG, and WebP images are allowed', severity: 'error' })
+
+      return
+    }
+
+    setUploadingQR(true)
+
+    try {
+      const formData = new FormData()
+
+      formData.append('file', file)
+
+      const response = await messengerService.uploadQR(formData)
+
+      if (response.data?.url) {
+        setQrCodeUrl(response.data.url)
+        setSnackbar({ open: true, message: 'QR code uploaded', severity: 'success' })
+      }
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to upload QR code', severity: 'error' })
+    } finally {
+      setUploadingQR(false)
+
+      if (qrFileRef.current) qrFileRef.current.value = ''
+    }
+  }
+
+  const handleDeleteQR = async () => {
+    try {
+      await messengerService.deleteQR()
+      setQrCodeUrl('')
+      setSnackbar({ open: true, message: 'QR code removed', severity: 'success' })
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to remove QR code', severity: 'error' })
+    }
+  }
+
+  // Generate QR code from m.me link
+  const handleGenerateQR = async () => {
+    if (!pageId) {
+      setSnackbar({ open: true, message: 'Page ID not configured. Go to Messenger Settings first.', severity: 'error' })
+
+      return
+    }
+
+    setGeneratingQR(true)
+
+    try {
+      // Build m.me deep link — opens Messenger conversation with the page
+      const mmeUrl = optInKeyword
+        ? `https://m.me/${pageId}?ref=${encodeURIComponent(optInKeyword)}`
+        : `https://m.me/${pageId}`
+
+      // Fetch QR code image from API
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&format=png&data=${encodeURIComponent(mmeUrl)}`
+      const response = await fetch(qrApiUrl)
+      const blob = await response.blob()
+
+      // Upload to Bunny CDN via our existing endpoint
+      const formData = new FormData()
+
+      formData.append('file', blob, 'messenger-qr.png')
+
+      const uploadResponse = await messengerService.uploadQR(formData)
+
+      if (uploadResponse.data?.url) {
+        setQrCodeUrl(uploadResponse.data.url)
+        setSnackbar({ open: true, message: 'QR code generated and saved!', severity: 'success' })
+      }
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to generate QR code', severity: 'error' })
+    } finally {
+      setGeneratingQR(false)
+    }
+  }
+
+  // Download QR code
+  const handleDownloadQR = async () => {
+    if (!qrCodeUrl) return
+
+    try {
+      const response = await fetch(qrCodeUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+
+      a.href = url
+      a.download = 'messenger-qr-code.png'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch {
+      setSnackbar({ open: true, message: 'Failed to download QR code', severity: 'error' })
+    }
+  }
 
   // Debounced search
   useEffect(() => {
@@ -305,6 +445,266 @@ const MessengerContactList = () => {
 
   return (
     <>
+      {/* How to Subscribe Guide */}
+      <Card className='mb-6'>
+        <CardHeader
+          title='How to Subscribe'
+          subheader='Share these steps with your audience to grow your Messenger subscriber list'
+          action={
+            <Button
+              size='small'
+              variant='text'
+              onClick={() => setShowGuide(!showGuide)}
+              startIcon={<i className={showGuide ? 'tabler-chevron-up' : 'tabler-chevron-down'} />}
+            >
+              {showGuide ? 'Hide' : 'Show'}
+            </Button>
+          }
+        />
+        <Collapse in={showGuide}>
+          <CardContent>
+            <Grid container spacing={6}>
+              {/* Left: Step-by-step Guide */}
+              <Grid size={{ xs: 12, md: 7 }}>
+                <Typography variant='subtitle1' className='font-semibold mb-4'>
+                  Subscription Steps
+                </Typography>
+                <Stepper orientation='vertical' activeStep={-1}>
+                  <Step active expanded>
+                    <StepLabel>
+                      <Typography className='font-medium'>Open Facebook Messenger</Typography>
+                    </StepLabel>
+                    <StepContent>
+                      <Typography variant='body2' color='text.secondary'>
+                        Open the Messenger app on your phone or go to{' '}
+                        <a href='https://www.messenger.com' target='_blank' rel='noopener noreferrer' className='text-primary' style={{ color: '#0084FF' }}>
+                          messenger.com
+                        </a>
+                        {' '}on desktop. You can also use the chat feature within the{' '}
+                        <a href='https://www.facebook.com' target='_blank' rel='noopener noreferrer' className='text-primary' style={{ color: '#0084FF' }}>
+                          Facebook app
+                        </a>
+                        .
+                      </Typography>
+                    </StepContent>
+                  </Step>
+                  <Step active expanded>
+                    <StepLabel>
+                      <Typography className='font-medium'>Find the Facebook Page</Typography>
+                    </StepLabel>
+                    <StepContent>
+                      <Typography variant='body2' color='text.secondary'>
+                        {pageName ? (
+                          <>Search for <strong>{pageName}</strong> on Facebook, or scan the QR code shown here. You can also click the &ldquo;Message&rdquo; button on the page.</>
+                        ) : (
+                          <>Search for our Facebook Page on Messenger, or scan the QR code shown here.</>
+                        )}
+                      </Typography>
+                      {pageName && (
+                        <Box className='mt-2'>
+                          <Chip
+                            label={pageName}
+                            color='primary'
+                            size='small'
+                            variant='outlined'
+                            icon={<i className='tabler-brand-facebook text-[16px]' />}
+                          />
+                        </Box>
+                      )}
+                    </StepContent>
+                  </Step>
+                  <Step active expanded>
+                    <StepLabel>
+                      <Typography className='font-medium'>Send the Opt-in Keyword</Typography>
+                    </StepLabel>
+                    <StepContent>
+                      <Typography variant='body2' color='text.secondary'>
+                        {optInKeyword ? (
+                          <>Send the following keyword to subscribe to marketing messages:</>
+                        ) : (
+                          <>Send any message to start a conversation. You&apos;ll be automatically added as a subscriber.</>
+                        )}
+                      </Typography>
+                      {optInKeyword && (
+                        <>
+                          <Box className='mt-2 p-2 rounded' sx={{ bgcolor: 'action.hover', fontFamily: 'monospace', fontSize: 14 }}>
+                            {optInKeyword}
+                          </Box>
+                          <Typography variant='caption' color='text.secondary' className='mt-1 block'>
+                            The keyword must match exactly (case-insensitive). Without the correct keyword, you won&apos;t be subscribed to marketing messages.
+                          </Typography>
+                        </>
+                      )}
+                    </StepContent>
+                  </Step>
+                  <Step active expanded>
+                    <StepLabel>
+                      <Typography className='font-medium'>Receive Confirmation</Typography>
+                    </StepLabel>
+                    <StepContent>
+                      <Typography variant='body2' color='text.secondary'>
+                        You&apos;ll receive a confirmation message from the page. Your PSID (Page-Scoped User ID) is automatically captured and you&apos;re added to the contact list.
+                      </Typography>
+                    </StepContent>
+                  </Step>
+                  <Step active expanded>
+                    <StepLabel>
+                      <Typography className='font-medium'>Done! You&apos;re Subscribed</Typography>
+                    </StepLabel>
+                    <StepContent>
+                      <Typography variant='body2' color='text.secondary'>
+                        You&apos;ll now receive campaign messages via Messenger. To unsubscribe, send <strong>STOP</strong> or block the page on Messenger.
+                      </Typography>
+                    </StepContent>
+                  </Step>
+                </Stepper>
+
+                <Divider className='my-4' />
+
+                <Alert severity='info' variant='outlined'>
+                  <Typography variant='caption'>
+                    <strong>Note:</strong> Facebook requires users to message your page first before you can send them marketing messages. This is called the{' '}
+                    <a href='https://developers.facebook.com/docs/messenger-platform/policy/policy-overview/' target='_blank' rel='noopener noreferrer' style={{ color: '#0084FF' }}>
+                      24-hour messaging window policy
+                    </a>
+                    . After 24 hours of inactivity, you can only send messages using{' '}
+                    <a href='https://developers.facebook.com/docs/messenger-platform/send-messages/message-tags/' target='_blank' rel='noopener noreferrer' style={{ color: '#0084FF' }}>
+                      Message Tags
+                    </a>
+                    {' '}or{' '}
+                    <a href='https://developers.facebook.com/docs/messenger-platform/send-messages/one-time-notification/' target='_blank' rel='noopener noreferrer' style={{ color: '#0084FF' }}>
+                      One-Time Notifications
+                    </a>
+                    .
+                  </Typography>
+                </Alert>
+              </Grid>
+
+              {/* Right: QR Code Upload/Display */}
+              <Grid size={{ xs: 12, md: 5 }}>
+                <Typography variant='subtitle1' className='font-semibold mb-4'>
+                  Messenger QR Code
+                </Typography>
+                <Box
+                  className='flex flex-col items-center gap-4 p-6 border-2 border-dashed rounded-lg'
+                  sx={{ borderColor: 'divider', backgroundColor: 'action.hover' }}
+                >
+                  {qrCodeUrl ? (
+                    <>
+                      <Box
+                        component='img'
+                        src={qrCodeUrl}
+                        alt='Messenger QR Code'
+                        sx={{
+                          maxWidth: 220,
+                          maxHeight: 220,
+                          width: '100%',
+                          borderRadius: 2,
+                          boxShadow: 2
+                        }}
+                      />
+                      <Typography variant='body2' color='text.secondary' align='center'>
+                        {pageName ? pageName : 'Scan to subscribe via Messenger'}
+                      </Typography>
+                      {pageId && (
+                        <Typography variant='caption' color='text.secondary' align='center' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                          m.me/{pageId}{optInKeyword ? `?ref=${optInKeyword}` : ''}
+                        </Typography>
+                      )}
+                      <Box className='flex gap-2 flex-wrap justify-center'>
+                        <Button
+                          size='small'
+                          variant='contained'
+                          startIcon={<i className='tabler-download' />}
+                          onClick={handleDownloadQR}
+                        >
+                          Download
+                        </Button>
+                        <Button
+                          size='small'
+                          variant='outlined'
+                          startIcon={generatingQR ? <CircularProgress size={16} /> : <i className='tabler-refresh' />}
+                          onClick={handleGenerateQR}
+                          disabled={generatingQR}
+                        >
+                          Regenerate
+                        </Button>
+                        <Button
+                          size='small'
+                          variant='outlined'
+                          color='error'
+                          startIcon={<i className='tabler-trash' />}
+                          onClick={handleDeleteQR}
+                        >
+                          Remove
+                        </Button>
+                      </Box>
+                    </>
+                  ) : (
+                    <>
+                      <Box sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.5 }}>
+                        <i className='tabler-qrcode' />
+                      </Box>
+                      <Typography variant='body2' color='text.secondary' align='center'>
+                        Generate a QR code that links to your Messenger page. When scanned, it opens a direct conversation where customers can send the opt-in keyword to subscribe.
+                      </Typography>
+                      <Button
+                        variant='contained'
+                        size='small'
+                        startIcon={generatingQR ? <CircularProgress size={16} /> : <i className='tabler-qrcode' />}
+                        disabled={generatingQR || !pageId}
+                        onClick={handleGenerateQR}
+                      >
+                        {generatingQR ? 'Generating...' : 'Generate QR Code'}
+                      </Button>
+                      {!pageId && (
+                        <Typography variant='caption' color='error'>
+                          Configure your Page ID in Messenger Settings first.
+                        </Typography>
+                      )}
+                      <Divider sx={{ width: '100%' }}>
+                        <Typography variant='caption' color='text.secondary'>or</Typography>
+                      </Divider>
+                      <Button
+                        variant='outlined'
+                        size='small'
+                        component='label'
+                        startIcon={uploadingQR ? <CircularProgress size={16} /> : <i className='tabler-upload' />}
+                        disabled={uploadingQR}
+                      >
+                        {uploadingQR ? 'Uploading...' : 'Upload Custom QR'}
+                        <input type='file' hidden accept='image/png,image/jpeg,image/webp' onChange={handleQRUpload} />
+                      </Button>
+                      <input
+                        ref={qrFileRef}
+                        type='file'
+                        accept='image/png,image/jpeg,image/webp'
+                        hidden
+                        onChange={handleQRUpload}
+                      />
+                      <Typography variant='caption' color='text.secondary'>
+                        PNG, JPEG, or WebP (max 5MB)
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+
+                {optInKeyword && (
+                  <Alert severity='info' variant='outlined' className='mt-4'>
+                    <Typography variant='body2'>
+                      Opt-in Keyword: <strong>{optInKeyword}</strong>
+                    </Typography>
+                    <Typography variant='caption' color='text.secondary'>
+                      Customers must send this keyword to subscribe to marketing messages.
+                    </Typography>
+                  </Alert>
+                )}
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Collapse>
+      </Card>
+
       <Card>
         <CardHeader
           title={`${totalCount} contacts`}

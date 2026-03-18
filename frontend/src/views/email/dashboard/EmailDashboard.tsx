@@ -214,7 +214,7 @@ const EmailDashboard = () => {
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard
           title='Open Rate'
-          value={`${dashboardData?.open_rate || 0}%`}
+          value={`${((dashboardData?.open_rate || 0) * 100).toFixed(1)}%`}
           icon='tabler-mail-opened'
           color='warning'
           loading={loading}

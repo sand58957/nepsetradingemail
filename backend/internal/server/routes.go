@@ -380,13 +380,16 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	// Messenger Marketing — all authenticated users (account-scoped)
 	// ==============================================================
-	msgHandler := handlers.NewMessengerHandler(s.DB)
+	msgHandler := handlers.NewMessengerHandler(s.DB, s.Config)
 
 	// Messenger Settings
 	msg := staff.Group("/messenger")
 	msg.GET("/settings", msgHandler.GetSettings)
 	msg.PUT("/settings", msgHandler.UpdateSettings)
 	msg.POST("/settings/test", msgHandler.TestConnection)
+	msg.POST("/settings/qr", msgHandler.UploadQR)
+	msg.DELETE("/settings/qr", msgHandler.DeleteQR)
+	msg.POST("/settings/generate-keyword", msgHandler.GenerateKeyword)
 
 	// Messenger Contacts
 	msgContacts := msg.Group("/contacts")

@@ -15,24 +15,26 @@
     inset-block-start: 0;
     inset-inline: 0;
     block-size: 100%;
-    backdrop-filter: saturate(100%) blur(6px);
+    backdrop-filter: saturate(180%) blur(16px);
   }
 
   .navbar {
     inline-size: calc(100% - 48px);
-    padding-block: 0.438rem;
+    padding-block: 0.5rem;
     padding-inline: 1.5rem;
     margin-inline: auto;
-    margin-block-start: 1rem;
+    margin-block-start: 0.75rem;
     pointer-events: auto;
-    background-color: rgb(var(--mui-palette-background-paperChannel) / 0.38);
-    border: 2px solid rgb(var(--mui-palette-background-paperChannel) / 0.68);
-    border-radius: var(--mui-shape-borderRadius);
+    background-color: rgb(var(--mui-palette-background-paperChannel) / 0.6);
+    border: 1px solid rgb(var(--mui-palette-background-paperChannel) / 0.5);
+    border-radius: 60px;
+    backdrop-filter: saturate(180%) blur(20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     &.headerScrolled {
-      background-color: var(--mui-palette-background-paper);
-      border-color: var(--mui-palette-background-paper);
-      box-shadow: var(--mui-customShadows-sm);
+      background-color: rgb(var(--mui-palette-background-paperChannel) / 0.85);
+      border-color: rgb(var(--mui-palette-dividerChannel) / 0.12);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     @media (min-width: 600px) {

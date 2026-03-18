@@ -5,7 +5,7 @@ import CardContent from '@mui/material/CardContent'
 import Chip from '@mui/material/Chip'
 import Rating from '@mui/material/Rating'
 import Divider from '@mui/material/Divider'
-import { useColorScheme } from '@mui/material/styles'
+// import { useColorScheme } from '@mui/material/styles'
 
 // Third-party Imports
 import { useKeenSlider } from 'keen-slider/react'
@@ -31,7 +31,7 @@ const CompanyLogo = ({ src, alt }: { src: string; alt: string }) => (
 const data = [
   {
     desc: 'Nepal Fillings has completely transformed our email marketing. We can now reach thousands of customers across Nepal with a single campaign. The delivery rates are outstanding!',
-    logo: '/images/front-pages/landing-page/reviews/daraz.svg',
+    logo: '/images/front-pages/landing-page/reviews/daraz_official.png',
     company: 'Daraz',
     rating: 5,
     name: 'Rajesh Sharma',
@@ -40,7 +40,7 @@ const data = [
   },
   {
     desc: 'The Telegram marketing feature is a game-changer for our food delivery alerts. Our customers love getting instant notifications about offers and deals directly on Telegram.',
-    logo: '/images/front-pages/landing-page/reviews/foodmandu.svg',
+    logo: '/images/front-pages/landing-page/reviews/foodmandu_official.png',
     company: 'Foodmandu',
     rating: 5,
     name: 'Srijana Thapa',
@@ -49,7 +49,7 @@ const data = [
   },
   {
     desc: 'We switched from manual WhatsApp messaging to Nepal Fillings and our engagement rate doubled. The bulk SMS feature helps us reach customers even in remote areas of Nepal.',
-    logo: '/images/front-pages/landing-page/reviews/bhojdeal.svg',
+    logo: '/images/front-pages/landing-page/reviews/bhojdeal_official.png',
     company: 'Bhoj Deal',
     rating: 5,
     name: 'Ankit Paudel',
@@ -58,7 +58,7 @@ const data = [
   },
   {
     desc: 'As a beauty brand, visual email campaigns are essential. Nepal Fillings makes it easy to design stunning emails with their template gallery. Our sales increased by 40% after using their platform.',
-    logo: '/images/front-pages/landing-page/reviews/foreveryng_dark.svg',
+    logo: '/images/front-pages/landing-page/reviews/foreveryng_official.svg',
     company: 'Foreveryng',
     rating: 5,
     name: 'Priya Karki',
@@ -76,7 +76,7 @@ const data = [
   },
   {
     desc: 'Nepal Fillings helped us streamline our admission notifications. We send bulk SMS and email updates to thousands of students. The platform is reliable and affordable for educational institutions.',
-    logo: '/images/front-pages/landing-page/reviews/ioe.svg',
+    logo: '/images/front-pages/landing-page/reviews/ioe_official.png',
     company: 'IOE Pulchowk',
     rating: 5,
     name: 'Dr. Ram Prasad',
@@ -94,7 +94,7 @@ const data = [
   },
   {
     desc: 'Payment confirmation emails and SMS reminders have become effortless with Nepal Fillings. The multi-channel approach ensures our users never miss important payment deadlines.',
-    logo: '/images/front-pages/landing-page/reviews/neb.svg',
+    logo: '/images/front-pages/landing-page/reviews/neb_official.png',
     company: 'NEB Payment',
     rating: 5,
     name: 'Kumari Shrestha',
@@ -112,7 +112,7 @@ const data = [
   },
   {
     desc: 'We use Nepal Fillings for flight booking confirmations, delay notifications, and promotional campaigns. The WhatsApp integration has improved our customer satisfaction significantly.',
-    logo: '/images/front-pages/landing-page/reviews/nepalair.svg',
+    logo: '/images/front-pages/landing-page/reviews/nepalair_official.png',
     company: 'Nepal Airlines',
     rating: 4,
     name: 'Captain Binod KC',
@@ -121,7 +121,7 @@ const data = [
   },
   {
     desc: 'Nepal Fillings has been instrumental in our policyholder communication. Automated SMS and email reminders for premium payments have reduced our lapse rate by 35%. A must-have for insurance companies!',
-    logo: '/images/front-pages/landing-page/reviews/nepallife.svg',
+    logo: '/images/front-pages/landing-page/reviews/nepallife_official.png',
     company: 'Nepal Life Insurance',
     rating: 5,
     name: 'Hari Bahadur KC',
@@ -130,7 +130,7 @@ const data = [
   },
   {
     desc: 'As a global brand operating in Nepal, we needed a reliable local platform for customer engagement. Nepal Fillings delivers professional email campaigns with excellent tracking and analytics.',
-    logo: '/images/front-pages/landing-page/reviews/metlife.svg',
+    logo: '/images/front-pages/landing-page/reviews/metlife_official.png',
     company: 'MetLife Nepal',
     rating: 5,
     name: 'Anil Joshi',
@@ -139,7 +139,7 @@ const data = [
   },
   {
     desc: 'Bulk SMS campaigns for festival greetings and new product launches have become effortless with Nepal Fillings. The Telegram bot feature helps us share insurance tips with our subscriber community.',
-    logo: '/images/front-pages/landing-page/reviews/asianlife.svg',
+    logo: '/images/front-pages/landing-page/reviews/asianlife_official.png',
     company: 'Asian Life Insurance',
     rating: 4,
     name: 'Binita Rana',
@@ -148,44 +148,21 @@ const data = [
   }
 ]
 
-// Bottom logo bar - dark versions for light backgrounds, light versions for dark backgrounds
-const bottomLogosDark = [
-  { src: '/images/front-pages/landing-page/reviews/daraz.svg', alt: 'Daraz' },
-  { src: '/images/front-pages/landing-page/reviews/foodmandu.svg', alt: 'Foodmandu' },
-  { src: '/images/front-pages/landing-page/reviews/bhojdeal.svg', alt: 'Bhoj Deal' },
-  { src: '/images/front-pages/landing-page/reviews/foreveryng.svg', alt: 'Foreveryng' },
-  { src: '/images/front-pages/landing-page/reviews/ultima.svg', alt: 'Ultima Lifestyle' },
-  { src: '/images/front-pages/landing-page/reviews/ioe.svg', alt: 'IOE Pulchowk' },
-  { src: '/images/front-pages/landing-page/reviews/name.svg', alt: 'NAME Institute' },
-  { src: '/images/front-pages/landing-page/reviews/neb.svg', alt: 'NEB' },
-  { src: '/images/front-pages/landing-page/reviews/tms.svg', alt: 'TMS (NEPSE)' },
-  { src: '/images/front-pages/landing-page/reviews/nepalair.svg', alt: 'Nepal Airlines' },
-  { src: '/images/front-pages/landing-page/reviews/nepallife.svg', alt: 'Nepal Life Insurance' },
-  { src: '/images/front-pages/landing-page/reviews/metlife.svg', alt: 'MetLife Nepal' },
-  { src: '/images/front-pages/landing-page/reviews/asianlife.svg', alt: 'Asian Life Insurance' }
-]
-
-const bottomLogosLight = [
-  { src: '/images/front-pages/landing-page/reviews/daraz_light.svg', alt: 'Daraz' },
-  { src: '/images/front-pages/landing-page/reviews/foodmandu_light.svg', alt: 'Foodmandu' },
-  { src: '/images/front-pages/landing-page/reviews/bhojdeal_light.svg', alt: 'Bhoj Deal' },
-  { src: '/images/front-pages/landing-page/reviews/foreveryng_dark.svg', alt: 'Foreveryng' },
-  { src: '/images/front-pages/landing-page/reviews/ultima_light.svg', alt: 'Ultima Lifestyle' },
-  { src: '/images/front-pages/landing-page/reviews/ioe_light.svg', alt: 'IOE Pulchowk' },
-  { src: '/images/front-pages/landing-page/reviews/name_light.svg', alt: 'NAME Institute' },
-  { src: '/images/front-pages/landing-page/reviews/neb_light.svg', alt: 'NEB' },
-  { src: '/images/front-pages/landing-page/reviews/tms_light.svg', alt: 'TMS (NEPSE)' },
-  { src: '/images/front-pages/landing-page/reviews/nepalair_light.svg', alt: 'Nepal Airlines' },
-  { src: '/images/front-pages/landing-page/reviews/nepallife_light.svg', alt: 'Nepal Life Insurance' },
-  { src: '/images/front-pages/landing-page/reviews/metlife_light.svg', alt: 'MetLife Nepal' },
-  { src: '/images/front-pages/landing-page/reviews/asianlife_light.svg', alt: 'Asian Life Insurance' }
+// Bottom logo bar - use official PNG logos for all modes
+const bottomLogos = [
+  { src: '/images/front-pages/landing-page/reviews/daraz_official.png', alt: 'Daraz' },
+  { src: '/images/front-pages/landing-page/reviews/foodmandu_official.png', alt: 'Foodmandu' },
+  { src: '/images/front-pages/landing-page/reviews/bhojdeal_official.png', alt: 'Bhoj Deal' },
+  { src: '/images/front-pages/landing-page/reviews/foreveryng_official.svg', alt: 'Foreveryng' },
+  { src: '/images/front-pages/landing-page/reviews/ioe_official.png', alt: 'IOE Pulchowk' },
+  { src: '/images/front-pages/landing-page/reviews/neb_official.png', alt: 'NEB Payment' },
+  { src: '/images/front-pages/landing-page/reviews/nepalair_official.png', alt: 'Nepal Airlines' },
+  { src: '/images/front-pages/landing-page/reviews/nepallife_official.png', alt: 'Nepal Life Insurance' },
+  { src: '/images/front-pages/landing-page/reviews/metlife_official.png', alt: 'MetLife Nepal' },
+  { src: '/images/front-pages/landing-page/reviews/asianlife_official.png', alt: 'Asian Life Insurance' }
 ]
 
 const CustomerReviews = () => {
-  // Hooks
-  const { mode: muiMode } = useColorScheme()
-  const isLightMode = muiMode === 'light'
-  const bottomLogos = isLightMode ? bottomLogosDark : bottomLogosLight
 
   const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>(
     {
@@ -243,7 +220,7 @@ const CustomerReviews = () => {
   )
 
   return (
-    <section className={classnames('flex flex-col gap-8 plb-[100px] bg-backgroundDefault', styles.sectionStartRadius)}>
+    <section className={classnames('flex flex-col gap-6 plb-[40px] bg-backgroundDefault', styles.sectionStartRadius)}>
       <div
         className={classnames('flex max-md:flex-col max-sm:flex-wrap is-full gap-6', frontCommonStyles.layoutSpacing)}
       >
@@ -300,13 +277,17 @@ const CustomerReviews = () => {
         </div>
       </div>
       <Divider />
-      <div className='flex flex-wrap items-center justify-center gap-x-10 gap-y-6 mli-3 pbs-4'>
+      <div className='flex flex-wrap items-center justify-center gap-x-8 gap-y-5 mli-3 pbs-4'>
         {bottomLogos.map((item, index) => (
           <img
             key={index}
             src={item.src}
             alt={item.alt}
-            style={{ height: 44, maxWidth: 150, objectFit: 'contain', ...(isLightMode ? {} : { filter: 'brightness(1.8) contrast(1.1)' }) }}
+            style={{
+              height: 44,
+              maxWidth: 150,
+              objectFit: 'contain'
+            }}
           />
         ))}
       </div>

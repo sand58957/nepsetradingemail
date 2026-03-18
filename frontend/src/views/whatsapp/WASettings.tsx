@@ -253,33 +253,69 @@ const WASettings = () => {
         {/* Help / Info */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Card>
-            <CardHeader title='Setup Guide' />
+            <CardHeader title='Setup Guide' subheader='Follow these steps to connect WhatsApp Business API' />
             <CardContent>
               <div className='flex flex-col gap-4'>
                 <Alert severity='info' icon={<i className='tabler-info-circle' />}>
                   You need a Gupshup WhatsApp Business API account to use this feature.
                 </Alert>
 
+                <Typography variant='subtitle2' color='primary'>Step 1: Create Gupshup Account</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 1:</strong> Sign up at gupshup.io and create a WhatsApp app
+                  Go to{' '}
+                  <a href='https://www.gupshup.io/developer/home' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    gupshup.io
+                  </a>
+                  {' '}&rarr; Click <strong>&ldquo;Sign Up&rdquo;</strong> &rarr; Verify your email &rarr; Complete the registration process.
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 2: Create a WhatsApp App</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 2:</strong> Copy your App ID and API Key from the Gupshup dashboard
+                  In{' '}
+                  <a href='https://www.gupshup.io/whatsapp/dashboard' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    Gupshup Dashboard
+                  </a>
+                  {' '}&rarr; Go to <strong>&ldquo;WhatsApp&rdquo;</strong> section &rarr; Click <strong>&ldquo;Create App&rdquo;</strong> &rarr; Enter app name &rarr; Link your WhatsApp Business phone number.
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 3: Get App ID &amp; API Key</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 3:</strong> Enter your credentials here and save
+                  In Gupshup Dashboard &rarr; Select your app &rarr; Go to <strong>&ldquo;Settings&rdquo;</strong> &rarr; Copy the <strong>App ID</strong> (UUID format) &rarr; Go to{' '}
+                  <a href='https://www.gupshup.io/whatsapp/dashboard/api-key' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    API Keys page
+                  </a>
+                  {' '}&rarr; Copy your <strong>API Key</strong>.
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 4: Get App Name &amp; Phone Number</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 4:</strong> Click &ldquo;Test Connection&rdquo; to verify
+                  The <strong>App Name</strong> is displayed in your Gupshup app settings (e.g. &ldquo;Nepalwhatsapp&rdquo;). The <strong>Source Phone</strong> is your WhatsApp Business number with country code, no &ldquo;+&rdquo; prefix (e.g. <code>9779812345678</code>).
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 5: Save &amp; Test</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 5:</strong> Set up your webhook URL in Gupshup for delivery reports
+                  Fill all fields &rarr; Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click <strong>&ldquo;Test Connection&rdquo;</strong>. If successful, your wallet balance will show.
+                </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 6: Configure Webhook</Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  In Gupshup Dashboard &rarr; <strong>&ldquo;Webhooks&rdquo;</strong> section &rarr; Add the webhook URL shown below for delivery reports and incoming messages.
                 </Typography>
 
                 {settings.webhook_secret && (
                   <>
                     <Divider />
-                    <Typography variant='subtitle2'>Webhook URL</Typography>
+                    <Typography variant='subtitle2'>Your Webhook URL</Typography>
                     <Typography
                       variant='body2'
                       className='p-2 rounded break-all'
@@ -292,6 +328,34 @@ const WASettings = () => {
                     </Typography>
                   </>
                 )}
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 7: Create Message Templates</Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  In Gupshup Dashboard &rarr; <strong>&ldquo;Templates&rdquo;</strong> &rarr; Create templates for marketing messages. Templates must be approved by WhatsApp before use. You can send template messages anytime (no 24-hour limit).
+                </Typography>
+
+                <Divider />
+
+                <Alert severity='warning' icon={<i className='tabler-alert-triangle' />}>
+                  <Typography variant='caption'>
+                    WhatsApp charges per conversation. Template messages (outside 24h window) cost more. Check{' '}
+                    <a href='https://developers.facebook.com/docs/whatsapp/pricing' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                      WhatsApp Pricing
+                    </a>
+                    {' '}for rates.
+                  </Typography>
+                </Alert>
+
+                <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
+                  <Typography variant='caption'>
+                    <strong>Gupshup Docs:</strong>{' '}
+                    <a href='https://docs.gupshup.io/docs/whatsapp-overview' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                      docs.gupshup.io
+                    </a>
+                  </Typography>
+                </Alert>
               </div>
             </CardContent>
           </Card>

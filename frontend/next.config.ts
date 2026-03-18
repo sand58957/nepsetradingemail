@@ -14,13 +14,19 @@ const nextConfig: NextConfig = {
       {
         source: '/',
         destination: '/front-pages/landing-page',
-        permanent: true,
+        permanent: false,
+        locale: false
+      },
+      {
+        source: '/dashboards',
+        destination: '/en/dashboards/email-marketing',
+        permanent: false,
         locale: false
       },
       {
         source: '/:lang(en|fr|ar)',
         destination: '/:lang/dashboards/email-marketing',
-        permanent: true,
+        permanent: false,
         locale: false
       },
       {
@@ -36,9 +42,9 @@ const nextConfig: NextConfig = {
         locale: false
       },
       {
-        source: '/:path((?!en|fr|ar|front-pages|images|api|favicon.ico|privacy|terms).*)*',
+        source: '/:path((?!en|fr|ar|front-pages|images|api|favicon.ico|privacy|terms|dashboards).*)*',
         destination: '/en/:path*',
-        permanent: true,
+        permanent: false,
         locale: false
       }
     ]

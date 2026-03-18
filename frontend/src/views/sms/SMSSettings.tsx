@@ -223,30 +223,76 @@ const SMSSettings = () => {
         {/* Help / Info */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Card>
-            <CardHeader title='Setup Guide' />
+            <CardHeader title='Setup Guide' subheader='Follow these steps to connect Aakash SMS' />
             <CardContent>
               <div className='flex flex-col gap-4'>
                 <Alert severity='info' icon={<i className='tabler-info-circle' />}>
                   You need an Aakash SMS account to use this feature.
                 </Alert>
 
+                <Typography variant='subtitle2' color='primary'>Step 1: Create Aakash SMS Account</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 1:</strong> Sign up at aakashsms.com and purchase SMS credits
+                  Go to{' '}
+                  <a href='https://aakashsms.com/register' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    aakashsms.com/register
+                  </a>
+                  {' '}&rarr; Fill in your details &rarr; Verify your phone number &rarr; Complete registration.
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 2: Purchase SMS Credits</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 2:</strong> Go to your Aakash SMS dashboard and copy your Auth Token
+                  Login to{' '}
+                  <a href='https://aakashsms.com/login' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    Aakash SMS Dashboard
+                  </a>
+                  {' '}&rarr; Go to <strong>&ldquo;Buy Credits&rdquo;</strong> &rarr; Choose a package and complete payment. Credits are required to send messages.
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 3: Get Auth Token</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 3:</strong> Enter your Auth Token and Sender ID here and save
+                  In Aakash SMS Dashboard &rarr; Go to <strong>&ldquo;API Settings&rdquo;</strong> or <strong>&ldquo;Developer&rdquo;</strong> section &rarr; Copy your <strong>Auth Token</strong>. This is the API key used to authenticate your requests.
                 </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 4: Set Sender ID</Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  <strong>Step 4:</strong> Click &ldquo;Test Connection&rdquo; to verify your credentials and check credit balance
+                  The <strong>Sender ID</strong> is the name displayed on recipients&apos; phones (e.g. &ldquo;InfoSMS&rdquo;, &ldquo;NEPSE&rdquo;). You can find your approved Sender IDs in the Aakash SMS dashboard under <strong>&ldquo;Sender ID&rdquo;</strong> section.
+                </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 5: Save &amp; Test</Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  Enter your <strong>Auth Token</strong> and <strong>Sender ID</strong> &rarr; Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click <strong>&ldquo;Test Connection&rdquo;</strong> to verify credentials and check your credit balance.
+                </Typography>
+
+                <Divider />
+
+                <Typography variant='subtitle2' color='primary'>Step 6: Send Your First Campaign</Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  Go to <strong>SMS &rarr; Campaigns &rarr; Create Campaign</strong> &rarr; Write your message &rarr; Select target contacts or groups &rarr; Send or schedule your campaign.
                 </Typography>
 
                 <Divider />
 
                 <Alert severity='warning' icon={<i className='tabler-alert-triangle' />}>
-                  SMS credits are deducted per message. English messages use 1 credit per 160 characters. Nepali/Unicode messages use 1 credit per 70 characters.
+                  <Typography variant='caption'>
+                    SMS credits are deducted per message. <strong>English:</strong> 1 credit per 160 characters. <strong>Nepali/Unicode:</strong> 1 credit per 70 characters. Long messages use multiple credits.
+                  </Typography>
+                </Alert>
+
+                <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
+                  <Typography variant='caption'>
+                    <strong>Aakash SMS API Docs:</strong>{' '}
+                    <a href='https://aakashsms.com/developers' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                      aakashsms.com/developers
+                    </a>
+                  </Typography>
                 </Alert>
               </div>
             </CardContent>

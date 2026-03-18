@@ -36,6 +36,22 @@ export const messengerService = {
     return response.data
   },
 
+  uploadQR: async (formData: FormData): Promise<{ data: { url: string } }> => {
+    const response = await api.post('/messenger/settings/qr', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
+  },
+
+  deleteQR: async (): Promise<void> => {
+    await api.delete('/messenger/settings/qr')
+  },
+
+  generateKeyword: async (): Promise<{ data: { keyword: string } }> => {
+    const response = await api.post('/messenger/settings/generate-keyword')
+    return response.data
+  },
+
   // ==================== Contacts ====================
   getContacts: async (params?: PaginationParams): Promise<MessengerContactListResponse> => {
     const response = await api.get('/messenger/contacts', { params })

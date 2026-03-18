@@ -11,6 +11,7 @@ import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import useScrollTrigger from '@mui/material/useScrollTrigger'
+import Chip from '@mui/material/Chip'
 import type { Theme } from '@mui/material/styles'
 
 // Third-party Imports
@@ -72,21 +73,58 @@ const Header = ({ mode }: { mode: Mode }) => {
               <CustomIconButton
                 component={Link}
                 variant='contained'
-                href='/en/dashboards/crm'
+                href='/en/login'
                 color='primary'
               >
-                <i className='tabler-layout-dashboard text-xl' />
+                <i className='tabler-login text-xl' />
               </CustomIconButton>
             ) : (
-              <Button
-                component={Link}
-                variant='contained'
-                href='/en/dashboards/crm'
-                startIcon={<i className='tabler-layout-dashboard text-xl' />}
-                className='whitespace-nowrap'
-              >
-                Dashboard
-              </Button>
+              <div className='flex items-center gap-3'>
+                <Button
+                  component={Link}
+                  variant='outlined'
+                  href='/en/login'
+                  color='primary'
+                  startIcon={<i className='tabler-login text-lg' />}
+                  sx={{
+                    borderRadius: '50px',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    px: 3,
+                    borderWidth: 2,
+                    '&:hover': {
+                      borderWidth: 2,
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(var(--mui-palette-primary-mainChannel) / 0.3)'
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Login
+                </Button>
+                <Button
+                  component={Link}
+                  variant='contained'
+                  href='/en/register'
+                  startIcon={<i className='tabler-rocket text-lg' />}
+                  sx={{
+                    borderRadius: '50px',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    px: 3,
+                    background: 'linear-gradient(135deg, var(--mui-palette-primary-main) 0%, #7c3aed 100%)',
+                    boxShadow: '0 4px 15px rgba(var(--mui-palette-primary-mainChannel) / 0.4)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #7c3aed 0%, var(--mui-palette-primary-main) 100%)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 20px rgba(var(--mui-palette-primary-mainChannel) / 0.5)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Get Started Free
+                </Button>
+              </div>
             )}
           </div>
         </div>

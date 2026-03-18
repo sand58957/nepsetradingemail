@@ -61,7 +61,7 @@ const PaymentPartners = () => {
   return (
     <section
       id='team'
-      className='plb-[100px]'
+      className='plb-[20px]'
       ref={ref}
       style={{
         background: 'linear-gradient(180deg, #0a0e1a 0%, #121829 50%, #0a0e1a 100%)'
@@ -96,7 +96,7 @@ const PaymentPartners = () => {
         </div>
         <div
           className={classnames(
-            'flex flex-wrap items-center justify-center gap-5 pbs-[60px]'
+            'flex flex-wrap items-center justify-center gap-5 pbs-[30px]'
           )}
         >
           {partners.map((partner, index) => (
@@ -107,8 +107,8 @@ const PaymentPartners = () => {
                 minWidth: 110,
                 height: 60,
                 padding: '12px 22px',
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
                 borderRadius: 14,
                 backdropFilter: 'blur(10px)',
                 transition: 'all 0.3s ease'
@@ -116,16 +116,16 @@ const PaymentPartners = () => {
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLDivElement
 
-                el.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'
-                el.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                el.style.backgroundColor = 'rgba(255, 255, 255, 1)'
+                el.style.borderColor = 'rgba(var(--mui-palette-primary-mainChannel), 0.3)'
                 el.style.transform = 'translateY(-3px)'
                 el.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.3)'
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLDivElement
 
-                el.style.backgroundColor = 'rgba(255, 255, 255, 0.06)'
-                el.style.borderColor = 'rgba(255, 255, 255, 0.08)'
+                el.style.backgroundColor = 'rgba(255, 255, 255, 0.95)'
+                el.style.borderColor = 'rgba(255, 255, 255, 0.3)'
                 el.style.transform = 'translateY(0)'
                 el.style.boxShadow = 'none'
               }}
@@ -136,9 +136,7 @@ const PaymentPartners = () => {
                 style={{
                   maxWidth: partner.width,
                   maxHeight: 40,
-                  objectFit: 'contain',
-                  filter: 'brightness(1.6) contrast(1.1)',
-                  opacity: 0.9
+                  objectFit: 'contain'
                 }}
               />
             </div>

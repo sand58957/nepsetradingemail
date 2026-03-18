@@ -19,9 +19,10 @@ import CompanyProfileTab from './CompanyProfileTab'
 import DefaultSettingsTab from './DefaultSettingsTab'
 import DomainsTab from './DomainsTab'
 import EcommerceTab from './EcommerceTab'
-import LinkTrackingTab from './LinkTrackingTab'
+import SetupGuideTab from './SetupGuideTab'
 import WASettings from '@/views/whatsapp/WASettings'
 import SMSSettingsView from '@/views/sms/SMSSettings'
+import MessengerSettings from '@/views/messenger/MessengerSettings'
 
 // Services
 import accountSettingsService from '@/services/accountSettings'
@@ -127,8 +128,8 @@ const SettingsPage = () => {
             iconPosition='start'
           />
           <Tab
-            label='Link Tracking'
-            icon={<i className='tabler-link text-[20px]' />}
+            label='Setup Guide'
+            icon={<i className='tabler-help text-[20px]' />}
             iconPosition='start'
           />
           <Tab
@@ -139,6 +140,11 @@ const SettingsPage = () => {
           <Tab
             label='SMS Settings'
             icon={<i className='tabler-message text-[20px]' />}
+            iconPosition='start'
+          />
+          <Tab
+            label='Messenger Settings'
+            icon={<i className='tabler-brand-facebook text-[20px]' />}
             iconPosition='start'
           />
         </Tabs>
@@ -182,18 +188,17 @@ const SettingsPage = () => {
           onSaveError={handleSaveError}
         />
       )}
-      {activeTab === 4 && settings && (
-        <LinkTrackingTab
-          data={settings.link_tracking}
-          onSaveSuccess={handleSaveSuccess}
-          onSaveError={handleSaveError}
-        />
+      {activeTab === 4 && (
+        <SetupGuideTab />
       )}
       {activeTab === 5 && (
         <WASettings />
       )}
       {activeTab === 6 && (
         <SMSSettingsView />
+      )}
+      {activeTab === 7 && (
+        <MessengerSettings />
       )}
 
       {/* Snackbar */}

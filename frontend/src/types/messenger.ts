@@ -12,6 +12,7 @@ export interface MessengerSettings {
   opt_in_keyword: string
   welcome_message: string
   keyword_prompt: string
+  qr_code_url: string
   created_at: string
   updated_at: string
 }

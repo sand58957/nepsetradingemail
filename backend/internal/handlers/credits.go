@@ -161,8 +161,8 @@ func (h *CreditHandler) AdminAdjustCredits(c echo.Context) error {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
-	if req.Channel != "sms" && req.Channel != "whatsapp" && req.Channel != "email" && req.Channel != "telegram" {
-		return response.BadRequest(c, "Channel must be one of: sms, whatsapp, email, telegram")
+	if req.Channel != "sms" && req.Channel != "whatsapp" && req.Channel != "email" && req.Channel != "telegram" && req.Channel != "messenger" {
+		return response.BadRequest(c, "Channel must be one of: sms, whatsapp, email, telegram, messenger")
 	}
 
 	if req.Amount == 0 {

@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"bytes"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/csv"
 	"encoding/hex"
@@ -9,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,6 +21,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 
+	"github.com/sandeep/nepsetradingemail/backend/internal/config"
 	mw "github.com/sandeep/nepsetradingemail/backend/internal/middleware"
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/messenger"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
@@ -25,12 +29,13 @@ import (
 
 // MessengerHandler manages all Facebook Messenger marketing endpoints.
 type MessengerHandler struct {
-	db *sqlx.DB
+	db  *sqlx.DB
+	cfg *config.Config
 }
 
 // NewMessengerHandler creates a new Messenger handler.
-func NewMessengerHandler(db *sqlx.DB) *MessengerHandler {
-	return &MessengerHandler{db: db}
+func NewMessengerHandler(db *sqlx.DB, cfg *config.Config) *MessengerHandler {
+	return &MessengerHandler{db: db, cfg: cfg}
 }
 
 // ============================================================
@@ -51,6 +56,7 @@ type MessengerSettings struct {
 	OptInKeyword    string    `json:"opt_in_keyword" db:"opt_in_keyword"`
 	WelcomeMessage  string    `json:"welcome_message" db:"welcome_message"`
 	KeywordPrompt   string    `json:"keyword_prompt" db:"keyword_prompt"`
+	QRCodeURL       string    `json:"qr_code_url" db:"qr_code_url"`
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -240,6 +246,120 @@ func (h *MessengerHandler) TestConnection(c echo.Context) error {
 		"page_id":   page.ID,
 		"page_name": page.Name,
 	})
+}
+
+// UploadQR uploads a QR code image to Bunny CDN and saves the URL in settings.
+func (h *MessengerHandler) UploadQR(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		return response.BadRequest(c, "No file uploaded")
+	}
+
+	contentType := file.Header.Get("Content-Type")
+	if contentType != "image/png" && contentType != "image/jpeg" && contentType != "image/webp" {
+		return response.BadRequest(c, "Only PNG, JPEG, and WebP images are allowed")
+	}
+
+	if file.Size > 5*1024*1024 {
+		return response.BadRequest(c, "File too large (max 5MB)")
+	}
+
+	src, err := file.Open()
+	if err != nil {
+		return response.InternalError(c, "Failed to read file")
+	}
+	defer src.Close()
+
+	fileData, err := io.ReadAll(src)
+	if err != nil {
+		return response.InternalError(c, "Failed to read file data")
+	}
+
+	timestamp := time.Now().UnixMilli()
+	safeName := strings.ReplaceAll(file.Filename, " ", "-")
+	storagePath := fmt.Sprintf("messenger-qr/%d-%s", timestamp, safeName)
+	storageURL := fmt.Sprintf("%s/%s/%s", h.cfg.BunnyCDNStorageURL, h.cfg.BunnyCDNStorageZone, storagePath)
+
+	req, err := http.NewRequest("PUT", storageURL, bytes.NewReader(fileData))
+	if err != nil {
+		return response.InternalError(c, "Failed to create upload request")
+	}
+	req.Header.Set("AccessKey", h.cfg.BunnyCDNStorageKey)
+	req.Header.Set("Content-Type", contentType)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return response.InternalError(c, "Failed to upload to CDN")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("[messenger] Bunny CDN upload failed: %d %s", resp.StatusCode, string(body))
+		return response.InternalError(c, "CDN upload failed")
+	}
+
+	cdnURL := fmt.Sprintf("%s/%s", h.cfg.BunnyCDNPullURL, storagePath)
+
+	_, err = h.db.Exec(`
+		INSERT INTO messenger_settings (account_id, qr_code_url, updated_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (account_id) DO UPDATE SET
+			qr_code_url = EXCLUDED.qr_code_url,
+			updated_at = NOW()
+	`, accountID, cdnURL)
+	if err != nil {
+		log.Printf("[messenger] Failed to save QR URL: %v", err)
+		return response.InternalError(c, "Failed to save QR code URL")
+	}
+
+	return response.Success(c, map[string]string{"url": cdnURL})
+}
+
+// DeleteQR removes the QR code URL from settings.
+func (h *MessengerHandler) DeleteQR(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	_, err := h.db.Exec(`UPDATE messenger_settings SET qr_code_url = '', updated_at = NOW() WHERE account_id = $1`, accountID)
+	if err != nil {
+		return response.InternalError(c, "Failed to remove QR code")
+	}
+
+	return response.SuccessWithMessage(c, "QR code removed", nil)
+}
+
+// GenerateKeyword generates a random opt-in keyword and saves it.
+func (h *MessengerHandler) GenerateKeyword(c echo.Context) error {
+	accountID := mw.GetAccountID(c)
+
+	// Generate a random 8-character alphanumeric code
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	code := make([]byte, 8)
+	for i := range code {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		if err != nil {
+			return response.InternalError(c, "Failed to generate random code")
+		}
+		code[i] = chars[n.Int64()]
+	}
+	keyword := string(code)
+
+	_, err := h.db.Exec(`
+		INSERT INTO messenger_settings (account_id, opt_in_keyword, updated_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (account_id) DO UPDATE SET
+			opt_in_keyword = EXCLUDED.opt_in_keyword,
+			updated_at = NOW()
+	`, accountID, keyword)
+	if err != nil {
+		log.Printf("[messenger] Failed to save generated keyword: %v", err)
+		return response.InternalError(c, "Failed to save keyword")
+	}
+
+	return response.Success(c, map[string]string{"keyword": keyword})
 }
 
 // ============================================================
