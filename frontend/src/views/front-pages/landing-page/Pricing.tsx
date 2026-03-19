@@ -166,7 +166,7 @@ const PricingPlan = () => {
             Pay Annually
           </InputLabel>
           <div className='flex gap-x-1 items-start max-sm:hidden mis-2 mbe-5'>
-            <img src='/images/front-pages/landing-page/pricing-arrow.png' width='50' />
+            <img src='/images/front-pages/landing-page/pricing-arrow.png' alt='save arrow' width='50' />
             <Typography className='font-medium'>Save 25%</Typography>
           </div>
         </div>

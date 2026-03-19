@@ -401,6 +401,28 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 	// Parse the webhook body
 	body, _ := io.ReadAll(c.Request().Body)
 
+	// Forward webhook to external URL (api.nepsetrading.com) in background
+	go func(rawBody []byte, headers http.Header) {
+		forwardURL := "https://api.nepsetrading.com/api/facebook/webhook"
+		req, err := http.NewRequest("POST", forwardURL, bytes.NewReader(rawBody))
+		if err != nil {
+			log.Printf("[messenger] Forward: failed to create request: %v", err)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		if sig := headers.Get("X-Hub-Signature-256"); sig != "" {
+			req.Header.Set("X-Hub-Signature-256", sig)
+		}
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("[messenger] Forward: failed to send: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		log.Printf("[messenger] Forward: sent to %s, status=%d", forwardURL, resp.StatusCode)
+	}(body, c.Request().Header.Clone())
+
 	// Verify signature if app_secret is set
 	if settings.AppSecret != "" {
 		signature := c.Request().Header.Get("X-Hub-Signature-256")

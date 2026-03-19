@@ -571,6 +571,21 @@ func (s *Server) RegisterRoutes() {
 	publicEmail.GET("/domains", publicEmailHandler.ListDomains)
 
 	// ==============================================================
+	// Public API — Messenger (API key auth, separate from JWT)
+	// ==============================================================
+	publicMsgHandler := handlers.NewPublicMessengerHandler(s.DB)
+	publicMsgLimiter := middleware.NewRateLimiter(30, 60)
+	publicMsg := api.Group("/v1/messenger")
+	publicMsg.Use(publicMsgLimiter.Middleware())
+	publicMsg.Use(middleware.APIKeyAuth(s.DB, "messenger"))
+	publicMsg.POST("/send", publicMsgHandler.Send)
+	publicMsg.POST("/send/bulk", publicMsgHandler.SendBulk)
+	publicMsg.GET("/messages", publicMsgHandler.ListMessages)
+	publicMsg.GET("/messages/:id", publicMsgHandler.GetMessage)
+	publicMsg.GET("/balance", publicMsgHandler.GetBalance)
+	publicMsg.GET("/status", publicMsgHandler.GetStatus)
+
+	// ==============================================================
 	// Admin-only routes — full platform control
 	// ==============================================================
 	admin := api.Group("")
