@@ -52,22 +52,132 @@ type UserProfile struct {
 	ProfilePic string `json:"profile_pic"`
 }
 
-// SendTextMessage sends a text message to a user by PSID.
-func (c *Client) SendTextMessage(psid, text string) (*SendResponse, error) {
+// MessageOptions controls how a message is sent (messaging type, tag, etc).
+type MessageOptions struct {
+	// IsWithinWindow indicates the user interacted within the last 24 hours.
+	// If true, uses RESPONSE messaging type (no tag needed).
+	// If false, uses MESSAGE_TAG with the specified Tag.
+	IsWithinWindow bool
+	// Tag is the Facebook message tag to use outside the 24h window.
+	// Valid tags: CONFIRMED_EVENT_UPDATE, POST_PURCHASE_UPDATE, HUMAN_AGENT
+	Tag string
+}
+
+// DefaultOptions returns options for sending outside the 24h window
+// using CONFIRMED_EVENT_UPDATE tag (most flexible for notifications).
+func DefaultOptions() MessageOptions {
+	return MessageOptions{
+		IsWithinWindow: false,
+		Tag:            "CONFIRMED_EVENT_UPDATE",
+	}
+}
+
+// WithinWindowOptions returns options for sending within the 24h window.
+func WithinWindowOptions() MessageOptions {
+	return MessageOptions{
+		IsWithinWindow: true,
+	}
+}
+
+// HumanAgentOptions returns options using the HUMAN_AGENT tag (7-day window).
+func HumanAgentOptions() MessageOptions {
+	return MessageOptions{
+		IsWithinWindow: false,
+		Tag:            "HUMAN_AGENT",
+	}
+}
+
+// buildPayloadBase creates the base payload with correct messaging_type and tag.
+func buildPayloadBase(psid string, opts MessageOptions) map[string]interface{} {
 	payload := map[string]interface{}{
 		"recipient": map[string]string{"id": psid},
-		"message":   map[string]string{"text": text},
-		"messaging_type": "MESSAGE_TAG",
-		"tag": "ACCOUNT_UPDATE",
 	}
+	if opts.IsWithinWindow {
+		payload["messaging_type"] = "RESPONSE"
+	} else {
+		payload["messaging_type"] = "MESSAGE_TAG"
+		tag := opts.Tag
+		if tag == "" {
+			tag = "CONFIRMED_EVENT_UPDATE"
+		}
+		payload["tag"] = tag
+	}
+	return payload
+}
 
+// SendTextMessage sends a text message to a user by PSID.
+func (c *Client) SendTextMessage(psid, text string) (*SendResponse, error) {
+	return c.SendTextMessageWithOpts(psid, text, DefaultOptions())
+}
+
+// SendTextMessageWithOpts sends a text message with specific messaging options.
+func (c *Client) SendTextMessageWithOpts(psid, text string, opts MessageOptions) (*SendResponse, error) {
+	payload := buildPayloadBase(psid, opts)
+	payload["message"] = map[string]string{"text": text}
 	return c.sendMessage(payload)
 }
 
 // SendImageMessage sends an image message to a user by PSID.
 func (c *Client) SendImageMessage(psid, imageURL string) (*SendResponse, error) {
+	return c.SendImageMessageWithOpts(psid, imageURL, DefaultOptions())
+}
+
+// SendImageMessageWithOpts sends an image message with specific messaging options.
+func (c *Client) SendImageMessageWithOpts(psid, imageURL string, opts MessageOptions) (*SendResponse, error) {
+	payload := buildPayloadBase(psid, opts)
+	payload["message"] = map[string]interface{}{
+		"attachment": map[string]interface{}{
+			"type": "image",
+			"payload": map[string]string{
+				"url":         imageURL,
+				"is_reusable": "true",
+			},
+		},
+	}
+	return c.sendMessage(payload)
+}
+
+// SendTextWithImage sends a text message followed by an image.
+func (c *Client) SendTextWithImage(psid, text, imageURL string) (*SendResponse, error) {
+	return c.SendTextWithImageOpts(psid, text, imageURL, DefaultOptions())
+}
+
+// SendTextWithImageOpts sends a text message followed by an image with options.
+func (c *Client) SendTextWithImageOpts(psid, text, imageURL string, opts MessageOptions) (*SendResponse, error) {
+	resp, err := c.SendTextMessageWithOpts(psid, text, opts)
+	if err != nil {
+		return nil, err
+	}
+	if imageURL != "" {
+		resp, err = c.SendImageMessageWithOpts(psid, imageURL, opts)
+		if err != nil {
+			return resp, err
+		}
+	}
+	return resp, nil
+}
+
+// SendWithRecurringToken sends a message using a recurring/marketing notification token.
+// This bypasses the 24h window for contacts who opted in to recurring notifications.
+// Uses NOTIFICATION_MESSAGE tag as required by Facebook's Marketing Messages API.
+func (c *Client) SendWithRecurringToken(psid, token, text string) (*SendResponse, error) {
 	payload := map[string]interface{}{
-		"recipient": map[string]string{"id": psid},
+		"recipient": map[string]string{
+			"notification_messages_token": token,
+		},
+		"message":        map[string]string{"text": text},
+		"messaging_type": "MESSAGE_TAG",
+		"tag":            "NOTIFICATION_MESSAGE",
+	}
+	return c.sendMessage(payload)
+}
+
+// SendImageWithRecurringToken sends an image using a recurring/marketing notification token.
+func (c *Client) SendImageWithRecurringToken(psid, token, imageURL string) (*SendResponse, error) {
+	payload := map[string]interface{}{
+		"recipient": map[string]string{
+			"notification_messages_token": token,
+		},
 		"message": map[string]interface{}{
 			"attachment": map[string]interface{}{
 				"type": "image",
@@ -78,29 +188,9 @@ func (c *Client) SendImageMessage(psid, imageURL string) (*SendResponse, error) 
 			},
 		},
 		"messaging_type": "MESSAGE_TAG",
-		"tag": "ACCOUNT_UPDATE",
+		"tag":            "NOTIFICATION_MESSAGE",
 	}
-
 	return c.sendMessage(payload)
-}
-
-// SendTextWithImage sends a text message followed by an image.
-func (c *Client) SendTextWithImage(psid, text, imageURL string) (*SendResponse, error) {
-	// Send text first
-	resp, err := c.SendTextMessage(psid, text)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's an image, send it too
-	if imageURL != "" {
-		resp, err = c.SendImageMessage(psid, imageURL)
-		if err != nil {
-			return resp, err
-		}
-	}
-
-	return resp, nil
 }
 
 func (c *Client) sendMessage(payload map[string]interface{}) (*SendResponse, error) {

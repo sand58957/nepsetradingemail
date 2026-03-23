@@ -62,19 +62,23 @@ type MessengerSettings struct {
 }
 
 type MessengerContact struct {
-	ID         int             `json:"id" db:"id"`
-	AccountID  int             `json:"account_id" db:"account_id"`
-	PSID       string          `json:"psid" db:"psid"`
-	Name       string          `json:"name" db:"name"`
-	Email      string          `json:"email" db:"email"`
-	ProfilePic string          `json:"profile_pic" db:"profile_pic"`
-	OptedIn    bool            `json:"opted_in" db:"opted_in"`
-	OptedInAt  *time.Time      `json:"opted_in_at" db:"opted_in_at"`
-	OptedOutAt *time.Time      `json:"opted_out_at" db:"opted_out_at"`
-	Tags       json.RawMessage `json:"tags" db:"tags"`
-	Attributes json.RawMessage `json:"attributes" db:"attributes"`
-	CreatedAt  time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt  time.Time       `json:"updated_at" db:"updated_at"`
+	ID                      int             `json:"id" db:"id"`
+	AccountID               int             `json:"account_id" db:"account_id"`
+	PSID                    string          `json:"psid" db:"psid"`
+	Name                    string          `json:"name" db:"name"`
+	Email                   string          `json:"email" db:"email"`
+	ProfilePic              string          `json:"profile_pic" db:"profile_pic"`
+	OptedIn                 bool            `json:"opted_in" db:"opted_in"`
+	OptedInAt               *time.Time      `json:"opted_in_at" db:"opted_in_at"`
+	OptedOutAt              *time.Time      `json:"opted_out_at" db:"opted_out_at"`
+	LastInteractionAt       *time.Time      `json:"last_interaction_at" db:"last_interaction_at"`
+	RecurringToken          *string         `json:"recurring_token" db:"recurring_token"`
+	RecurringFrequency      *string         `json:"recurring_frequency" db:"recurring_frequency"`
+	RecurringTokenExpiresAt *time.Time      `json:"recurring_token_expires_at" db:"recurring_token_expires_at"`
+	Tags                    json.RawMessage `json:"tags" db:"tags"`
+	Attributes              json.RawMessage `json:"attributes" db:"attributes"`
+	CreatedAt               time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt               time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 type MessengerCampaign struct {
@@ -466,7 +470,13 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 					Payload string `json:"payload"`
 				} `json:"postback"`
 				Optin *struct {
-					Ref string `json:"ref"`
+					Ref                    string `json:"ref"`
+					Type                   string `json:"type"`
+					NotificationMessagesToken      string `json:"notification_messages_token"`
+					NotificationMessagesFrequency  string `json:"notification_messages_frequency"`
+					NotificationMessagesTimezone   string `json:"notification_messages_timezone"`
+					TokenExpiryTimestamp   int64  `json:"token_expiry_timestamp"`
+					NotificationMessagesStatus     string `json:"notification_messages_status"`
 				} `json:"optin"`
 			} `json:"messaging"`
 		} `json:"entry"`
@@ -501,6 +511,14 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 				continue
 			}
 
+			// Update last_interaction_at for any user-initiated event (message, postback, optin)
+			if event.Message != nil || event.Postback != nil || event.Optin != nil {
+				h.db.Exec(`
+					UPDATE messenger_contacts SET last_interaction_at = NOW(), updated_at = NOW()
+					WHERE account_id = $1 AND psid = $2
+				`, settings.AccountID, senderID)
+			}
+
 			// Handle incoming message — auto-subscribe contact
 			if event.Message != nil {
 				h.handleIncomingMessage(settings.AccountID, senderID, event.Message.Text, client)
@@ -511,9 +529,21 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 				h.handlePostback(settings.AccountID, senderID, event.Postback.Payload, client)
 			}
 
-			// Handle opt-in
+			// Handle opt-in (regular or recurring notification)
 			if event.Optin != nil {
-				h.handleOptin(settings.AccountID, senderID, event.Optin.Ref, client)
+				if event.Optin.NotificationMessagesToken != "" {
+					// Recurring Notification opt-in
+					h.handleRecurringNotificationOptin(
+						settings.AccountID, senderID,
+						event.Optin.NotificationMessagesToken,
+						event.Optin.NotificationMessagesFrequency,
+						event.Optin.TokenExpiryTimestamp,
+						event.Optin.NotificationMessagesStatus,
+						client,
+					)
+				} else {
+					h.handleOptin(settings.AccountID, senderID, event.Optin.Ref, client)
+				}
 			}
 
 			// Handle delivery receipts
@@ -571,26 +601,26 @@ func (h *MessengerHandler) handleIncomingMessage(accountID int, psid, text strin
 				}
 
 				h.db.Exec(`
-					INSERT INTO messenger_contacts (account_id, psid, name, profile_pic, opted_in, opted_in_at)
-					VALUES ($1, $2, $3, $4, true, $5)
-					ON CONFLICT (account_id, psid) DO NOTHING
+					INSERT INTO messenger_contacts (account_id, psid, name, profile_pic, opted_in, opted_in_at, last_interaction_at)
+					VALUES ($1, $2, $3, $4, true, $5, $5)
+					ON CONFLICT (account_id, psid) DO UPDATE SET last_interaction_at = $5
 				`, accountID, psid, name, profilePic, now)
 
 				log.Printf("[messenger] New contact subscribed via keyword: %s (%s) for account %d", name, psid, accountID)
 
-				// Send welcome message
+				// Send welcome message (within 24h window since user just messaged us)
 				welcomeMsg := settings.WelcomeMessage
 				if welcomeMsg == "" {
 					welcomeMsg = "You have been successfully subscribed! Send STOP to unsubscribe."
 				}
-				client.SendTextMessage(psid, welcomeMsg)
+				client.SendTextMessageWithOpts(psid, welcomeMsg, messenger.WithinWindowOptions())
 			} else {
-				// Wrong keyword — send prompt
+				// Wrong keyword — send prompt (within 24h window since user just messaged us)
 				promptMsg := settings.KeywordPrompt
 				if promptMsg == "" {
 					promptMsg = fmt.Sprintf("Welcome! To subscribe, please send the keyword: %s", settings.OptInKeyword)
 				}
-				client.SendTextMessage(psid, promptMsg)
+				client.SendTextMessageWithOpts(psid, promptMsg, messenger.WithinWindowOptions())
 			}
 			return
 		}
@@ -612,7 +642,7 @@ func (h *MessengerHandler) handleIncomingMessage(accountID int, psid, text strin
 		log.Printf("[messenger] New contact subscribed: %s (%s) for account %d", name, psid, accountID)
 
 		if settings.WelcomeMessage != "" {
-			client.SendTextMessage(psid, settings.WelcomeMessage)
+			client.SendTextMessageWithOpts(psid, settings.WelcomeMessage, messenger.WithinWindowOptions())
 		}
 	}
 
@@ -623,7 +653,7 @@ func (h *MessengerHandler) handleIncomingMessage(accountID int, psid, text strin
 			WHERE account_id = $2 AND psid = $3
 		`, now, accountID, psid)
 		log.Printf("[messenger] Contact unsubscribed: %s for account %d", psid, accountID)
-		client.SendTextMessage(psid, "You have been unsubscribed. Send START to re-subscribe.")
+		client.SendTextMessageWithOpts(psid, "You have been unsubscribed. Send START to re-subscribe.", messenger.WithinWindowOptions())
 	}
 
 	// Handle start/subscribe commands (re-subscribe or keyword-based subscribe for existing opted-out contacts)
@@ -639,7 +669,7 @@ func (h *MessengerHandler) handleIncomingMessage(accountID int, psid, text strin
 		if welcomeMsg == "" {
 			welcomeMsg = "You have been successfully subscribed! Send STOP to unsubscribe."
 		}
-		client.SendTextMessage(psid, welcomeMsg)
+		client.SendTextMessageWithOpts(psid, welcomeMsg, messenger.WithinWindowOptions())
 	}
 }
 
@@ -655,9 +685,9 @@ func (h *MessengerHandler) handlePostback(accountID int, psid, payload string, c
 		}
 
 		h.db.Exec(`
-			INSERT INTO messenger_contacts (account_id, psid, name, profile_pic, opted_in, opted_in_at)
-			VALUES ($1, $2, $3, $4, true, $5)
-			ON CONFLICT (account_id, psid) DO UPDATE SET opted_in = true, opted_in_at = $5, opted_out_at = NULL, updated_at = NOW()
+			INSERT INTO messenger_contacts (account_id, psid, name, profile_pic, opted_in, opted_in_at, last_interaction_at)
+			VALUES ($1, $2, $3, $4, true, $5, $5)
+			ON CONFLICT (account_id, psid) DO UPDATE SET opted_in = true, opted_in_at = $5, opted_out_at = NULL, last_interaction_at = $5, updated_at = NOW()
 		`, accountID, psid, name, profilePic, now)
 	}
 }
@@ -672,10 +702,47 @@ func (h *MessengerHandler) handleOptin(accountID int, psid, ref string, client *
 	}
 
 	h.db.Exec(`
-		INSERT INTO messenger_contacts (account_id, psid, name, profile_pic, opted_in, opted_in_at)
-		VALUES ($1, $2, $3, $4, true, $5)
-		ON CONFLICT (account_id, psid) DO UPDATE SET opted_in = true, opted_in_at = $5, opted_out_at = NULL, updated_at = NOW()
+		INSERT INTO messenger_contacts (account_id, psid, name, profile_pic, opted_in, opted_in_at, last_interaction_at)
+		VALUES ($1, $2, $3, $4, true, $5, $5)
+		ON CONFLICT (account_id, psid) DO UPDATE SET opted_in = true, opted_in_at = $5, opted_out_at = NULL, last_interaction_at = $5, updated_at = NOW()
 	`, accountID, psid, name, profilePic, now)
+}
+
+// handleRecurringNotificationOptin stores the recurring notification token for a contact.
+func (h *MessengerHandler) handleRecurringNotificationOptin(accountID int, psid, token, frequency string, tokenExpiryTimestamp int64, status string, client *messenger.Client) {
+	now := time.Now()
+	expiresAt := time.Unix(tokenExpiryTimestamp/1000, 0)
+
+	if status == "STOP_NOTIFICATIONS" {
+		// User opted out of recurring notifications
+		h.db.Exec(`
+			UPDATE messenger_contacts
+			SET recurring_token = NULL, recurring_frequency = NULL, recurring_token_expires_at = NULL, updated_at = NOW()
+			WHERE account_id = $1 AND psid = $2
+		`, accountID, psid)
+		log.Printf("[messenger] Contact %s opted out of recurring notifications for account %d", psid, accountID)
+		return
+	}
+
+	// Store the recurring notification token
+	name := ""
+	profilePic := ""
+	if profile, err := client.GetUserProfile(psid); err == nil {
+		name = strings.TrimSpace(profile.FirstName + " " + profile.LastName)
+		profilePic = profile.ProfilePic
+	}
+
+	h.db.Exec(`
+		INSERT INTO messenger_contacts (account_id, psid, name, profile_pic, opted_in, opted_in_at, last_interaction_at,
+			recurring_token, recurring_frequency, recurring_token_expires_at)
+		VALUES ($1, $2, $3, $4, true, $5, $5, $6, $7, $8)
+		ON CONFLICT (account_id, psid) DO UPDATE SET
+			opted_in = true, opted_in_at = $5, last_interaction_at = $5,
+			recurring_token = $6, recurring_frequency = $7, recurring_token_expires_at = $8, updated_at = NOW()
+	`, accountID, psid, name, profilePic, now, token, frequency, expiresAt)
+
+	log.Printf("[messenger] Contact %s opted in for recurring notifications (%s) for account %d, expires %s",
+		psid, frequency, accountID, expiresAt.Format(time.RFC3339))
 }
 
 // ============================================================
@@ -1516,13 +1583,17 @@ func (h *MessengerHandler) executeCampaignSend(campaignID, accountID int) {
 	}
 
 	type QueuedMessage struct {
-		MessageID int    `db:"message_id"`
-		ContactID int    `db:"contact_id"`
-		PSID      string `db:"psid"`
+		MessageID               int        `db:"message_id"`
+		ContactID               int        `db:"contact_id"`
+		PSID                    string     `db:"psid"`
+		LastInteractionAt       *time.Time `db:"last_interaction_at"`
+		RecurringToken          *string    `db:"recurring_token"`
+		RecurringTokenExpiresAt *time.Time `db:"recurring_token_expires_at"`
 	}
 	var queuedMessages []QueuedMessage
 	if err := h.db.Select(&queuedMessages, `
-		SELECT mcm.id AS message_id, mcm.contact_id, mc.psid
+		SELECT mcm.id AS message_id, mcm.contact_id, mc.psid, mc.last_interaction_at,
+		       mc.recurring_token, mc.recurring_token_expires_at
 		FROM messenger_campaign_messages mcm
 		JOIN messenger_contacts mc ON mc.id = mcm.contact_id
 		WHERE mcm.campaign_id = $1 AND mcm.status = 'queued'
@@ -1554,13 +1625,39 @@ func (h *MessengerHandler) executeCampaignSend(campaignID, accountID int) {
 			return
 		}
 
+		// Determine best sending method:
+		// 1. Within 24h window -> use RESPONSE type (no restrictions)
+		// 2. Has valid recurring notification token -> use token
+		// 3. Outside window, no token -> use MESSAGE_TAG with CONFIRMED_EVENT_UPDATE
+		isWithinWindow := qm.LastInteractionAt != nil && time.Since(*qm.LastInteractionAt) < 24*time.Hour
+		hasValidRecurringToken := qm.RecurringToken != nil && *qm.RecurringToken != "" &&
+			qm.RecurringTokenExpiresAt != nil && qm.RecurringTokenExpiresAt.After(time.Now())
+
 		var result *messenger.SendResponse
 		var sendErr error
 
-		if campaign.ImageURL != "" {
-			result, sendErr = client.SendTextWithImage(qm.PSID, campaign.MessageText, campaign.ImageURL)
+		if isWithinWindow {
+			// Within 24h — use RESPONSE messaging type
+			opts := messenger.WithinWindowOptions()
+			if campaign.ImageURL != "" {
+				result, sendErr = client.SendTextWithImageOpts(qm.PSID, campaign.MessageText, campaign.ImageURL, opts)
+			} else {
+				result, sendErr = client.SendTextMessageWithOpts(qm.PSID, campaign.MessageText, opts)
+			}
+		} else if hasValidRecurringToken {
+			// Outside 24h but has recurring notification token
+			result, sendErr = client.SendWithRecurringToken(qm.PSID, *qm.RecurringToken, campaign.MessageText)
+			if sendErr == nil && campaign.ImageURL != "" {
+				result, sendErr = client.SendImageWithRecurringToken(qm.PSID, *qm.RecurringToken, campaign.ImageURL)
+			}
 		} else {
-			result, sendErr = client.SendTextMessage(qm.PSID, campaign.MessageText)
+			// Outside 24h, no recurring token — use MESSAGE_TAG
+			opts := messenger.DefaultOptions()
+			if campaign.ImageURL != "" {
+				result, sendErr = client.SendTextWithImageOpts(qm.PSID, campaign.MessageText, campaign.ImageURL, opts)
+			} else {
+				result, sendErr = client.SendTextMessageWithOpts(qm.PSID, campaign.MessageText, opts)
+			}
 		}
 
 		if sendErr != nil {
@@ -1640,13 +1737,22 @@ func (h *MessengerHandler) TestCampaign(c echo.Context) error {
 		return response.BadRequest(c, clientErr.Error())
 	}
 
+	// Check if test contact is within the 24h messaging window
+	var contact MessengerContact
+	contactErr := h.db.Get(&contact, "SELECT * FROM messenger_contacts WHERE account_id = $1 AND psid = $2", accountID, req.PSID)
+
+	opts := messenger.DefaultOptions()
+	if contactErr == nil && contact.LastInteractionAt != nil && time.Since(*contact.LastInteractionAt) < 24*time.Hour {
+		opts = messenger.WithinWindowOptions()
+	}
+
 	var result *messenger.SendResponse
 	var sendErr error
 
 	if campaign.ImageURL != "" {
-		result, sendErr = client.SendTextWithImage(req.PSID, campaign.MessageText, campaign.ImageURL)
+		result, sendErr = client.SendTextWithImageOpts(req.PSID, campaign.MessageText, campaign.ImageURL, opts)
 	} else {
-		result, sendErr = client.SendTextMessage(req.PSID, campaign.MessageText)
+		result, sendErr = client.SendTextMessageWithOpts(req.PSID, campaign.MessageText, opts)
 	}
 
 	if sendErr != nil {
