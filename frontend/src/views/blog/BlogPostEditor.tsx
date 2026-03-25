@@ -190,8 +190,11 @@ export default function BlogPostEditor() {
         setCanonicalUrl(post.canonical_url || '')
         setStatus(post.status)
         setFaqs(postFaqs?.map(f => ({ id: f.id, question: f.question, answer: f.answer })) || [])
-        if (editor && post.content) {
-          editor.commands.setContent(post.content)
+        if (editor) {
+          const editorContent = post.content && Object.keys(post.content).length > 0 ? post.content : post.content_html || ''
+          if (editorContent) {
+            editor.commands.setContent(editorContent)
+          }
         }
       } catch {
         setSnackbar({ open: true, message: 'Failed to load post', severity: 'error' })
