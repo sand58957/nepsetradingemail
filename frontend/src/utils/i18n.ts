@@ -13,5 +13,19 @@ export const isUrlMissingLocale = (url: string) => {
 export const getLocalizedUrl = (url: string, languageCode: string): string => {
   if (!url || !languageCode) throw new Error("URL or Language Code can't be empty")
 
+  // For default locale (en), don't add prefix - rewrites handle it
+  if (languageCode === i18n.defaultLocale) {
+    // Strip existing /en prefix if present
+    if (url.startsWith(`/${i18n.defaultLocale}/`)) {
+      return url.slice(3)
+    }
+
+    if (url === `/${i18n.defaultLocale}`) {
+      return '/'
+    }
+
+    return ensurePrefix(url, '/')
+  }
+
   return isUrlMissingLocale(url) ? `/${languageCode}${ensurePrefix(url, '/')}` : url
 }

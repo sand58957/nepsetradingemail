@@ -12,50 +12,40 @@ const nextConfig: NextConfig = {
   rewrites: async () => {
     return [
       {
+        source: '/',
+        destination: '/front-pages/landing-page'
+      },
+      {
+        source: '/dashboards',
+        destination: '/en/dashboards/email-marketing'
+      },
+      {
         source: '/blog',
         destination: '/front-pages/blog'
       },
       {
         source: '/blog/:path*',
         destination: '/front-pages/blog/:path*'
+      },
+      {
+        source: '/privacy',
+        destination: '/front-pages/privacy'
+      },
+      {
+        source: '/terms',
+        destination: '/front-pages/terms'
+      },
+      {
+        source: '/:path((?!en|fr|ar|front-pages|blog|images|api|favicon.ico|_next).+)+',
+        destination: '/en/:path*'
       }
     ]
   },
   redirects: async () => {
     return [
       {
-        source: '/',
-        destination: '/front-pages/landing-page',
-        permanent: false,
-        locale: false
-      },
-      {
-        source: '/dashboards',
-        destination: '/en/dashboards/email-marketing',
-        permanent: false,
-        locale: false
-      },
-      {
         source: '/:lang(en|fr|ar)',
         destination: '/:lang/dashboards/email-marketing',
-        permanent: false,
-        locale: false
-      },
-      {
-        source: '/privacy',
-        destination: '/front-pages/privacy',
-        permanent: true,
-        locale: false
-      },
-      {
-        source: '/terms',
-        destination: '/front-pages/terms',
-        permanent: true,
-        locale: false
-      },
-      {
-        source: '/:path((?!en|fr|ar|front-pages|blog|images|api|favicon.ico|privacy|terms|dashboards).*)*',
-        destination: '/en/:path*',
         permanent: false,
         locale: false
       }
