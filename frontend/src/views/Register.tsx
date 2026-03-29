@@ -178,7 +178,7 @@ const Register = ({ mode }: { mode: SystemMode }) => {
         }
       >
         <Link
-          href='/front-pages/landing-page'
+          href='/'
           className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'
         >
           <Logo />

@@ -106,7 +106,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
             <Button
               component={Link}
               size='large'
-              href='/front-pages/landing-page#pricing-plans'
+              href='/#pricing-plans'
               variant='outlined'
               color='primary'
             >

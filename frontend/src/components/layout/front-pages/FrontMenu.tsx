@@ -70,11 +70,11 @@ const Wrapper = (props: WrapperProps) => {
 }
 
 const menuItems = [
-  { label: 'Home', href: '/front-pages/landing-page', icon: 'tabler-home', section: null },
-  { label: 'Features', href: '/front-pages/landing-page#features', icon: 'tabler-sparkles', section: 'features' },
-  { label: 'Pricing', href: '/front-pages/landing-page#pricing-plans', icon: 'tabler-currency-dollar', section: 'pricing-plans' },
-  { label: 'FAQ', href: '/front-pages/landing-page#faq', icon: 'tabler-help-circle', section: 'faq' },
-  { label: 'Contact', href: '/front-pages/landing-page#contact-us', icon: 'tabler-mail', section: 'contact-us' },
+  { label: 'Home', href: '/', icon: 'tabler-home', section: null },
+  { label: 'Features', href: '/#features', icon: 'tabler-sparkles', section: 'features' },
+  { label: 'Pricing', href: '/#pricing-plans', icon: 'tabler-currency-dollar', section: 'pricing-plans' },
+  { label: 'FAQ', href: '/#faq', icon: 'tabler-help-circle', section: 'faq' },
+  { label: 'Contact', href: '/#contact-us', icon: 'tabler-mail', section: 'contact-us' },
   { label: 'Blog', href: '/blog', icon: 'tabler-article', section: null }
 ]
 
@@ -108,7 +108,7 @@ const FrontMenu = (props: Props) => {
       !intersections['pricing-plans'] &&
       !intersections.faq &&
       !intersections['contact-us'] &&
-      pathname === '/front-pages/landing-page'
+      pathname === '/'
     )
   }
 

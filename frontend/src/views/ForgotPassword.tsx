@@ -220,7 +220,7 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
         style={_mode === 'dark' ? { background: 'rgba(22, 22, 38, 0.7)', backdropFilter: 'blur(16px)', borderInlineStart: '1px solid rgba(115, 103, 240, 0.1)' } : undefined}
       >
         <div className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'>
-          <Link href='/front-pages/landing-page'>
+          <Link href='/'>
             <Logo />
           </Link>
         </div>

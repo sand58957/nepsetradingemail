@@ -128,7 +128,7 @@ const NavbarContent = () => {
         <NavToggle />
         {/* Hide Logo on Smaller screens */}
         {!isBreakpointReached && (
-          <Link href='/front-pages/landing-page'>
+          <Link href='/'>
             <Logo />
           </Link>
         )}

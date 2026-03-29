@@ -298,12 +298,12 @@ const Login = ({ mode }: { mode: SystemMode }) => {
         style={_mode === 'dark' ? { background: 'rgba(22, 22, 38, 0.7)', backdropFilter: 'blur(16px)', borderInlineStart: '1px solid rgba(115, 103, 240, 0.1)' } : undefined}
       >
         <div className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px] flex items-center gap-4'>
-          <Link href='/front-pages/landing-page'>
+          <Link href='/'>
             <Logo />
           </Link>
           <Typography
             component={Link}
-            href='/front-pages/landing-page'
+            href='/'
             color='primary.main'
             sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none', opacity: 0.8, '&:hover': { opacity: 1 } }}
           >

@@ -43,7 +43,7 @@ const Footer = ({ mode }: { mode: Mode }) => {
           <Grid container rowSpacing={10} columnSpacing={12}>
             <Grid size={{ xs: 12, lg: 5 }}>
               <div className='flex flex-col items-start gap-6'>
-                <Link href='/front-pages/landing-page'>
+                <Link href='/'>
                   <Logo color='var(--mui-palette-common-white)' />
                 </Link>
                 <Typography color='white' className='md:max-is-[390px] opacity-[0.78]'>
@@ -87,19 +87,19 @@ const Footer = ({ mode }: { mode: Mode }) => {
                 Platform
               </Typography>
               <div className='flex flex-col gap-4'>
-                <Typography component={Link} href='/front-pages/landing-page' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/' color='white' className='opacity-[0.78]'>
                   Home
                 </Typography>
-                <Typography component={Link} href='/front-pages/landing-page#pricing-plans' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#pricing-plans' color='white' className='opacity-[0.78]'>
                   Pricing
                 </Typography>
-                <Typography component={Link} href='/front-pages/landing-page#features' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#features' color='white' className='opacity-[0.78]'>
                   Features
                 </Typography>
-                <Typography component={Link} href='/front-pages/landing-page#faq' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#faq' color='white' className='opacity-[0.78]'>
                   FAQ
                 </Typography>
-                <Typography component={Link} href='/front-pages/landing-page#contact-us' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#contact-us' color='white' className='opacity-[0.78]'>
                   Contact Us
                 </Typography>
               </div>

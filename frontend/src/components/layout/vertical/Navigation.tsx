@@ -117,7 +117,7 @@ const Navigation = (props: Props) => {
     >
       {/* Nav Header including Logo & nav toggle icons  */}
       <NavHeader>
-        <Link href='/front-pages/landing-page'>
+        <Link href='/'>
           <Logo />
         </Link>
         {!(isCollapsed && !isHovered) && (
