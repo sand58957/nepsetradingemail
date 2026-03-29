@@ -50,6 +50,18 @@ const nextConfig: NextConfig = {
         locale: false
       },
       {
+        source: '/dashboards/email-marketing',
+        destination: '/dashboards',
+        permanent: true,
+        locale: false
+      },
+      {
+        source: '/en/dashboards/email-marketing',
+        destination: '/dashboards',
+        permanent: true,
+        locale: false
+      },
+      {
         source: '/:lang(en|fr|ar)',
         destination: '/:lang/dashboards/email-marketing',
         permanent: false,
