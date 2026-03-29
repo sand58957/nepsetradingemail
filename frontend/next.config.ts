@@ -44,6 +44,12 @@ const nextConfig: NextConfig = {
   redirects: async () => {
     return [
       {
+        source: '/front-pages/landing-page',
+        destination: '/',
+        permanent: true,
+        locale: false
+      },
+      {
         source: '/:lang(en|fr|ar)',
         destination: '/:lang/dashboards/email-marketing',
         permanent: false,
