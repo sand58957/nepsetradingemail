@@ -159,7 +159,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       )}
 
       {/* Breadcrumb Navigation */}
-      <nav className='blog-breadcrumb' style={{ marginBottom: 24, fontSize: 14 }}>
+      <nav className='blog-breadcrumb' style={{ marginBottom: 24, fontSize: 14, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
         <Link href='/' style={{ color: '#7c3aed', textDecoration: 'none' }}>
           Home
         </Link>
@@ -179,7 +179,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <span style={{ color: 'var(--blog-muted)' }}>{post.title}</span>
       </nav>
 
-      <div style={{ display: 'flex', gap: 40 }}>
+      <div className='blog-layout'>
         {/* Main Content */}
         <article style={{ flex: 1, minWidth: 0 }}>
           {/* Post Header */}
@@ -201,15 +201,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               </span>
             )}
 
-            <h1
-              style={{
-                fontSize: 36,
-                fontWeight: 800,
-                color: 'var(--blog-heading)',
-                lineHeight: 1.25,
-                margin: '0 0 16px'
-              }}
-            >
+            <h1 className='blog-post-title-h1'>
               {post.title}
             </h1>
 
@@ -537,7 +529,26 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             .blog-meta a { color: var(--blog-muted); }
             .blog-breadcrumb { color: var(--blog-light); }
             .blog-breadcrumb span { color: var(--blog-muted); }
+            .blog-layout { display: flex; gap: 40px; }
+            .blog-post-title-h1 { font-size: 36px; font-weight: 800; color: var(--blog-heading); line-height: 1.25; margin: 0 0 16px; }
             @media (min-width: 1024px) { .blog-toc-sidebar { display: block !important; } }
+            @media (max-width: 1023px) { .blog-layout { gap: 0; } }
+            @media (max-width: 768px) {
+              .blog-post-title-h1 { font-size: 24px; line-height: 1.3; }
+              .blog-content h2 { font-size: 20px; margin: 28px 0 12px; }
+              .blog-content h3 { font-size: 18px; margin: 24px 0 10px; }
+              .blog-content pre { padding: 12px; font-size: 12px; }
+              .blog-content blockquote { padding: 12px 16px; }
+              .blog-content table { font-size: 13px; display: block; overflow-x: auto; }
+              .blog-content th, .blog-content td { padding: 8px 10px; font-size: 13px; }
+              .blog-qa-box { padding: 16px; }
+              .blog-faq-card { padding: 16px; }
+            }
+            @media (max-width: 480px) {
+              .blog-post-title-h1 { font-size: 20px; }
+              .blog-content h2 { font-size: 18px; }
+              .blog-content h3 { font-size: 16px; }
+            }
           `
         }}
       />

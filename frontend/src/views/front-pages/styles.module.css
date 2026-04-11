@@ -1,6 +1,10 @@
 .layoutSpacing {
   margin-inline: auto;
-  padding-inline: 1.5rem;
+  padding-inline: 1rem;
+
+  @media (min-width: 600px) {
+    padding-inline: 1.5rem;
+  }
 
   @media (min-width: 900px) {
     max-inline-size: 900px;

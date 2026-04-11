@@ -46,16 +46,18 @@ const GetStarted = ({ mode }: { mode: SystemMode }) => {
             Create Free Account
           </Button>
         </div>
-        <div className='z-1' style={{ display: 'flex', flexDirection: 'row', gap: '24px', justifyContent: 'center' }}>
+        <div className='z-1 flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center'>
           <img
             src='/images/front-pages/landing-page/dashboard-email.png'
             alt='Email Marketing Dashboard'
-            style={{ width: '48%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', objectFit: 'contain' }}
+            className='w-full sm:w-[48%]'
+            style={{ borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', objectFit: 'contain' }}
           />
           <img
             src='/images/front-pages/landing-page/dashboard-telegram.png'
             alt='Telegram Marketing Dashboard'
-            style={{ width: '48%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', objectFit: 'contain' }}
+            className='w-full sm:w-[48%]'
+            style={{ borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', objectFit: 'contain' }}
           />
         </div>
       </div>

@@ -90,8 +90,8 @@ const ContactUs = () => {
                     display: 'flex',
                     alignItems: 'flex-end',
                     justifyContent: 'center',
-                    minHeight: 360,
-                    paddingTop: 30
+                    minHeight: 280,
+                    paddingTop: 20
                   }}
                 >
                   {/* Character image */}
@@ -186,7 +186,7 @@ const ContactUs = () => {
                     </Typography>
                   </div>
                   <form className='flex flex-col items-start gap-6'>
-                    <div className='flex gap-5 is-full'>
+                    <div className='flex flex-col sm:flex-row gap-5 is-full'>
                       <CustomTextField fullWidth label='Full name' id='name-input' />
                       <CustomTextField fullWidth label='Email address' id='email-input' type='email' />
                     </div>

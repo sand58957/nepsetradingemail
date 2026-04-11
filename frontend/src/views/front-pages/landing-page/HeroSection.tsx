@@ -116,7 +116,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
         </div>
       </div>
       {/* Channel badges */}
-      <div className={classnames('flex flex-wrap justify-center gap-3 mbs-8 mbe-6', frontCommonStyles.layoutSpacing)}>
+      <div className={classnames('flex flex-wrap justify-center gap-2 sm:gap-3 mbs-8 mbe-6', frontCommonStyles.layoutSpacing)}>
         {[
           { icon: 'tabler-mail', label: 'Email', sub: '99.5% Delivery', color: 'var(--mui-palette-primary-main)', bg: 'rgba(var(--mui-palette-primary-mainChannel), 0.12)', border: 'rgba(var(--mui-palette-primary-mainChannel), 0.2)' },
           { icon: 'tabler-message-2', label: 'SMS', sub: 'Bulk Nepal', color: 'var(--mui-palette-success-main)', bg: 'rgba(var(--mui-palette-success-mainChannel), 0.12)', border: 'rgba(var(--mui-palette-success-mainChannel), 0.2)' },
@@ -125,10 +125,10 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
           { icon: 'tabler-brand-messenger', label: 'Messenger', sub: 'FB Campaigns', color: '#0084ff', bg: 'rgba(0,132,255,0.12)', border: 'rgba(0,132,255,0.25)' }
         ].map((ch, i) => (
           <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: 10,
+            display: 'flex', alignItems: 'center', gap: 8,
             background: 'rgba(var(--mui-palette-background-paperChannel), 0.9)',
             backdropFilter: 'blur(10px)',
-            borderRadius: 12, padding: '10px 16px',
+            borderRadius: 12, padding: '8px 12px',
             border: `1px solid ${ch.border}`,
             boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
           }}>
@@ -147,7 +147,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
         style={{ transform: isAboveLgScreen ? transform : 'none' }}
       >
         <div className='block relative'>
-          <img src={dashboardImage} alt='dashboard-image' className={classnames('mli-auto', styles.heroSecDashboard)} style={{ borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }} />
+          <img src={dashboardImage} alt='dashboard-image' className={classnames('mli-auto', styles.heroSecDashboard)} style={{ borderRadius: '12px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)', maxWidth: '100%' }} />
         </div>
       </div>
     </section>

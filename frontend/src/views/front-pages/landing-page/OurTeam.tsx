@@ -104,9 +104,9 @@ const PaymentPartners = () => {
               key={index}
               className='flex items-center justify-center'
               style={{
-                minWidth: 110,
-                height: 60,
-                padding: '12px 22px',
+                minWidth: 90,
+                height: 55,
+                padding: '10px 16px',
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 borderRadius: 14,
