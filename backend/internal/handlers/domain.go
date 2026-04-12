@@ -32,6 +32,15 @@ const (
 	dkimKeyBits  = 2048
 )
 
+// dnsResolver uses Google public DNS to avoid Docker internal DNS caching issues
+var dnsResolver = &net.Resolver{
+	PreferGo: true,
+	Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+		d := net.Dialer{Timeout: 10 * time.Second}
+		return d.DialContext(ctx, "udp", "8.8.8.8:53")
+	},
+}
+
 var domainNameRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
 // DnsRecordResult represents the result of verifying a single DNS record.
@@ -481,8 +490,7 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 
 	if d.Type == "site" {
 		// Site domains: only check Verification TXT
-		resolver := net.Resolver{}
-		txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+		txtRecords, txtErr := dnsResolver.LookupTXT(ctx, d.Domain)
 		verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
 		results = append(results, verifyResult)
 
@@ -549,8 +557,7 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 		}
 
 		// 2. SPF check (includes sendgrid.net)
-		resolver := net.Resolver{}
-		txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+		txtRecords, txtErr := dnsResolver.LookupTXT(ctx, d.Domain)
 		spfResult := verifySPFSendGrid(txtRecords, txtErr)
 		results = append(results, spfResult)
 
@@ -675,8 +682,7 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 		var failedChecks []string
 
 		if d.Type == "site" {
-			resolver := net.Resolver{}
-			txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+			txtRecords, txtErr := dnsResolver.LookupTXT(ctx, d.Domain)
 			verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
 
 			allPassed = verifyResult.Status == "pass"
@@ -704,8 +710,7 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 				}
 			}
 
-			resolver := net.Resolver{}
-			txtRecords, txtErr := resolver.LookupTXT(ctx, d.Domain)
+			txtRecords, txtErr := dnsResolver.LookupTXT(ctx, d.Domain)
 			spfResult := verifySPFSendGrid(txtRecords, txtErr)
 			verifyResult := verifyTXT(txtRecords, txtErr, d.VerificationHash)
 
@@ -741,8 +746,7 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 func verifyARecord(ctx context.Context, domain string) DnsRecordResult {
 	expected := serverIP
 
-	resolver := net.Resolver{}
-	ips, err := resolver.LookupIPAddr(ctx, domain)
+	ips, err := dnsResolver.LookupIPAddr(ctx, domain)
 
 	if err != nil {
 		return DnsRecordResult{RecordType: "A", Expected: expected, Found: "", Status: "fail"}
@@ -771,8 +775,7 @@ func verifyDKIM(ctx context.Context, domain, selector, expectedPubKey string) Dn
 	lookupName := selector + "._domainkey." + domain
 	expected := "v=DKIM1"
 
-	resolver := net.Resolver{}
-	txtRecords, err := resolver.LookupTXT(ctx, lookupName)
+	txtRecords, err := dnsResolver.LookupTXT(ctx, lookupName)
 
 	if err != nil {
 		return DnsRecordResult{RecordType: "TXT_DKIM", Expected: expected, Found: "", Status: "fail"}
@@ -859,8 +862,7 @@ func verifySPF(txtRecords []string, lookupErr error) DnsRecordResult {
 func verifyDMARC(ctx context.Context, domain string) DnsRecordResult {
 	expected := "v=DMARC1"
 
-	resolver := net.Resolver{}
-	txtRecords, err := resolver.LookupTXT(ctx, "_dmarc."+domain)
+	txtRecords, err := dnsResolver.LookupTXT(ctx, "_dmarc."+domain)
 
 	if err != nil {
 		return DnsRecordResult{RecordType: "TXT_DMARC", Expected: expected, Found: "", Status: "fail"}
