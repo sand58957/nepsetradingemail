@@ -25,6 +25,8 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 
+import { useColorScheme } from '@mui/material/styles'
+
 import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 import campaignService from '@/services/campaigns'
 import subscriberService from '@/services/subscribers'
@@ -64,6 +66,8 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const [testEmailSending, setTestEmailSending] = useState(false)
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const isMobile = useMobileBreakpoint()
+  const { mode } = useColorScheme()
+  const isDark = mode === 'dark'
   const [loadingTemplate, setLoadingTemplate] = useState(false)
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
   const [saveTemplateName, setSaveTemplateName] = useState('')
@@ -529,7 +533,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
                 preview: { enabled: true }
               },
               appearance: {
-                theme: 'modern_light',
+                theme: isDark ? 'modern_dark' : 'modern_light',
                 panels: {
                   tools: { dock: 'left' }
                 }
@@ -574,16 +578,16 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            bgcolor: '#f0f0f0',
+            bgcolor: isDark ? 'rgba(255,255,255,0.05)' : '#f0f0f0',
             borderLeft: '1px solid',
             borderColor: 'divider',
-            '&:hover': { bgcolor: '#e0e0e0' },
+            '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.1)' : '#e0e0e0' },
             transition: 'background-color 0.2s'
           }}
         >
           <i
             className={`tabler-chevron-${drawerOpen ? 'right' : 'left'} text-[14px]`}
-            style={{ color: '#757575' }}
+            style={{ color: isDark ? '#aaa' : '#757575' }}
           />
         </Box>
 
@@ -603,7 +607,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             sx={{
               width: DRAWER_WIDTH,
               minWidth: DRAWER_WIDTH,
-              bgcolor: '#fff',
+              bgcolor: isDark ? '#1e1e2f' : '#fff',
               overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column'
@@ -746,10 +750,10 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          bgcolor: '#f5f5f5'
+                          bgcolor: isDark ? 'rgba(255,255,255,0.08)' : '#f5f5f5'
                         }}
                       >
-                        <i className={`${cat.icon} text-[17px]`} style={{ color: '#757575' }} />
+                        <i className={`${cat.icon} text-[17px]`} style={{ color: isDark ? '#aaa' : '#757575' }} />
                       </Box>
                       <Typography variant='body2' sx={{ flex: 1, fontSize: '0.85rem' }}>
                         {cat.name}
@@ -757,7 +761,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
                       <Typography variant='caption' color='text.secondary' sx={{ mr: 0.5 }}>
                         {cat.blocks.length}
                       </Typography>
-                      <i className='tabler-chevron-right text-[14px]' style={{ color: '#bdbdbd' }} />
+                      <i className='tabler-chevron-right text-[14px]' style={{ color: isDark ? '#666' : '#bdbdbd' }} />
                     </Box>
                   ))}
                 </Box>
