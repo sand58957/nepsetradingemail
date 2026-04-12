@@ -52,6 +52,12 @@ export const accountSettingsService = {
     return response.data
   },
 
+  updateWhatsAppWidget: async (value: any): Promise<any> => {
+    const response = await api.put('/account-settings/whatsapp_widget', { value })
+
+    return response.data
+  },
+
   verifyDomain: async (domain: string): Promise<any> => {
     const response = await api.post('/account-settings/domains/verify', { domain })
 

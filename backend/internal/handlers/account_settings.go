@@ -23,11 +23,12 @@ func NewAccountSettingsHandler(db *sqlx.DB, lm *listmonk.Client) *AccountSetting
 }
 
 var validSettingsKeys = map[string]bool{
-	"company_profile": true,
-	"brand_defaults":  true,
-	"domains":         true,
-	"ecommerce":       true,
-	"link_tracking":   true,
+	"company_profile":  true,
+	"brand_defaults":   true,
+	"domains":          true,
+	"ecommerce":        true,
+	"link_tracking":    true,
+	"whatsapp_widget":  true,
 }
 
 // GetAll returns all account settings as a map keyed by setting key.
@@ -96,6 +97,20 @@ func (h *AccountSettingsHandler) UpdateByKey(c echo.Context) error {
 	}
 
 	return response.Success(c, setting)
+}
+
+// GetWidgetSettings returns whatsapp_widget settings publicly (no auth required).
+func (h *AccountSettingsHandler) GetWidgetSettings(c echo.Context) error {
+	var setting models.AccountSetting
+	err := h.db.Get(&setting, "SELECT * FROM app_account_settings WHERE key = 'whatsapp_widget'")
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return response.Success(c, map[string]interface{}{"enabled": false})
+		}
+		return response.InternalError(c, "Failed to fetch widget settings")
+	}
+
+	return response.Success(c, json.RawMessage(setting.Value))
 }
 
 // UploadLogo handles logo file upload, proxies to Listmonk media, and updates brand_defaults.logo_url.

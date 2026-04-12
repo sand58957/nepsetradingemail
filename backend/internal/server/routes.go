@@ -506,6 +506,9 @@ func (s *Server) RegisterRoutes() {
 	publicBlog.GET("/sitemap.xml", blogHandler.PublicGetSitemap)
 	publicBlog.GET("/robots.txt", blogHandler.PublicGetRobotsTxt)
 
+	// Public Widget Settings (no auth — used by landing page)
+	api.GET("/public/widget/whatsapp", accountSettingsHandler.GetWidgetSettings)
+
 	// ==============================================================
 	// API Key Management — authenticated users manage their own keys
 	// ==============================================================

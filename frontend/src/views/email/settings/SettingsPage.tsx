@@ -23,6 +23,7 @@ import SetupGuideTab from './SetupGuideTab'
 import WASettings from '@/views/whatsapp/WASettings'
 import SMSSettingsView from '@/views/sms/SMSSettings'
 import MessengerSettings from '@/views/messenger/MessengerSettings'
+import WhatsAppWidgetTab from './WhatsAppWidgetTab'
 
 // Services
 import accountSettingsService from '@/services/accountSettings'
@@ -147,6 +148,11 @@ const SettingsPage = () => {
             icon={<i className='tabler-brand-facebook text-[20px]' />}
             iconPosition='start'
           />
+          <Tab
+            label='WhatsApp Widget'
+            icon={<i className='tabler-message-circle text-[20px]' />}
+            iconPosition='start'
+          />
         </Tabs>
       </Box>
 
@@ -199,6 +205,9 @@ const SettingsPage = () => {
       )}
       {activeTab === 7 && (
         <MessengerSettings />
+      )}
+      {activeTab === 8 && (
+        <WhatsAppWidgetTab />
       )}
 
       {/* Snackbar */}

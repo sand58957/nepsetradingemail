@@ -16,6 +16,7 @@ import Providers from '@components/Providers'
 import BlankLayout from '@layouts/BlankLayout'
 import FrontLayout from '@components/layout/front-pages'
 import ScrollToTop from '@core/components/scroll-to-top'
+import WhatsAppFloat from '@components/layout/front-pages/WhatsAppFloat'
 
 // Util Imports
 import { getSystemMode } from '@core/utils/serverHelpers'
@@ -116,6 +117,7 @@ const Layout = async ({ children }: ChildrenType) => {
             <IntersectionProvider>
               <FrontLayout>
                 {children}
+                <WhatsAppFloat />
                 <ScrollToTop className='mui-fixed'>
                   <Button
                     variant='contained'
