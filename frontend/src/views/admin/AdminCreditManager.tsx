@@ -31,8 +31,14 @@ import Tab from '@mui/material/Tab'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 
+import CircularProgress from '@mui/material/CircularProgress'
+import Divider from '@mui/material/Divider'
+
 import { creditService } from '@/services/apicredits'
+import api from '@/services/api'
 import type { AdminCreditEntry, CreditTransaction } from '@/types/api'
+
+const CHANNELS = ['sms', 'whatsapp', 'email', 'telegram', 'messenger'] as const
 
 const AdminCreditManager = () => {
   const [credits, setCredits] = useState<AdminCreditEntry[]>([])
@@ -45,15 +51,72 @@ const AdminCreditManager = () => {
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [adjustAccountId, setAdjustAccountId] = useState(0)
   const [adjustAccountName, setAdjustAccountName] = useState('')
-  const [adjustChannel, setAdjustChannel] = useState<'sms' | 'whatsapp' | 'email' | 'telegram'>('sms')
+  const [adjustChannel, setAdjustChannel] = useState<typeof CHANNELS[number]>('sms')
   const [adjustAmount, setAdjustAmount] = useState('')
   const [adjustDescription, setAdjustDescription] = useState('')
+
+  // Give Credits dialog (search any user)
+  const [giveOpen, setGiveOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [giveChannel, setGiveChannel] = useState<typeof CHANNELS[number]>('email')
+  const [giveAmount, setGiveAmount] = useState('')
+  const [giveDescription, setGiveDescription] = useState('')
+  const [giving, setGiving] = useState(false)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
     severity: 'success'
   })
+
+  // Search users by email/name
+  const searchUsers = async (query: string) => {
+    if (query.length < 2) { setSearchResults([]); return }
+    setSearching(true)
+    try {
+      const res = await api.get(`/users?query=${encodeURIComponent(query)}`)
+      setSearchResults(res.data?.data || [])
+    } catch { setSearchResults([]) }
+    finally { setSearching(false) }
+  }
+
+  const handleGiveCredits = async () => {
+    if (!selectedUser) return
+    const amount = parseFloat(giveAmount)
+    if (isNaN(amount) || amount <= 0) {
+      setSnackbar({ open: true, message: 'Enter a positive amount', severity: 'error' }); return
+    }
+    if (!giveDescription.trim()) {
+      setSnackbar({ open: true, message: 'Description is required for audit', severity: 'error' }); return
+    }
+
+    setGiving(true)
+    try {
+      const accountId = selectedUser.current_account_id
+      const res = await creditService.adminAdjustCredits(accountId, {
+        channel: giveChannel as any,
+        amount,
+        description: giveDescription
+      })
+      setSnackbar({
+        open: true,
+        message: `${amount} ${giveChannel.toUpperCase()} credits added to ${selectedUser.name || selectedUser.email}. New balance: ${res.data.new_balance}`,
+        severity: 'success'
+      })
+      setGiveOpen(false)
+      setSelectedUser(null)
+      setGiveAmount('')
+      setGiveDescription('')
+      setSearchQuery('')
+      setSearchResults([])
+      loadData()
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to give credits', severity: 'error' })
+    } finally { setGiving(false) }
+  }
 
   useEffect(() => {
     loadData()
@@ -156,7 +219,17 @@ const AdminCreditManager = () => {
           {/* Credit Balances Tab */}
           {activeTab === 0 && (
             <CardContent>
-              <Typography variant='h6' gutterBottom>Account Credit Balances</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant='h6'>Account Credit Balances</Typography>
+                <Button
+                  variant='contained'
+                  startIcon={<i className='tabler-coin' />}
+                  onClick={() => setGiveOpen(true)}
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
+                >
+                  Give Credits to User
+                </Button>
+              </Box>
               {accountMap.size === 0 ? (
                 <Typography color='text.secondary' sx={{ py: 4, textAlign: 'center' }}>
                   No accounts with API credits yet.
@@ -309,10 +382,9 @@ const AdminCreditManager = () => {
               <FormControl fullWidth>
                 <InputLabel>Channel</InputLabel>
                 <Select value={adjustChannel} label='Channel' onChange={e => setAdjustChannel(e.target.value as any)}>
-                  <MenuItem value='sms'>SMS</MenuItem>
-                  <MenuItem value='whatsapp'>WhatsApp</MenuItem>
-                  <MenuItem value='email'>Email</MenuItem>
-                  <MenuItem value='telegram'>Telegram</MenuItem>
+                  {CHANNELS.map(ch => (
+                    <MenuItem key={ch} value={ch}>{ch.toUpperCase()}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -344,6 +416,135 @@ const AdminCreditManager = () => {
           <Button variant='contained' onClick={handleAdjust}>
             {parseFloat(adjustAmount) >= 0 ? 'Add Credits' : 'Deduct Credits'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Give Credits to Any User Dialog */}
+      <Dialog open={giveOpen} onClose={() => { setGiveOpen(false); setSelectedUser(null); setSearchResults([]) }} maxWidth='sm' fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <i className='tabler-coin text-xl' />
+          Give Credits to User
+        </DialogTitle>
+        <Divider />
+        <DialogContent>
+          {!selectedUser ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <TextField
+                fullWidth
+                label='Search user by email or name'
+                placeholder='Type email or name...'
+                value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); searchUsers(e.target.value) }}
+                InputProps={{
+                  startAdornment: <i className='tabler-search text-lg mr-2' style={{ opacity: 0.5 }} />,
+                  endAdornment: searching ? <CircularProgress size={18} /> : null
+                }}
+                autoFocus
+              />
+              {searchResults.length > 0 && (
+                <Box sx={{ maxHeight: 300, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                  {searchResults.map((user: any) => (
+                    <Box
+                      key={user.id}
+                      onClick={() => setSelectedUser(user)}
+                      sx={{
+                        display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1.5,
+                        cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' },
+                        borderBottom: '1px solid', borderColor: 'divider'
+                      }}
+                    >
+                      <Box sx={{
+                        width: 36, height: 36, borderRadius: '50%',
+                        bgcolor: 'primary.main', color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 700, fontSize: 14
+                      }}>
+                        {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant='body2' fontWeight={600}>{user.name || 'No Name'}</Typography>
+                        <Typography variant='caption' color='text.secondary'>{user.email}</Typography>
+                      </Box>
+                      <Chip label={user.role} size='small' variant='outlined' />
+                    </Box>
+                  ))}
+                </Box>
+              )}
+              {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+                <Typography color='text.secondary' textAlign='center' py={2}>No users found</Typography>
+              )}
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
+              {/* Selected user card */}
+              <Box sx={{
+                display: 'flex', alignItems: 'center', gap: 2, p: 2,
+                bgcolor: 'action.hover', borderRadius: 2, border: '1px solid', borderColor: 'primary.main'
+              }}>
+                <Box sx={{
+                  width: 44, height: 44, borderRadius: '50%',
+                  bgcolor: 'primary.main', color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: 18
+                }}>
+                  {(selectedUser.name || selectedUser.email).charAt(0).toUpperCase()}
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography fontWeight={700}>{selectedUser.name || 'No Name'}</Typography>
+                  <Typography variant='caption' color='text.secondary'>{selectedUser.email}</Typography>
+                  <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                    Account ID: {selectedUser.current_account_id}
+                  </Typography>
+                </Box>
+                <Button size='small' variant='outlined' onClick={() => setSelectedUser(null)}>
+                  Change
+                </Button>
+              </Box>
+
+              <FormControl fullWidth>
+                <InputLabel>Channel</InputLabel>
+                <Select value={giveChannel} label='Channel' onChange={e => setGiveChannel(e.target.value as any)}>
+                  {CHANNELS.map(ch => (
+                    <MenuItem key={ch} value={ch}>{ch.toUpperCase()}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
+                label='Credits Amount'
+                type='number'
+                value={giveAmount}
+                onChange={e => setGiveAmount(e.target.value)}
+                helperText='Number of credits to add to this user'
+                InputProps={{ startAdornment: <i className='tabler-plus text-lg mr-2' style={{ opacity: 0.5 }} /> }}
+              />
+
+              <TextField
+                fullWidth
+                label='Reason / Description (required)'
+                value={giveDescription}
+                onChange={e => setGiveDescription(e.target.value)}
+                placeholder='e.g. Monthly credit allocation, Bonus for signup, Free trial credits'
+                multiline
+                rows={2}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => { setGiveOpen(false); setSelectedUser(null); setSearchResults([]) }}>Cancel</Button>
+          {selectedUser && (
+            <Button
+              variant='contained'
+              color='success'
+              onClick={handleGiveCredits}
+              disabled={giving || !giveAmount || !giveDescription.trim()}
+              startIcon={giving ? <CircularProgress size={18} /> : <i className='tabler-send' />}
+            >
+              {giving ? 'Giving...' : `Give ${giveAmount || '0'} ${giveChannel.toUpperCase()} Credits`}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
