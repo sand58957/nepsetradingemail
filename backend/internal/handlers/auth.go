@@ -1056,7 +1056,7 @@ func (h *AuthHandler) ListUsers(c echo.Context) error {
 	var users []models.User
 	var err error
 
-	baseQuery := "SELECT id, email, name, role, is_active, preferences, created_at, updated_at FROM app_users"
+	baseQuery := "SELECT id, email, name, role, is_active, current_account_id, preferences, auth_provider, created_at, updated_at FROM app_users"
 	var conditions []string
 	var args []interface{}
 	argIdx := 1
