@@ -508,6 +508,7 @@ func (s *Server) RegisterRoutes() {
 
 	// Public Widget Settings (no auth — used by landing page)
 	api.GET("/public/widget/whatsapp", accountSettingsHandler.GetWidgetSettings)
+	api.GET("/public/plan-limits", accountSettingsHandler.GetPlanLimits)
 
 	// ==============================================================
 	// API Key Management — authenticated users manage their own keys

@@ -29,6 +29,7 @@ var validSettingsKeys = map[string]bool{
 	"ecommerce":        true,
 	"link_tracking":    true,
 	"whatsapp_widget":  true,
+	"plan_limits":      true,
 }
 
 // GetAll returns all account settings as a map keyed by setting key.
@@ -97,6 +98,20 @@ func (h *AccountSettingsHandler) UpdateByKey(c echo.Context) error {
 	}
 
 	return response.Success(c, setting)
+}
+
+// GetPlanLimits returns plan limits publicly (no auth required, used by pricing page).
+func (h *AccountSettingsHandler) GetPlanLimits(c echo.Context) error {
+	var setting models.AccountSetting
+	err := h.db.Get(&setting, "SELECT * FROM app_account_settings WHERE key = 'plan_limits'")
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return response.Success(c, map[string]interface{}{})
+		}
+		return response.InternalError(c, "Failed to fetch plan limits")
+	}
+
+	return response.Success(c, json.RawMessage(setting.Value))
 }
 
 // GetWidgetSettings returns whatsapp_widget settings publicly (no auth required).
