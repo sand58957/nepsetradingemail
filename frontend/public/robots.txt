@@ -22,4 +22,17 @@ User-agent: PerplexityBot
 Allow: /blog/
 Allow: /front-pages/
 
+User-agent: ClaudeBot
+Allow: /blog/
+Allow: /front-pages/
+
+User-agent: Applebot-Extended
+Allow: /blog/
+Allow: /front-pages/
+
+User-agent: anthropic-ai
+Allow: /blog/
+Allow: /front-pages/
+
+Sitemap: https://nepalfillings.com/sitemap.xml
 Sitemap: https://nepalfillings.com/api/public/blog/sitemap.xml
