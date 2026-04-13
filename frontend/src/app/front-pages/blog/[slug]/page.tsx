@@ -95,6 +95,12 @@ export async function generateMetadata({
     },
     alternates: {
       canonical: `/blog/${post.slug}`
+    },
+    other: {
+      'geo.region': 'NP',
+      'geo.placename': 'Kathmandu',
+      'geo.position': '27.7172;85.3240',
+      'ICBM': '27.7172, 85.3240'
     }
   }
 }

@@ -1185,29 +1185,40 @@ func (h *BlogHandler) PublicListByTag(c echo.Context) error {
 // Sitemap XML
 // ============================================================
 
+type sitemapImage struct {
+	XMLName xml.Name `xml:"image:image"`
+	Loc     string   `xml:"image:loc"`
+	Title   string   `xml:"image:title,omitempty"`
+}
+
 type sitemapURL struct {
-	XMLName    xml.Name `xml:"url"`
-	Loc        string   `xml:"loc"`
-	LastMod    string   `xml:"lastmod,omitempty"`
-	ChangeFreq string   `xml:"changefreq,omitempty"`
-	Priority   string   `xml:"priority,omitempty"`
+	XMLName    xml.Name      `xml:"url"`
+	Loc        string        `xml:"loc"`
+	LastMod    string        `xml:"lastmod,omitempty"`
+	ChangeFreq string        `xml:"changefreq,omitempty"`
+	Priority   string        `xml:"priority,omitempty"`
+	Images     []sitemapImage `xml:"image:image,omitempty"`
 }
 
 type sitemapURLSet struct {
-	XMLName xml.Name     `xml:"urlset"`
-	Xmlns   string       `xml:"xmlns,attr"`
-	URLs    []sitemapURL `xml:"url"`
+	XMLName   xml.Name     `xml:"urlset"`
+	Xmlns     string       `xml:"xmlns,attr"`
+	XmlnsImg  string       `xml:"xmlns:image,attr"`
+	URLs      []sitemapURL `xml:"url"`
 }
 
 func (h *BlogHandler) PublicGetSitemap(c echo.Context) error {
 	type PostInfo struct {
-		Slug      string    `db:"slug"`
-		UpdatedAt time.Time `db:"updated_at"`
+		Slug             string    `db:"slug"`
+		Title            string    `db:"title"`
+		FeaturedImageURL string    `db:"featured_image_url"`
+		FeaturedImageAlt string    `db:"featured_image_alt"`
+		UpdatedAt        time.Time `db:"updated_at"`
 	}
 
 	var posts []PostInfo
 	err := h.db.Select(&posts, `
-		SELECT slug, updated_at FROM blog_posts
+		SELECT slug, title, featured_image_url, featured_image_alt, updated_at FROM blog_posts
 		WHERE status = 'published'
 		ORDER BY published_at DESC
 	`)
@@ -1219,7 +1230,8 @@ func (h *BlogHandler) PublicGetSitemap(c echo.Context) error {
 	baseURL := "https://nepalfillings.com"
 
 	urlset := sitemapURLSet{
-		Xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9",
+		Xmlns:    "http://www.sitemaps.org/schemas/sitemap/0.9",
+		XmlnsImg: "http://www.google.com/schemas/sitemap-image/1.1",
 	}
 
 	// Blog index
@@ -1229,17 +1241,31 @@ func (h *BlogHandler) PublicGetSitemap(c echo.Context) error {
 		Priority:   "0.8",
 	})
 
-	// Individual posts
+	// Individual posts with images
 	for _, p := range posts {
-		urlset.URLs = append(urlset.URLs, sitemapURL{
+		u := sitemapURL{
 			Loc:        baseURL + "/blog/" + p.Slug,
 			LastMod:    p.UpdatedAt.Format("2006-01-02"),
 			ChangeFreq: "weekly",
 			Priority:   "0.9",
-		})
+		}
+
+		if p.FeaturedImageURL != "" {
+			imgTitle := p.FeaturedImageAlt
+			if imgTitle == "" {
+				imgTitle = p.Title
+			}
+			u.Images = append(u.Images, sitemapImage{
+				Loc:   p.FeaturedImageURL,
+				Title: imgTitle,
+			})
+		}
+
+		urlset.URLs = append(urlset.URLs, u)
 	}
 
 	c.Response().Header().Set("Content-Type", "application/xml")
+	c.Response().Header().Set("Cache-Control", "public, max-age=3600")
 	output, _ := xml.MarshalIndent(urlset, "", "  ")
 	return c.String(http.StatusOK, xml.Header+string(output))
 }

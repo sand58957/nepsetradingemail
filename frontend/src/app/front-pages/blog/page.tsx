@@ -4,6 +4,26 @@ import Link from 'next/link'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://nepalfillings.com/api'
 const BASE_URL = 'https://nepalfillings.com'
 
+export const metadata: Metadata = {
+  title: 'Blog - Nepal Fillings | Digital Marketing Guides for Nepal',
+  description: 'Expert guides on email marketing, SMS, WhatsApp, Telegram, and Messenger marketing for Nepal businesses. Tips, strategies, and case studies.',
+  keywords: ['Nepal digital marketing blog', 'email marketing Nepal', 'SMS marketing Nepal', 'WhatsApp marketing Nepal', 'Telegram marketing Nepal'],
+  openGraph: {
+    title: 'Blog - Nepal Fillings | Digital Marketing Guides',
+    description: 'Expert digital marketing guides for Nepal businesses. Email, SMS, WhatsApp, Telegram, and Messenger strategies.',
+    url: `${BASE_URL}/blog`,
+    siteName: 'Nepal Fillings',
+    type: 'website'
+  },
+  alternates: { canonical: '/blog' },
+  other: {
+    'geo.region': 'NP',
+    'geo.placename': 'Kathmandu',
+    'geo.position': '27.7172;85.3240',
+    'ICBM': '27.7172, 85.3240'
+  }
+}
+
 interface BlogPost {
   id: number
   title: string
