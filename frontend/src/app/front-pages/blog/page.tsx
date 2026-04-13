@@ -84,14 +84,7 @@ async function getCategories(): Promise<{ id: number; name: string; slug: string
   }
 }
 
-export const metadata: Metadata = {
-  title: 'Blog - Digital Marketing Insights for Nepali Businesses',
-  description:
-    'Expert articles on email marketing, SMS campaigns, WhatsApp business, Telegram marketing, and digital growth strategies for Nepali businesses.',
-  alternates: {
-    canonical: '/blog'
-  }
-}
+// metadata is exported at the top of the file
 
 export default async function BlogListingPage({
   searchParams
