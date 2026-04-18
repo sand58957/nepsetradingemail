@@ -4,23 +4,45 @@ const BASE_URL = 'https://nepalfillings.com'
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://nepalfillings.com/api'
 
 async function getBlogPosts(): Promise<Array<{ slug: string; updated_at: string; featured_image_url: string }>> {
+  const allPosts: Array<{ slug: string; updated_at: string; featured_image_url: string }> = []
+
   try {
-    const res = await fetch(`${API_URL}/public/blog/posts?per_page=1000`, {
-      next: { revalidate: 3600 }
-    })
+    // Paginate through all posts (API max 100 per page)
+    let page = 1
+    let hasMore = true
 
-    if (!res.ok) return []
+    while (hasMore) {
+      const res = await fetch(`${API_URL}/public/blog/posts?per_page=100&page=${page}`, {
+        next: { revalidate: 3600 }
+      })
 
-    const json = await res.json()
+      if (!res.ok) break
 
-    return (json.data || []).map((p: any) => ({
-      slug: p.slug,
-      updated_at: p.updated_at || p.published_at,
-      featured_image_url: p.featured_image_url || ''
-    }))
+      const json = await res.json()
+      const posts = json.data || []
+
+      for (const p of posts) {
+        allPosts.push({
+          slug: p.slug,
+          updated_at: p.updated_at || p.published_at,
+          featured_image_url: p.featured_image_url || ''
+        })
+      }
+
+      // Check if there are more pages
+      const total = json.total || 0
+
+      if (allPosts.length >= total || posts.length < 100) {
+        hasMore = false
+      } else {
+        page++
+      }
+    }
   } catch {
-    return []
+    // Return whatever we collected
   }
+
+  return allPosts
 }
 
 async function getBlogCategories(): Promise<Array<{ slug: string }>> {
