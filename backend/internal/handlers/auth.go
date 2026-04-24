@@ -1046,7 +1046,7 @@ func generateRandomKey(length int) (string, error) {
 // ============================================================
 
 func isValidRole(role string) bool {
-	return role == "admin" || role == "user" || role == "subscriber"
+	return role == "superadmin" || role == "admin" || role == "user" || role == "subscriber"
 }
 
 func (h *AuthHandler) ListUsers(c echo.Context) error {

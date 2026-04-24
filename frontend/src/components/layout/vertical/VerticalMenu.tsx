@@ -75,7 +75,9 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
   // Vars
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
   const { lang: locale } = params
-  const isAdmin = role === 'admin'
+  const isSuperAdmin = role === 'superadmin'
+  const isAdmin = role === 'admin' || role === 'superadmin'
+  const isCustomer = role === 'user' || role === 'subscriber'
 
   // Section visibility state
   const [visibility, setVisibility] = useState<SectionVisibility>(getDefaultVisibility())
@@ -386,17 +388,26 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           </MenuItem>
         </MenuSection>
 
-        {/* Administration section — admin only */}
+        {/* Admin section — admin + superadmin */}
         {isAdmin && (
           <MenuSection label='Administration'>
+            <MenuItem href={`/${locale}/settings`} icon={<i className='tabler-settings' />}>
+              Settings
+            </MenuItem>
+          </MenuSection>
+        )}
+
+        {/* Super Admin section — superadmin only */}
+        {isSuperAdmin && (
+          <MenuSection label='Super Admin'>
             <MenuItem href={`/${locale}/admin/users`} icon={<i className='tabler-users-group' />}>
               User Management
             </MenuItem>
             <MenuItem href={`/${locale}/admin/credits`} icon={<i className='tabler-credit-card' />}>
               API Credit Management
             </MenuItem>
-            <MenuItem href={`/${locale}/settings`} icon={<i className='tabler-settings' />}>
-              Settings
+            <MenuItem href={`/${locale}/blog/autopublish`} icon={<i className='tabler-robot' />}>
+              Auto-Publish Cron
             </MenuItem>
           </MenuSection>
         )}
