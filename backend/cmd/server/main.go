@@ -127,6 +127,13 @@ func main() {
 	domainHandler := handlers.NewDomainHandler(db, cfg.SendGridAPIKey)
 	go domainHandler.StartAutoVerification(autoVerifyCtx, 5*time.Minute)
 
+	// Start blog auto-publish background job (checks every 30 minutes)
+	autoPublishCtx, autoPublishCancel := context.WithCancel(context.Background())
+	defer autoPublishCancel()
+
+	autoPublishHandler := handlers.NewBlogAutoPublishHandler(db, cfg)
+	go autoPublishHandler.StartAutoPublish(autoPublishCtx, 30*time.Minute)
+
 	// Start server in a goroutine
 	go func() {
 		addr := fmt.Sprintf(":%d", cfg.Port)

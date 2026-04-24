@@ -26,9 +26,10 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	AakashOTPToken       string
-	GupshupOTPKey        string
-	GupshupOTPAppName    string
+	GupshupOTPKey         string
+	GupshupOTPAppName     string
 	GupshupOTPSourcePhone string
+	AnthropicAPIKey       string
 }
 
 func Load() (*Config, error) {
@@ -70,6 +71,7 @@ func Load() (*Config, error) {
 		GupshupOTPKey:         getEnv("GUPSHUP_OTP_KEY", ""),
 		GupshupOTPAppName:     getEnv("GUPSHUP_OTP_APP_NAME", ""),
 		GupshupOTPSourcePhone: getEnv("GUPSHUP_OTP_SOURCE_PHONE", ""),
+		AnthropicAPIKey:       getEnv("ANTHROPIC_API_KEY", ""),
 	}
 
 	if cfg.JWTSecret == "" {

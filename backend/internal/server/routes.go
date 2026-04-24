@@ -496,6 +496,20 @@ func (s *Server) RegisterRoutes() {
 	// Blog Dashboard Stats
 	blog.GET("/stats", blogHandler.GetDashboardStats)
 
+	// Blog Auto-Publish (admin/staff)
+	autoPublishHandler := handlers.NewBlogAutoPublishHandler(s.DB, s.Config)
+	blogAP := blog.Group("/autopublish")
+	blogAP.GET("/settings", autoPublishHandler.GetSettings)
+	blogAP.PUT("/settings", autoPublishHandler.UpdateSettings)
+	blogAP.GET("/queue", autoPublishHandler.ListQueue)
+	blogAP.POST("/queue", autoPublishHandler.AddToQueue)
+	blogAP.POST("/queue/bulk", autoPublishHandler.BulkAddToQueue)
+	blogAP.PUT("/queue/:id", autoPublishHandler.UpdateQueueItem)
+	blogAP.DELETE("/queue/:id", autoPublishHandler.DeleteQueueItem)
+	blogAP.POST("/queue/:id/retry", autoPublishHandler.RetryQueueItem)
+	blogAP.POST("/queue/:id/generate-now", autoPublishHandler.GenerateNow)
+	blogAP.GET("/logs", autoPublishHandler.ListLogs)
+
 	// Public Blog Endpoints (no auth)
 	publicBlog := api.Group("/public/blog")
 	publicBlog.GET("/posts", blogHandler.PublicListPosts)
