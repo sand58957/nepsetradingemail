@@ -201,6 +201,9 @@ func (h *BlogAutoPublishHandler) AddToQueue(c echo.Context) error {
 	if req.Topic == "" {
 		return response.BadRequest(c, "Topic is required")
 	}
+	if req.SecondaryKeywords == nil {
+		req.SecondaryKeywords = []string{}
+	}
 
 	var scheduledFor *time.Time
 	if req.ScheduledFor != nil && *req.ScheduledFor != "" {
@@ -247,10 +250,14 @@ func (h *BlogAutoPublishHandler) BulkAddToQueue(c echo.Context) error {
 		if item.Topic == "" {
 			continue
 		}
+		skw := item.SecondaryKeywords
+		if skw == nil {
+			skw = []string{}
+		}
 		_, err := h.db.Exec(`
 			INSERT INTO blog_autopublish_queue (account_id, topic, primary_keyword, secondary_keywords, category_id, priority)
 			VALUES ($1, $2, $3, $4, $5, $6)`,
-			accountID, item.Topic, item.PrimaryKeyword, pq.Array(item.SecondaryKeywords), item.CategoryID, item.Priority,
+			accountID, item.Topic, item.PrimaryKeyword, pq.Array(skw), item.CategoryID, item.Priority,
 		)
 		if err == nil {
 			added++
