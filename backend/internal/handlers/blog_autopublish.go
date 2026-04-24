@@ -342,13 +342,16 @@ func (h *BlogAutoPublishHandler) GenerateNow(c echo.Context) error {
 		return response.BadRequest(c, "Auto-publish settings not configured")
 	}
 
-	// Resolve API key
+	// Resolve API key (prefer Gemini, fallback to Anthropic)
 	apiKey := settings.AnthropicAPIKey
+	if apiKey == "" {
+		apiKey = h.cfg.GeminiAPIKey
+	}
 	if apiKey == "" {
 		apiKey = h.cfg.AnthropicAPIKey
 	}
 	if apiKey == "" {
-		return response.BadRequest(c, "No Anthropic API key configured")
+		return response.BadRequest(c, "No AI API key configured (set Gemini or Anthropic key)")
 	}
 
 	// Mark as processing

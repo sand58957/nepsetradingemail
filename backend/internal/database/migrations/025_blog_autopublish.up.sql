@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS blog_autopublish_settings (
     target_audience     TEXT NOT NULL DEFAULT 'Nepal business owners and digital marketers',
     site_context        TEXT NOT NULL DEFAULT 'nepalfillings.com is a Nepal-based digital marketing platform for Email, SMS, WhatsApp, Telegram and Messenger marketing.',
     anthropic_api_key   TEXT NOT NULL DEFAULT '',
-    anthropic_model     TEXT NOT NULL DEFAULT 'claude-sonnet-4-20250514',
+    anthropic_model     TEXT NOT NULL DEFAULT 'gemini-2.5-flash',
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(account_id)

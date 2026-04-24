@@ -86,11 +86,11 @@ func GenerateBlogPost(ctx context.Context, client *Client, topic, primaryKeyword
 
 	resp, err := client.Generate(ctx, systemPrompt, userPrompt, 8192)
 	if err != nil {
-		return nil, 0, fmt.Errorf("claude API call failed: %w", err)
+		return nil, 0, fmt.Errorf("LLM API call failed: %w", err)
 	}
 
-	text := resp.GetTextContent()
-	tokens := resp.TotalTokens()
+	text := resp.Text
+	tokens := resp.TotalTokens
 
 	// Extract JSON from response (Claude may wrap in ```json blocks)
 	jsonStr := extractJSON(text)

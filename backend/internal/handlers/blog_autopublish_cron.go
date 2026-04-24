@@ -71,8 +71,11 @@ func (h *BlogAutoPublishHandler) processAccountQueue(settings *AutoPublishSettin
 		return // Not within the preferred time window
 	}
 
-	// Resolve API key
+	// Resolve API key (prefer Gemini free tier, fallback to Anthropic)
 	apiKey := settings.AnthropicAPIKey
+	if apiKey == "" {
+		apiKey = h.cfg.GeminiAPIKey
+	}
 	if apiKey == "" {
 		apiKey = h.cfg.AnthropicAPIKey
 	}

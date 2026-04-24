@@ -30,6 +30,7 @@ type Config struct {
 	GupshupOTPAppName     string
 	GupshupOTPSourcePhone string
 	AnthropicAPIKey       string
+	GeminiAPIKey          string
 }
 
 func Load() (*Config, error) {
@@ -72,6 +73,7 @@ func Load() (*Config, error) {
 		GupshupOTPAppName:     getEnv("GUPSHUP_OTP_APP_NAME", ""),
 		GupshupOTPSourcePhone: getEnv("GUPSHUP_OTP_SOURCE_PHONE", ""),
 		AnthropicAPIKey:       getEnv("ANTHROPIC_API_KEY", ""),
+		GeminiAPIKey:          getEnv("GEMINI_API_KEY", ""),
 	}
 
 	if cfg.JWTSecret == "" {
