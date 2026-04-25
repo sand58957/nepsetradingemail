@@ -220,7 +220,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                   <span>{post.reading_time_min} min read</span>
                 </>
               )}
-              {post.word_count > 0 && (
+              {(post.word_count || 0) > 0 && (
                 <>
                   <span className='blog-meta-divider'>·</span>
                   <span>{post.word_count.toLocaleString()} words</span>
