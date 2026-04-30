@@ -542,6 +542,16 @@ func (s *Server) RegisterRoutes() {
 	apiCredits.GET("/transactions", creditHandler.GetMyTransactions)
 
 	// ==============================================================
+	// Public API — Meta endpoints (/v1/health, /v1/me) usable with any
+	// channel's API key. Lets clients verify credentials before sending.
+	// ==============================================================
+	publicMetaHandler := handlers.NewPublicMetaHandler(s.DB)
+	api.GET("/v1/health", publicMetaHandler.Health)
+	publicMeta := api.Group("/v1")
+	publicMeta.Use(middleware.APIKeyAuth(s.DB, ""))
+	publicMeta.GET("/me", publicMetaHandler.Me)
+
+	// ==============================================================
 	// Public API — SMS (API key auth, separate from JWT)
 	// ==============================================================
 	publicSMSHandler := handlers.NewPublicSMSHandler(s.DB)

@@ -25,6 +25,7 @@ type APIKeyInfo struct {
 
 // APIKeyAuth validates API keys from the Authorization header and sets account context.
 // The channel parameter restricts which channel this middleware accepts (e.g., "sms", "whatsapp", "email").
+// Pass "" to accept any channel (useful for cross-channel endpoints like /me, /health).
 func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -74,8 +75,8 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 				return response.Error(c, http.StatusUnauthorized, "Invalid API key")
 			}
 
-			// Check channel matches
-			if keyRecord.Channel != channel {
+			// Check channel matches (empty channel = accept any channel)
+			if channel != "" && keyRecord.Channel != channel {
 				return response.Error(c, http.StatusForbidden,
 					fmt.Sprintf("This API key is for %s, not %s", keyRecord.Channel, channel))
 			}
