@@ -118,6 +118,10 @@ func (h *APIKeyHandler) CreateKey(c echo.Context) error {
 		ON CONFLICT (account_id, channel) DO NOTHING
 	`, accountID, req.Channel)
 
+	// Auto-enable API access on the account; otherwise the new key is silently
+	// rejected by APIKeyAuth middleware with a 403.
+	h.db.Exec("UPDATE app_accounts SET api_enabled = true WHERE id = $1", accountID)
+
 	return response.Created(c, map[string]interface{}{
 		"id":             keyID,
 		"key":            rawKey, // shown ONCE, never again
