@@ -1092,7 +1092,7 @@ func (h *BlogHandler) PublicListPosts(c echo.Context) error {
 	err = h.db.Select(&posts, fmt.Sprintf(`
 		SELECT p.id, p.account_id, p.title, p.slug, p.excerpt, p.featured_image_url, p.featured_image_alt,
 		       p.meta_title, p.meta_description, p.quick_answer, p.primary_keyword,
-		       p.seo_score, p.word_count, p.reading_time_min, p.view_count, p.published_at, p.created_at,
+		       p.seo_score, p.word_count, p.reading_time_min, p.view_count, p.published_at, p.created_at, p.updated_at,
 		       COALESCE(a.name, '') AS author_name,
 		       COALESCE(cat.name, '') AS category_name
 		FROM blog_posts p
