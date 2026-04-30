@@ -47,8 +47,25 @@ func (h *BlogAutoPublishHandler) runAutoPublishCycle() {
 	}
 
 	for _, settings := range accounts {
+		// Top up the topic queue if it's running low. Runs independently of
+		// the publish window so the queue stays warm for tomorrow's slots.
+		if apiKey := h.resolveAPIKey(&settings); apiKey != "" {
+			h.seedTopicsIfNeeded(&settings, apiKey)
+		}
 		h.processAccountQueue(&settings)
 	}
+}
+
+// resolveAPIKey picks the first available LLM key for this account.
+// Prefers per-account override, then global Gemini, then global Anthropic.
+func (h *BlogAutoPublishHandler) resolveAPIKey(settings *AutoPublishSettings) string {
+	if settings.AnthropicAPIKey != "" {
+		return settings.AnthropicAPIKey
+	}
+	if h.cfg.GeminiAPIKey != "" {
+		return h.cfg.GeminiAPIKey
+	}
+	return h.cfg.AnthropicAPIKey
 }
 
 func (h *BlogAutoPublishHandler) processAccountQueue(settings *AutoPublishSettings) {
