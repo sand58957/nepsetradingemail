@@ -1,35 +1,16 @@
-// Type Imports
-import type { Locale } from '@configs/i18n'
+// Next Imports
+import { notFound } from 'next/navigation'
 
-// Component Imports
-import Providers from '@components/Providers'
-import BlankLayout from '@layouts/BlankLayout'
-import NotFound from '@views/NotFound'
-
-// Config Imports
-import { i18n } from '@configs/i18n'
-
-// Util Imports
-import { getServerMode, getSystemMode } from '@core/utils/serverHelpers'
-
-const NotFoundPage = async (props: { params: Promise<{ lang: string }> }) => {
-  const params = await props.params
-
-  // Type guard to ensure lang is a valid Locale
-  const lang: Locale = i18n.locales.includes(params.lang as Locale) ? (params.lang as Locale) : i18n.defaultLocale
-
-  // Vars
-  const direction = i18n.langDirection[lang]
-  const mode = await getServerMode()
-  const systemMode = await getSystemMode()
-
-  return (
-    <Providers direction={direction}>
-      <BlankLayout systemMode={systemMode}>
-        <NotFound mode={mode} />
-      </BlankLayout>
-    </Providers>
-  )
+/**
+ * Catch-all route for unknown paths under /[lang]/*.
+ *
+ * We call `notFound()` here so Next.js returns a proper HTTP 404 status code
+ * (instead of HTTP 200 with the not-found UI, which Google flags as a "soft 404").
+ * The UI is rendered by the closest `not-found.tsx` boundary (see ./not-found.tsx
+ * one level up at src/app/[lang]/not-found.tsx).
+ */
+const NotFoundPage = () => {
+  notFound()
 }
 
 export default NotFoundPage

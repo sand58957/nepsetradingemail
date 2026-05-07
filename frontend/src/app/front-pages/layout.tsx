@@ -90,9 +90,7 @@ export const metadata = {
       'max-snippet': -1
     }
   },
-  verification: {
-    google: 'google-site-verification-code'
-  }
+  // GSC verification is handled by /public/google16932f9bf54e4b87.html — do NOT emit a placeholder meta tag here
 }
 
 const Layout = async ({ children }: ChildrenType) => {
@@ -104,7 +102,7 @@ const Layout = async ({ children }: ChildrenType) => {
       <head>
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <meta name='theme-color' content='#7c3aed' />
-        <link rel='canonical' href='https://nepalfillings.com' />
+        {/* canonical is emitted per-page via Next.js metadata `alternates.canonical` — do NOT hardcode it here, it produces duplicate <link rel="canonical"> tags */}
         <meta name='geo.region' content='NP' />
         <meta name='geo.placename' content='Kathmandu' />
         <meta name='geo.position' content='27.7172;85.3240' />

@@ -1,0 +1,52 @@
+# Nepal Fillings
+
+> Nepal Fillings is Nepal's all-in-one digital marketing platform. Send bulk Email, SMS, WhatsApp, Telegram and Messenger campaigns from a single dashboard with credit-based pricing and no monthly fees. Built for Nepali businesses, NEPSE traders, e-commerce stores, and marketing agencies.
+
+Operated by Marketminds Investment Group Pvt Ltd, based in Kathmandu, Nepal.
+
+## Core capabilities
+
+- Bulk email campaigns (transactional + marketing) via SendGrid and self-hosted Listmonk
+- Bulk SMS in Nepal via Aakash SMS gateway integration
+- WhatsApp Business API broadcasts
+- Telegram channel and group broadcasts
+- Facebook Messenger marketing automation
+- Subscriber lists, segmentation, and contact management
+- Campaign analytics and deliverability reporting
+- Credit-based pay-as-you-go billing (no monthly fees)
+
+## Key pages
+
+- [Homepage](https://nepalfillings.com): Product overview and feature tour
+- [Pricing](https://nepalfillings.com/front-pages/pricing): Credit-based pricing for Email, SMS, WhatsApp, Telegram, Messenger
+- [Help Center](https://nepalfillings.com/front-pages/help-center): Setup guides, FAQs, troubleshooting
+- [Blog index](https://nepalfillings.com/blog): Articles on digital marketing in Nepal
+- [Privacy Policy](https://nepalfillings.com/front-pages/privacy)
+- [Terms of Service](https://nepalfillings.com/front-pages/terms)
+
+## Sitemaps
+
+- [Main sitemap](https://nepalfillings.com/sitemap.xml): All static pages and published blog posts
+- [Blog sitemap with images](https://nepalfillings.com/api/public/blog/sitemap.xml): Blog posts with featured-image metadata
+
+## Public APIs (read-only, no auth required)
+
+- `GET https://nepalfillings.com/api/public/blog/posts` — Paginated list of published blog posts (JSON)
+- `GET https://nepalfillings.com/api/public/blog/posts/{slug}` — Single post detail
+- `GET https://nepalfillings.com/api/v1/health` — Service health check
+
+## Editorial focus
+
+The blog publishes daily articles tailored to the Nepal market, covering:
+
+- Email marketing strategies and deliverability for Nepali audiences
+- Bulk SMS campaign tactics and Aakash SMS integration patterns
+- WhatsApp Business API for SMEs in Nepal
+- Telegram group marketing and engagement measurement
+- Messenger and chatbot automation for Nepali e-commerce
+- Comparative guides (Email vs SMS, WhatsApp vs Viber, etc.)
+
+## Optional
+
+- [Search Console verification](https://nepalfillings.com/google16932f9bf54e4b87.html)
+- [Robots policy](https://nepalfillings.com/robots.txt)
