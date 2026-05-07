@@ -18,6 +18,9 @@ services:
       - listmonk
     networks:
       - nepse
+      # Cross-project network so nginx can proxy /hostingnepals.* to hn-frontend
+      # (Hosting Nepal lives in /root/Hosting_Nepal with its own compose project).
+      - hosting_nepal_hn-network
 
   certbot:
     image: certbot/certbot
@@ -141,6 +144,11 @@ services:
 
 networks:
   nepse:
+  # Declared as external because it's owned by the Hosting Nepal compose project.
+  # Without this, recreating nginx detaches it from hn-frontend's network and
+  # nginx fails to start with "host not found in upstream hn-frontend".
+  hosting_nepal_hn-network:
+    external: true
 
 volumes:
   pgdata:
