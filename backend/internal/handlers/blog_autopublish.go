@@ -464,8 +464,12 @@ func (h *BlogAutoPublishHandler) processQueueItem(item *AutoPublishQueueItem, se
 	tocJSON, _ := json.Marshal(post.TableOfContents)
 	keyPointsJSON, _ := json.Marshal(post.KeyPoints)
 
-	// Featured image
-	featuredImage := "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=630&fit=crop"
+	// Featured image — self-hosted on the nginx container at /blog-images/.
+	// Files live on the VPS at ./uploads/blog-images/ and are served as static
+	// assets (see nginx/conf.d/default.conf, location /blog-images/).
+	// We avoid hot-linking external Unsplash URLs so the site has no third-party
+	// runtime image dependency and we control caching/SEO image attribution.
+	featuredImage := "https://nepalfillings.com/blog-images/default.jpg"
 
 	// Insert blog post
 	var postID int
