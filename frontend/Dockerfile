@@ -1,6 +1,6 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN corepack enable pnpm
+RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
 
 # Copy package files and pnpm config (shamefully-hoist required)
 COPY package.json pnpm-lock.yaml .npmrc ./
@@ -19,6 +19,8 @@ RUN npx tsx src/assets/iconify-icons/bundle-icons-css.ts
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL=https://nepalfillings.com/api
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
 RUN pnpm build
 
 FROM node:20-alpine AS runner
