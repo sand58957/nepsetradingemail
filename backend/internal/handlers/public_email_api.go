@@ -17,12 +17,16 @@ import (
 
 // PublicEmailHandler handles the public Email API endpoints.
 type PublicEmailHandler struct {
-	db            *sqlx.DB
-	sendgridKey   string
+	db          *sqlx.DB
+	envFallback string
 }
 
-func NewPublicEmailHandler(db *sqlx.DB, sendgridKey string) *PublicEmailHandler {
-	return &PublicEmailHandler{db: db, sendgridKey: sendgridKey}
+func NewPublicEmailHandler(db *sqlx.DB, envFallback string) *PublicEmailHandler {
+	return &PublicEmailHandler{db: db, envFallback: envFallback}
+}
+
+func (h *PublicEmailHandler) currentKey() string {
+	return GetCurrentSendGridKey(h.db, h.envFallback)
 }
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
@@ -113,7 +117,7 @@ func (h *PublicEmailHandler) Send(c echo.Context) error {
 	`, accountID, keyInfo.KeyID, req.To, req.From, req.Subject, truncate(req.Subject, 200), creditCost, webhookURL, req.Reference).Scan(&msgID)
 
 	// Send via SendGrid
-	client := sendgrid.NewClient(h.sendgridKey)
+	client := sendgrid.NewClient(h.currentKey())
 	result, sendErr := client.SendMail(sendgrid.MailRequest{
 		To:       req.To,
 		From:     req.From,
@@ -245,7 +249,7 @@ func (h *PublicEmailHandler) SendBulk(c echo.Context) error {
 			fmt.Sprintf("Need %.0f email credits, have %.0f", totalCost, balance), "")
 	}
 
-	client := sendgrid.NewClient(h.sendgridKey)
+	client := sendgrid.NewClient(h.currentKey())
 
 	sent := 0
 	failed := 0

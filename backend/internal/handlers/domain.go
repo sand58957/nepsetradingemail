@@ -61,27 +61,37 @@ type VerifyDomainResponse struct {
 
 // DomainHandler manages per-account domains with DKIM key generation, SendGrid, and DNS verification.
 type DomainHandler struct {
-	db         *sqlx.DB
-	dkimKeyDir string
-	sg         *sendgrid.Client
+	db          *sqlx.DB
+	dkimKeyDir  string
+	envAPIKey   string
 }
 
-// NewDomainHandler creates a new DomainHandler.
-func NewDomainHandler(db *sqlx.DB, sendgridAPIKey string) *DomainHandler {
+// NewDomainHandler creates a new DomainHandler. The SendGrid client is built
+// per-call so that key rotations from the super admin UI take effect without a
+// restart; envAPIKey is used only as a fallback when no DB key is set.
+func NewDomainHandler(db *sqlx.DB, envAPIKey string) *DomainHandler {
 	dir := os.Getenv("DKIM_KEYS_DIR")
 	if dir == "" {
 		dir = "/opt/dkim-keys"
 	}
 
-	var sgClient *sendgrid.Client
-	if sendgridAPIKey != "" {
-		sgClient = sendgrid.NewClient(sendgridAPIKey)
-		log.Println("INFO: SendGrid domain authentication enabled")
+	if envAPIKey == "" {
+		log.Println("INFO: SENDGRID_API_KEY env var not set — relying on DB-stored key from super admin UI")
 	} else {
-		log.Println("WARNING: SENDGRID_API_KEY not set — SendGrid domain auth disabled")
+		log.Println("INFO: SendGrid domain authentication enabled (env fallback present)")
 	}
 
-	return &DomainHandler{db: db, dkimKeyDir: dir, sg: sgClient}
+	return &DomainHandler{db: db, dkimKeyDir: dir, envAPIKey: envAPIKey}
+}
+
+// sgClient builds a SendGrid client using the current key (DB takes precedence
+// over env). Returns nil if no key is configured anywhere.
+func (h *DomainHandler) sgClient() *sendgrid.Client {
+	key := GetCurrentSendGridKey(h.db, h.envAPIKey)
+	if key == "" {
+		return nil
+	}
+	return sendgrid.NewClient(key)
 }
 
 // --------------------------------------------------------------------------
@@ -267,8 +277,8 @@ func (h *DomainHandler) Create(c echo.Context) error {
 		}
 
 		// Create SendGrid domain authentication
-		if h.sg != nil {
-			sgResp, err := h.sg.AuthenticateDomain(domain)
+		if sg := h.sgClient(); sg != nil {
+			sgResp, err := sg.AuthenticateDomain(domain)
 			if err != nil {
 				log.Printf("WARNING: SendGrid domain auth for %s failed: %v (continuing without SendGrid)", domain, err)
 			} else {
@@ -338,8 +348,8 @@ func (h *DomainHandler) Delete(c echo.Context) error {
 	}
 
 	// Delete SendGrid domain auth
-	if h.sg != nil && domainInfo.SendgridDomainID > 0 {
-		if err := h.sg.DeleteDomainAuth(domainInfo.SendgridDomainID); err != nil {
+	if sg := h.sgClient(); sg != nil && domainInfo.SendgridDomainID > 0 {
+		if err := sg.DeleteDomainAuth(domainInfo.SendgridDomainID); err != nil {
 			log.Printf("WARNING: Failed to delete SendGrid domain auth %d: %v", domainInfo.SendgridDomainID, err)
 		}
 	}
@@ -500,8 +510,9 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 
 		// 1. SendGrid validation (checks DKIM CNAMEs + Mail CNAME)
 		sgPassed := false
-		if h.sg != nil && d.SendgridDomainID > 0 {
-			sgResult, err := h.sg.ValidateDomain(d.SendgridDomainID)
+		sg := h.sgClient()
+		if sg != nil && d.SendgridDomainID > 0 {
+			sgResult, err := sg.ValidateDomain(d.SendgridDomainID)
 			if err != nil {
 				log.Printf("WARNING: SendGrid validate domain %d: %v", d.SendgridDomainID, err)
 				results = append(results, DnsRecordResult{
@@ -692,8 +703,9 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 		} else {
 			// SendGrid validation
 			sgPassed := false
-			if h.sg != nil && d.SendgridDomainID > 0 {
-				sgResult, err := h.sg.ValidateDomain(d.SendgridDomainID)
+			sg := h.sgClient()
+			if sg != nil && d.SendgridDomainID > 0 {
+				sgResult, err := sg.ValidateDomain(d.SendgridDomainID)
 				if err != nil {
 					failedChecks = append(failedChecks, "SendGrid")
 				} else {

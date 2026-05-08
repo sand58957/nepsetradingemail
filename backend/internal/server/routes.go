@@ -17,7 +17,7 @@ func (s *Server) RegisterRoutes() {
 	subscriberHandler := handlers.NewSubscriberHandler(s.LM, s.DB)
 	campaignHandler := handlers.NewCampaignHandler(s.LM)
 	listHandler := handlers.NewListHandler(s.LM)
-	templateHandler := handlers.NewTemplateHandler(s.LM, s.Config)
+	templateHandler := handlers.NewTemplateHandler(s.LM, s.Config, s.DB)
 	mediaHandler := handlers.NewMediaHandler(s.LM)
 	settingsHandler := handlers.NewSettingsHandler(s.LM)
 	automationHandler := handlers.NewAutomationHandler(s.DB)
@@ -684,6 +684,19 @@ func (s *Server) RegisterRoutes() {
 	forms.POST("", formHandler.Create)
 	forms.PUT("/:id", formHandler.Update)
 	forms.DELETE("/:id", formHandler.Delete)
+
+	// ==============================================================
+	// Super-admin-only routes — platform secrets
+	// ==============================================================
+	superAdmin := api.Group("")
+	superAdmin.Use(middleware.JWTAuth(s.Config.JWTSecret))
+	superAdmin.Use(middleware.RequireRole("superadmin"))
+
+	systemSettingsHandler := handlers.NewSystemSettingsHandler(s.DB, s.Config.SendGridAPIKey)
+	system := superAdmin.Group("/system")
+	system.GET("/sendgrid", systemSettingsHandler.GetSendGrid)
+	system.PUT("/sendgrid", systemSettingsHandler.UpdateSendGrid)
+	system.POST("/sendgrid/test", systemSettingsHandler.TestSendGrid)
 
 	// 404 handler
 	s.Echo.RouteNotFound("/*", func(c echo.Context) error {

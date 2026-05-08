@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 
 	"github.com/sandeep/nepsetradingemail/backend/internal/config"
@@ -21,10 +22,11 @@ import (
 type TemplateHandler struct {
 	lm  *listmonk.Client
 	cfg *config.Config
+	db  *sqlx.DB
 }
 
-func NewTemplateHandler(lm *listmonk.Client, cfg *config.Config) *TemplateHandler {
-	return &TemplateHandler{lm: lm, cfg: cfg}
+func NewTemplateHandler(lm *listmonk.Client, cfg *config.Config, db *sqlx.DB) *TemplateHandler {
+	return &TemplateHandler{lm: lm, cfg: cfg, db: db}
 }
 
 // validateTemplateID validates that the path param is a numeric ID
@@ -216,7 +218,7 @@ func (h *TemplateHandler) ListSendGridTemplates(c echo.Context) error {
 		return adminOnly(c)
 	}
 
-	apiKey := h.cfg.SendGridAPIKey
+	apiKey := GetCurrentSendGridKey(h.db, h.cfg.SendGridAPIKey)
 	if apiKey == "" {
 		return response.BadRequest(c, "SendGrid API key not configured")
 	}
@@ -236,7 +238,7 @@ func (h *TemplateHandler) ImportSendGridTemplates(c echo.Context) error {
 		return adminOnly(c)
 	}
 
-	apiKey := h.cfg.SendGridAPIKey
+	apiKey := GetCurrentSendGridKey(h.db, h.cfg.SendGridAPIKey)
 	if apiKey == "" {
 		return response.BadRequest(c, "SendGrid API key not configured")
 	}
