@@ -16,6 +16,7 @@ services:
       - frontend
       - backend
       - listmonk
+    mem_limit: 256m
     networks:
       - nepse
       # Cross-project network so nginx can proxy /hostingnepals.* to hn-frontend
@@ -40,8 +41,12 @@ services:
     environment:
       - API_URL=http://backend:8080/api/auth
       - NEXT_PUBLIC_API_URL=https://nepalfillings.com/api
+      # Internal Docker network address for SSR fetches — avoids round-tripping
+      # through Cloudflare back to the same origin (saves 200–500 ms / page render).
+      - INTERNAL_API_URL=http://backend:8080/api
       - NEXTAUTH_URL=https://nepalfillings.com
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    mem_limit: 1g
     networks:
       - nepse
 
@@ -78,6 +83,7 @@ services:
         condition: service_started
       listmonk:
         condition: service_started
+    mem_limit: 512m
     networks:
       - nepse
 
@@ -107,6 +113,7 @@ services:
       - LISTMONK_app__admin_password=${LISTMONK_ADMIN_PASSWORD}
     volumes:
       - listmonk-uploads:/listmonk/uploads
+    mem_limit: 512m
     networks:
       - nepse
 
@@ -127,6 +134,7 @@ services:
       retries: 6
     volumes:
       - pgdata:/var/lib/postgresql/data
+    mem_limit: 2g
     networks:
       - nepse
 
@@ -134,11 +142,14 @@ services:
     image: redis:7-alpine
     container_name: nepse_redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    # 256 MB cap with allkeys-lru — evicts least-recently-used keys when full,
+    # so accidental unbounded growth in cache keys can never OOM the box.
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --activedefrag yes
     expose:
       - "6379"
     volumes:
       - redisdata:/data
+    mem_limit: 320m
     networks:
       - nepse
 
