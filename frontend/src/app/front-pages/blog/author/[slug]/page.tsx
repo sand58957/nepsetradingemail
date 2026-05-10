@@ -4,8 +4,9 @@ import { notFound } from 'next/navigation'
 
 import type { BlogAuthor } from '@/utils/blogSchema'
 import { generateAuthorSchema } from '@/utils/blogSchema'
+import { getApiBase } from '@/utils/apiBase'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://nepalfillings.com/api'
+const API_URL = getApiBase()
 const BASE_URL = 'https://nepalfillings.com'
 
 interface BlogPost {

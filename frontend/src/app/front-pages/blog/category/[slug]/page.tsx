@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://nepalfillings.com/api'
+import { getApiBase } from '@/utils/apiBase'
+
+const API_URL = getApiBase()
 const BASE_URL = 'https://nepalfillings.com'
 
 interface BlogCategory {

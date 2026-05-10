@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://nepalfillings.com/api'
+import { getApiBase } from '@/utils/apiBase'
+
+const API_URL = getApiBase()
 const BASE_URL = 'https://nepalfillings.com'
 
 export const metadata: Metadata = {

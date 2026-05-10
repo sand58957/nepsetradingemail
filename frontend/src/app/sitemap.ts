@@ -1,7 +1,9 @@
 import type { MetadataRoute } from 'next'
 
+import { getApiBase } from '@/utils/apiBase'
+
 const BASE_URL = 'https://nepalfillings.com'
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://nepalfillings.com/api'
+const API_URL = getApiBase()
 
 async function getBlogPosts(): Promise<Array<{ slug: string; updated_at: string; featured_image_url: string }>> {
   const allPosts: Array<{ slug: string; updated_at: string; featured_image_url: string }> = []

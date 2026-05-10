@@ -9,6 +9,29 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname)
   },
+  // Tree-shake / barrel-optimize the heaviest UI deps. Without this, importing
+  // a single MUI component drags the entire library into the bundle.
+  experimental: {
+    optimizePackageImports: [
+      '@mui/material',
+      '@mui/icons-material',
+      '@mui/lab',
+      '@iconify/react',
+      'lodash',
+      'date-fns',
+      '@tabler/icons-react'
+    ]
+  },
+  // Image optimization: AVIF/WebP at edge, long browser cache.
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 2592000,
+    remotePatterns: [
+      { protocol: 'https', hostname: 'nepalfillings.com' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'my-pull-zone-name-nepalfilling.b-cdn.net' }
+    ]
+  },
   rewrites: async () => {
     return [
       {
@@ -34,6 +57,10 @@ const nextConfig: NextConfig = {
       {
         source: '/terms',
         destination: '/front-pages/terms'
+      },
+      {
+        source: '/pricing',
+        destination: '/front-pages/pricing'
       },
       {
         source: '/:path((?!en|fr|ar|front-pages|blog|images|api|favicon.ico|_next).+)+',
