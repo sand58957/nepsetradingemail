@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"encoding/xml"
@@ -18,18 +19,34 @@ import (
 
 	"github.com/sandeep/nepsetradingemail/backend/internal/config"
 	mw "github.com/sandeep/nepsetradingemail/backend/internal/middleware"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/cache"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
 
 // BlogHandler manages all Blog CMS endpoints.
 type BlogHandler struct {
-	db  *sqlx.DB
-	cfg *config.Config
+	db    *sqlx.DB
+	cfg   *config.Config
+	cache *cache.RedisCache
 }
 
 // NewBlogHandler creates a new Blog handler.
-func NewBlogHandler(db *sqlx.DB, cfg *config.Config) *BlogHandler {
-	return &BlogHandler{db: db, cfg: cfg}
+func NewBlogHandler(db *sqlx.DB, cfg *config.Config, c *cache.RedisCache) *BlogHandler {
+	return &BlogHandler{db: db, cfg: cfg, cache: c}
+}
+
+// invalidatePublicBlogCache wipes all cached public blog responses. Called from
+// any mutation (create/update/delete/publish/unpublish + FAQ writes). Pattern
+// "blog:pub:*" covers list, post-by-slug, and category/tag/author scopes.
+func (h *BlogHandler) invalidatePublicBlogCache() {
+	if h.cache == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := h.cache.DeletePattern(ctx, "blog:pub:*"); err != nil {
+		log.Printf("blog cache invalidation failed: %v", err)
+	}
 }
 
 // ============================================================
@@ -693,6 +710,9 @@ func (h *BlogHandler) CreatePost(c echo.Context) error {
 		}
 	}
 
+	if post.Status == "published" {
+		h.invalidatePublicBlogCache()
+	}
 	return response.Created(c, post)
 }
 
@@ -793,6 +813,7 @@ func (h *BlogHandler) UpdatePost(c echo.Context) error {
 		}
 	}
 
+	h.invalidatePublicBlogCache()
 	return response.Success(c, post)
 }
 
@@ -809,6 +830,7 @@ func (h *BlogHandler) DeletePost(c echo.Context) error {
 	if rows == 0 {
 		return response.NotFound(c, "Post not found")
 	}
+	h.invalidatePublicBlogCache()
 	return response.SuccessWithMessage(c, "Post deleted", nil)
 }
 
@@ -824,6 +846,7 @@ func (h *BlogHandler) PublishPost(c echo.Context) error {
 	if err != nil {
 		return response.NotFound(c, "Post not found")
 	}
+	h.invalidatePublicBlogCache()
 	return response.SuccessWithMessage(c, "Post published", post)
 }
 
@@ -839,6 +862,7 @@ func (h *BlogHandler) UnpublishPost(c echo.Context) error {
 	if err != nil {
 		return response.NotFound(c, "Post not found")
 	}
+	h.invalidatePublicBlogCache()
 	return response.SuccessWithMessage(c, "Post unpublished", post)
 }
 
@@ -885,6 +909,7 @@ func (h *BlogHandler) CreatePostFAQ(c echo.Context) error {
 		log.Printf("Error creating post FAQ: %v", err)
 		return response.InternalError(c, "Failed to create FAQ")
 	}
+	h.invalidatePublicBlogCache()
 	return response.Created(c, faq)
 }
 
@@ -907,6 +932,7 @@ func (h *BlogHandler) UpdatePostFAQ(c echo.Context) error {
 	if err != nil {
 		return response.NotFound(c, "FAQ not found")
 	}
+	h.invalidatePublicBlogCache()
 	return response.Success(c, faq)
 }
 
@@ -922,6 +948,7 @@ func (h *BlogHandler) DeletePostFAQ(c echo.Context) error {
 	if rows == 0 {
 		return response.NotFound(c, "FAQ not found")
 	}
+	h.invalidatePublicBlogCache()
 	return response.SuccessWithMessage(c, "FAQ deleted", nil)
 }
 
@@ -1052,6 +1079,18 @@ func (h *BlogHandler) PublicListPosts(c echo.Context) error {
 	tagSlug := c.QueryParam("tag")
 	authorSlug := c.QueryParam("author")
 
+	// Cache key includes all filters + pagination so each variant caches independently.
+	cacheKey := fmt.Sprintf("blog:pub:list:p%d:pp%d:cat=%s:tag=%s:author=%s",
+		page, perPage, categorySlug, tagSlug, authorSlug)
+	if h.cache != nil {
+		ctx, cancel := context.WithTimeout(c.Request().Context(), 200*time.Millisecond)
+		defer cancel()
+		var cached map[string]interface{}
+		if err := h.cache.Get(ctx, cacheKey, &cached); err == nil && cached != nil {
+			return c.JSON(http.StatusOK, cached)
+		}
+	}
+
 	where := "p.status = 'published'"
 	args := []interface{}{}
 	argIdx := 1
@@ -1109,11 +1148,44 @@ func (h *BlogHandler) PublicListPosts(c echo.Context) error {
 	if posts == nil {
 		posts = []BlogPost{}
 	}
-	return response.Paginated(c, posts, total, page, perPage)
+
+	payload := response.PaginatedResponse{
+		Success: true,
+		Data:    posts,
+		Total:   total,
+		Page:    page,
+		PerPage: perPage,
+	}
+	if h.cache != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+		_ = h.cache.Set(ctx, cacheKey, payload, 60*time.Second)
+	}
+	return c.JSON(http.StatusOK, payload)
 }
 
 func (h *BlogHandler) PublicGetPost(c echo.Context) error {
 	slug := c.Param("slug")
+
+	cacheKey := "blog:pub:post:" + slug
+	if h.cache != nil {
+		ctx, cancel := context.WithTimeout(c.Request().Context(), 200*time.Millisecond)
+		defer cancel()
+		var cached map[string]interface{}
+		if err := h.cache.Get(ctx, cacheKey, &cached); err == nil && cached != nil {
+			// Bump view_count async on cache hits too — best-effort, don't block response.
+			if idVal, ok := cached["data"].(map[string]interface{}); ok {
+				if postVal, ok := idVal["post"].(map[string]interface{}); ok {
+					if idF, ok := postVal["id"].(float64); ok {
+						go func(id int) {
+							h.db.Exec(`UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1`, id)
+						}(int(idF))
+					}
+				}
+			}
+			return c.JSON(http.StatusOK, cached)
+		}
+	}
 
 	var post BlogPost
 	err := h.db.Get(&post, `
@@ -1127,8 +1199,11 @@ func (h *BlogHandler) PublicGetPost(c echo.Context) error {
 		return response.NotFound(c, "Post not found")
 	}
 
-	// Increment view count
-	h.db.Exec(`UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1`, post.ID)
+	// Increment view count (fire-and-forget; don't block response)
+	postID := post.ID
+	go func() {
+		h.db.Exec(`UPDATE blog_posts SET view_count = view_count + 1 WHERE id = $1`, postID)
+	}()
 
 	// Get author details
 	var author *BlogAuthor
@@ -1157,12 +1232,21 @@ func (h *BlogHandler) PublicGetPost(c echo.Context) error {
 		faqs = []BlogPostFAQ{}
 	}
 
-	return response.Success(c, map[string]interface{}{
-		"post":   post,
-		"author": author,
-		"tags":   tags,
-		"faqs":   faqs,
-	})
+	payload := response.Response{
+		Success: true,
+		Data: map[string]interface{}{
+			"post":   post,
+			"author": author,
+			"tags":   tags,
+			"faqs":   faqs,
+		},
+	}
+	if h.cache != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+		_ = h.cache.Set(ctx, cacheKey, payload, 5*time.Minute)
+	}
+	return c.JSON(http.StatusOK, payload)
 }
 
 func (h *BlogHandler) PublicListByCategory(c echo.Context) error {

@@ -448,7 +448,7 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	// Blog CMS
 	// ==============================================================
-	blogHandler := handlers.NewBlogHandler(s.DB, s.Config)
+	blogHandler := handlers.NewBlogHandler(s.DB, s.Config, s.Cache)
 
 	blog := staff.Group("/blog")
 
