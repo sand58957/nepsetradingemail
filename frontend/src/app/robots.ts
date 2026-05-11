@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
+        allow: ['/', '/api/public/blog/sitemap.xml'],
         disallow: ['/api/', '/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       },
       // AI/LLM bots - allow blog and public pages for AIO optimization
