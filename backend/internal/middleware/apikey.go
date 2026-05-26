@@ -3,6 +3,7 @@ package middleware
 import (
 	"crypto/sha256"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -12,6 +13,14 @@ import (
 
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
+
+// redactKey returns a safe-to-log preview of an API key (prefix + last 4 chars).
+func redactKey(key string) string {
+	if len(key) <= 12 {
+		return key
+	}
+	return key[:12] + "...len=" + fmt.Sprintf("%d", len(key))
+}
 
 // APIKeyInfo holds the validated API key details set in context.
 type APIKeyInfo struct {
@@ -29,13 +38,18 @@ type APIKeyInfo struct {
 func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			ip := c.RealIP()
+			path := c.Request().URL.Path
+
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
+				log.Printf("apikey.auth_fail reason=no_header ip=%s path=%s channel=%s", ip, path, channel)
 				return response.Error(c, http.StatusUnauthorized, "Missing Authorization header. Use: Bearer nf_<channel>_<key>")
 			}
 
 			parts := strings.SplitN(authHeader, " ", 2)
 			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+				log.Printf("apikey.auth_fail reason=bad_scheme ip=%s path=%s scheme=%q", ip, path, parts[0])
 				return response.Error(c, http.StatusUnauthorized, "Invalid authorization format. Use: Bearer <api_key>")
 			}
 
@@ -44,6 +58,7 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 			// Extract prefix for lookup (first segment up to 20 chars before the random part)
 			prefix := extractPrefix(apiKey)
 			if prefix == "" {
+				log.Printf("apikey.auth_fail reason=bad_format ip=%s path=%s key=%s", ip, path, redactKey(apiKey))
 				return response.Error(c, http.StatusUnauthorized, "Invalid API key format")
 			}
 
@@ -65,6 +80,7 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 			`, prefix)
 
 			if err != nil {
+				log.Printf("apikey.auth_fail reason=prefix_not_found ip=%s path=%s prefix=%s key=%s", ip, path, prefix, redactKey(apiKey))
 				return response.Error(c, http.StatusUnauthorized, "Invalid or inactive API key")
 			}
 
@@ -72,11 +88,13 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 			hash := sha256.Sum256([]byte(apiKey))
 			hashStr := fmt.Sprintf("%x", hash)
 			if hashStr != keyRecord.KeyHash {
+				log.Printf("apikey.auth_fail reason=hash_mismatch ip=%s path=%s prefix=%s account=%d key=%s", ip, path, prefix, keyRecord.AccountID, redactKey(apiKey))
 				return response.Error(c, http.StatusUnauthorized, "Invalid API key")
 			}
 
 			// Check channel matches (empty channel = accept any channel)
 			if channel != "" && keyRecord.Channel != channel {
+				log.Printf("apikey.auth_fail reason=channel_mismatch ip=%s path=%s prefix=%s account=%d key_channel=%s want=%s", ip, path, prefix, keyRecord.AccountID, keyRecord.Channel, channel)
 				return response.Error(c, http.StatusForbidden,
 					fmt.Sprintf("This API key is for %s, not %s", keyRecord.Channel, channel))
 			}
@@ -85,6 +103,7 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 			var apiEnabled bool
 			db.Get(&apiEnabled, "SELECT api_enabled FROM app_accounts WHERE id = $1", keyRecord.AccountID)
 			if !apiEnabled {
+				log.Printf("apikey.auth_fail reason=api_disabled ip=%s path=%s account=%d", ip, path, keyRecord.AccountID)
 				return response.Error(c, http.StatusForbidden, "API access is not enabled for this account. Contact admin.")
 			}
 
