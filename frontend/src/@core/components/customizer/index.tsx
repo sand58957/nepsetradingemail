@@ -342,6 +342,7 @@ const Customizer = ({ breakpoint = 'lg', dir = 'ltr', disableDirection = false }
                     id='customizer-semi-dark'
                     checked={settings.semiDark === true}
                     onChange={() => handleChange('semiDark', !settings.semiDark)}
+                    slotProps={{ input: { 'aria-label': 'Semi Dark' } }}
                   />
                 </div>
               )}

@@ -111,11 +111,11 @@ const Faqs = () => {
           <Chip size='small' variant='tonal' color='primary' label='FAQ' />
           <div className='flex flex-col items-center gap-y-1 justify-center flex-wrap'>
             <div className='flex items-center gap-x-2'>
-              <Typography color='text.primary' variant='h4'>
+              <Typography color='text.primary' variant='h4' component='h2'>
                 Frequently asked
                 <span className='relative z-[1] font-extrabold'>
                   <img
-                    src='/images/front-pages/landing-page/bg-shape.png'
+                    src='/images/front-pages/landing-page/bg-shape.webp'
                     alt='bg-shape'
                     className='absolute block-end-0 z-[1] bs-[40%] is-[132%] -inline-start-[8%] block-start-[17px]'
                   />{' '}
@@ -132,9 +132,14 @@ const Faqs = () => {
           <Grid container spacing={6}>
             <Grid size={{ xs: 12, lg: 5 }} className='text-center'>
               <img
-                src='/images/front-pages/landing-page/boy-sitting-with-laptop.png'
+                src='/images/front-pages/landing-page/boy-sitting-with-laptop.webp'
                 alt='boy with laptop'
+                width={660}
+                height={601}
+                loading='lazy'
+                decoding='async'
                 className='is-[80%] max-is-[320px]'
+                style={{ height: 'auto' }}
               />
             </Grid>
             <Grid size={{ xs: 12, lg: 7 }}>

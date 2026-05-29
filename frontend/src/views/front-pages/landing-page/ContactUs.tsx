@@ -56,11 +56,11 @@ const ContactUs = () => {
           <Chip size='small' variant='tonal' color='primary' label='Contact Us' />
           <div className='flex flex-col items-center gap-y-1 justify-center flex-wrap'>
             <div className='flex items-center gap-x-2'>
-              <Typography color='text.primary' variant='h4'>
+              <Typography color='text.primary' variant='h4' component='h2'>
                 <span className='relative z-[1] font-extrabold'>
                   Let&#39;s work
                   <img
-                    src='/images/front-pages/landing-page/bg-shape.png'
+                    src='/images/front-pages/landing-page/bg-shape.webp'
                     alt='bg-shape'
                     className='absolute block-end-0 z-[1] bs-[40%] is-[132%] -inline-start-[19%] block-start-[17px]'
                   />
@@ -76,10 +76,15 @@ const ContactUs = () => {
             <Grid size={{ xs: 12, md: 6, lg: 5 }}>
               <div className={classnames('border p-[10px] relative', styles.contactRadius)}>
                 <img
-                  src='/images/front-pages/landing-page/contact-border.png'
+                  src='/images/front-pages/landing-page/contact-border.webp'
                   className='absolute -block-start-[7%] -inline-start-[8%] max-is-full max-lg:hidden '
-                  alt='contact-border'
+                  alt=''
+                  aria-hidden='true'
                   width='180'
+                  height='150'
+                  loading='lazy'
+                  decoding='async'
+                  style={{ height: 'auto' }}
                 />
                 <div
                   className={classnames(styles.contactRadius)}
@@ -96,8 +101,10 @@ const ContactUs = () => {
                 >
                   {/* Character image */}
                   <img
-                    src='/images/illustrations/characters/4.png'
+                    src='/images/illustrations/characters/4.webp'
                     alt='Contact us'
+                    loading='lazy'
+                    decoding='async'
                     style={{
                       maxHeight: 300,
                       objectFit: 'contain',
@@ -179,7 +186,7 @@ const ContactUs = () => {
               <Card>
                 <CardContent>
                   <div className='flex flex-col gap-y-[6px] mbe-6'>
-                    <Typography variant='h4'>Send a message</Typography>
+                    <Typography variant='h4' component='h3'>Send a message</Typography>
                     <Typography>
                       Have questions about our digital marketing services? Want to discuss pricing, partnerships, or
                       need a demo? First visit our office at Koteshwor (Near Rastriya Banijya Bank) or call us directly.

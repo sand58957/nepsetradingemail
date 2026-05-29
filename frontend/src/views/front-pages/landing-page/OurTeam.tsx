@@ -16,20 +16,20 @@ import frontCommonStyles from '@views/front-pages/styles.module.css'
 
 // Payment Partner Logos - official scraped logos
 const partners = [
-  { src: '/images/front-pages/landing-page/partners/esewa_official.png', alt: 'eSewa', width: 130 },
-  { src: '/images/front-pages/landing-page/partners/khalti_official.png', alt: 'Khalti', width: 120 },
-  { src: '/images/front-pages/landing-page/partners/connectips_official.png', alt: 'ConnectIPS', width: 100 },
+  { src: '/images/front-pages/landing-page/partners/esewa_official.webp', alt: 'eSewa', width: 130 },
+  { src: '/images/front-pages/landing-page/partners/khalti_official.webp', alt: 'Khalti', width: 120 },
+  { src: '/images/front-pages/landing-page/partners/connectips_official.webp', alt: 'ConnectIPS', width: 100 },
   { src: '/images/front-pages/landing-page/partners/imepay_official.jpg', alt: 'IME Pay', width: 110 },
-  { src: '/images/front-pages/landing-page/partners/fonepay_official.png', alt: 'FonePay', width: 120 },
-  { src: '/images/front-pages/landing-page/partners/namastepay_official.png', alt: 'Namaste Pay', width: 70 },
-  { src: '/images/front-pages/landing-page/partners/prabhupay_official.png', alt: 'Prabhu Pay', width: 130 },
-  { src: '/images/front-pages/landing-page/partners/visa_official.png', alt: 'Visa', width: 100 },
-  { src: '/images/front-pages/landing-page/partners/mastercard_official.png', alt: 'Mastercard', width: 80 },
-  { src: '/images/front-pages/landing-page/partners/unionpay_official.png', alt: 'UnionPay', width: 110 },
-  { src: '/images/front-pages/landing-page/partners/paypal_official.png', alt: 'PayPal', width: 120 },
-  { src: '/images/front-pages/landing-page/partners/nmb_official.png', alt: 'NMB Bank', width: 110 },
+  { src: '/images/front-pages/landing-page/partners/fonepay_official.webp', alt: 'FonePay', width: 120 },
+  { src: '/images/front-pages/landing-page/partners/namastepay_official.webp', alt: 'Namaste Pay', width: 70 },
+  { src: '/images/front-pages/landing-page/partners/prabhupay_official.webp', alt: 'Prabhu Pay', width: 130 },
+  { src: '/images/front-pages/landing-page/partners/visa_official.webp', alt: 'Visa', width: 100 },
+  { src: '/images/front-pages/landing-page/partners/mastercard_official.webp', alt: 'Mastercard', width: 80 },
+  { src: '/images/front-pages/landing-page/partners/unionpay_official.webp', alt: 'UnionPay', width: 110 },
+  { src: '/images/front-pages/landing-page/partners/paypal_official.webp', alt: 'PayPal', width: 120 },
+  { src: '/images/front-pages/landing-page/partners/nmb_official.webp', alt: 'NMB Bank', width: 110 },
   { src: '/images/front-pages/landing-page/partners/civilbank_official.jpg', alt: 'Civil Bank', width: 110 },
-  { src: '/images/front-pages/landing-page/partners/laxmisunrise_official.png', alt: 'Laxmi Sunrise Bank', width: 130 },
+  { src: '/images/front-pages/landing-page/partners/laxmisunrise_official.webp', alt: 'Laxmi Sunrise Bank', width: 130 },
 ]
 
 const PaymentPartners = () => {
@@ -77,11 +77,11 @@ const PaymentPartners = () => {
           />
           <div className='flex flex-col items-center gap-y-1 justify-center flex-wrap'>
             <div className='flex items-center gap-x-2'>
-              <Typography variant='h4' style={{ color: '#fff' }}>
+              <Typography variant='h4' component='h2' style={{ color: '#fff' }}>
                 <span className='relative z-[1] font-extrabold'>
                   Payment
                   <img
-                    src='/images/front-pages/landing-page/bg-shape.png'
+                    src='/images/front-pages/landing-page/bg-shape.webp'
                     alt='bg-shape'
                     className='absolute block-end-0 z-[1] bs-[40%] is-[132%] -inline-start-[19%] block-start-[17px]'
                   />
@@ -133,6 +133,8 @@ const PaymentPartners = () => {
               <img
                 src={partner.src}
                 alt={partner.alt}
+                loading='lazy'
+                decoding='async'
                 style={{
                   maxWidth: partner.width,
                   maxHeight: 40,
