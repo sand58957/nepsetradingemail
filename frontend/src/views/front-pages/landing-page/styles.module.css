@@ -1,6 +1,7 @@
 .heroSectionBg {
   background-repeat: no-repeat;
   background-size: cover;
+  object-fit: cover;
   position: absolute;
   inline-size: 100%;
   inset-block-start: -12%;

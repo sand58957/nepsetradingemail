@@ -29,8 +29,8 @@ import frontCommonStyles from '@views/front-pages/styles.module.css'
 
 const Footer = ({ mode }: { mode: Mode }) => {
   // Vars
-  const footerImageLight = '/images/front-pages/footer-bg-light.png'
-  const footerImageDark = '/images/front-pages/footer-bg-dark.png'
+  const footerImageLight = '/images/front-pages/footer-bg-light.webp'
+  const footerImageDark = '/images/front-pages/footer-bg-dark.webp'
 
   // Hooks
   const dashboardImage = useImageVariant(mode, footerImageLight, footerImageDark)
@@ -38,7 +38,14 @@ const Footer = ({ mode }: { mode: Mode }) => {
   return (
     <footer className={frontLayoutClasses.footer}>
       <div className='relative'>
-        <img src={dashboardImage} alt='footer bg' className='absolute inset-0 is-full bs-full object-cover -z-[1]' />
+        <img
+          src={dashboardImage}
+          alt=''
+          aria-hidden='true'
+          loading='lazy'
+          decoding='async'
+          className='absolute inset-0 is-full bs-full object-cover -z-[1]'
+        />
         <div className={classnames('plb-12 text-white', frontCommonStyles.layoutSpacing)}>
           <Grid container rowSpacing={10} columnSpacing={12}>
             <Grid size={{ xs: 12, lg: 5 }}>
@@ -210,10 +217,10 @@ const Footer = ({ mode }: { mode: Mode }) => {
               Terms
             </Typography>
             <div className='flex gap-1.5 items-center'>
-              <IconButton component={Link} size='small' href='https://www.facebook.com/profile.php?id=100063477431390' target='_blank'>
+              <IconButton component={Link} size='small' href='https://www.facebook.com/profile.php?id=100063477431390' target='_blank' aria-label='Nepal Fillings on Facebook'>
                 <i className='tabler-brand-facebook-filled text-white text-lg' />
               </IconButton>
-              <IconButton component={Link} size='small' href='https://t.me/nepsemarket_alert_bot' target='_blank'>
+              <IconButton component={Link} size='small' href='https://t.me/nepsemarket_alert_bot' target='_blank' aria-label='Nepal Fillings on Telegram'>
                 <i className='tabler-brand-telegram text-white text-lg' />
               </IconButton>
             </div>

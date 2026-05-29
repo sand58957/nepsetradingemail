@@ -89,7 +89,8 @@ export const metadata = {
       'max-image-preview': 'large' as const,
       'max-snippet': -1
     }
-  },
+  }
+
   // GSC verification is handled by /public/google16932f9bf54e4b87.html — do NOT emit a placeholder meta tag here
 }
 
@@ -124,6 +125,7 @@ const Layout = async ({ children }: ChildrenType) => {
                 <ScrollToTop className='mui-fixed'>
                   <Button
                     variant='contained'
+                    aria-label='Scroll to top'
                     className='is-10 bs-10 rounded-full p-0 min-is-0 flex items-center justify-center'
                   >
                     <i className='tabler-arrow-up' />

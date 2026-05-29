@@ -17,7 +17,7 @@ import styles from './styles.module.css'
 const data = [
   {
     desc: 'Nepal Fillings has completely transformed our email marketing. We can now reach thousands of customers across Nepal with a single campaign. The delivery rates are outstanding!',
-    logo: '/images/front-pages/landing-page/reviews/daraz_official.png',
+    logo: '/images/front-pages/landing-page/reviews/daraz_official.webp',
     company: 'Daraz',
     rating: 5,
     name: 'Rajesh Sharma',
@@ -25,7 +25,7 @@ const data = [
   },
   {
     desc: 'The Telegram marketing feature is a game-changer for our food delivery alerts. Our customers love getting instant notifications about offers and deals directly on Telegram.',
-    logo: '/images/front-pages/landing-page/reviews/foodmandu_official.png',
+    logo: '/images/front-pages/landing-page/reviews/foodmandu_official.webp',
     company: 'Foodmandu',
     rating: 5,
     name: 'Srijana Thapa',
@@ -33,7 +33,7 @@ const data = [
   },
   {
     desc: 'We switched from manual WhatsApp messaging to Nepal Fillings and our engagement rate doubled. The bulk SMS feature helps us reach customers even in remote areas of Nepal.',
-    logo: '/images/front-pages/landing-page/reviews/bhojdeal_official.png',
+    logo: '/images/front-pages/landing-page/reviews/bhojdeal_official.webp',
     company: 'Bhoj Deal',
     rating: 5,
     name: 'Ankit Paudel',
@@ -49,7 +49,7 @@ const data = [
   },
   {
     desc: 'Nepal Fillings helped us streamline our admission notifications. We send bulk SMS and email updates to thousands of students. Reliable and affordable for educational institutions.',
-    logo: '/images/front-pages/landing-page/reviews/ioe_official.png',
+    logo: '/images/front-pages/landing-page/reviews/ioe_official.webp',
     company: 'IOE Pulchowk',
     rating: 5,
     name: 'Dr. Ram Prasad',
@@ -57,7 +57,7 @@ const data = [
   },
   {
     desc: 'We use Nepal Fillings for flight booking confirmations, delay notifications, and promotional campaigns. The WhatsApp integration improved our customer satisfaction significantly.',
-    logo: '/images/front-pages/landing-page/reviews/nepalair_official.png',
+    logo: '/images/front-pages/landing-page/reviews/nepalair_official.webp',
     company: 'Nepal Airlines',
     rating: 4,
     name: 'Captain Binod KC',
@@ -65,7 +65,7 @@ const data = [
   },
   {
     desc: 'Nepal Fillings has been instrumental in our policyholder communication. Automated SMS and email reminders have reduced our lapse rate by 35%. A must-have for insurance companies!',
-    logo: '/images/front-pages/landing-page/reviews/nepallife_official.png',
+    logo: '/images/front-pages/landing-page/reviews/nepallife_official.webp',
     company: 'Nepal Life Insurance',
     rating: 5,
     name: 'Hari Bahadur KC',
@@ -73,7 +73,7 @@ const data = [
   },
   {
     desc: 'As a global brand operating in Nepal, we needed a reliable local platform for customer engagement. Nepal Fillings delivers professional email campaigns with excellent analytics.',
-    logo: '/images/front-pages/landing-page/reviews/metlife_official.png',
+    logo: '/images/front-pages/landing-page/reviews/metlife_official.webp',
     company: 'MetLife Nepal',
     rating: 5,
     name: 'Anil Joshi',
@@ -81,7 +81,7 @@ const data = [
   },
   {
     desc: 'Bulk SMS campaigns for festival greetings and new product launches have become effortless. The Telegram bot feature helps us share insurance tips with our subscriber community.',
-    logo: '/images/front-pages/landing-page/reviews/asianlife_official.png',
+    logo: '/images/front-pages/landing-page/reviews/asianlife_official.webp',
     company: 'Asian Life Insurance',
     rating: 4,
     name: 'Binita Rana',
@@ -90,14 +90,14 @@ const data = [
 ]
 
 const logos = [
-  { src: '/images/front-pages/landing-page/reviews/daraz_official.png', alt: 'Daraz' },
-  { src: '/images/front-pages/landing-page/reviews/foodmandu_official.png', alt: 'Foodmandu' },
-  { src: '/images/front-pages/landing-page/reviews/bhojdeal_official.png', alt: 'Bhoj Deal' },
+  { src: '/images/front-pages/landing-page/reviews/daraz_official.webp', alt: 'Daraz' },
+  { src: '/images/front-pages/landing-page/reviews/foodmandu_official.webp', alt: 'Foodmandu' },
+  { src: '/images/front-pages/landing-page/reviews/bhojdeal_official.webp', alt: 'Bhoj Deal' },
   { src: '/images/front-pages/landing-page/reviews/foreveryng_official.svg', alt: 'Foreveryng' },
-  { src: '/images/front-pages/landing-page/reviews/ioe_official.png', alt: 'IOE Pulchowk' },
-  { src: '/images/front-pages/landing-page/reviews/nepalair_official.png', alt: 'Nepal Airlines' },
-  { src: '/images/front-pages/landing-page/reviews/nepallife_official.png', alt: 'Nepal Life' },
-  { src: '/images/front-pages/landing-page/reviews/asianlife_official.png', alt: 'Asian Life' }
+  { src: '/images/front-pages/landing-page/reviews/ioe_official.webp', alt: 'IOE Pulchowk' },
+  { src: '/images/front-pages/landing-page/reviews/nepalair_official.webp', alt: 'Nepal Airlines' },
+  { src: '/images/front-pages/landing-page/reviews/nepallife_official.webp', alt: 'Nepal Life' },
+  { src: '/images/front-pages/landing-page/reviews/asianlife_official.webp', alt: 'Asian Life' }
 ]
 
 const CustomerReviews = () => {
@@ -152,7 +152,7 @@ const CustomerReviews = () => {
           }}
         >
           <Chip label='Testimonials' variant='tonal' color='primary' size='small' />
-          <Typography variant='h3' className='font-extrabold'>
+          <Typography variant='h3' component='h2' className='font-extrabold'>
             Trusted by Leading{' '}
             <span style={{ color: 'var(--mui-palette-primary-main)' }}>Nepali Brands</span>
           </Typography>
@@ -220,6 +220,8 @@ const CustomerReviews = () => {
                       <img
                         src={item.logo}
                         alt={item.company}
+                        loading='lazy'
+                        decoding='async'
                         style={{ height: 32, maxWidth: 130, objectFit: 'contain' }}
                       />
                     </div>
@@ -272,7 +274,7 @@ const CustomerReviews = () => {
                         {item.name.charAt(0)}
                       </div>
                       <div>
-                        <Typography variant='subtitle2' fontWeight={700} sx={{ lineHeight: 1.3 }}>
+                        <Typography variant='subtitle2' component='p' fontWeight={700} sx={{ lineHeight: 1.3 }}>
                           {item.name}
                         </Typography>
                         <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.3 }}>
@@ -291,6 +293,7 @@ const CustomerReviews = () => {
             <CustomIconButton
               color='primary'
               variant='tonal'
+              aria-label='Previous testimonial'
               onClick={() => instanceRef.current?.prev()}
               sx={{
                 width: 44,
@@ -326,6 +329,7 @@ const CustomerReviews = () => {
             <CustomIconButton
               color='primary'
               variant='tonal'
+              aria-label='Next testimonial'
               onClick={() => instanceRef.current?.next()}
               sx={{
                 width: 44,
@@ -402,6 +406,8 @@ const CustomerReviews = () => {
                   <img
                     src={item.src}
                     alt={item.alt}
+                    loading='lazy'
+                    decoding='async'
                     style={{
                       height: 36,
                       maxWidth: 130,

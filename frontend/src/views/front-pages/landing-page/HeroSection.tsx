@@ -29,17 +29,14 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
   const [transform, setTransform] = useState('')
 
   // Vars
-  const dashboardImageLight = '/images/front-pages/landing-page/hero-dashboard-light.png'
-  const dashboardImageDark = '/images/front-pages/landing-page/hero-dashboard-dark.png'
-  const elementsImageLight = '/images/front-pages/landing-page/hero-elements-light.png'
-  const elementsImageDark = '/images/front-pages/landing-page/hero-elements-dark.png'
-  const heroSectionBgLight = '/images/front-pages/landing-page/hero-bg-light.png'
-  const heroSectionBgDark = '/images/front-pages/landing-page/hero-bg-dark.png'
+  const dashboardImageLight = '/images/front-pages/landing-page/hero-dashboard-light.webp'
+  const dashboardImageDark = '/images/front-pages/landing-page/hero-dashboard-dark.webp'
+  const heroSectionBgLight = '/images/front-pages/landing-page/hero-bg-light.webp'
+  const heroSectionBgDark = '/images/front-pages/landing-page/hero-bg-dark.webp'
 
   // Hooks
   const { mode: muiMode } = useColorScheme()
   const dashboardImage = useImageVariant(mode, dashboardImageLight, dashboardImageDark)
-  const elementsImage = useImageVariant(mode, elementsImageLight, elementsImageDark)
   const heroSectionBg = useImageVariant(mode, heroSectionBgLight, heroSectionBgDark)
 
   const _mode = (muiMode === 'system' ? mode : muiMode) || mode
@@ -68,7 +65,9 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
     <section id='home' className='overflow-hidden pbs-[75px] -mbs-[75px] relative'>
       <img
         src={heroSectionBg}
-        alt='hero-bg'
+        alt=''
+        aria-hidden='true'
+        fetchPriority='high'
         className={classnames('bs-[95%] sm:bs-[85%] md:bs-[80%]', styles.heroSectionBg, {
           [styles.bgLight]: _mode === 'light',
           [styles.bgDark]: _mode === 'dark'
@@ -92,7 +91,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
           <div className='flex mbs-6 items-baseline justify-center relative gap-4'>
             <div className='flex gap-2 absolute inline-start-[0%] block-start-[41%] max-md:hidden'>
               <Typography className='font-medium'>5 Channels</Typography>
-              <img src='/images/front-pages/landing-page/join-community-arrow.png' alt='arrow' height='48' width='60' />
+              <img src='/images/front-pages/landing-page/join-community-arrow.webp' alt='' aria-hidden='true' height='42' width='60' loading='lazy' decoding='async' />
             </div>
             <Button
               component={Link}
@@ -147,7 +146,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
         style={{ transform: isAboveLgScreen ? transform : 'none' }}
       >
         <div className='block relative'>
-          <img src={dashboardImage} alt='dashboard-image' className={classnames('mli-auto', styles.heroSecDashboard)} style={{ borderRadius: '12px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)', maxWidth: '100%' }} />
+          <img src={dashboardImage} alt='dashboard-image' width={1600} height={828} fetchPriority='high' className={classnames('mli-auto', styles.heroSecDashboard)} style={{ borderRadius: '12px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)', maxWidth: '100%', height: 'auto' }} />
         </div>
       </div>
     </section>

@@ -221,7 +221,7 @@ const PricingPlan = () => {
         {/* Header */}
         <div className='flex flex-col gap-y-4 items-center justify-center'>
           <Chip size='small' variant='tonal' color='primary' label='Pricing Plans' />
-          <Typography variant='h4' className='text-center font-extrabold'>
+          <Typography variant='h4' component='h2' className='text-center font-extrabold'>
             Choose your plan
           </Typography>
           <Typography color='text.secondary' className='text-center max-w-lg'>
@@ -232,15 +232,16 @@ const PricingPlan = () => {
         {/* Subscriber Slider */}
         <div className='flex flex-col items-center gap-4 mbs-6 mbe-4'>
           <div className='flex items-center gap-3'>
-            <Typography variant='h5' fontWeight={700} color='primary.main'>
+            <Typography variant='h5' component='span' fontWeight={700} color='primary.main'>
               {currentTier.label}
             </Typography>
-            <Typography variant='h6' color='text.secondary'>
+            <Typography variant='h6' component='span' color='text.secondary'>
               Subscribers
             </Typography>
           </div>
           <div className='is-full max-w-lg px-4'>
             <Slider
+              aria-label='Subscriber count'
               value={sliderValue}
               min={0}
               max={subscriberTiers.length - 1}
@@ -270,7 +271,11 @@ const PricingPlan = () => {
               Pay monthly
             </Typography>
           </InputLabel>
-          <Switch checked={isAnnual} onChange={e => setIsAnnual(e.target.checked)} />
+          <Switch
+            checked={isAnnual}
+            onChange={e => setIsAnnual(e.target.checked)}
+            slotProps={{ input: { 'aria-label': 'Toggle annual billing' } }}
+          />
           <InputLabel className='cursor-pointer' onClick={() => setIsAnnual(true)}>
             <Typography fontWeight={isAnnual ? 700 : 400} color={isAnnual ? 'text.primary' : 'text.secondary'}>
               Pay yearly (save up to 15%)
@@ -310,7 +315,7 @@ const PricingPlan = () => {
                   <CardContent className='flex flex-col gap-5 p-5' sx={{ height: '100%' }}>
                     {/* Plan Name */}
                     <div>
-                      <Typography variant='h6' fontWeight={700}>
+                      <Typography variant='h6' component='h3' fontWeight={700}>
                         {plan.title}
                       </Typography>
                       <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.4, display: 'block', mt: 0.5 }}>
@@ -320,7 +325,7 @@ const PricingPlan = () => {
 
                     {/* Price */}
                     <div>
-                      <Typography variant='h4' fontWeight={800} color={plan.title === 'Free' ? 'success.main' : 'primary.main'}>
+                      <Typography variant='h4' component='p' fontWeight={800} color={plan.title === 'Free' ? 'success.main' : 'primary.main'}>
                         {pricing.display}
                       </Typography>
                       {pricing.sub && (

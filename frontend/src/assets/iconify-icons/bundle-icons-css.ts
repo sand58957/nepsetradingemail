@@ -66,17 +66,73 @@ async function generateIconsCSS() {
 
   const sources: BundleScriptConfig = {
     json: [
-      // Iconify JSON file (@iconify/json is a package name, /json/ is directory where files are, then filename)
-      require.resolve('@iconify/json/json/tabler.json')
-
-      // Custom file with only few icons
-      /* {
-        filename: require.resolve('@iconify/json/json/line-md.json'),
-        icons: ['home-twotone-alt', 'github', 'document-list', 'document-code', 'image-twotone']
-      } */
-
-      // Custom JSON file
-      // 'json/gg.json'
+      // Bundle ONLY the tabler icons actually used in the app. Bundling the full
+      // ~6000-icon set produced a 2.7 MB render-blocking CSS file. Regenerate this
+      // list with: grep -rhoE 'tabler-[a-z0-9-]+' src | sort -u  (strip the prefix).
+      {
+        filename: require.resolve('@iconify/json/json/tabler.json'),
+        icons: [
+        'ab', 'ad', 'address-book', 'alert-circle', 'alert-octagon', 'alert-triangle',
+        'alert-triangle-filled', 'align-box-bottom-center', 'align-center', 'align-justified', 'align-left', 'align-right',
+        'arrow-back-up', 'arrow-down', 'arrow-forward-up', 'arrow-left', 'arrow-right', 'arrow-up',
+        'arrows-move', 'arrows-move-vertical', 'article', 'atom', 'ban', 'bell',
+        'bell-ringing', 'blockquote', 'bold', 'book', 'book-2', 'bookmark',
+        'bookmarks', 'books', 'bounce-right', 'box', 'brand-android', 'brand-angular',
+        'brand-apple', 'brand-aws', 'brand-dribbble', 'brand-facebook', 'brand-facebook-filled', 'brand-facebook-messenger',
+        'brand-github-filled', 'brand-google', 'brand-google-drive', 'brand-google-filled', 'brand-google-play', 'brand-instagram',
+        'brand-linkedin', 'brand-messenger', 'brand-paypal', 'brand-react-native', 'brand-sendgrid', 'brand-telegram',
+        'brand-twitter', 'brand-twitter-filled', 'brand-whatsapp', 'brand-windows', 'brand-x', 'briefcase',
+        'browser-check', 'building', 'building-skyscraper', 'building-store', 'bulb', 'calendar',
+        'calendar-check', 'calendar-event', 'calendar-month', 'calendar-plus', 'calendar-stats', 'camera',
+        'car', 'cards', 'category', 'chart-bar', 'chart-donut-2', 'chart-donut-3',
+        'chart-dots-3', 'chart-histogram', 'chart-pie', 'chart-pie-2', 'chart-ppf', 'chart-sankey',
+        'check', 'checkbox', 'checks', 'checkup-list', 'chevron', 'chevron-down',
+        'chevron-left', 'chevron-right', 'chevron-right-pipe', 'chevron-up', 'circle', 'circle-arrow-down',
+        'circle-arrow-up', 'circle-check', 'circle-check-filled', 'circle-dot', 'circle-filled', 'circle-off',
+        'circle-plus', 'circle-x', 'circle-x-filled', 'click', 'clock', 'clock-hour-3',
+        'cloud', 'cloud-off', 'cloud-upload', 'code', 'coin', 'color-picker',
+        'color-swatch', 'columns', 'confetti', 'copy', 'corner-down-left', 'corner-left-down',
+        'corner-right-down', 'cpu', 'credit-card', 'credit-card-filled', 'crown', 'currency-dollar',
+        'database', 'database-off', 'device-desktop', 'device-desktop-analytics', 'device-floppy', 'device-gamepad-2',
+        'device-imac-dollar', 'device-ipad-horizontal-plus', 'device-laptop', 'device-mobile', 'devices', 'diamond',
+        'diamond-filled', 'discount', 'discount-2', 'discount-check-filled', 'dots', 'dots-vertical',
+        'download', 'edit', 'external-link', 'eye', 'eye-off', 'file',
+        'file-alert', 'file-analytics', 'file-check', 'file-description', 'file-dollar', 'file-import',
+        'file-info', 'file-invoice', 'file-pencil', 'file-plus', 'file-spreadsheet', 'file-text',
+        'file-type-pdf', 'file-upload', 'files', 'filter', 'flag', 'flask',
+        'fold', 'folder', 'folder-plus', 'folders', 'forms', 'free-rights',
+        'gif', 'gift', 'git-fork', 'git-merge', 'globe', 'h-2',
+        'h-3', 'hand-wave', 'headphones', 'headset', 'heart', 'help',
+        'help-circle', 'history', 'home', 'icons', 'id', 'inbox',
+        'infinity', 'info-circle', 'italic', 'key', 'language', 'layout',
+        'layout-board-split', 'layout-bottombar', 'layout-dashboard', 'layout-grid', 'layout-grid-add', 'layout-navbar',
+        'letter-d', 'letter-h', 'letter-n', 'lifebuoy', 'line', 'link',
+        'list', 'list-check', 'list-details', 'list-numbers', 'list-search', 'loader-2',
+        'lock', 'lock-check', 'lock-open', 'lock-plus', 'login', 'login-2',
+        'logout', 'mail', 'mail-check', 'mail-forward', 'mail-opened', 'map',
+        'map-pin', 'markdown', 'menu-2', 'message', 'message-2', 'message-circle',
+        'message-circle-2', 'message-dots', 'message-star', 'messages', 'microphone', 'microphone-2',
+        'minus', 'mood-happy', 'mood-smile', 'moon-stars', 'mouse', 'music',
+        'news', 'notification', 'oval-vertical', 'package', 'palette', 'paperclip',
+        'pencil', 'percentage', 'phone', 'phone-call', 'photo', 'pig',
+        'player-pause', 'player-play', 'player-play-filled', 'playlist-add', 'plug-connected', 'plus',
+        'plus-minus', 'progress', 'qrcode', 'quote', 'receipt', 'rectangle',
+        'refresh', 'replace', 'robot', 'rocket', 'rotate-clockwise-2', 'rss',
+        'school', 'search', 'search-off', 'send', 'send-2', 'seo',
+        'server', 'server-cog', 'settings', 'settings-2', 'settings-automation', 'settings-cog',
+        'shadow', 'share', 'shield', 'shield-check', 'shield-lock', 'ship',
+        'shirt', 'shoe', 'shopping-cart', 'shopping-cart-check', 'sitemap', 'smart-home',
+        'sparkles', 'speakerphone', 'square', 'square-plus', 'star', 'star-filled',
+        'strikethrough', 'sun', 'svg', 'switch-horizontal', 'table', 'table-plus',
+        'tag', 'tags', 'template', 'test-pipe', 'text-wrap', 'thumb-up',
+        'thumb-up-filled', 'ticket', 'timeline', 'toggle-left', 'toggle-right', 'trash',
+        'trending-up', 'truck', 'truck-delivery', 'typography', 'underline', 'upload',
+        'user', 'user-cancel', 'user-check', 'user-circle', 'user-edit', 'user-minus',
+        'user-off', 'user-plus', 'user-question', 'user-search', 'user-shield', 'user-square',
+        'user-x', 'users', 'users-group', 'users-plus', 'variable', 'video',
+        'wallet', 'webhook', 'world', 'x'
+        ]
+      }
     ],
 
     icons: [

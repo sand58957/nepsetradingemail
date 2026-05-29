@@ -11,7 +11,6 @@ import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import useScrollTrigger from '@mui/material/useScrollTrigger'
-import Chip from '@mui/material/Chip'
 import type { Theme } from '@mui/material/styles'
 
 // Third-party Imports
@@ -51,7 +50,7 @@ const Header = ({ mode }: { mode: Mode }) => {
         <div className={classnames(frontLayoutClasses.navbarContent, styles.navbarContent)}>
           {isBelowLgScreen ? (
             <div className='flex items-center gap-2 sm:gap-4'>
-              <IconButton onClick={() => setIsDrawerOpen(true)} className='-mis-2'>
+              <IconButton onClick={() => setIsDrawerOpen(true)} className='-mis-2' aria-label='Open navigation menu'>
                 <i className='tabler-menu-2 text-textPrimary' />
               </IconButton>
               <Link href='/'>
@@ -75,6 +74,7 @@ const Header = ({ mode }: { mode: Mode }) => {
                 variant='contained'
                 href='/en/login'
                 color='primary'
+                aria-label='Login'
               >
                 <i className='tabler-login text-xl' />
               </CustomIconButton>

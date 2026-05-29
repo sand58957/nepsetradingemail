@@ -90,11 +90,11 @@ const UsefulFeature = () => {
           <Chip size='small' variant='tonal' color='primary' label='Marketing Channels' />
           <div className='flex flex-col items-center gap-y-1 justify-center flex-wrap'>
             <div className='flex items-center gap-x-2'>
-              <Typography color='text.primary' variant='h4' className='text-center'>
+              <Typography color='text.primary' variant='h4' component='h2' className='text-center'>
                 <span className='relative z-[1] font-extrabold'>
                   5 Powerful Channels
                   <img
-                    src='/images/front-pages/landing-page/bg-shape.png'
+                    src='/images/front-pages/landing-page/bg-shape.webp'
                     alt='bg-shape'
                     className='absolute block-end-0 z-[1] bs-[40%] is-[125%] sm:is-[132%] -inline-start-[13%] sm:inline-start-[-19%] block-start-[17px]'
                   />
@@ -113,7 +113,7 @@ const UsefulFeature = () => {
               <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={index}>
                 <div className='flex flex-col gap-2 justify-center items-center'>
                   {item.icon}
-                  <Typography className='mbs-2' variant='h5'>
+                  <Typography className='mbs-2' variant='h5' component='h3'>
                     {item.title}
                   </Typography>
                   <Typography className='max-is-[364px] text-center'>{item.description}</Typography>

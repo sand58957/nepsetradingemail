@@ -18,7 +18,7 @@ const FrontLayout = async ({ children }: ChildrenType) => {
   return (
     <div className={frontLayoutClasses.root}>
       <Header mode={mode} />
-      {children}
+      <main>{children}</main>
       <Footer mode={mode} />
     </div>
   )

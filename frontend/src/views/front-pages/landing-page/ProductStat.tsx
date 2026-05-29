@@ -70,7 +70,7 @@ const ProductStat = () => {
               >
                 {stat.svg}
                 <div className='text-center'>
-                  <Typography variant='h3' className='font-medium'>
+                  <Typography variant='h3' component='p' className='font-medium'>
                     {stat.value}
                   </Typography>
                   <Typography className='font-medium'>{stat.title}</Typography>
