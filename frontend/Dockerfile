@@ -32,4 +32,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
+# Bind to all interfaces. Docker sets HOSTNAME to the container id, and Next.js
+# standalone binds to $HOSTNAME — which leaves 127.0.0.1 unbound and makes a
+# localhost healthcheck fail. Forcing 0.0.0.0 keeps both nginx and the
+# healthcheck working.
+ENV HOSTNAME=0.0.0.0
 CMD ["node", "server.js"]
