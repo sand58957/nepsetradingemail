@@ -94,7 +94,11 @@ func main() {
 
 	// Log SendGrid API key status
 	if cfg.SendGridAPIKey != "" {
-		log.Printf("SendGrid API key configured (prefix: %s...)", cfg.SendGridAPIKey[:20])
+		prefixLen := 6
+		if len(cfg.SendGridAPIKey) < prefixLen {
+			prefixLen = len(cfg.SendGridAPIKey)
+		}
+		log.Printf("SendGrid API key configured (prefix: %s...)", cfg.SendGridAPIKey[:prefixLen])
 	} else {
 		log.Println("WARNING: SENDGRID_API_KEY is not set — email API will fail")
 	}

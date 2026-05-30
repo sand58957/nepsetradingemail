@@ -271,13 +271,14 @@ const ListTable = () => {
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
             <Tooltip title='Edit'>
-              <IconButton size='small' onClick={() => handleEditOpen(row.original)}>
+              <IconButton size='small' aria-label='Edit list' onClick={() => handleEditOpen(row.original)}>
                 <i className='tabler-pencil text-[22px] text-textSecondary' />
               </IconButton>
             </Tooltip>
             <Tooltip title='Delete'>
               <IconButton
                 size='small'
+                aria-label='Delete list'
                 onClick={() => {
                   setDeletingList(row.original)
                   setDeleteDialogOpen(true)

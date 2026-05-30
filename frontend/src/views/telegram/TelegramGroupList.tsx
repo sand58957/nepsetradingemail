@@ -198,6 +198,7 @@ const TelegramGroupList = () => {
                     <TableCell align='center'>
                       <IconButton
                         size='small'
+                        aria-label='Group actions'
                         onClick={(e) => {
                           e.stopPropagation()
                           setAnchorEl(e.currentTarget)

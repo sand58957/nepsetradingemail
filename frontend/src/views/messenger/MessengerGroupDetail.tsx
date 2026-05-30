@@ -355,6 +355,7 @@ const MessengerGroupDetail = ({ id }: MessengerGroupDetailProps) => {
                         <IconButton
                           size='small'
                           color='error'
+                          aria-label='Remove contact from group'
                           onClick={() => {
                             setSelectedIds([contact.id])
                             setRemoveDialogOpen(true)

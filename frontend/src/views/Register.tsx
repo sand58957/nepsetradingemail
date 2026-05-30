@@ -224,7 +224,7 @@ const Register = ({ mode }: { mode: SystemMode }) => {
                 input: {
                   endAdornment: (
                     <InputAdornment position='end'>
-                      <IconButton edge='end' onClick={handleClickShowPassword} onMouseDown={e => e.preventDefault()}>
+                      <IconButton edge='end' aria-label={isPasswordShown ? 'Hide password' : 'Show password'} onClick={handleClickShowPassword} onMouseDown={e => e.preventDefault()}>
                         <i className={isPasswordShown ? 'tabler-eye-off' : 'tabler-eye'} />
                       </IconButton>
                     </InputAdornment>

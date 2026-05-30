@@ -177,7 +177,7 @@ const WAGroupList = () => {
                       </Typography>
                     </TableCell>
                     <TableCell align='center'>
-                      <IconButton size='small' onClick={(e) => { e.stopPropagation(); setAnchorEl(e.currentTarget); setMenuGroup(group) }}>
+                      <IconButton size='small' aria-label='Group actions' onClick={(e) => { e.stopPropagation(); setAnchorEl(e.currentTarget); setMenuGroup(group) }}>
                         <i className='tabler-dots-vertical' />
                       </IconButton>
                     </TableCell>

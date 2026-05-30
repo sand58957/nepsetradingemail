@@ -103,7 +103,7 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	staff := api.Group("")
 	staff.Use(middleware.JWTAuth(s.Config.JWTSecret))
-	staff.Use(middleware.RequireRole("superadmin", "admin", "user", "subscriber"))
+	staff.Use(middleware.RequireRole("superadmin", "admin", "user"))
 
 	// Subscribers management
 	subscribers := staff.Group("/subscribers")

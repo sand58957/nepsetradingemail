@@ -304,13 +304,14 @@ const CampaignListTable = () => {
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
             <Tooltip title='Edit'>
-              <IconButton size='small' onClick={() => router.push(`/${locale}/campaigns/${row.original.id}`)}>
+              <IconButton size='small' aria-label='Edit campaign' onClick={() => router.push(`/${locale}/campaigns/${row.original.id}`)}>
                 <i className='tabler-pencil text-[22px] text-textSecondary' />
               </IconButton>
             </Tooltip>
             <Tooltip title='More'>
               <IconButton
                 size='small'
+                aria-label='Campaign actions'
                 onClick={e => {
                   setActionMenuAnchor(e.currentTarget)
                   setSelectedCampaignId(row.original.id)

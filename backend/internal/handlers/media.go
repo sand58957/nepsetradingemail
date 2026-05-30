@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -17,6 +18,32 @@ import (
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/listmonk"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
+
+// isDisallowedIP reports whether an IP must be blocked to prevent SSRF
+// (loopback, private RFC1918, link-local, unique-local IPv6, multicast, unspecified).
+func isDisallowedIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified()
+}
+
+// resolveAndValidateHost resolves the host and rejects it if ANY resolved
+// address is internal. This defeats decimal/hex IPv4, IPv6, and DNS tricks
+// that string-prefix checks miss. Returns an error suitable for the client.
+func resolveAndValidateHost(host string) error {
+	if host == "" || strings.EqualFold(host, "localhost") {
+		return fmt.Errorf("URL points to a private network address")
+	}
+	ips, err := net.LookupIP(host)
+	if err != nil || len(ips) == 0 {
+		return fmt.Errorf("could not resolve host")
+	}
+	for _, ip := range ips {
+		if isDisallowedIP(ip) {
+			return fmt.Errorf("URL points to a private network address")
+		}
+	}
+	return nil
+}
 
 // validateMediaID validates that the path param is a numeric ID
 func validateMediaID(c echo.Context) (string, error) {
@@ -186,22 +213,26 @@ func (h *MediaHandler) UploadFromURL(c echo.Context) error {
 		return response.BadRequest(c, "Invalid URL — must start with http:// or https://")
 	}
 
-	// Block private/internal IP ranges to prevent SSRF
-	host := parsedURL.Hostname()
-	blockedPrefixes := []string{"127.", "10.", "172.16.", "172.17.", "172.18.", "172.19.",
-		"172.20.", "172.21.", "172.22.", "172.23.", "172.24.", "172.25.", "172.26.",
-		"172.27.", "172.28.", "172.29.", "172.30.", "172.31.", "192.168.", "169.254.", "0."}
-	for _, prefix := range blockedPrefixes {
-		if strings.HasPrefix(host, prefix) {
-			return response.BadRequest(c, "URL points to a private network address")
-		}
-	}
-	if host == "localhost" || host == "::1" || host == "" {
-		return response.BadRequest(c, "URL points to a private network address")
+	// Block private/internal addresses to prevent SSRF. Resolve the host and
+	// reject if ANY resolved IP is internal (defeats encoded IPv4, IPv6, and DNS tricks).
+	if err := resolveAndValidateHost(parsedURL.Hostname()); err != nil {
+		return response.BadRequest(c, err.Error())
 	}
 
-	// Download the file
-	httpClient := &http.Client{Timeout: 30 * time.Second}
+	// Download the file. Re-validate every redirect hop so a public URL cannot
+	// 30x-redirect us to an internal address.
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(redirectReq *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return fmt.Errorf("too many redirects")
+			}
+			if redirectReq.URL.Scheme != "http" && redirectReq.URL.Scheme != "https" {
+				return fmt.Errorf("redirect to disallowed scheme")
+			}
+			return resolveAndValidateHost(redirectReq.URL.Hostname())
+		},
+	}
 	resp, err := httpClient.Get(req.URL)
 	if err != nil {
 		return response.BadRequest(c, "Failed to download file from URL")

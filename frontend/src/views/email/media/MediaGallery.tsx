@@ -214,18 +214,18 @@ const MediaGallery = () => {
               <Divider />
               <CardActions className='flex justify-between'>
                 <Tooltip title={copiedUrl === media.id ? 'Copied!' : 'Copy URL'}>
-                  <IconButton size='small' onClick={() => handleCopyUrl(media)}>
+                  <IconButton size='small' aria-label={copiedUrl === media.id ? 'Copied' : 'Copy URL'} onClick={() => handleCopyUrl(media)}>
                     <i className={`tabler-${copiedUrl === media.id ? 'check' : 'link'} text-[18px]`} />
                   </IconButton>
                 </Tooltip>
                 <div className='flex gap-1'>
                   <Tooltip title='Download'>
-                    <IconButton size='small'>
+                    <IconButton size='small' aria-label='Download'>
                       <i className='tabler-download text-[18px]' />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title='Delete'>
-                    <IconButton size='small'>
+                    <IconButton size='small' aria-label='Delete'>
                       <i className='tabler-trash text-[18px]' />
                     </IconButton>
                   </Tooltip>

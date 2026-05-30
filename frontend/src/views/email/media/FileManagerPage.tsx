@@ -234,7 +234,7 @@ const FileManagerPage = () => {
             </>
           )}
           {isMobile && !pickerMode && (
-            <IconButton onClick={() => setSidebarOpen(true)} color='primary'>
+            <IconButton onClick={() => setSidebarOpen(true)} color='primary' aria-label='Open folders'>
               <i className='tabler-menu-2 text-[22px]' />
             </IconButton>
           )}

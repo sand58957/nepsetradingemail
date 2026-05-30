@@ -169,6 +169,7 @@ const SMSDashboard = () => {
             <Tooltip title='Refresh balance'>
               <IconButton
                 size='small'
+                aria-label='Refresh balance'
                 onClick={handleRefreshCredits}
                 disabled={refreshingCredits}
               >

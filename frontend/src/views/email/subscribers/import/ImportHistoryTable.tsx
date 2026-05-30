@@ -249,6 +249,7 @@ const ImportHistoryTable = () => {
                         <IconButton
                           size='small'
                           color='error'
+                          aria-label='Delete import record'
                           onClick={e => {
                             e.stopPropagation()
                             setDeleteId(record.id)

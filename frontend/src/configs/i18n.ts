@@ -1,10 +1,11 @@
+// The product ships English-only content. `fr`/`ar` were Vuexy template
+// leftovers with no real translations — shipping them created duplicate-content
+// routes with no hreflang. Trimmed to `en` until real localized content exists.
 export const i18n = {
   defaultLocale: 'en',
-  locales: ['en', 'fr', 'ar'],
+  locales: ['en'],
   langDirection: {
-    en: 'ltr',
-    fr: 'ltr',
-    ar: 'rtl'
+    en: 'ltr'
   }
 } as const
 

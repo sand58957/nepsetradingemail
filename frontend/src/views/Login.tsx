@@ -372,7 +372,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                       input: {
                         endAdornment: (
                           <InputAdornment position='end'>
-                            <IconButton edge='end' onClick={() => setIsPasswordShown(!isPasswordShown)} onMouseDown={e => e.preventDefault()}>
+                            <IconButton edge='end' aria-label={isPasswordShown ? 'Hide password' : 'Show password'} onClick={() => setIsPasswordShown(!isPasswordShown)} onMouseDown={e => e.preventDefault()}>
                               <i className={isPasswordShown ? 'tabler-eye' : 'tabler-eye-off'} />
                             </IconButton>
                           </InputAdornment>

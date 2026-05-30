@@ -268,7 +268,7 @@ const MessengerSettings = () => {
                     input: {
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <IconButton onClick={() => setShowPageAccessToken(!showPageAccessToken)} edge='end'>
+                          <IconButton onClick={() => setShowPageAccessToken(!showPageAccessToken)} edge='end' aria-label={showPageAccessToken ? 'Hide page access token' : 'Show page access token'}>
                             <i className={showPageAccessToken ? 'tabler-eye-off' : 'tabler-eye'} />
                           </IconButton>
                         </InputAdornment>
@@ -300,7 +300,7 @@ const MessengerSettings = () => {
                     input: {
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <IconButton onClick={() => setShowAppSecret(!showAppSecret)} edge='end'>
+                          <IconButton onClick={() => setShowAppSecret(!showAppSecret)} edge='end' aria-label={showAppSecret ? 'Hide app secret' : 'Show app secret'}>
                             <i className={showAppSecret ? 'tabler-eye-off' : 'tabler-eye'} />
                           </IconButton>
                         </InputAdornment>

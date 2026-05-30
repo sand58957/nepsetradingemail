@@ -494,7 +494,7 @@ const TelegramCreateCampaign = () => {
                         onChange={e => handleButtonChange(index, 'url', e.target.value)}
                         sx={{ flex: 1 }}
                       />
-                      <IconButton size='small' color='error' onClick={() => handleRemoveButton(index)}>
+                      <IconButton size='small' color='error' aria-label='Remove button' onClick={() => handleRemoveButton(index)}>
                         <i className='tabler-trash' />
                       </IconButton>
                     </div>

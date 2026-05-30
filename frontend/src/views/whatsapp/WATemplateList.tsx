@@ -315,6 +315,7 @@ const WATemplateList = () => {
                       size='small'
                       onClick={() => setDeleteId(template.id)}
                       title='Delete template'
+                      aria-label='Delete template'
                     >
                       <i className='tabler-trash' />
                     </IconButton>

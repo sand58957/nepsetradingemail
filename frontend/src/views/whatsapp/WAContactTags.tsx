@@ -168,6 +168,7 @@ const WAContactTags = () => {
                           color='error'
                           onClick={() => setDeleteTag(item.tag)}
                           title='Delete tag from all contacts'
+                          aria-label='Delete tag from all contacts'
                         >
                           <i className='tabler-trash text-[18px]' />
                         </IconButton>

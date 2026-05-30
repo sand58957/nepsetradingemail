@@ -317,6 +317,7 @@ const WAContactList = () => {
                       <TableCell align='center'>
                         <IconButton
                           size='small'
+                          aria-label='Contact actions'
                           onClick={(e) => {
                             setAnchorEl(e.currentTarget)
                             setMenuContactId(contact.id)

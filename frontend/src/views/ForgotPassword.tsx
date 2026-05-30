@@ -347,7 +347,7 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
                   input: {
                     endAdornment: (
                       <InputAdornment position='end'>
-                        <IconButton edge='end' onClick={() => setShowPassword(!showPassword)}>
+                        <IconButton edge='end' aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(!showPassword)}>
                           <i className={showPassword ? 'tabler-eye' : 'tabler-eye-off'} />
                         </IconButton>
                       </InputAdornment>

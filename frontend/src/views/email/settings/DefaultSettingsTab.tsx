@@ -586,7 +586,7 @@ const DefaultSettingsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
               </Grid>
               <Grid size={{ xs: 2, sm: 1 }}>
                 <Tooltip title='Remove'>
-                  <IconButton size='small' color='error' onClick={() => handleRemoveSocialLink(index)}>
+                  <IconButton size='small' color='error' aria-label='Remove social link' onClick={() => handleRemoveSocialLink(index)}>
                     <i className='tabler-trash text-[18px]' />
                   </IconButton>
                 </Tooltip>
