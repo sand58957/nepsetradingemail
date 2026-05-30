@@ -361,6 +361,7 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
                         <IconButton
                           size='small'
                           color='error'
+                          aria-label='Remove contact from group'
                           onClick={() => {
                             setSelectedIds([contact.id])
                             setRemoveDialogOpen(true)

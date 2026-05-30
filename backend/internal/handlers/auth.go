@@ -594,8 +594,11 @@ func (h *AuthHandler) PasswordResetVerify(c echo.Context) error {
 	if req.Channel != "email" && req.Channel != "sms" && req.Channel != "whatsapp" {
 		return response.BadRequest(c, "Channel must be email, sms, or whatsapp")
 	}
-	if len(req.NewPassword) < 5 {
-		return response.BadRequest(c, "New password must be at least 5 characters")
+	if len(req.NewPassword) < 8 {
+		return response.BadRequest(c, "New password must be at least 8 characters")
+	}
+	if len(req.NewPassword) > 72 {
+		return response.BadRequest(c, "New password must be at most 72 characters")
 	}
 
 	// The otp_codes table uses "phone" column to store the identifier (email or phone)

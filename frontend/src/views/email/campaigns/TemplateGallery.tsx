@@ -19,21 +19,49 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import IconButton from '@mui/material/IconButton'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
 
-import type { Template } from '@/types/email'
+import type { Template, Campaign } from '@/types/email'
 import templateService from '@/services/templates'
 import campaignService from '@/services/campaigns'
-import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 
-// Helper: get display name (strip [Category] prefix if present)
-const getDisplayName = (name: string): string => {
-  return name.replace(/^\[[^\]]+\]\s*/, '')
+const UPLOAD_CONCURRENCY = 3
+
+const EXT_TO_MIME: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  webp: 'image/webp',
+  ico: 'image/x-icon'
 }
 
-// Helper: check if a template is a gallery template (has [Category] prefix in name)
+const MIME_TO_EXT: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg'
+}
+
+const base64ToFile = (base64: string, mime: string, name: string): File => {
+  const bytes = atob(base64)
+  const buffer = new ArrayBuffer(bytes.length)
+  const view = new Uint8Array(buffer)
+
+  for (let i = 0; i < bytes.length; i++) {
+    view[i] = bytes.charCodeAt(i)
+  }
+
+  return new File([new Blob([buffer], { type: mime })], name, { type: mime })
+}
+
+const getDisplayName = (name: string): string => name.replace(/^\[[^\]]+\]\s*/, '')
+
 const isGalleryTemplate = (t: Template): boolean => /^\[.+\]/.test(t.name)
 
-// Helper: check if a template is a Listmonk default/system template (should be hidden)
 const isDefaultTemplate = (t: Template): boolean => {
   const defaultNames = [
     'default campaign template',
@@ -56,17 +84,24 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
   const [activeTab, setActiveTab] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [templates, setTemplates] = useState<Template[]>([])
-  const [recentCampaigns, setRecentCampaigns] = useState<any[]>([])
+  const [recentCampaigns, setRecentCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingRecent, setLoadingRecent] = useState(false)
   const [loadedRecent, setLoadedRecent] = useState(false)
-  const [previewDialog, setPreviewDialog] = useState<Template | null>(null)
-  const [deleteDialog, setDeleteDialog] = useState<any>(null)
+  const [deleteDialog, setDeleteDialog] = useState<Campaign | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const isMobile = useMobileBreakpoint()
+
+  // Activate a clickable card via keyboard (Enter / Space) for a11y parity with click.
+  const activateOnKey = (handler: () => void) => (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handler()
+    }
+  }
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -144,10 +179,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
     e.target.value = ''
 
     const fileName = file.name.toLowerCase()
-    const mimeMap: Record<string, string> = {
-      png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
-      gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp', ico: 'image/x-icon'
-    }
 
     setUploading(true)
     setUploadProgress('Processing template...')
@@ -156,24 +187,20 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
       let html = ''
 
       if (fileName.endsWith('.zip')) {
-        // Handle ZIP file - extract HTML and upload images to server
         const JSZip = (await import('jszip')).default
         const zip = await JSZip.loadAsync(file)
         const files = Object.keys(zip.files)
 
-        // Find HTML file in the ZIP
         const htmlFile = files.find(f => f.toLowerCase().endsWith('.html') || f.toLowerCase().endsWith('.htm'))
 
         if (!htmlFile) {
-          alert('No HTML file found in the ZIP archive. Please include an .html or .htm file.')
-          setUploading(false)
+          setErrorMsg('No HTML file found in the ZIP archive. Please include an .html or .htm file.')
 
           return
         }
 
         html = await zip.files[htmlFile].async('string')
 
-        // Find image files in the ZIP
         const imageFiles = files.filter(f => {
           const ext = f.toLowerCase()
 
@@ -181,16 +208,15 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                  ext.endsWith('.gif') || ext.endsWith('.svg') || ext.endsWith('.webp') || ext.endsWith('.ico')
         })
 
-        // Upload images to server (3 at a time for speed)
-        for (let i = 0; i < imageFiles.length; i += 3) {
-          const chunk = imageFiles.slice(i, i + 3)
+        for (let i = 0; i < imageFiles.length; i += UPLOAD_CONCURRENCY) {
+          const chunk = imageFiles.slice(i, i + UPLOAD_CONCURRENCY)
 
-          setUploadProgress(`Uploading images ${i + 1}-${Math.min(i + 3, imageFiles.length)} of ${imageFiles.length}...`)
+          setUploadProgress(`Uploading images ${i + 1}-${Math.min(i + UPLOAD_CONCURRENCY, imageFiles.length)} of ${imageFiles.length}...`)
 
           const results = await Promise.allSettled(chunk.map(async (imgPath) => {
             const imgData = await zip.files[imgPath].async('blob')
             const ext = imgPath.split('.').pop()?.toLowerCase() || 'png'
-            const mime = mimeMap[ext] || 'image/png'
+            const mime = EXT_TO_MIME[ext] || 'image/png'
             const imgFileName = imgPath.split('/').pop() || imgPath
             const imageFile = new File([imgData], imgFileName, { type: mime })
 
@@ -213,7 +239,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
           }
         }
       } else {
-        // Handle regular HTML file
         html = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
 
@@ -228,42 +253,28 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
           reader.readAsText(file)
         })
 
-        // Extract and upload any base64-embedded images
         const base64Regex = /data:(image\/[a-z+]+);base64,([A-Za-z0-9+/=]+)/g
         const matches = [...html.matchAll(base64Regex)]
 
-        if (matches.length > 0) {
-          setUploadProgress(`Uploading ${matches.length} embedded images...`)
+        for (let i = 0; i < matches.length; i += UPLOAD_CONCURRENCY) {
+          const chunk = matches.slice(i, i + UPLOAD_CONCURRENCY)
 
-          for (let i = 0; i < matches.length; i++) {
-            const [fullMatch, mime, base64Data] = matches[i]
-            const extMap: Record<string, string> = {
-              'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif',
-              'image/webp': 'webp', 'image/svg+xml': 'svg'
-            }
-            const ext = extMap[mime] || 'png'
+          setUploadProgress(`Uploading images ${i + 1}-${Math.min(i + UPLOAD_CONCURRENCY, matches.length)} of ${matches.length}...`)
 
-            try {
-              // Convert base64 to File
-              const byteString = atob(base64Data)
-              const ab = new ArrayBuffer(byteString.length)
-              const ia = new Uint8Array(ab)
+          const results = await Promise.allSettled(chunk.map(async ([fullMatch, mime, base64Data], idx) => {
+            const ext = MIME_TO_EXT[mime] || 'png'
+            const imageFile = base64ToFile(base64Data, mime, `image-${i + idx}.${ext}`)
+            const result = await templateService.uploadMedia(imageFile)
 
-              for (let j = 0; j < byteString.length; j++) {
-                ia[j] = byteString.charCodeAt(j)
-              }
+            return { fullMatch, url: result.data.url }
+          }))
 
-              const blob = new Blob([ab], { type: mime })
-              const imageFile = new File([blob], `image-${i}.${ext}`, { type: mime })
-
-              setUploadProgress(`Uploading image ${i + 1} of ${matches.length}...`)
-
-              const result = await templateService.uploadMedia(imageFile)
-
-              html = html.replace(fullMatch, result.data.url)
-            } catch (err) {
-              console.error(`Failed to upload embedded image ${i}:`, err)
+          for (const result of results) {
+            if (result.status === 'fulfilled') {
+              html = html.replace(result.value.fullMatch, result.value.url)
+            } else {
               // Keep original base64 if upload fails
+              console.error('Failed to upload embedded image:', result.reason)
             }
           }
         }
@@ -273,7 +284,7 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
       router.push(`/${locale}/campaigns/create?type=${campaignType}&template=scratch&from_upload=true`)
     } catch (err) {
       console.error('Failed to process template file:', err)
-      alert('Failed to process the template file. Please try again.')
+      setErrorMsg('Failed to process the template file. Please try again.')
     } finally {
       setUploading(false)
       setUploadProgress('')
@@ -287,23 +298,27 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
     searchQuery ? t.name.toLowerCase().includes(searchQuery.toLowerCase()) : true
   )
 
-  // Template card component for user templates
   const TemplateCard = ({ template }: { template: Template }) => {
     const displayName = getDisplayName(template.name)
 
     return (
       <Card
+        role='button'
+        tabIndex={0}
+        aria-label={`Use template ${displayName}`}
         sx={{
           cursor: 'pointer',
           '&:hover': { boxShadow: 6, transform: 'translateY(-2px)' },
+          '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
           transition: 'all 0.2s'
         }}
         onClick={() => handleSelectTemplate(template.id)}
+        onKeyDown={activateOnKey(() => handleSelectTemplate(template.id))}
       >
         <Box
           sx={{
             height: 220,
-            bgcolor: '#f8f9fa',
+            bgcolor: 'action.hover',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -314,7 +329,7 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
           {template.body ? (
             <iframe
               srcDoc={template.body}
-              sandbox='allow-same-origin'
+              sandbox=''
               loading='lazy'
               style={{
                 width: '600px',
@@ -345,7 +360,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
 
   return (
     <div className='flex flex-col gap-4'>
-      {/* Tab Bar */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs
           value={activeTab}
@@ -366,10 +380,8 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         </Tabs>
       </Box>
 
-      {/* Tab 0: Template Gallery */}
       {activeTab === 0 && (
         <Box>
-          {/* Search */}
           {userTemplates.length > 0 && (
             <Box sx={{ maxWidth: 400, mb: 3 }}>
               <TextField
@@ -389,7 +401,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
             </Box>
           )}
 
-          {/* Template Grid — always show Start from scratch + Upload cards */}
           <Box
             sx={{
               display: 'grid',
@@ -397,20 +408,24 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
               gap: 3
             }}
           >
-              {/* Start from scratch Card */}
               <Card
+                role='button'
+                tabIndex={0}
+                aria-label='Start from scratch'
                 sx={{
                   cursor: 'pointer',
                   '&:hover': { boxShadow: 6, transform: 'translateY(-2px)' },
+                  '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
                   transition: 'all 0.2s',
                   overflow: 'hidden',
                   borderRadius: 3
                 }}
                 onClick={handleStartFromScratch}
+                onKeyDown={activateOnKey(handleStartFromScratch)}
               >
                 <Box
                   sx={{
-                    bgcolor: '#f5f5f5',
+                    bgcolor: 'action.hover',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -429,9 +444,9 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                       justifyContent: 'center'
                     }}
                   >
-                    <i className='tabler-layout-dashboard text-[40px]' style={{ color: '#555' }} />
+                    <i className='tabler-layout-dashboard text-[40px]' style={{ color: 'var(--mui-palette-primary-main)' }} />
                   </Box>
-                  <Typography variant='subtitle1' fontWeight={700} sx={{ color: '#333' }}>
+                  <Typography variant='subtitle1' fontWeight={700} sx={{ color: 'text.primary' }}>
                     Start from scratch
                   </Typography>
                   <Typography variant='body2' color='text.secondary' sx={{ textAlign: 'center', lineHeight: 1.5 }}>
@@ -459,22 +474,27 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                 </Box>
               </Card>
 
-              {/* Upload Email Template Card */}
               <Card
+                role='button'
+                tabIndex={uploading ? -1 : 0}
+                aria-label='Upload email template (.html, .htm or .zip)'
+                aria-disabled={uploading}
                 sx={{
                   border: '2px dashed',
                   borderColor: uploading ? 'primary.main' : 'divider',
                   cursor: uploading ? 'default' : 'pointer',
                   '&:hover': uploading ? {} : { borderColor: 'primary.main', boxShadow: 4, transform: 'translateY(-2px)' },
+                  '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
                   transition: 'all 0.2s',
                   opacity: uploading ? 0.8 : 1
                 }}
                 onClick={() => !uploading && fileInputRef.current?.click()}
+                onKeyDown={activateOnKey(() => !uploading && fileInputRef.current?.click())}
               >
                 <Box
                   sx={{
                     height: 220,
-                    bgcolor: '#f8f9fa',
+                    bgcolor: 'action.hover',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -520,7 +540,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                 </CardContent>
               </Card>
 
-              {/* Hidden file input for template upload */}
               <input
                 ref={fileInputRef}
                 type='file'
@@ -529,7 +548,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
                 onChange={handleUploadTemplate}
               />
 
-              {/* User Templates */}
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4, gridColumn: '1 / -1' }}>
                   <CircularProgress size={24} />
@@ -543,7 +561,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         </Box>
       )}
 
-      {/* Tab 1: Recent Emails */}
       {activeTab === 1 && (
         <Box>
           {loadingRecent ? (
@@ -565,24 +582,33 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
               {recentCampaigns.map(campaign => (
                 <Card
                   key={campaign.id}
+                  role='button'
+                  tabIndex={0}
+                  aria-label={`Use campaign ${campaign.name} as a template`}
                   sx={{
                     cursor: 'pointer',
                     position: 'relative',
                     '&:hover': { boxShadow: 4 },
-                    '&:hover .delete-btn': { opacity: 1 },
+
+                    // Reveal delete on hover (desktop) AND focus-within (keyboard); always
+                    // visible on touch (xs) where there is no hover.
+                    '&:hover .delete-btn, &:focus-within .delete-btn': { opacity: 1 },
+                    '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
                     transition: 'box-shadow 0.2s'
                   }}
                   onClick={() => handleUseRecentCampaign(campaign)}
+                  onKeyDown={activateOnKey(() => handleUseRecentCampaign(campaign))}
                 >
                   <IconButton
                     className='delete-btn'
                     size='small'
+                    aria-label={`Delete campaign ${campaign.name}`}
                     sx={{
                       position: 'absolute',
                       top: 6,
                       right: 6,
                       zIndex: 2,
-                      opacity: 0,
+                      opacity: { xs: 1, md: 0 },
                       transition: 'opacity 0.2s',
                       bgcolor: 'background.paper',
                       boxShadow: 2,
@@ -638,7 +664,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         </Box>
       )}
 
-      {/* Delete Campaign Confirmation Dialog */}
       <Dialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)} maxWidth='xs' fullWidth>
         <DialogTitle>Delete Campaign</DialogTitle>
         <DialogContent>
@@ -662,42 +687,17 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         </DialogActions>
       </Dialog>
 
-      {/* Template Preview Dialog */}
-      <Dialog open={!!previewDialog} onClose={() => setPreviewDialog(null)} maxWidth='md' fullWidth fullScreen={isMobile}>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant='h6' fontWeight={600}>{previewDialog?.name}</Typography>
-          <IconButton onClick={() => setPreviewDialog(null)} size='small'>
-            <i className='tabler-x' />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          {previewDialog?.body && (
-            <iframe
-              srcDoc={previewDialog.body}
-              sandbox=''
-              style={{ width: '100%', height: '60vh', border: 'none' }}
-              title={`Preview of ${previewDialog.name}`}
-            />
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPreviewDialog(null)} color='secondary'>
-            Cancel
-          </Button>
-          <Button
-            variant='contained'
-            color='success'
-            startIcon={<i className='tabler-check' />}
-            onClick={() => {
-              if (previewDialog) {
-                handleSelectTemplate(previewDialog.id)
-              }
-            }}
-          >
-            Use Template
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <Snackbar
+        open={!!errorMsg}
+        autoHideDuration={6000}
+        onClose={() => setErrorMsg('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity='error' onClose={() => setErrorMsg('')} variant='filled' sx={{ width: '100%' }}>
+          {errorMsg}
+        </Alert>
+      </Snackbar>
+
     </div>
   )
 }

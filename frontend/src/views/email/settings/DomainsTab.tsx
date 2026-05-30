@@ -261,20 +261,20 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
                         <div className='flex items-center justify-end gap-1'>
                           {domain.status !== 'verified' && (
                             <Tooltip title='Setup DNS records'>
-                              <IconButton size='small' onClick={() => setVerifyDomain(domain)}>
+                              <IconButton size='small' aria-label='Setup DNS records' onClick={() => setVerifyDomain(domain)}>
                                 <i className='tabler-settings text-[18px]' />
                               </IconButton>
                             </Tooltip>
                           )}
                           {domain.status === 'verified' && (
                             <Tooltip title='Re-verify'>
-                              <IconButton size='small' onClick={() => setVerifyDomain(domain)}>
+                              <IconButton size='small' aria-label='Re-verify' onClick={() => setVerifyDomain(domain)}>
                                 <i className='tabler-refresh text-[18px]' />
                               </IconButton>
                             </Tooltip>
                           )}
                           <Tooltip title='Remove'>
-                            <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, domain })}>
+                            <IconButton size='small' aria-label='Remove domain' onClick={() => setDeleteConfirm({ open: true, domain })}>
                               <i className='tabler-trash text-[18px]' />
                             </IconButton>
                           </Tooltip>
@@ -395,13 +395,13 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
                         <div className='flex items-center justify-end gap-1'>
                           {domain.status !== 'verified' && (
                             <Tooltip title='Verify DNS records'>
-                              <IconButton size='small' onClick={() => setVerifyDomain(domain)}>
+                              <IconButton size='small' aria-label='Verify DNS records' onClick={() => setVerifyDomain(domain)}>
                                 <i className='tabler-settings text-[18px]' />
                               </IconButton>
                             </Tooltip>
                           )}
                           <Tooltip title='Remove'>
-                            <IconButton size='small' onClick={() => setDeleteConfirm({ open: true, domain })}>
+                            <IconButton size='small' aria-label='Remove domain' onClick={() => setDeleteConfirm({ open: true, domain })}>
                               <i className='tabler-trash text-[18px]' />
                             </IconButton>
                           </Tooltip>

@@ -150,7 +150,7 @@ const SubscriberGroups = () => {
                       <Typography className='font-bold'>{list.subscriber_count || 0}</Typography>
                     </div>
                     <div>
-                      <IconButton size='small' color='error' onClick={() => { setDeletingId(list.id); setDeleteDialogOpen(true) }}>
+                      <IconButton size='small' color='error' aria-label='Delete group' onClick={() => { setDeletingId(list.id); setDeleteDialogOpen(true) }}>
                         <i className='tabler-trash text-[20px]' />
                       </IconButton>
                     </div>

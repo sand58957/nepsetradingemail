@@ -264,7 +264,7 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
                         <Chip label={contact.opted_in ? 'Opted In' : 'Opted Out'} color={contact.opted_in ? 'success' : 'default'} size='small' variant='tonal' />
                       </TableCell>
                       <TableCell align='center'>
-                        <IconButton size='small' color='error' onClick={() => { setSelectedIds([contact.id]); setRemoveDialogOpen(true) }}>
+                        <IconButton size='small' color='error' aria-label='Remove contact from group' onClick={() => { setSelectedIds([contact.id]); setRemoveDialogOpen(true) }}>
                           <i className='tabler-user-minus' />
                         </IconButton>
                       </TableCell>

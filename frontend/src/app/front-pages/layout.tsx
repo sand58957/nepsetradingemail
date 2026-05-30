@@ -108,11 +108,8 @@ const Layout = async ({ children }: ChildrenType) => {
         <meta name='geo.placename' content='Kathmandu' />
         <meta name='geo.position' content='27.7172;85.3240' />
         <meta name='ICBM' content='27.7172, 85.3240' />
-        <script
-          async
-          src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7636052892520336'
-          crossOrigin='anonymous'
-        />
+        {/* AdSense moved to the blog layout (the only routes with ad slots) so it
+            no longer loads on LCP-sensitive landing/pricing pages. */}
       </head>
       <body className='flex is-full min-bs-full flex-auto flex-col'>
         <InitColorSchemeScript attribute='data' defaultMode={systemMode} />

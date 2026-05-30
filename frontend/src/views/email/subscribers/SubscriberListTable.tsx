@@ -336,12 +336,14 @@ const SubscriberListTable = () => {
               size='small'
               href={`/${locale}/subscribers/${row.original.id}`}
               title='View details'
+              aria-label='View details'
             >
               <i className='tabler-eye text-[22px] text-textSecondary' />
             </IconButton>
             <IconButton
               size='small'
               title='Delete'
+              aria-label='Delete subscriber'
               onClick={() => {
                 setSubscriberToDelete(row.original)
                 setDeleteDialogOpen(true)

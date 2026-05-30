@@ -617,13 +617,13 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
               <>
                 {/* Block list header with back button */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, pt: 1.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-                  <IconButton size='small' onClick={() => setActiveCategory('')} sx={{ color: 'text.secondary' }}>
+                  <IconButton size='small' aria-label='Back' onClick={() => setActiveCategory('')} sx={{ color: 'text.secondary' }}>
                     <i className='tabler-arrow-left text-[18px]' />
                   </IconButton>
                   <Typography variant='subtitle2' fontWeight={600} sx={{ fontSize: '0.85rem', flex: 1 }}>
                     {activeCategory}
                   </Typography>
-                  <IconButton size='small' onClick={() => setDrawerOpen(false)} sx={{ color: 'text.secondary' }}>
+                  <IconButton size='small' aria-label='Close' onClick={() => setDrawerOpen(false)} sx={{ color: 'text.secondary' }}>
                     <i className='tabler-x text-[16px]' />
                   </IconButton>
                 </Box>
@@ -698,7 +698,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
                   <Typography variant='subtitle2' fontWeight={600} sx={{ fontSize: '0.85rem' }}>
                     Blocks
                   </Typography>
-                  <IconButton size='small' onClick={() => setDrawerOpen(false)} sx={{ color: 'text.secondary' }}>
+                  <IconButton size='small' aria-label='Close' onClick={() => setDrawerOpen(false)} sx={{ color: 'text.secondary' }}>
                     <i className='tabler-x text-[16px]' />
                   </IconButton>
                 </Box>
@@ -841,7 +841,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             <i className='tabler-eye text-[20px]' />
             Email Preview
           </Box>
-          <IconButton onClick={() => setPreviewHtml(null)} size='small'>
+          <IconButton onClick={() => setPreviewHtml(null)} size='small' aria-label='Close'>
             <i className='tabler-x text-[18px]' />
           </IconButton>
         </DialogTitle>

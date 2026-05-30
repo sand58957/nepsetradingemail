@@ -182,7 +182,7 @@ const WASettings = () => {
                     input: {
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <IconButton onClick={() => setShowApiKey(!showApiKey)} edge='end'>
+                          <IconButton onClick={() => setShowApiKey(!showApiKey)} edge='end' aria-label={showApiKey ? 'Hide API key' : 'Show API key'}>
                             <i className={showApiKey ? 'tabler-eye-off' : 'tabler-eye'} />
                           </IconButton>
                         </InputAdornment>

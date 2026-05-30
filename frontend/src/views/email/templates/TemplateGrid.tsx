@@ -328,13 +328,13 @@ const TemplateGrid = () => {
                   <div className='flex gap-1'>
                     {!template.is_default && (
                       <Tooltip title='Set as Default'>
-                        <IconButton size='small' onClick={() => handleSetDefault(template.id)}>
+                        <IconButton size='small' aria-label='Set as default' onClick={() => handleSetDefault(template.id)}>
                           <i className='tabler-star text-[20px]' />
                         </IconButton>
                       </Tooltip>
                     )}
                     <Tooltip title='Edit'>
-                      <IconButton size='small' component={Link} href={`/${locale}/templates/editor/${template.id}`}>
+                      <IconButton size='small' aria-label='Edit template' component={Link} href={`/${locale}/templates/editor/${template.id}`}>
                         <i className='tabler-pencil text-[20px]' />
                       </IconButton>
                     </Tooltip>
@@ -342,6 +342,7 @@ const TemplateGrid = () => {
                       <Tooltip title='Delete'>
                         <IconButton
                           size='small'
+                          aria-label='Delete template'
                           onClick={() => {
                             setDeletingTemplate(template)
                             setDeleteDialogOpen(true)

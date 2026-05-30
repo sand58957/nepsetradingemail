@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
@@ -22,8 +24,13 @@ func CORSConfig(frontendURL string) echo.MiddlewareFunc {
 		}
 	}
 
-	// Always allow localhost origins for local development against production API
-	origins = append(origins, "http://localhost:3000", "http://localhost:3001")
+	// Allow localhost origins ONLY in non-production environments. Shipping these
+	// to prod lets any locally-running page make credentialed cross-origin calls.
+	// Opt in by setting ENV to "development"/"local"/"dev"; prod leaves it unset.
+	env := strings.ToLower(os.Getenv("ENV"))
+	if env == "development" || env == "local" || env == "dev" {
+		origins = append(origins, "http://localhost:3000", "http://localhost:3001")
+	}
 
 	return echomw.CORSWithConfig(echomw.CORSConfig{
 		AllowOrigins: origins,

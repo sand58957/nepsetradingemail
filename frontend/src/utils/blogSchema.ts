@@ -54,13 +54,27 @@ export function generateArticleSchema(
   author: BlogAuthor | undefined,
   baseUrl: string
 ) {
+  // Fallback hero image so `image` is ALWAYS present (required for rich results).
+  const fallbackImage = `${baseUrl}/images/front-pages/landing-page/hero-dashboard-dark.png`
+  const imageUrl = post.featured_image_url
+    ? post.featured_image_url.startsWith('http')
+      ? post.featured_image_url
+      : `${baseUrl}${post.featured_image_url}`
+    : fallbackImage
+
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': 'BlogPosting',
     headline: post.meta_title || post.title,
     description: post.meta_description || post.excerpt,
     url: `${baseUrl}/blog/${post.slug}`,
     datePublished: post.published_at,
+    // Google strongly prefers dateModified to always be present; default to publish date.
+    dateModified: post.updated_at || post.published_at,
+    image: {
+      '@type': 'ImageObject',
+      url: imageUrl
+    },
     mainEntityOfPage: {
       '@type': 'WebPage',
       '@id': `${baseUrl}/blog/${post.slug}`
@@ -80,26 +94,25 @@ export function generateArticleSchema(
     isAccessibleForFree: true
   }
 
-  if (post.updated_at) {
-    schema.dateModified = post.updated_at
-  }
-
-  if (post.featured_image_url) {
-    schema.image = {
-      '@type': 'ImageObject',
-      url: post.featured_image_url.startsWith('http') ? post.featured_image_url : `${baseUrl}${post.featured_image_url}`
-    }
-  }
-
+  // author is REQUIRED for Article/BlogPosting rich results. Emit a Person when we
+  // have one, otherwise fall back to the Organization as author.
   if (author) {
-    schema.author = {
+    const personAuthor: Record<string, unknown> = {
       '@type': 'Person',
       name: author.name,
       url: `${baseUrl}/blog/author/${author.slug}`
     }
 
     if (author.bio) {
-      ;(schema.author as Record<string, unknown>).description = author.bio
+      personAuthor.description = author.bio
+    }
+
+    schema.author = personAuthor
+  } else {
+    schema.author = {
+      '@type': 'Organization',
+      name: post.author_name || 'Nepal Fillings',
+      url: baseUrl
     }
   }
 

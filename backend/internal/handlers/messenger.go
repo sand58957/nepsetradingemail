@@ -405,7 +405,26 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 	// Parse the webhook body
 	body, _ := io.ReadAll(c.Request().Body)
 
-	// Forward webhook to external URL (api.nepsetrading.com) in background
+	// Verify signature BEFORE doing anything with the payload (including forwarding).
+	// When an app secret is configured, a valid signature is REQUIRED — a missing
+	// header must be rejected, otherwise the check is trivially bypassable.
+	if settings.AppSecret != "" {
+		signature := c.Request().Header.Get("X-Hub-Signature-256")
+		if signature == "" {
+			log.Printf("[messenger] Missing signature for account %d", settings.AccountID)
+			return c.JSON(http.StatusOK, map[string]string{"status": "invalid_signature"})
+		}
+		mac := hmac.New(sha256.New, []byte(settings.AppSecret))
+		mac.Write(body)
+		expected := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+		if !hmac.Equal([]byte(signature), []byte(expected)) {
+			log.Printf("[messenger] Invalid signature for account %d", settings.AccountID)
+			return c.JSON(http.StatusOK, map[string]string{"status": "invalid_signature"})
+		}
+	}
+
+	// Forward webhook to external URL (api.nepsetrading.com) in background,
+	// only after the signature has been validated above.
 	go func(rawBody []byte, headers http.Header) {
 		forwardURL := "https://api.nepsetrading.com/api/facebook/webhook"
 		req, err := http.NewRequest("POST", forwardURL, bytes.NewReader(rawBody))
@@ -426,20 +445,6 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 		defer resp.Body.Close()
 		log.Printf("[messenger] Forward: sent to %s, status=%d", forwardURL, resp.StatusCode)
 	}(body, c.Request().Header.Clone())
-
-	// Verify signature if app_secret is set
-	if settings.AppSecret != "" {
-		signature := c.Request().Header.Get("X-Hub-Signature-256")
-		if signature != "" {
-			mac := hmac.New(sha256.New, []byte(settings.AppSecret))
-			mac.Write(body)
-			expected := "sha256=" + hex.EncodeToString(mac.Sum(nil))
-			if !hmac.Equal([]byte(signature), []byte(expected)) {
-				log.Printf("[messenger] Invalid signature for account %d", settings.AccountID)
-				return c.JSON(http.StatusOK, map[string]string{"status": "invalid_signature"})
-			}
-		}
-	}
 
 	var webhook struct {
 		Object string `json:"object"`

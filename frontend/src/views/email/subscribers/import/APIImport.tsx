@@ -182,7 +182,7 @@ const APIImport = ({ onImportComplete }: APIImportProps) => {
                   POST /api/import/json
                 </Paper>
                 <Tooltip title={copied ? 'Copied!' : 'Copy'}>
-                  <IconButton size='small' onClick={handleCopyEndpoint}>
+                  <IconButton size='small' aria-label={copied ? 'Copied' : 'Copy endpoint'} onClick={handleCopyEndpoint}>
                     <i className={copied ? 'tabler-check' : 'tabler-copy'} />
                   </IconButton>
                 </Tooltip>

@@ -13,9 +13,12 @@ services:
       # Self-hosted blog featured images (replaces external Unsplash URLs)
       - ./uploads/blog-images:/usr/share/nginx/blog-images:ro
     depends_on:
-      - frontend
-      - backend
-      - listmonk
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      listmonk:
+        condition: service_started
     mem_limit: 256m
     networks:
       - nepse
@@ -46,6 +49,12 @@ services:
       - INTERNAL_API_URL=http://backend:8080/api
       - NEXTAUTH_URL=https://nepalfillings.com
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     mem_limit: 1g
     networks:
       - nepse
@@ -80,9 +89,15 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       listmonk:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     mem_limit: 512m
     networks:
       - nepse
@@ -121,8 +136,8 @@ services:
     image: postgres:17-alpine
     container_name: nepse_db
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:5432:5432"
+    # No host port mapping: db is only consumed in-network by backend/listmonk.
+    # For ad-hoc ops access use `docker exec nepse_db psql ...` instead of exposing 5432.
     environment:
       - POSTGRES_USER=${DB_USER:-listmonk}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -147,6 +162,11 @@ services:
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --activedefrag yes
     expose:
       - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     volumes:
       - redisdata:/data
     mem_limit: 320m

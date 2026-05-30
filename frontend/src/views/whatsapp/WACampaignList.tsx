@@ -280,6 +280,7 @@ const WACampaignList = () => {
                       <TableCell align='center'>
                         <IconButton
                           size='small'
+                          aria-label='Campaign actions'
                           onClick={(e) => {
                             setAnchorEl(e.currentTarget)
                             setMenuCampaign(campaign)

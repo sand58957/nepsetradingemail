@@ -186,7 +186,7 @@ const SubscriberSegments = () => {
                 <Chip label={`${totalCount} subscriber${totalCount !== 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' />
               </Box>
               <Tooltip title='Clear results'>
-                <IconButton size='small' onClick={() => { setResults(null); setActiveSegment('') }}>
+                <IconButton size='small' aria-label='Clear results' onClick={() => { setResults(null); setActiveSegment('') }}>
                   <i className='tabler-x text-[16px]' />
                 </IconButton>
               </Tooltip>

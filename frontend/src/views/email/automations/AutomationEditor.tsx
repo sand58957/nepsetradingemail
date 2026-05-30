@@ -336,7 +336,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
                   ))}
                 </Select>
               </FormControl>
-              <IconButton size='small'>
+              <IconButton size='small' aria-label='Edit'>
                 <i className='tabler-edit text-[16px]' />
               </IconButton>
             </Box>
@@ -546,6 +546,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
                         <IconButton
                           size='small'
                           color='error'
+                          aria-label='Remove email step'
                           onClick={() => removeEmailStep(currentEmailNum - 1)}
                           sx={{ flexShrink: 0 }}
                         >

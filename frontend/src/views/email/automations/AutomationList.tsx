@@ -185,6 +185,7 @@ const AutomationList = () => {
                         <Tooltip title='Edit'>
                           <IconButton
                             size='small'
+                            aria-label='Edit automation'
                             onClick={e => {
                               e.stopPropagation()
                               router.push(`/${locale}/automations/${automation.id}`)
@@ -197,6 +198,7 @@ const AutomationList = () => {
                           <IconButton
                             size='small'
                             color='error'
+                            aria-label='Delete automation'
                             onClick={e => {
                               e.stopPropagation()
                               setDeleteId(automation.id)

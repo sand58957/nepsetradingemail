@@ -213,6 +213,7 @@ const FileManagerSidebar = ({
                 <div className='flex gap-0.5 shrink-0' onClick={e => e.stopPropagation()}>
                   <IconButton
                     size='small'
+                    aria-label='Edit folder'
                     onClick={() => openEditDialog(folder)}
                     sx={{ p: { xs: 1, sm: 0.5 } }}
                   >
@@ -220,6 +221,7 @@ const FileManagerSidebar = ({
                   </IconButton>
                   <IconButton
                     size='small'
+                    aria-label='Delete folder'
                     onClick={() => handleDeleteFolder(folder.id)}
                     sx={{ p: { xs: 1, sm: 0.5 } }}
                   >

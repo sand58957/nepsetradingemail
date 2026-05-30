@@ -1,3 +1,5 @@
+import Script from 'next/script'
+
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -30,6 +32,15 @@ export const metadata: Metadata = {
 export default function BlogLayout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px 40px' }}>
+      {/* AdSense loads only on blog routes (the only pages with ad slots), and
+          lazily so it never competes with LCP on the landing/marketing pages. */}
+      <Script
+        id='adsbygoogle-init'
+        async
+        strategy='lazyOnload'
+        src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7636052892520336'
+        crossOrigin='anonymous'
+      />
       {children}
     </div>
   )

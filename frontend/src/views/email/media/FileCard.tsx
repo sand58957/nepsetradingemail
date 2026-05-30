@@ -136,18 +136,18 @@ const FileCard = ({ media, onDelete, pickerMode, onSelect }: Props) => {
       ) : (
         <CardActions sx={{ justifyContent: 'space-between', px: { xs: 0.5, sm: 1 }, py: { xs: 0.5, sm: 0.5 } }}>
           <Tooltip title={copiedUrl ? 'Copied!' : 'Copy URL'}>
-            <IconButton onClick={handleCopyUrl} sx={{ p: { xs: 1, sm: 0.75 } }}>
+            <IconButton onClick={handleCopyUrl} aria-label={copiedUrl ? 'Copied' : 'Copy URL'} sx={{ p: { xs: 1, sm: 0.75 } }}>
               <i className={`tabler-${copiedUrl ? 'check' : 'link'} text-[16px] sm:text-[18px]`} />
             </IconButton>
           </Tooltip>
           <div className='flex'>
             <Tooltip title='Download'>
-              <IconButton component='a' href={media.url} download={media.filename} target='_blank' rel='noopener' sx={{ p: { xs: 1, sm: 0.75 } }}>
+              <IconButton component='a' href={media.url} download={media.filename} target='_blank' rel='noopener' aria-label='Download' sx={{ p: { xs: 1, sm: 0.75 } }}>
                 <i className='tabler-download text-[16px] sm:text-[18px]' />
               </IconButton>
             </Tooltip>
             <Tooltip title='Delete'>
-              <IconButton onClick={() => onDelete(media.id)} sx={{ p: { xs: 1, sm: 0.75 } }}>
+              <IconButton onClick={() => onDelete(media.id)} aria-label='Delete' sx={{ p: { xs: 1, sm: 0.75 } }}>
                 <i className='tabler-trash text-[16px] sm:text-[18px]' />
               </IconButton>
             </Tooltip>

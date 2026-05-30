@@ -212,6 +212,7 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
               <Tooltip title={copied === 'url' ? 'Copied!' : 'Copy'}>
                 <IconButton
                   size='small'
+                  aria-label={copied === 'url' ? 'Copied' : 'Copy webhook URL'}
                   onClick={() => handleCopy(getWebhookURL(createdWebhook.secret_key), 'url')}
                 >
                   <i className={copied === 'url' ? 'tabler-check' : 'tabler-copy'} />
@@ -231,6 +232,7 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
               <Tooltip title={copied === 'secret' ? 'Copied!' : 'Copy'}>
                 <IconButton
                   size='small'
+                  aria-label={copied === 'secret' ? 'Copied' : 'Copy secret key'}
                   onClick={() => handleCopy(createdWebhook.secret_key, 'secret')}
                 >
                   <i className={copied === 'secret' ? 'tabler-check' : 'tabler-copy'} />
@@ -258,6 +260,7 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
               <Tooltip title={copied === 'curl' ? 'Copied!' : 'Copy'}>
                 <IconButton
                   size='small'
+                  aria-label={copied === 'curl' ? 'Copied' : 'Copy example'}
                   onClick={() => handleCopy(curlExample(createdWebhook.secret_key), 'curl')}
                 >
                   <i className={copied === 'curl' ? 'tabler-check' : 'tabler-copy'} />
@@ -326,6 +329,7 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
                       <Tooltip title={copied === `wh-${wh.id}` ? 'Copied!' : 'Copy URL'}>
                         <IconButton
                           size='small'
+                          aria-label={copied === `wh-${wh.id}` ? 'Copied' : 'Copy URL'}
                           onClick={() => handleCopy(getWebhookURL(wh.secret_key), `wh-${wh.id}`)}
                         >
                           <i className={copied === `wh-${wh.id}` ? 'tabler-check text-[14px]' : 'tabler-copy text-[14px]'} />
@@ -352,7 +356,7 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
                   </TableCell>
                   <TableCell align='center'>
                     <Tooltip title='Delete'>
-                      <IconButton size='small' color='error' onClick={() => { setDeleteId(wh.id); setDeleteOpen(true) }}>
+                      <IconButton size='small' color='error' aria-label='Delete webhook' onClick={() => { setDeleteId(wh.id); setDeleteOpen(true) }}>
                         <i className='tabler-trash text-[16px]' />
                       </IconButton>
                     </Tooltip>

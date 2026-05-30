@@ -180,7 +180,7 @@ const TelegramSettings = () => {
                     input: {
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <IconButton onClick={() => setShowToken(!showToken)} edge='end'>
+                          <IconButton onClick={() => setShowToken(!showToken)} edge='end' aria-label={showToken ? 'Hide token' : 'Show token'}>
                             <i className={showToken ? 'tabler-eye-off' : 'tabler-eye'} />
                           </IconButton>
                         </InputAdornment>
