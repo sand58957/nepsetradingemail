@@ -50,7 +50,9 @@ services:
       - NEXTAUTH_URL=https://nepalfillings.com
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000 >/dev/null 2>&1 || exit 1"]
+      # Use 127.0.0.1 (not localhost): busybox wget resolves localhost to ::1
+      # (IPv6) but Next.js standalone binds IPv4-only, so localhost is refused.
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000 >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -93,7 +95,7 @@ services:
       listmonk:
         condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/api/health >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/api/health >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
