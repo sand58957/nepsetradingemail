@@ -371,7 +371,7 @@ const CustomerReviews = () => {
                 top: 0,
                 left: 0,
                 bottom: 0,
-                width: 80,
+                width: 'clamp(24px, 8vw, 80px)',
                 background: 'linear-gradient(to right, var(--mui-palette-background-default), transparent)',
                 zIndex: 2,
                 pointerEvents: 'none'
@@ -383,7 +383,7 @@ const CustomerReviews = () => {
                 top: 0,
                 right: 0,
                 bottom: 0,
-                width: 80,
+                width: 'clamp(24px, 8vw, 80px)',
                 background: 'linear-gradient(to left, var(--mui-palette-background-default), transparent)',
                 zIndex: 2,
                 pointerEvents: 'none'

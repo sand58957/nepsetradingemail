@@ -248,7 +248,7 @@ const TelegramSettings = () => {
                 <Typography variant='subtitle2' color='primary'>Step 1: Open BotFather</Typography>
                 <Typography variant='body2' color='text.secondary'>
                   Open Telegram and go to{' '}
-                  <a href='https://t.me/BotFather' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                  <a href='https://t.me/BotFather' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                     t.me/BotFather
                   </a>
                   {' '}or search for <strong>@BotFather</strong> in Telegram. This is the official bot for creating and managing Telegram bots.
@@ -298,7 +298,7 @@ const TelegramSettings = () => {
                 <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
                   <Typography variant='caption'>
                     <strong>Telegram Bot API Docs:</strong>{' '}
-                    <a href='https://core.telegram.org/bots/api' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://core.telegram.org/bots/api' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       core.telegram.org/bots/api
                     </a>
                   </Typography>

@@ -263,7 +263,7 @@ const WASettings = () => {
                 <Typography variant='subtitle2' color='primary'>Step 1: Create Gupshup Account</Typography>
                 <Typography variant='body2' color='text.secondary'>
                   Go to{' '}
-                  <a href='https://www.gupshup.io/developer/home' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                  <a href='https://www.gupshup.io/developer/home' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                     gupshup.io
                   </a>
                   {' '}&rarr; Click <strong>&ldquo;Sign Up&rdquo;</strong> &rarr; Verify your email &rarr; Complete the registration process.
@@ -274,7 +274,7 @@ const WASettings = () => {
                 <Typography variant='subtitle2' color='primary'>Step 2: Create a WhatsApp App</Typography>
                 <Typography variant='body2' color='text.secondary'>
                   In{' '}
-                  <a href='https://www.gupshup.io/whatsapp/dashboard' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                  <a href='https://www.gupshup.io/whatsapp/dashboard' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                     Gupshup Dashboard
                   </a>
                   {' '}&rarr; Go to <strong>&ldquo;WhatsApp&rdquo;</strong> section &rarr; Click <strong>&ldquo;Create App&rdquo;</strong> &rarr; Enter app name &rarr; Link your WhatsApp Business phone number.
@@ -285,7 +285,7 @@ const WASettings = () => {
                 <Typography variant='subtitle2' color='primary'>Step 3: Get App ID &amp; API Key</Typography>
                 <Typography variant='body2' color='text.secondary'>
                   In Gupshup Dashboard &rarr; Select your app &rarr; Go to <strong>&ldquo;Settings&rdquo;</strong> &rarr; Copy the <strong>App ID</strong> (UUID format) &rarr; Go to{' '}
-                  <a href='https://www.gupshup.io/whatsapp/dashboard/api-key' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                  <a href='https://www.gupshup.io/whatsapp/dashboard/api-key' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                     API Keys page
                   </a>
                   {' '}&rarr; Copy your <strong>API Key</strong>.
@@ -341,7 +341,7 @@ const WASettings = () => {
                 <Alert severity='warning' icon={<i className='tabler-alert-triangle' />}>
                   <Typography variant='caption'>
                     WhatsApp charges per conversation. Template messages (outside 24h window) cost more. Check{' '}
-                    <a href='https://developers.facebook.com/docs/whatsapp/pricing' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://developers.facebook.com/docs/whatsapp/pricing' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       WhatsApp Pricing
                     </a>
                     {' '}for rates.
@@ -351,7 +351,7 @@ const WASettings = () => {
                 <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
                   <Typography variant='caption'>
                     <strong>Gupshup Docs:</strong>{' '}
-                    <a href='https://docs.gupshup.io/docs/whatsapp-overview' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://docs.gupshup.io/docs/whatsapp-overview' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       docs.gupshup.io
                     </a>
                   </Typography>

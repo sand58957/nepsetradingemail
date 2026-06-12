@@ -233,7 +233,7 @@ const SMSSettings = () => {
                 <Typography variant='subtitle2' color='primary'>Step 1: Create Aakash SMS Account</Typography>
                 <Typography variant='body2' color='text.secondary'>
                   Go to{' '}
-                  <a href='https://aakashsms.com/register' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                  <a href='https://aakashsms.com/register' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                     aakashsms.com/register
                   </a>
                   {' '}&rarr; Fill in your details &rarr; Verify your phone number &rarr; Complete registration.
@@ -244,7 +244,7 @@ const SMSSettings = () => {
                 <Typography variant='subtitle2' color='primary'>Step 2: Purchase SMS Credits</Typography>
                 <Typography variant='body2' color='text.secondary'>
                   Login to{' '}
-                  <a href='https://aakashsms.com/login' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                  <a href='https://aakashsms.com/login' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                     Aakash SMS Dashboard
                   </a>
                   {' '}&rarr; Go to <strong>&ldquo;Buy Credits&rdquo;</strong> &rarr; Choose a package and complete payment. Credits are required to send messages.
@@ -289,7 +289,7 @@ const SMSSettings = () => {
                 <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
                   <Typography variant='caption'>
                     <strong>Aakash SMS API Docs:</strong>{' '}
-                    <a href='https://aakashsms.com/developers' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://aakashsms.com/developers' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       aakashsms.com/developers
                     </a>
                   </Typography>

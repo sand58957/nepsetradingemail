@@ -505,7 +505,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
                 position: 'absolute',
                 inset: 0,
                 zIndex: 20,
-                bgcolor: 'rgba(255,255,255,0.85)',
+                bgcolor: isDark ? 'rgba(30,30,47,0.85)' : 'rgba(255,255,255,0.85)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',

@@ -265,8 +265,13 @@ const PricingPlan = () => {
         </div>
 
         {/* Billing Toggle */}
-        <div className='flex justify-center items-center gap-2 mbe-8'>
-          <InputLabel className='cursor-pointer' onClick={() => setIsAnnual(false)}>
+        <div className='flex flex-wrap justify-center items-center gap-2 mbe-8'>
+          {/* whiteSpace/overflow undo InputLabel's nowrap+hidden defaults, which clip the label on narrow phones */}
+          <InputLabel
+            className='cursor-pointer'
+            sx={{ whiteSpace: 'normal', overflow: 'visible' }}
+            onClick={() => setIsAnnual(false)}
+          >
             <Typography fontWeight={!isAnnual ? 700 : 400} color={!isAnnual ? 'text.primary' : 'text.secondary'}>
               Pay monthly
             </Typography>
@@ -276,7 +281,11 @@ const PricingPlan = () => {
             onChange={e => setIsAnnual(e.target.checked)}
             slotProps={{ input: { 'aria-label': 'Toggle annual billing' } }}
           />
-          <InputLabel className='cursor-pointer' onClick={() => setIsAnnual(true)}>
+          <InputLabel
+            className='cursor-pointer'
+            sx={{ whiteSpace: 'normal', overflow: 'visible' }}
+            onClick={() => setIsAnnual(true)}
+          >
             <Typography fontWeight={isAnnual ? 700 : 400} color={isAnnual ? 'text.primary' : 'text.secondary'}>
               Pay yearly (save up to 15%)
             </Typography>

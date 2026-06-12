@@ -192,7 +192,7 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
         className={classnames('flex bs-full items-center justify-center flex-1 min-bs-[100dvh] relative p-6 max-md:hidden', {
           'border-ie': settings.skin === 'bordered'
         })}
-        style={_mode === 'dark' ? { background: 'linear-gradient(135deg, #0a0a18 0%, #12122a 40%, #1a1040 70%, #0f0f1a 100%)' } : undefined}
+        style={{ background: 'linear-gradient(135deg, #0a0a18 0%, #12122a 40%, #1a1040 70%, #0f0f1a 100%)' }}
       >
         <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
           <div style={{

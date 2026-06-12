@@ -244,7 +244,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, mb: 4 }}>
         <Box>
           <Breadcrumbs sx={{ mb: 1 }}>
             <Link
@@ -320,7 +320,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
               Entry Criteria <Typography component='span' color='error.main'>*</Typography>
             </Typography>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, maxWidth: 500 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, mt: 1, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, maxWidth: 500 }}>
               <Typography variant='body2'>
                 The first time a contact is added to
               </Typography>
