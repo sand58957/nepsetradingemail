@@ -4,8 +4,14 @@ import type { Template, TemplateListResponse, CreateTemplatePayload, UpdateTempl
 export const templateService = {
   getAll: async (): Promise<TemplateListResponse> => {
     const response = await api.get('/templates')
+    const body = response.data
 
-    return response.data
+    // Guard against paginated {data:{results:[...]}} bodies — consumers expect data to be an array
+    if (body && !Array.isArray(body.data)) {
+      return { data: body.data?.results ?? [] }
+    }
+
+    return body
   },
 
   getById: async (id: number): Promise<{ data: Template }> => {
