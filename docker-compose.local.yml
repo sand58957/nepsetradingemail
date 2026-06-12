@@ -1,5 +1,10 @@
 # Local development — only DB + Redis + Listmonk
 # Usage: docker compose -f docker-compose.local.yml up -d
+#
+# Host ports avoid natively-installed services (Postgres on 5433, Redis on 6379):
+#   Postgres -> localhost:5435   Redis -> localhost:6381   Listmonk -> localhost:9000
+# These must match DATABASE_URL / REDIS_URL / LISTMONK_API_URL in backend/.env
+# (see backend/.env.example).
 services:
   db:
     image: postgres:17-alpine
@@ -9,7 +14,7 @@ services:
       POSTGRES_PASSWORD: listmonk
       POSTGRES_DB: listmonk
     ports:
-      - "5433:5432"
+      - "5435:5432" # must match DATABASE_URL in backend/.env
     volumes:
       - local_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +27,7 @@ services:
     image: redis:7-alpine
     container_name: nepse_local_redis
     ports:
-      - "6379:6379"
+      - "6381:6379" # must match REDIS_URL in backend/.env
     command: redis-server --appendonly yes
     volumes:
       - local_redisdata:/data

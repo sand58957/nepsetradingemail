@@ -35,6 +35,15 @@ func adminOnly(c echo.Context) error {
 	})
 }
 
+// emptyListmonkArray returns an empty Listmonk-formatted flat-array response.
+// Listmonk's /templates endpoint returns {"data":[...]} (not paginated), so
+// non-admin users must get the same shape or array consumers break.
+func emptyListmonkArray(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": []interface{}{},
+	})
+}
+
 // emptyListmonkList returns an empty Listmonk-formatted paginated response.
 // Used for non-admin users who should see a fresh/clean view without shared data.
 func emptyListmonkList(c echo.Context) error {

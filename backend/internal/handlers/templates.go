@@ -39,9 +39,10 @@ func validateTemplateID(c echo.Context) (string, error) {
 }
 
 func (h *TemplateHandler) List(c echo.Context) error {
-	// Non-admin users get a fresh/clean view (no shared Listmonk data)
+	// Non-admin users get a fresh/clean view (no shared Listmonk data).
+	// Templates is a flat-array endpoint — the paginated shape crashes the frontend.
 	if !isAdmin(c) {
-		return emptyListmonkList(c)
+		return emptyListmonkArray(c)
 	}
 
 	params := map[string]string{}
