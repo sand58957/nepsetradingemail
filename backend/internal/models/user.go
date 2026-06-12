@@ -66,7 +66,7 @@ type CreateUserRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Name     string `json:"name"`
-	Role     string `json:"role"` // "admin", "user", or "subscriber"
+	Role     string `json:"role"` // "superadmin", "admin", "user", or "subscriber"
 }
 
 type UpdateUserRequest struct {

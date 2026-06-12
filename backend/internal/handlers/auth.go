@@ -1136,7 +1136,12 @@ func (h *AuthHandler) CreateUser(c echo.Context) error {
 	}
 
 	if !isValidRole(req.Role) {
-		return response.BadRequest(c, "Role must be admin, user, or subscriber")
+		return response.BadRequest(c, "Role must be superadmin, admin, user, or subscriber")
+	}
+
+	// Admins must not be able to mint accounts above their own rank
+	if req.Role == "superadmin" && mw.GetUserRole(c) != "superadmin" {
+		return response.Forbidden(c, "Only a superadmin can assign the superadmin role")
 	}
 
 	var exists bool
@@ -1289,7 +1294,20 @@ func (h *AuthHandler) UpdateUserRole(c echo.Context) error {
 	}
 
 	if !isValidRole(req.Role) {
-		return response.BadRequest(c, "Role must be admin, user, or subscriber")
+		return response.BadRequest(c, "Role must be superadmin, admin, user, or subscriber")
+	}
+
+	// Admins must not be able to promote anyone above their own rank,
+	// nor demote a superadmin
+	if mw.GetUserRole(c) != "superadmin" {
+		if req.Role == "superadmin" {
+			return response.Forbidden(c, "Only a superadmin can assign the superadmin role")
+		}
+
+		var targetRole string
+		if err := h.db.Get(&targetRole, "SELECT role FROM app_users WHERE id = $1", userID); err == nil && targetRole == "superadmin" {
+			return response.Forbidden(c, "Only a superadmin can change a superadmin's role")
+		}
 	}
 
 	result, err := h.db.Exec("UPDATE app_users SET role = $1, updated_at = NOW() WHERE id = $2", req.Role, userID)

@@ -126,6 +126,7 @@ const UserCreateView = () => {
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select value={form.role} label='Role' onChange={e => setForm({ ...form, role: e.target.value })}>
+                  <MenuItem value='superadmin'>Super Admin - Platform owner (superadmins only)</MenuItem>
                   <MenuItem value='admin'>Admin - Full platform control</MenuItem>
                   <MenuItem value='user'>Staff - Email marketing features</MenuItem>
                   <MenuItem value='subscriber'>Subscriber - Self-service portal only</MenuItem>

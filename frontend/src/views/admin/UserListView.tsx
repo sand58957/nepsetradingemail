@@ -231,6 +231,7 @@ const UserListView = () => {
               <InputLabel>Role</InputLabel>
               <Select value={roleFilter} label='Role' onChange={e => setRoleFilter(e.target.value)}>
                 <MenuItem value=''>All Roles</MenuItem>
+                <MenuItem value='superadmin'>Super Admin</MenuItem>
                 <MenuItem value='admin'>Admin</MenuItem>
                 <MenuItem value='user'>Staff</MenuItem>
                 <MenuItem value='subscriber'>Subscriber</MenuItem>
@@ -366,6 +367,7 @@ const UserListView = () => {
                 label='Role'
                 onChange={e => setEditForm({ ...editForm, role: e.target.value })}
               >
+                <MenuItem value='superadmin'>Super Admin</MenuItem>
                 <MenuItem value='admin'>Admin</MenuItem>
                 <MenuItem value='user'>Staff</MenuItem>
                 <MenuItem value='subscriber'>Subscriber</MenuItem>

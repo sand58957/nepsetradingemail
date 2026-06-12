@@ -33,15 +33,16 @@ services:
       - local_redisdata:/data
 
   listmonk:
-    image: listmonk/listmonk:v3.0.0
+    image: listmonk/listmonk:v6.0.0 # keep in sync with docker-compose.yml (prod runs v6.0.0)
     container_name: nepse_local_listmonk
     depends_on:
       db:
         condition: service_healthy
     environment:
       - LISTMONK_app__address=0.0.0.0:9000
+      # Listmonk v4+ migration rejects admin passwords shorter than 8 chars
       - LISTMONK_app__admin_username=admin
-      - LISTMONK_app__admin_password=admin
+      - LISTMONK_app__admin_password=admin12345
       - LISTMONK_db__host=db
       - LISTMONK_db__port=5432
       - LISTMONK_db__user=listmonk
@@ -53,7 +54,9 @@ services:
     volumes:
       - local_listmonk_uploads:/listmonk/uploads
     command: >
-      sh -c "yes | ./listmonk --install && yes | ./listmonk --upgrade && ./listmonk"
+      sh -c "./listmonk --install --idempotent --yes --config '' &&
+             ./listmonk --upgrade --yes --config '' &&
+             ./listmonk --config ''"
 
 volumes:
   local_pgdata:
