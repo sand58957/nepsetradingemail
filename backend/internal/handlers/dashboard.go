@@ -49,9 +49,9 @@ func (h *DashboardHandler) GetStats(c echo.Context) error {
 	userRole := middleware.GetUserRole(c)
 	accountID := middleware.GetAccountID(c)
 
-	// For admin role: show full global Listmonk stats (platform overview)
+	// For admin/superadmin roles: show full global Listmonk stats (platform overview)
 	// For user role: show fresh/clean per-account stats (no shared Listmonk data)
-	if userRole == "admin" {
+	if userRole == "admin" || userRole == "superadmin" {
 		// Fetch subscribers count
 		wg.Add(1)
 		go func() {

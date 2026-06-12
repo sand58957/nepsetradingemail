@@ -21,9 +21,12 @@ func validateParamID(c echo.Context, param string) (string, error) {
 	return id, nil
 }
 
-// isAdmin returns true if the current user has admin role.
+// isAdmin returns true if the current user has admin-level privileges.
+// superadmin outranks admin (see RequireRole groups in routes.go), so it
+// must pass every admin gate too.
 func isAdmin(c echo.Context) bool {
-	return middleware.GetUserRole(c) == "admin"
+	role := middleware.GetUserRole(c)
+	return role == "admin" || role == "superadmin"
 }
 
 // adminOnly returns a 403 Forbidden response for non-admin users.

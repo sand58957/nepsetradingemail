@@ -144,7 +144,7 @@ const UserDropdown = () => {
                     <i className='tabler-user' />
                     <Typography color='text.primary'>My Profile</Typography>
                   </MenuItem>
-                  {session?.role === 'admin' && (
+                  {(session?.role === 'admin' || session?.role === 'superadmin') && (
                     <MenuItem className='mli-2 gap-3' onClick={e => handleDropdownClose(e, '/settings')}>
                       <i className='tabler-settings' />
                       <Typography color='text.primary'>Settings</Typography>

@@ -1,5 +1,6 @@
 // Role constants
 export const ROLES = {
+  SUPERADMIN: 'superadmin',
   ADMIN: 'admin',
   USER: 'user',
   SUBSCRIBER: 'subscriber'
@@ -7,9 +8,9 @@ export const ROLES = {
 
 export type UserRole = (typeof ROLES)[keyof typeof ROLES]
 
-// Role check helpers
-export const isAdmin = (role: string): boolean => role === ROLES.ADMIN
-export const isStaff = (role: string): boolean => role === ROLES.ADMIN || role === ROLES.USER
+// Role check helpers — superadmin outranks admin, so it passes every admin check
+export const isAdmin = (role: string): boolean => role === ROLES.ADMIN || role === ROLES.SUPERADMIN
+export const isStaff = (role: string): boolean => isAdmin(role) || role === ROLES.USER
 export const isSubscriber = (role: string): boolean => role === ROLES.SUBSCRIBER
 export const hasRole = (role: string, allowedRoles: string[]): boolean => allowedRoles.includes(role)
 
@@ -28,6 +29,8 @@ export const getHomeUrl = (role: string): string => {
 // Role display labels
 export const getRoleLabel = (role: string): string => {
   switch (role) {
+    case ROLES.SUPERADMIN:
+      return 'Super Admin'
     case ROLES.ADMIN:
       return 'Admin'
     case ROLES.USER:
@@ -42,6 +45,7 @@ export const getRoleLabel = (role: string): string => {
 // Role colors for MUI chips
 export const getRoleColor = (role: string): 'error' | 'primary' | 'success' | 'default' => {
   switch (role) {
+    case ROLES.SUPERADMIN:
     case ROLES.ADMIN:
       return 'error'
     case ROLES.USER:
