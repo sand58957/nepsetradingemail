@@ -105,7 +105,9 @@ services:
       - nepse
 
   listmonk:
-    image: listmonk/listmonk:latest
+    # Pinned: production was already on v6.0.0 via a silent `latest` pull.
+    # Bump deliberately — major Listmonk versions change API response shapes.
+    image: listmonk/listmonk:v6.0.0
     container_name: nepse_listmonk
     hostname: nepsetrading.com
     restart: unless-stopped
