@@ -341,7 +341,7 @@ const MessengerSettings = () => {
                   Require users to send a secret keyword before adding them as contacts. Leave empty to auto-subscribe all users who message the page.
                 </Typography>
 
-                <div className='flex gap-3 items-start'>
+                <div className='flex flex-col sm:flex-row gap-3 sm:items-start'>
                   <TextField
                     fullWidth
                     label='Opt-in Keyword'
@@ -354,7 +354,7 @@ const MessengerSettings = () => {
                     variant='outlined'
                     onClick={handleGenerateKeyword}
                     disabled={generatingKeyword}
-                    sx={{ mt: 0.5, minWidth: 160, height: 56 }}
+                    sx={{ mt: 0.5, minWidth: 160, height: { sm: 56 } }}
                     startIcon={generatingKeyword ? <CircularProgress size={16} /> : <i className='tabler-refresh' />}
                   >
                     {generatingKeyword ? 'Generating...' : 'Generate Key'}
@@ -420,7 +420,7 @@ const MessengerSettings = () => {
                   <Typography variant='subtitle2' color='primary'>Step 1: Create a Facebook App</Typography>
                   <Typography variant='body2' color='text.secondary'>
                     Go to{' '}
-                    <a href='https://developers.facebook.com/apps/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://developers.facebook.com/apps/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       developers.facebook.com/apps
                     </a>
                     {' '}&rarr; Click <strong>&ldquo;Create App&rdquo;</strong> &rarr; Select <strong>&ldquo;Business&rdquo;</strong> type &rarr; Enter app name &rarr; Click <strong>&ldquo;Create&rdquo;</strong>.
@@ -438,7 +438,7 @@ const MessengerSettings = () => {
                   <Typography variant='subtitle2' color='primary'>Step 3: Get App ID &amp; App Secret</Typography>
                   <Typography variant='body2' color='text.secondary'>
                     In your app at{' '}
-                    <a href='https://developers.facebook.com/apps/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://developers.facebook.com/apps/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       developers.facebook.com
                     </a>
                     {' '}&rarr; Sidebar &rarr; <strong>&ldquo;App Settings&rdquo;</strong> &rarr; <strong>&ldquo;Basic&rdquo;</strong>. Copy the <strong>App ID</strong> and click <strong>&ldquo;Show&rdquo;</strong> next to App Secret to copy it.
@@ -456,7 +456,7 @@ const MessengerSettings = () => {
                   <Typography variant='subtitle2' color='primary'>Step 5: Generate Page Access Token</Typography>
                   <Typography variant='body2' color='text.secondary'>
                     Go to{' '}
-                    <a href='https://developers.facebook.com/tools/explorer/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://developers.facebook.com/tools/explorer/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       Graph API Explorer
                     </a>
                     {' '}&rarr; Select your app &rarr; Add permissions: <strong>pages_messaging, pages_manage_metadata, pages_read_engagement, pages_show_list</strong> &rarr; Click <strong>&ldquo;Generate Access Token&rdquo;</strong> &rarr; Approve all permissions &rarr; Change dropdown from <strong>&ldquo;User Token&rdquo;</strong> to <strong>&ldquo;Page Token&rdquo;</strong> &rarr; Select your page &rarr; Copy the token.

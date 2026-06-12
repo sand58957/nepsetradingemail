@@ -37,7 +37,8 @@ const Footer = ({ mode }: { mode: Mode }) => {
 
   return (
     <footer className={frontLayoutClasses.footer}>
-      <div className='relative'>
+      {/* Fallback bg matches the footer image tone so the white text stays readable before/without the image */}
+      <div className='relative bg-[#30314a]'>
         <img
           src={dashboardImage}
           alt=''
@@ -57,10 +58,10 @@ const Footer = ({ mode }: { mode: Mode }) => {
                   Nepal Fillings - Multi-channel digital marketing platform for Email, SMS, Telegram, WhatsApp &
                   Messenger campaigns. Powered by Marketminds Investment Group Pvt Ltd.
                 </Typography>
-                <div className='flex items-end'>
+                <div className='flex items-end is-full'>
                   <CustomTextField
                     size='small'
-                    className={styles.inputBorder}
+                    className={classnames(styles.inputBorder, 'flex-1 min-is-0')}
                     label='Subscribe to newsletter'
                     placeholder='Your email'
                     sx={{

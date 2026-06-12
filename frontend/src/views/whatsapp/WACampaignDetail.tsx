@@ -482,9 +482,9 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                         <TableCell>Contact</TableCell>
                         <TableCell>Phone</TableCell>
                         <TableCell>Status</TableCell>
-                        <TableCell>Submitted</TableCell>
-                        <TableCell>Delivered</TableCell>
-                        <TableCell>Read</TableCell>
+                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Submitted</TableCell>
+                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Delivered</TableCell>
+                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Read</TableCell>
                         <TableCell>Error</TableCell>
                       </TableRow>
                     </TableHead>
@@ -514,17 +514,17 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                               }
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                             <Typography variant='caption'>
                               {recipient.submitted_at ? new Date(recipient.submitted_at).toLocaleString() : '—'}
                             </Typography>
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                             <Typography variant='caption'>
                               {recipient.delivered_at ? new Date(recipient.delivered_at).toLocaleString() : '—'}
                             </Typography>
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                             <Typography variant='caption'>
                               {recipient.read_at ? new Date(recipient.read_at).toLocaleString() : '—'}
                             </Typography>

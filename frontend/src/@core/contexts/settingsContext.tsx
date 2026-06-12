@@ -68,15 +68,19 @@ export const SettingsProvider = (props: Props) => {
     mode: props.mode || themeConfig.mode
   }
 
-  // Cookies
+  // Cookies — merge over defaults so a partial/stale cookie (e.g. written by an
+  // older schema) can never leave required keys like primaryColor undefined,
+  // which would crash the theme provider for that visitor until cookies clear.
   const [settingsCookie, updateSettingsCookie] = useObjectCookie<Settings>(
     themeConfig.settingsCookieName,
-    JSON.stringify(props.settingsCookie) !== '{}' ? props.settingsCookie : updatedInitialSettings
+    JSON.stringify(props.settingsCookie) !== '{}'
+      ? { ...updatedInitialSettings, ...props.settingsCookie }
+      : updatedInitialSettings
   )
 
   // State
   const [_settingsState, _updateSettingsState] = useState<Settings>(
-    JSON.stringify(settingsCookie) !== '{}' ? settingsCookie : updatedInitialSettings
+    JSON.stringify(settingsCookie) !== '{}' ? { ...updatedInitialSettings, ...settingsCookie } : updatedInitialSettings
   )
 
   const updateSettings = (settings: Partial<Settings>, options?: UpdateSettingsOptions) => {

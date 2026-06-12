@@ -169,7 +169,7 @@ export const BlockMiniPreview = ({ previewKey }: { previewKey: string }) => {
 
   const socialDots = (
     <Box sx={{ display: 'flex', gap: 0.5 }}>
-      {[1, 2, 3].map(n => <Box key={n} sx={{ width: 10, height: 10, bgcolor: '#616161', borderRadius: '50%' }} />)}
+      {[1, 2, 3].map(n => <Box key={n} sx={{ width: 10, height: 10, bgcolor: '#9e9e9e', borderRadius: '50%' }} />)}
     </Box>
   )
 

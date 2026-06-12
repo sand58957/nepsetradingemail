@@ -42,7 +42,7 @@ const SetupGuideTab = () => {
               <Typography variant='subtitle2' color='primary'>Step 1: Set Up Company Profile</Typography>
               <Typography variant='body2' color='text.secondary'>
                 Go to the <strong>&ldquo;Company Profile&rdquo;</strong> tab &rarr; Fill in your company name, address, and contact details. This information appears in the footer of every email (required by{' '}
-                <a href='https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                <a href='https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                   CAN-SPAM Act
                 </a>
                 ).
@@ -70,15 +70,15 @@ const SetupGuideTab = () => {
               </Typography>
               <Typography variant='body2' color='text.secondary'>
                 Learn more about email authentication:{' '}
-                <a href='https://www.cloudflare.com/learning/dns/dns-records/dns-spf-record/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                <a href='https://www.cloudflare.com/learning/dns/dns-records/dns-spf-record/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                   SPF Guide
                 </a>
                 {' | '}
-                <a href='https://www.cloudflare.com/learning/dns/dns-records/dns-dkim-record/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                <a href='https://www.cloudflare.com/learning/dns/dns-records/dns-dkim-record/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                   DKIM Guide
                 </a>
                 {' | '}
-                <a href='https://www.cloudflare.com/learning/dns/dns-records/dns-dmarc-record/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                <a href='https://www.cloudflare.com/learning/dns/dns-records/dns-dmarc-record/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                   DMARC Guide
                 </a>
               </Typography>
@@ -93,36 +93,36 @@ const SetupGuideTab = () => {
                 <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
                   <li>
                     <strong>SendGrid</strong> &mdash;{' '}
-                    <a href='https://signup.sendgrid.com/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://signup.sendgrid.com/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       signup.sendgrid.com
                     </a>
                     {' '}&mdash; 100 free emails/day. Go to{' '}
-                    <a href='https://app.sendgrid.com/settings/api_keys' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://app.sendgrid.com/settings/api_keys' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       Settings &rarr; API Keys
                     </a>
                     {' '}&rarr; Create API Key &rarr; Use <code>apikey</code> as username and the key as password.
                   </li>
                   <li>
                     <strong>Amazon SES</strong> &mdash;{' '}
-                    <a href='https://aws.amazon.com/ses/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://aws.amazon.com/ses/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       aws.amazon.com/ses
                     </a>
                     {' '}&mdash; Very low cost ($0.10 per 1,000 emails). Set up in{' '}
-                    <a href='https://console.aws.amazon.com/ses/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://console.aws.amazon.com/ses/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       AWS SES Console
                     </a>
                     .
                   </li>
                   <li>
                     <strong>Mailgun</strong> &mdash;{' '}
-                    <a href='https://signup.mailgun.com/new/signup' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://signup.mailgun.com/new/signup' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       mailgun.com
                     </a>
                     {' '}&mdash; 5,000 free emails for 3 months.
                   </li>
                   <li>
                     <strong>Postmark</strong> &mdash;{' '}
-                    <a href='https://postmarkapp.com/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://postmarkapp.com/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       postmarkapp.com
                     </a>
                     {' '}&mdash; Great deliverability, 100 free emails/month.
@@ -165,7 +165,7 @@ const SetupGuideTab = () => {
                   <li><strong>CSV Import</strong> &mdash; Bulk import from a CSV file with columns: email, name, lists</li>
                   <li><strong>Signup Forms</strong> &mdash; Embed opt-in forms on your website using the provided HTML snippet</li>
                   <li><strong>API</strong> &mdash; Use the{' '}
-                    <a href='https://listmonk.app/docs/apis/subscribers/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                    <a href='https://listmonk.app/docs/apis/subscribers/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                       Listmonk Subscriber API
                     </a>
                     {' '}to programmatically add contacts
@@ -233,12 +233,12 @@ const SetupGuideTab = () => {
               <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
                 <Typography variant='caption'>
                   <strong>Listmonk Docs:</strong>{' '}
-                  <a href='https://listmonk.app/docs/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                  <a href='https://listmonk.app/docs/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                     listmonk.app/docs
                   </a>
                   {' | '}
                   <strong>Email Best Practices:</strong>{' '}
-                  <a href='https://www.mailgun.com/blog/deliverability/email-best-practices/' target='_blank' rel='noopener noreferrer' style={{ color: '#1976d2' }}>
+                  <a href='https://www.mailgun.com/blog/deliverability/email-best-practices/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
                     Email Deliverability Guide
                   </a>
                 </Typography>

@@ -88,7 +88,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
             Built for Nepali businesses, NEPSE traders &amp; digital marketers. Manage subscribers, automate campaigns,
             track analytics and grow your reach with credit-based pricing — no monthly subscriptions.
           </Typography>
-          <div className='flex mbs-6 items-baseline justify-center relative gap-4'>
+          <div className='flex flex-wrap mbs-6 items-baseline justify-center relative gap-4'>
             <div className='flex gap-2 absolute inline-start-[0%] block-start-[41%] max-md:hidden'>
               <Typography className='font-medium'>5 Channels</Typography>
               <img src='/images/front-pages/landing-page/join-community-arrow.webp' alt='' aria-hidden='true' height='42' width='60' loading='lazy' decoding='async' />
