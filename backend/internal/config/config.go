@@ -31,6 +31,8 @@ type Config struct {
 	GupshupOTPSourcePhone string
 	AnthropicAPIKey       string
 	GeminiAPIKey          string
+	GlitchTipDSN          string
+	AppEnv                string
 }
 
 func Load() (*Config, error) {
@@ -74,6 +76,8 @@ func Load() (*Config, error) {
 		GupshupOTPSourcePhone: getEnv("GUPSHUP_OTP_SOURCE_PHONE", ""),
 		AnthropicAPIKey:       getEnv("ANTHROPIC_API_KEY", ""),
 		GeminiAPIKey:          getEnv("GEMINI_API_KEY", ""),
+		GlitchTipDSN:          getEnv("GLITCHTIP_DSN", ""),
+		AppEnv:                getEnv("APP_ENV", "production"),
 	}
 
 	if cfg.JWTSecret == "" {

@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -77,6 +78,21 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Error tracking (GlitchTip / Sentry-compatible). No-op when GLITCHTIP_DSN is unset.
+	if cfg.GlitchTipDSN != "" {
+		if err := sentry.Init(sentry.ClientOptions{
+			Dsn:              cfg.GlitchTipDSN,
+			Environment:      cfg.AppEnv,
+			EnableTracing:    false,
+			AttachStacktrace: true,
+		}); err != nil {
+			log.Printf("WARNING: sentry/glitchtip init failed: %v", err)
+		} else {
+			log.Println("GlitchTip error tracking initialized")
+			defer sentry.Flush(2 * time.Second)
+		}
 	}
 
 	// Connect to PostgreSQL

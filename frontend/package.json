@@ -42,6 +42,7 @@
     "@prisma/client": "6.19.1",
     "@react-oauth/google": "^0.13.4",
     "@reduxjs/toolkit": "2.11.2",
+    "@sentry/browser": "^10.57.0",
     "@tanstack/match-sorter-utils": "8.19.4",
     "@tanstack/react-table": "8.21.3",
     "@tiptap/core": "3.14.0",

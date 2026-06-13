@@ -19,6 +19,10 @@ RUN npx tsx src/assets/iconify-icons/bundle-icons-css.ts
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL=https://nepalfillings.com/api
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+# GlitchTip client DSN (public by nature — ships in the client bundle). Empty default = error
+# reporting off; the real value is passed as a build arg from the server .env at deploy time.
+ARG NEXT_PUBLIC_GLITCHTIP_DSN=
+ENV NEXT_PUBLIC_GLITCHTIP_DSN=${NEXT_PUBLIC_GLITCHTIP_DSN}
 RUN pnpm build
 
 FROM node:20-alpine AS runner

@@ -37,6 +37,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # GlitchTip client DSN, inlined into the bundle at build time (value from .env)
+        - NEXT_PUBLIC_GLITCHTIP_DSN=${NEXT_PUBLIC_GLITCHTIP_DSN:-}
     container_name: nepse_frontend
     restart: unless-stopped
     expose:
@@ -78,6 +81,9 @@ services:
       - LISTMONK_ADMIN_PASSWORD=${LISTMONK_API_TOKEN}
       - JWT_SECRET=${JWT_SECRET}
       - FRONTEND_URL=https://nepalfillings.com
+      # GlitchTip server DSN (kept out of git; value from .env). Empty = error reporting off.
+      - GLITCHTIP_DSN=${GLITCHTIP_DSN:-}
+      - APP_ENV=production
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - BUNNY_CDN_STORAGE_URL=https://sg.storage.bunnycdn.com

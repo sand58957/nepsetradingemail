@@ -412,6 +412,15 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
             <MenuItem href={`/${locale}/admin/settings`} icon={<i className='tabler-server-cog' />}>
               System Settings
             </MenuItem>
+            <MenuItem
+              href='https://errors.nepalfillings.com'
+              target='_blank'
+              rel='noopener noreferrer'
+              icon={<i className='tabler-bug' />}
+              suffix={<i className='tabler-external-link text-base' />}
+            >
+              Error Monitoring
+            </MenuItem>
           </MenuSection>
         )}
       </Menu>
