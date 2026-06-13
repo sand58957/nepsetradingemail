@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react'
 
+import * as Sentry from '@sentry/browser'
+
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
@@ -14,6 +16,10 @@ type ErrorPageProps = {
 const ErrorPage = ({ error, reset }: ErrorPageProps) => {
   useEffect(() => {
     console.error('[dashboard error boundary]', error)
+
+    // Report React render crashes to GlitchTip (no-op if Sentry wasn't initialized).
+    // React error boundaries don't trigger window.onerror, so capture explicitly here.
+    Sentry.captureException(error)
   }, [error])
 
   return (
