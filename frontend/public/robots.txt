@@ -7,33 +7,71 @@ Disallow: /en/register
 Disallow: /en/dashboards/
 Disallow: /en/forgot-password
 
+# AI/LLM bots: allowed on public content (blog, front-pages, public blog API
+# advertised in /llms.txt). Only the private dashboard/auth routes are blocked —
+# do NOT disallow /api/public/ here, AI engines consume it.
 User-agent: GPTBot
 Allow: /blog/
 Allow: /front-pages/
+Allow: /api/public/
+Disallow: /en/login
+Disallow: /en/register
+Disallow: /en/dashboards/
+Disallow: /en/forgot-password
 
 User-agent: Google-Extended
 Allow: /blog/
 Allow: /front-pages/
+Allow: /api/public/
+Disallow: /en/login
+Disallow: /en/register
+Disallow: /en/dashboards/
+Disallow: /en/forgot-password
 
 User-agent: ChatGPT-User
 Allow: /blog/
 Allow: /front-pages/
+Allow: /api/public/
+Disallow: /en/login
+Disallow: /en/register
+Disallow: /en/dashboards/
+Disallow: /en/forgot-password
 
 User-agent: PerplexityBot
 Allow: /blog/
 Allow: /front-pages/
+Allow: /api/public/
+Disallow: /en/login
+Disallow: /en/register
+Disallow: /en/dashboards/
+Disallow: /en/forgot-password
 
 User-agent: ClaudeBot
 Allow: /blog/
 Allow: /front-pages/
+Allow: /api/public/
+Disallow: /en/login
+Disallow: /en/register
+Disallow: /en/dashboards/
+Disallow: /en/forgot-password
 
 User-agent: Applebot-Extended
 Allow: /blog/
 Allow: /front-pages/
+Allow: /api/public/
+Disallow: /en/login
+Disallow: /en/register
+Disallow: /en/dashboards/
+Disallow: /en/forgot-password
 
 User-agent: anthropic-ai
 Allow: /blog/
 Allow: /front-pages/
+Allow: /api/public/
+Disallow: /en/login
+Disallow: /en/register
+Disallow: /en/dashboards/
+Disallow: /en/forgot-password
 
 Sitemap: https://nepalfillings.com/sitemap.xml
 Sitemap: https://nepalfillings.com/api/public/blog/sitemap.xml
