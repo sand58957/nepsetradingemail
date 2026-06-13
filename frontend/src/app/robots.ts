@@ -11,31 +11,38 @@ export default function robots(): MetadataRoute.Robots {
       // AI/LLM bots - allow blog and public pages for AIO optimization
       {
         userAgent: 'GPTBot',
-        allow: ['/blog/', '/front-pages/']
+        allow: ['/blog/', '/front-pages/', '/api/public/'],
+        disallow: ['/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       },
       {
         userAgent: 'Google-Extended',
-        allow: ['/blog/', '/front-pages/']
+        allow: ['/blog/', '/front-pages/', '/api/public/'],
+        disallow: ['/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       },
       {
         userAgent: 'ChatGPT-User',
-        allow: ['/blog/', '/front-pages/']
+        allow: ['/blog/', '/front-pages/', '/api/public/'],
+        disallow: ['/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       },
       {
         userAgent: 'PerplexityBot',
-        allow: ['/blog/', '/front-pages/']
+        allow: ['/blog/', '/front-pages/', '/api/public/'],
+        disallow: ['/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       },
       {
         userAgent: 'ClaudeBot',
-        allow: ['/blog/', '/front-pages/']
+        allow: ['/blog/', '/front-pages/', '/api/public/'],
+        disallow: ['/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       },
       {
         userAgent: 'Applebot-Extended',
-        allow: ['/blog/', '/front-pages/']
+        allow: ['/blog/', '/front-pages/', '/api/public/'],
+        disallow: ['/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       },
       {
         userAgent: 'anthropic-ai',
-        allow: ['/blog/', '/front-pages/']
+        allow: ['/blog/', '/front-pages/', '/api/public/'],
+        disallow: ['/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       }
     ],
     sitemap: [

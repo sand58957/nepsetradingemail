@@ -28,9 +28,11 @@ import '@/app/globals.css'
 import '@assets/iconify-icons/generated-icons.css'
 
 export const metadata = {
-  title: 'Nepal Fillings - #1 Digital Marketing Platform in Nepal | Email, SMS, WhatsApp, Telegram & Messenger',
+  // Title/description kept within SERP display limits (~60 / ~155 chars) so they don't truncate.
+  // Channel keywords (Email/SMS/WhatsApp/...) live in `keywords`, the H1, and on-page copy.
+  title: 'Nepal Fillings - #1 Digital Marketing Platform in Nepal',
   description:
-    'Nepal Fillings is Nepal\'s leading all-in-one digital marketing platform. Send bulk Email, SMS, WhatsApp, Telegram & Messenger campaigns. Credit-based pricing, no monthly fees. Built for Nepali businesses, NEPSE traders & marketers.',
+    'Send bulk Email, SMS, WhatsApp, Telegram & Messenger campaigns from one dashboard. Credit-based pricing, no monthly fees. Built for Nepali businesses.',
   keywords: [
     'Nepal email marketing',
     'bulk SMS Nepal',
@@ -65,7 +67,7 @@ export const metadata = {
     type: 'website',
     images: [
       {
-        url: '/images/front-pages/landing-page/hero-dashboard-dark.png',
+        url: '/images/front-pages/landing-page/hero-og.jpg',
         width: 1200,
         height: 630,
         alt: 'Nepal Fillings - Digital Marketing Dashboard'
@@ -77,7 +79,7 @@ export const metadata = {
     title: 'Nepal Fillings - #1 Digital Marketing Platform in Nepal',
     description:
       'Send bulk Email, SMS, WhatsApp, Telegram & Messenger campaigns from one dashboard. Built for Nepali businesses.',
-    images: ['/images/front-pages/landing-page/hero-dashboard-dark.png']
+    images: ['/images/front-pages/landing-page/hero-og.jpg']
   },
   robots: {
     index: true,
