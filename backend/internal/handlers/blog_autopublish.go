@@ -464,10 +464,19 @@ func (h *BlogAutoPublishHandler) processQueueItem(item *AutoPublishQueueItem, se
 	tocJSON, _ := json.Marshal(post.TableOfContents)
 	keyPointsJSON, _ := json.Marshal(post.KeyPoints)
 
-	// Featured image — stored in Cloudflare R2 (bucket nepalfillings-images),
-	// served CDN-cached via the custom domain cdn.nepalfillings.com/blog-images/.
-	// The VPS path nepalfillings.com/blog-images/ is kept as a fallback mirror.
+	// Featured image — stored in Cloudflare R2 (cdn.nepalfillings.com/blog-images/),
+	// VPS /blog-images/ kept as a fallback mirror. Pick a varied image at random from
+	// the pool of real images already used by other posts, so new posts aren't all the
+	// same placeholder. Falls back to default.jpg if the pool is somehow empty.
 	featuredImage := "https://cdn.nepalfillings.com/blog-images/default.jpg"
+	var poolImage string
+	if scanErr := h.db.QueryRow(
+		`SELECT featured_image_url FROM blog_posts
+		 WHERE featured_image_url LIKE 'https://cdn.nepalfillings.com/blog-images/%'
+		   AND featured_image_url NOT LIKE '%default.jpg'
+		 ORDER BY random() LIMIT 1`).Scan(&poolImage); scanErr == nil && poolImage != "" {
+		featuredImage = poolImage
+	}
 
 	// Insert blog post
 	var postID int
