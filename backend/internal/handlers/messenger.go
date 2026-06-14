@@ -24,6 +24,7 @@ import (
 	"github.com/sandeep/nepsetradingemail/backend/internal/config"
 	mw "github.com/sandeep/nepsetradingemail/backend/internal/middleware"
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/messenger"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/r2"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
 
@@ -284,29 +285,45 @@ func (h *MessengerHandler) UploadQR(c echo.Context) error {
 	timestamp := time.Now().UnixMilli()
 	safeName := strings.ReplaceAll(file.Filename, " ", "-")
 	storagePath := fmt.Sprintf("messenger-qr/%d-%s", timestamp, safeName)
-	storageURL := fmt.Sprintf("%s/%s/%s", h.cfg.BunnyCDNStorageURL, h.cfg.BunnyCDNStorageZone, storagePath)
-
-	req, err := http.NewRequest("PUT", storageURL, bytes.NewReader(fileData))
-	if err != nil {
-		return response.InternalError(c, "Failed to create upload request")
+	// Upload to Cloudflare R2 when configured; otherwise fall back to the legacy Bunny CDN.
+	var cdnURL string
+	r2cfg := r2.Config{
+		AccountID:       h.cfg.R2AccountID,
+		AccessKeyID:     h.cfg.R2AccessKeyID,
+		SecretAccessKey: h.cfg.R2SecretAccessKey,
+		Bucket:          h.cfg.R2Bucket,
+		PublicBaseURL:   h.cfg.R2PublicBaseURL,
 	}
-	req.Header.Set("AccessKey", h.cfg.BunnyCDNStorageKey)
-	req.Header.Set("Content-Type", contentType)
+	if r2cfg.Enabled() {
+		url, upErr := r2.Upload(c.Request().Context(), r2cfg, storagePath, contentType, fileData)
+		if upErr != nil {
+			log.Printf("[messenger] R2 upload failed: %v", upErr)
+			return response.InternalError(c, "Image upload failed")
+		}
+		cdnURL = url
+	} else {
+		storageURL := fmt.Sprintf("%s/%s/%s", h.cfg.BunnyCDNStorageURL, h.cfg.BunnyCDNStorageZone, storagePath)
+		req, reqErr := http.NewRequest("PUT", storageURL, bytes.NewReader(fileData))
+		if reqErr != nil {
+			return response.InternalError(c, "Failed to create upload request")
+		}
+		req.Header.Set("AccessKey", h.cfg.BunnyCDNStorageKey)
+		req.Header.Set("Content-Type", contentType)
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return response.InternalError(c, "Failed to upload to CDN")
+		client := &http.Client{Timeout: 30 * time.Second}
+		resp, doErr := client.Do(req)
+		if doErr != nil {
+			return response.InternalError(c, "Failed to upload to CDN")
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			log.Printf("[messenger] Bunny CDN upload failed: %d %s", resp.StatusCode, string(body))
+			return response.InternalError(c, "CDN upload failed")
+		}
+		cdnURL = fmt.Sprintf("%s/%s", h.cfg.BunnyCDNPullURL, storagePath)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		log.Printf("[messenger] Bunny CDN upload failed: %d %s", resp.StatusCode, string(body))
-		return response.InternalError(c, "CDN upload failed")
-	}
-
-	cdnURL := fmt.Sprintf("%s/%s", h.cfg.BunnyCDNPullURL, storagePath)
 
 	_, err = h.db.Exec(`
 		INSERT INTO messenger_settings (account_id, qr_code_url, updated_at)
