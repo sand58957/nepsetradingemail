@@ -94,6 +94,12 @@ services:
       - BUNNY_CDN_STORAGE_ZONE=nepalfilling
       - BUNNY_CDN_STORAGE_KEY=${BUNNY_CDN_STORAGE_KEY}
       - BUNNY_CDN_PULL_URL=https://my-pull-zone-name-nepalfilling.b-cdn.net
+      # Cloudflare R2 (campaign/QR image uploads). Values from .env (kept out of git).
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID:-}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID:-}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY:-}
+      - R2_BUCKET=${R2_BUCKET:-nepalfillings-images}
+      - R2_PUBLIC_BASE_URL=${R2_PUBLIC_BASE_URL:-https://cdn.nepalfillings.com}
       - DKIM_KEYS_DIR=/opt/dkim-keys
     volumes:
       - /opt/dkim-keys:/opt/dkim-keys

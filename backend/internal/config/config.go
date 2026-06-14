@@ -33,6 +33,11 @@ type Config struct {
 	GeminiAPIKey          string
 	GlitchTipDSN          string
 	AppEnv                string
+	R2AccountID           string
+	R2AccessKeyID         string
+	R2SecretAccessKey     string
+	R2Bucket              string
+	R2PublicBaseURL       string
 }
 
 func Load() (*Config, error) {
@@ -78,6 +83,11 @@ func Load() (*Config, error) {
 		GeminiAPIKey:          getEnv("GEMINI_API_KEY", ""),
 		GlitchTipDSN:          getEnv("GLITCHTIP_DSN", ""),
 		AppEnv:                getEnv("APP_ENV", "production"),
+		R2AccountID:           getEnv("R2_ACCOUNT_ID", ""),
+		R2AccessKeyID:         getEnv("R2_ACCESS_KEY_ID", ""),
+		R2SecretAccessKey:     getEnv("R2_SECRET_ACCESS_KEY", ""),
+		R2Bucket:              getEnv("R2_BUCKET", "nepalfillings-images"),
+		R2PublicBaseURL:       getEnv("R2_PUBLIC_BASE_URL", "https://cdn.nepalfillings.com"),
 	}
 
 	if cfg.JWTSecret == "" {
