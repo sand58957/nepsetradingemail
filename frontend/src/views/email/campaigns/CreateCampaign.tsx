@@ -159,7 +159,16 @@ const CreateCampaign = () => {
     .reduce((sum, l) => sum + (l.subscriber_count || 0), 0)
 
   const isFormValid = () => {
-    return name.trim() !== '' && subject.trim() !== '' && fromEmail.trim() !== '' && selectedLists.length > 0 && body.trim() !== ''
+    return (
+      name.trim() !== '' &&
+      subject.trim() !== '' &&
+      fromEmail.trim() !== '' &&
+      selectedLists.length > 0 &&
+      body.trim() !== '' &&
+
+      // "Schedule for later" requires a date, or the campaign is created as 'scheduled' with no send_at
+      (sendNow || scheduledDate.trim() !== '')
+    )
   }
 
   // Save form state to sessionStorage before navigating away
@@ -221,6 +230,8 @@ const CreateCampaign = () => {
       content_type: 'html',
       body: assembleBody(),
       lists: selectedLists,
+      track_opens: trackOpens,
+      track_clicks: trackClicks,
     }
 
     // Full HTML documents need the passthrough template (no wrapper)

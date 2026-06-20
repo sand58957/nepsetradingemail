@@ -45,9 +45,12 @@ const SubscriberCleanup = () => {
     setLoading(true)
 
     try {
+      // Honour the "Time inactive" selection: only subscribers not modified within the window.
+      const months = parseInt(timePeriod, 10) || 6
+
       const response = await subscriberService.getAll({
         per_page: 50,
-        query: "subscribers.status = 'disabled' OR subscribers.status = 'blocklisted'"
+        query: `(subscribers.status = 'disabled' OR subscribers.status = 'blocklisted') AND subscribers.updated_at < (NOW() - INTERVAL '${months} months')`
       })
 
       setInactiveSubscribers(response.data?.results || [])
@@ -59,7 +62,7 @@ const SubscriberCleanup = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [timePeriod])
 
   useEffect(() => {
     fetchInactive()
@@ -170,7 +173,7 @@ const SubscriberCleanup = () => {
             >
               {processing ? 'Processing...' : selectedIds.size > 0
                 ? `Disable ${selectedIds.size} selected`
-                : 'Disable all inactive'}
+                : `Disable ${inactiveSubscribers.length} loaded`}
             </Button>
           </div>
 

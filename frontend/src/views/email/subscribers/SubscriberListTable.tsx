@@ -137,11 +137,15 @@ const SubscriberListTable = () => {
 
       if (searchDebounce) {
         // Sanitize: escape SQL special chars and strip dangerous patterns
+        // Escape SQL string + LIKE wildcards; strip only genuinely dangerous chars.
+        // Do NOT strip backslashes (they ARE the wildcard escaping) or hyphens (valid in
+        // names/domains like "Smith-Jones" / "my-company.com").
         const sanitized = searchDebounce
           .replace(/'/g, "''")
+          .replace(/\\/g, '\\\\')
           .replace(/%/g, '\\%')
           .replace(/_/g, '\\_')
-          .replace(/[;\-\\]/g, '')
+          .replace(/;/g, '')
           .replace(/\/\*/g, '')
           .slice(0, 200)
 

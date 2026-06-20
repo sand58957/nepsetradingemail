@@ -254,7 +254,9 @@ const WAContactList = () => {
         ) : contacts.length === 0 ? (
           <CardContent>
             <Typography color='text.secondary' align='center' className='py-8'>
-              {globalFilter ? 'No contacts match your search' : 'No contacts yet. Add or import contacts to get started.'}
+              {globalFilter || optedInFilter
+                ? 'No contacts match your filters'
+                : 'No contacts yet. Add or import contacts to get started.'}
             </Typography>
           </CardContent>
         ) : (

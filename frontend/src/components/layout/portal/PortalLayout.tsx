@@ -31,7 +31,13 @@ const PortalLayout = ({ children }: ChildrenType) => {
     { label: 'Profile', icon: 'tabler-user', path: '/portal/profile' }
   ]
 
-  const currentNavIndex = navItems.findIndex(item => pathname?.includes(item.path))
+  // Pick the MOST specific matching path so '/portal/profile' highlights Profile, not Home
+  // ('/portal/profile'.includes('/portal') is true, so a plain findIndex would match Home first).
+  const currentNavIndex =
+    navItems
+      .map((item, idx) => ({ idx, len: item.path.length, match: !!pathname?.includes(item.path) }))
+      .filter(x => x.match)
+      .sort((a, b) => b.len - a.len)[0]?.idx ?? 0
 
   return (
     <Box className='min-bs-full flex flex-col'>

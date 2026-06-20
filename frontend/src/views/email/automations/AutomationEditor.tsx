@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import { useRouter, useParams } from 'next/navigation'
 
 import Box from '@mui/material/Box'
@@ -60,6 +61,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
   const [triggerType, setTriggerType] = useState('subscriber_added')
   const [triggerListId, setTriggerListId] = useState<number | string>('')
   const [exitCriteria, setExitCriteria] = useState('all_emails_sent')
+
   const [steps, setSteps] = useState<StepFormData[]>([
     { step_type: 'send_email', delay_minutes: 0, config: { subject: '' } },
     { step_type: 'wait', delay_minutes: 1440, config: { delay_unit: 'days', delay_value: 1 } },
@@ -71,6 +73,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
 
   useEffect(() => {
     fetchLists()
+
     if (automationId) {
       fetchAutomation()
     }
@@ -80,7 +83,10 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
     try {
       const { default: api } = await import('@/services/api')
       const res = await api.get('/lists')
-      const data = res.data?.data
+
+      // /lists returns { data: { results: List[], total, ... } } — read the nested results array
+      const data = res.data?.data?.results ?? res.data?.data
+
       if (Array.isArray(data)) {
         setLists(data.map((l: any) => ({ id: l.id, name: l.name })))
       }
@@ -91,6 +97,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
 
   const fetchAutomation = async () => {
     if (!automationId) return
+
     try {
       setLoading(true)
       const res = await automationService.getById(automationId)
@@ -103,6 +110,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
       if (data.trigger_config?.list_id) {
         setTriggerListId(data.trigger_config.list_id)
       }
+
       if (data.trigger_config?.exit_criteria) {
         setExitCriteria(data.trigger_config.exit_criteria)
       }
@@ -139,6 +147,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
     for (let i = 0; i < steps.length; i++) {
       if (steps[i].step_type === 'send_email') {
         emailCount++
+
         if (emailCount === emailIndex + 1) {
           stepIdx = i
           break
@@ -150,9 +159,11 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
 
     const newSteps = [...steps]
 
-    // Remove the wait step before this email (if exists and it's a wait)
+    // Remove this email plus its adjacent wait step so no orphan 'wait' is left.
     if (stepIdx > 0 && newSteps[stepIdx - 1].step_type === 'wait') {
-      newSteps.splice(stepIdx - 1, 2)
+      newSteps.splice(stepIdx - 1, 2) // email preceded by a wait -> remove both
+    } else if (stepIdx === 0 && newSteps[1]?.step_type === 'wait') {
+      newSteps.splice(0, 2) // first email followed by a wait -> remove both, else the flow starts with a delay
     } else {
       newSteps.splice(stepIdx, 1)
     }
@@ -185,7 +196,8 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
   const handleSave = async () => {
     if (!name.trim()) {
       setError('Automation name is required')
-      return
+      
+return
     }
 
     try {
@@ -224,10 +236,18 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
   }
 
   const getDelayDisplay = (step: StepFormData) => {
-    const unit = step.config?.delay_unit || 'days'
-    const value = step.config?.delay_value || Math.round(step.delay_minutes / 1440) || 1
+    if (step.config?.delay_unit && step.config?.delay_value) {
+      return { value: step.config.delay_value, unit: step.config.delay_unit }
+    }
 
-    return { value, unit }
+    // No stored unit/value (e.g. a record from another client) — derive from delay_minutes
+    // instead of assuming days, which would turn a 60-minute wait into "1 day".
+    const mins = step.delay_minutes || 0
+
+    if (mins > 0 && mins % 1440 === 0) return { value: mins / 1440, unit: 'days' }
+    if (mins > 0 && mins % 60 === 0) return { value: mins / 60, unit: 'hours' }
+
+    return { value: mins || 1, unit: 'minutes' }
   }
 
   if (loading) {
@@ -590,6 +610,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
                           value={value}
                           onChange={e => {
                             const v = parseInt(e.target.value) || 1
+
                             updateWaitDelay(index, v, unit as 'minutes' | 'hours' | 'days')
                           }}
                           inputProps={{ min: 1, max: 365 }}
