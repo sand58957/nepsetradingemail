@@ -30,7 +30,7 @@ const HelpCenterWrapper = () => {
     <>
       <HelpCenterHeader searchValue={searchValue} setSearchValue={setSearchValue} />
       <Articles />
-      <KnowledgeBase />
+      <KnowledgeBase searchValue={searchValue} />
       <KeepLearning />
       <NeedHelp />
     </>

@@ -232,7 +232,10 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
               const escapedName = imgFileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
               html = html.replace(new RegExp(escapedPath, 'g'), url)
-              html = html.replace(new RegExp(`(?<=[\"'])([^\"']*/?)?${escapedName}(?=[\"'])`, 'g'), url)
+
+              // Capture the surrounding quotes in groups instead of a lookbehind/lookahead —
+              // lookbehind throws a SyntaxError on Safari/iOS < 16.4, failing the whole upload.
+              html = html.replace(new RegExp(`(["'])([^"']*/)?${escapedName}(["'])`, 'g'), `$1${url}$3`)
             } else {
               console.error('Failed to upload image:', result.reason)
             }

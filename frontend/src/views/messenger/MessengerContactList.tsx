@@ -121,7 +121,7 @@ const MessengerContactList = () => {
         if (response.data?.settings) {
           setQrCodeUrl(response.data.settings.qr_code_url || '')
           setOptInKeyword(response.data.settings.opt_in_keyword || '')
-          setPageName((response.data.settings as any).page_name || '')
+          setPageName((response.data as any).page_name || (response.data.settings as any).page_name || '')
           setPageId(response.data.settings.page_id || '')
         }
       } catch {

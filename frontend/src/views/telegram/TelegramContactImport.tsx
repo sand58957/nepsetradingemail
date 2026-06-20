@@ -30,6 +30,7 @@ import Checkbox from '@mui/material/Checkbox'
 
 // Service Imports
 import telegramService from '@/services/telegram'
+import { parseCSV as parseCSVText, dedupeHeaders } from '@/utils/csv'
 
 // Type Imports
 import type { TelegramContactGroup } from '@/types/telegram'
@@ -84,19 +85,21 @@ const TelegramContactImport = () => {
   ]
 
   const parseCSV = (text: string): { headers: string[]; rows: ParsedRow[] } => {
-    const lines = text.split('\n').filter(line => line.trim())
+    // Quote-aware parse so values like "vip,investor" aren't split into two columns.
+    const matrix = parseCSVText(text).map(r => r.map(c => c.trim()))
 
-    if (lines.length < 2) return { headers: [], rows: [] }
+    if (matrix.length < 2) return { headers: [], rows: [] }
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''))
+    // De-duplicate headers so repeated column names don't silently overwrite each other.
+    const headers = dedupeHeaders(matrix[0].map(h => h.replace(/^["']|["']$/g, '')))
     const rows: ParsedRow[] = []
 
-    for (let i = 1; i < Math.min(lines.length, 6); i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/^["']|["']$/g, ''))
+    for (let i = 1; i < Math.min(matrix.length, 6); i++) {
+      const values = matrix[i]
       const row: ParsedRow = {}
 
       headers.forEach((h, idx) => {
-        row[h] = values[idx] || ''
+        row[h] = (values[idx] || '').replace(/^["']|["']$/g, '')
       })
 
       rows.push(row)

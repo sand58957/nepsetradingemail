@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+
 import { useParams, useRouter } from 'next/navigation'
+
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Heading from '@tiptap/extension-heading'
@@ -29,6 +31,7 @@ import {
   Alert,
   Tooltip
 } from '@mui/material'
+
 // Using tabler CSS classes instead of @tabler/icons-react
 
 import { useSEOScore } from '@/hooks/useSEOScore'
@@ -59,12 +62,15 @@ function extractEditorData(editor: ReturnType<typeof useEditor>) {
   const wordCount = text.split(/\s+/).filter(Boolean).length
 
   const headings: string[] = []
+
   const walk = (node: any) => {
     if (node.type === 'heading' && node.content) {
       headings.push(node.content.map((c: any) => c.text || '').join(''))
     }
+
     if (node.content) node.content.forEach(walk)
   }
+
   if (json) walk(json)
 
   const hasImages = html.includes('<img')
@@ -73,6 +79,7 @@ function extractEditorData(editor: ReturnType<typeof useEditor>) {
 
   let imagesHaveAlt = true
   const imgMatches = html.match(/<img[^>]*>/g)
+
   if (imgMatches) {
     imagesHaveAlt = imgMatches.every(tag => /alt="[^"]+"/i.test(tag))
   }
@@ -113,6 +120,13 @@ export default function BlogPostEditor() {
   const [loading, setLoading] = useState(!!editId)
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' })
 
+  // Bumped on every editor transaction to force re-computation of editorData/SEO (TipTap v3's
+  // useEditor does not re-render the component by default, so derived UI would otherwise freeze).
+  const [, setEditorTick] = useState(0)
+
+  // Content fetched for an existing post, applied once the editor instance is ready.
+  const [pendingContent, setPendingContent] = useState<any>(null)
+
   // TipTap editor
   const editor = useEditor({
     extensions: [
@@ -125,7 +139,7 @@ export default function BlogPostEditor() {
       CharacterCount
     ],
     content: '',
-    onUpdate: () => {}
+    onUpdate: () => setEditorTick(t => t + 1)
   })
 
   // Derived editor data
@@ -157,6 +171,7 @@ export default function BlogPostEditor() {
           blogService.listAuthors(),
           blogService.listTags()
         ])
+
         setCategories(catRes.data)
         setAuthors(authRes.data)
         setTags(tagRes.data)
@@ -164,16 +179,20 @@ export default function BlogPostEditor() {
         // silently fail
       }
     }
+
     loadData()
   }, [])
 
-  // Load existing post
+  // Load existing post — fetch ONCE per editId (the editor instance is intentionally not a dep;
+  // depending on it re-ran this effect when useEditor went null -> defined, firing getPost twice).
   useEffect(() => {
     if (!editId) return
+
     const load = async () => {
       try {
         const res = await blogService.getPost(editId)
         const { post, tags: postTags, faqs: postFaqs } = res.data
+
         setTitle(post.title)
         setSlug(post.slug)
         setSlugManual(true)
@@ -190,20 +209,26 @@ export default function BlogPostEditor() {
         setCanonicalUrl(post.canonical_url || '')
         setStatus(post.status)
         setFaqs(postFaqs?.map(f => ({ id: f.id, question: f.question, answer: f.answer })) || [])
-        if (editor) {
-          const editorContent = post.content && Object.keys(post.content).length > 0 ? post.content : post.content_html || ''
-          if (editorContent) {
-            editor.commands.setContent(editorContent)
-          }
-        }
+        const editorContent = post.content && Object.keys(post.content).length > 0 ? post.content : post.content_html || ''
+
+        setPendingContent(editorContent || null)
       } catch {
         setSnackbar({ open: true, message: 'Failed to load post', severity: 'error' })
       } finally {
         setLoading(false)
       }
     }
+
     load()
-  }, [editId, editor])
+  }, [editId])
+
+  // Apply the fetched content as soon as the editor instance exists (runs once thereafter).
+  useEffect(() => {
+    if (editor && pendingContent) {
+      editor.commands.setContent(pendingContent)
+      setPendingContent(null)
+    }
+  }, [editor, pendingContent])
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -216,6 +241,7 @@ export default function BlogPostEditor() {
   const handleLinkInsert = useCallback(() => {
     if (!editor) return
     const url = window.prompt('Enter URL:')
+
     if (url) {
       editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
     }
@@ -224,6 +250,7 @@ export default function BlogPostEditor() {
   const handleImageInsert = useCallback(() => {
     if (!editor) return
     const url = window.prompt('Enter image URL:')
+
     if (url) {
       editor.chain().focus().setImage({ src: url }).run()
     }
@@ -232,6 +259,7 @@ export default function BlogPostEditor() {
   // FAQ management
   const addFAQ = () => setFaqs(prev => [...prev, { question: '', answer: '' }])
   const removeFAQ = (index: number) => setFaqs(prev => prev.filter((_, i) => i !== index))
+
   const updateFAQ = (index: number, field: 'question' | 'answer', value: string) => {
     setFaqs(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item))
   }
@@ -240,12 +268,16 @@ export default function BlogPostEditor() {
   const handleSave = async (publishAction?: 'draft' | 'publish') => {
     if (!title.trim()) {
       setSnackbar({ open: true, message: 'Title is required', severity: 'error' })
-      return
+      
+return
     }
+
     setSaving(true)
+
     try {
       const data = editorData
       const secondaryKwArr = secondaryKeywords.split(',').map(s => s.trim()).filter(Boolean)
+
       const payload: CreatePostRequest = {
         title,
         content: data.json,
@@ -274,7 +306,7 @@ export default function BlogPostEditor() {
       }
 
       setSnackbar({ open: true, message: editId ? 'Post updated!' : 'Post created!', severity: 'success' })
-      setTimeout(() => router.push('/blog/posts'), 1200)
+      setTimeout(() => router.push(`/${(params?.lang as string) || 'en'}/blog/posts`), 1200)
     } catch {
       setSnackbar({ open: true, message: 'Failed to save post', severity: 'error' })
     } finally {
@@ -287,6 +319,7 @@ export default function BlogPostEditor() {
     try {
       const res = await blogService.createTag(name)
       const newTag = res.data
+
       setTags(prev => [...prev, newTag])
       setSelectedTags(prev => [...prev, newTag])
     } catch {
@@ -658,6 +691,7 @@ export default function BlogPostEditor() {
                 value={selectedTags}
                 onChange={(_, newValue) => {
                   const filtered = newValue.filter((v): v is BlogTag => typeof v !== 'string')
+
                   setSelectedTags(filtered)
                 }}
                 getOptionLabel={opt => typeof opt === 'string' ? opt : opt.name}
@@ -674,14 +708,18 @@ export default function BlogPostEditor() {
                 }}
                 filterOptions={(options, state) => {
                   const filtered = options.filter(o => o.name.toLowerCase().includes(state.inputValue.toLowerCase()))
+
                   if (state.inputValue.trim() && !filtered.some(o => o.name.toLowerCase() === state.inputValue.toLowerCase())) {
                     filtered.push({ id: -1, account_id: 0, name: state.inputValue.trim(), slug: '', created_at: '' } as BlogTag)
                   }
-                  return filtered
+
+                  
+return filtered
                 }}
                 onClose={(_, reason) => {
                   if (reason === 'selectOption') {
                     const last = selectedTags[selectedTags.length - 1]
+
                     if (last && last.id === -1) {
                       setSelectedTags(prev => prev.filter(t => t.id !== -1))
                       handleTagCreate(last.name)

@@ -59,6 +59,7 @@ const WACreateCampaign = () => {
   const [creating, setCreating] = useState(false)
   const [sendingNow, setSendingNow] = useState(false)
   const [confirmSendNow, setConfirmSendNow] = useState(false)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -82,6 +83,7 @@ const WACreateCampaign = () => {
     const fetchGroups = async () => {
       try {
         const response = await whatsappService.getGroups()
+
         setAvailableGroups(response.data || [])
       } catch {
         // Silently fail
@@ -110,9 +112,16 @@ const WACreateCampaign = () => {
 
     try {
       // Build template params from variable values
-      const paramsList = templateVars.map((v, idx) => ({
-        index: idx + 1,
-        value: templateVarValues[v] || '',
+      // Key params by the placeholder NUMBER ({{n}}), de-duplicated and numerically ordered.
+      // The regex matches in document order, so a positional idx+1 mis-maps out-of-order or
+      // repeated variables (e.g. body "Hi {{2}}, code {{1}}" would swap the values).
+      const uniqueNums = Array.from(new Set(templateVars.map(v => parseInt(v.replace(/\D/g, ''), 10))))
+        .filter(n => !isNaN(n))
+        .sort((a, b) => a - b)
+
+      const paramsList = uniqueNums.map(n => ({
+        index: n,
+        value: templateVarValues[`{{${n}}}`] || '',
         field: ''
       }))
 
@@ -170,9 +179,16 @@ const WACreateCampaign = () => {
 
     try {
       // Build template params
-      const paramsList = templateVars.map((v, idx) => ({
-        index: idx + 1,
-        value: templateVarValues[v] || '',
+      // Key params by the placeholder NUMBER ({{n}}), de-duplicated and numerically ordered.
+      // The regex matches in document order, so a positional idx+1 mis-maps out-of-order or
+      // repeated variables (e.g. body "Hi {{2}}, code {{1}}" would swap the values).
+      const uniqueNums = Array.from(new Set(templateVars.map(v => parseInt(v.replace(/\D/g, ''), 10))))
+        .filter(n => !isNaN(n))
+        .sort((a, b) => a - b)
+
+      const paramsList = uniqueNums.map(n => ({
+        index: n,
+        value: templateVarValues[`{{${n}}}`] || '',
         field: ''
       }))
 

@@ -35,6 +35,7 @@ import Snackbar from '@mui/material/Snackbar'
 import type { List } from '@/types/email'
 import importService from '@/services/import'
 import listService from '@/services/lists'
+import { parseCSV as parseCSVText } from '@/utils/csv'
 
 interface CSVImportWizardProps {
   onImportComplete?: () => void
@@ -109,35 +110,9 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
   }, [])
 
   const parseCSV = useCallback(
-    (text: string) => {
-      const delim = delimiter
-      const lines = text.split('\n').filter(l => l.trim())
 
-      const parsed = lines.map(line => {
-        const result: string[] = []
-        let current = ''
-        let inQuotes = false
-
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i]
-
-          if (char === '"') {
-            inQuotes = !inQuotes
-          } else if (char === delim && !inQuotes) {
-            result.push(current.trim())
-            current = ''
-          } else {
-            current += char
-          }
-        }
-
-        result.push(current.trim())
-
-        return result
-      })
-
-      return parsed
-    },
+    // Quote-aware parse (handles commas/newlines/"" inside quoted fields), then trim each cell.
+    (text: string) => parseCSVText(text, delimiter).map(row => row.map(cell => cell.trim())),
     [delimiter]
   )
 

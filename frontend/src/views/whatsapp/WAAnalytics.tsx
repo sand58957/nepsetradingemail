@@ -113,7 +113,7 @@ const WAAnalytics = () => {
 
   // Donut chart data
   const donutSeries = totalSent > 0
-    ? [totalDelivered - totalRead, totalRead, totalFailed, totalSent - totalDelivered - totalFailed]
+    ? [Math.max(0, totalDelivered - totalRead), totalRead, totalFailed, Math.max(0, totalSent - totalDelivered - totalFailed)]
     : [0, 0, 0, 0]
 
   const donutOptions: ApexOptions = {

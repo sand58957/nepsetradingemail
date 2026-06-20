@@ -112,7 +112,7 @@ const MessengerAnalytics = () => {
 
   // Donut chart data
   const donutSeries = totalSent > 0
-    ? [totalDelivered, totalFailed, totalSent - totalDelivered - totalFailed]
+    ? [totalDelivered, totalFailed, Math.max(0, totalSent - totalDelivered - totalFailed)]
     : [0, 0, 0]
 
   const donutOptions: ApexOptions = {
@@ -330,7 +330,7 @@ const MessengerAnalytics = () => {
                 {[
                   { label: 'Delivered', value: totalDelivered, total: totalSent, color: 'success' as const },
                   { label: 'Failed', value: totalFailed, total: totalSent, color: 'error' as const },
-                  { label: 'Pending', value: totalSent - totalDelivered - totalFailed, total: totalSent, color: 'warning' as const }
+                  { label: 'Pending', value: Math.max(0, totalSent - totalDelivered - totalFailed), total: totalSent, color: 'warning' as const }
                 ].map(item => (
                   <div key={item.label}>
                     <div className='flex items-center justify-between mb-1'>

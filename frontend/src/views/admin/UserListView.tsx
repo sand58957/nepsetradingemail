@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 
 import { useParams, useRouter } from 'next/navigation'
+
 import { useSession } from 'next-auth/react'
 
 import Card from '@mui/material/Card'
@@ -65,7 +66,11 @@ const UserListView = () => {
   const router = useRouter()
   const { lang: locale } = useParams()
   const { data: session } = useSession()
-  const currentUserId = (session as any)?.user?.id
+
+  // Coerce to a number: the API's user.id is numeric, but session.user.id arrives as a string,
+  // so a strict `5 === "5"` would make the self-edit / self-delete guards below never fire.
+  const rawUserId = (session as any)?.user?.id
+  const currentUserId = rawUserId != null ? Number(rawUserId) : undefined
 
   // Debounce search input
   const handleSearchChange = useCallback((value: string) => {

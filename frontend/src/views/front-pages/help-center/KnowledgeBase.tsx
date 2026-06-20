@@ -100,14 +100,34 @@ const allArticles: popularArticlesType[] = [
   }
 ]
 
-const KnowledgeBase = () => {
+const KnowledgeBase = ({ searchValue = '' }: { searchValue?: string }) => {
+  const query = searchValue.trim().toLowerCase()
+
+  // Filter categories/articles by the help-center search box. A category is kept if its title
+  // matches (showing all its articles) or if any of its articles match (showing just those).
+  const visibleArticles = query
+    ? allArticles
+        .map(cat => ({
+          ...cat,
+          articles: cat.title.toLowerCase().includes(query)
+            ? cat.articles
+            : cat.articles.filter(a => a.title.toLowerCase().includes(query))
+        }))
+        .filter(cat => cat.title.toLowerCase().includes(query) || cat.articles.length > 0)
+    : allArticles
+
   return (
     <section className={classnames('flex flex-col gap-6 md:plb-[100px] plb-[50px]', frontCommonStyles.layoutSpacing)}>
       <Typography variant='h4' className='text-center'>
         Knowledge Base
       </Typography>
+      {visibleArticles.length === 0 && (
+        <Typography className='text-center' color='text.secondary'>
+          No articles match “{searchValue}”.
+        </Typography>
+      )}
       <Grid container spacing={6}>
-        {allArticles.map((article, index) => {
+        {visibleArticles.map((article, index) => {
           return (
             <Grid size={{ xs: 12, lg: 4 }} key={index}>
               <Card>

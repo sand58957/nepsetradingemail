@@ -163,7 +163,11 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
     return null
   }
 
-  const allPassed = verificationResults?.every(r => r.status === 'pass') ?? false
+  // Mirror the backend's all_passed, which treats DMARC (TXT_DMARC) as optional — otherwise the
+  // table can show a domain "verified" while this dialog says it failed on the DMARC row alone.
+  const allPassed = verificationResults
+    ? verificationResults.filter(r => r.record_type !== 'TXT_DMARC').every(r => r.status === 'pass')
+    : false
 
   const DnsValueBox = ({ label, value, fieldId }: { label: string; value: string; fieldId: string }) => (
     <Box sx={{ flex: 1, minWidth: 0 }}>
