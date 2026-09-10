@@ -7,14 +7,21 @@
       "runtimeArgs": ["dev"],
       "port": 3000,
       "autoPort": true,
-      "cwd": "frontend"
+      "cwd": "frontend",
+      "env": {
+        "NEXT_PUBLIC_API_URL": "http://localhost:8081/api",
+        "API_URL": "http://localhost:8081/api/auth"
+      }
     },
     {
       "name": "backend",
       "runtimeExecutable": "go",
       "runtimeArgs": ["run", "./cmd/server"],
-      "port": 8080,
-      "cwd": "backend"
+      "port": 8081,
+      "cwd": "backend",
+      "env": {
+        "PORT": "8081"
+      }
     }
   ]
 }
