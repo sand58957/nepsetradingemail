@@ -21,7 +21,16 @@ interface StatCardProps {
 const StatCard = ({ title, value, icon, color, loading }: StatCardProps) => {
   return (
     <Card sx={{ height: '100%' }}>
-      <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 4, height: '100%' }}>
+      <CardContent
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          py: 4,
+          height: '100%'
+        }}
+      >
         <CustomAvatar color={color} skin='light' variant='rounded' size={44} sx={{ mb: 1.5 }}>
           <i className={`${icon} text-[24px]`} />
         </CustomAvatar>

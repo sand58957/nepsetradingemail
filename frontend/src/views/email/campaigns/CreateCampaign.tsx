@@ -87,7 +87,9 @@ const CreateCampaign = () => {
 
   // Snackbar
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
+    open: false,
+    message: '',
+    severity: 'success'
   })
 
   const isMobile = useMobileBreakpoint()
@@ -149,9 +151,7 @@ const CreateCampaign = () => {
   }, [searchParams])
 
   const handleListToggle = (listId: number) => {
-    setSelectedLists(prev =>
-      prev.includes(listId) ? prev.filter(id => id !== listId) : [...prev, listId]
-    )
+    setSelectedLists(prev => (prev.includes(listId) ? prev.filter(id => id !== listId) : [...prev, listId]))
   }
 
   const totalRecipients = availableLists
@@ -165,7 +165,6 @@ const CreateCampaign = () => {
       fromEmail.trim() !== '' &&
       selectedLists.length > 0 &&
       body.trim() !== '' &&
-
       // "Schedule for later" requires a date, or the campaign is created as 'scheduled' with no send_at
       (sendNow || scheduledDate.trim() !== '')
     )
@@ -174,8 +173,16 @@ const CreateCampaign = () => {
   // Save form state to sessionStorage before navigating away
   const saveFormState = () => {
     const state = {
-      name, subject, fromName, fromEmail, preheader,
-      selectedLists, sendNow, scheduledDate, trackOpens, trackClicks
+      name,
+      subject,
+      fromName,
+      fromEmail,
+      preheader,
+      selectedLists,
+      sendNow,
+      scheduledDate,
+      trackOpens,
+      trackClicks
     }
 
     sessionStorage.setItem(FORM_STATE_KEY, JSON.stringify(state))
@@ -202,7 +209,8 @@ const CreateCampaign = () => {
     if (!preheader.trim()) return body
 
     // HTML-encode the preheader to prevent XSS injection
-    const encoded = preheader.trim()
+    const encoded = preheader
+      .trim()
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -231,7 +239,7 @@ const CreateCampaign = () => {
       body: assembleBody(),
       lists: selectedLists,
       track_opens: trackOpens,
-      track_clicks: trackClicks,
+      track_clicks: trackClicks
     }
 
     // Full HTML documents need the passthrough template (no wrapper)
@@ -330,11 +338,8 @@ const CreateCampaign = () => {
     const email = testEmailAddress.trim()
 
     // Need at least one list — use selected or first available
-    const listsForTest = selectedLists.length > 0
-      ? selectedLists
-      : availableLists.length > 0
-        ? [availableLists[0].id]
-        : []
+    const listsForTest =
+      selectedLists.length > 0 ? selectedLists : availableLists.length > 0 ? [availableLists[0].id] : []
 
     if (listsForTest.length === 0) {
       setSnackbar({ open: true, message: 'No subscriber lists available. Create a list first.', severity: 'error' })
@@ -350,7 +355,10 @@ const CreateCampaign = () => {
       let subscriberId: number | null = null
 
       try {
-        const sanitizedEmail = email.replace(/'/g, "''").replace(/[;\-\\]/g, '').replace(/\/\*/g, '')
+        const sanitizedEmail = email
+          .replace(/'/g, "''")
+          .replace(/[;\-\\]/g, '')
+          .replace(/\/\*/g, '')
 
         const searchResult = await subscriberService.getAll({
           query: `subscribers.email='${sanitizedEmail}'`,
@@ -518,11 +526,7 @@ const CreateCampaign = () => {
               {selectedLists.length === 0 ? (
                 <div className='flex flex-col items-center py-4 gap-2'>
                   <Typography color='text.secondary'>No recipients selected</Typography>
-                  <Button
-                    variant='outlined'
-                    size='small'
-                    onClick={() => setRecipientDialogOpen(true)}
-                  >
+                  <Button variant='outlined' size='small' onClick={() => setRecipientDialogOpen(true)}>
                     Select recipient lists
                   </Button>
                 </div>
@@ -553,10 +557,7 @@ const CreateCampaign = () => {
           <Card>
             <CardHeader title='Delivery' />
             <CardContent>
-              <RadioGroup
-                value={sendNow ? 'now' : 'later'}
-                onChange={e => setSendNow(e.target.value === 'now')}
-              >
+              <RadioGroup value={sendNow ? 'now' : 'later'} onChange={e => setSendNow(e.target.value === 'now')}>
                 <FormControlLabel value='now' control={<Radio />} label='Send immediately' />
                 <FormControlLabel value='later' control={<Radio />} label='Schedule for later' />
               </RadioGroup>
@@ -580,10 +581,7 @@ const CreateCampaign = () => {
           <Box sx={{ position: { xs: 'static', md: 'sticky' }, top: { md: 100 } }}>
             {/* Email Preview Card */}
             <Card className='mb-6'>
-              <CardHeader
-                title='Email Preview'
-                titleTypographyProps={{ variant: 'subtitle1' }}
-              />
+              <CardHeader title='Email Preview' titleTypographyProps={{ variant: 'subtitle1' }} />
               <CardContent className='flex flex-col gap-3'>
                 {body ? (
                   <Box
@@ -649,11 +647,15 @@ const CreateCampaign = () => {
                   onClose={() => setEditContentAnchor(null)}
                 >
                   <MenuItem onClick={handleEditInEditor}>
-                    <ListItemIcon><i className='tabler-palette text-[18px]' /></ListItemIcon>
+                    <ListItemIcon>
+                      <i className='tabler-palette text-[18px]' />
+                    </ListItemIcon>
                     <ListItemText>Edit in editor</ListItemText>
                   </MenuItem>
                   <MenuItem onClick={handleEditHtml}>
-                    <ListItemIcon><i className='tabler-code text-[18px]' /></ListItemIcon>
+                    <ListItemIcon>
+                      <i className='tabler-code text-[18px]' />
+                    </ListItemIcon>
                     <ListItemText>Edit HTML directly</ListItemText>
                   </MenuItem>
                 </Menu>
@@ -662,27 +664,14 @@ const CreateCampaign = () => {
 
             {/* Settings Card */}
             <Card>
-              <CardHeader
-                title='Settings'
-                titleTypographyProps={{ variant: 'subtitle1' }}
-              />
+              <CardHeader title='Settings' titleTypographyProps={{ variant: 'subtitle1' }} />
               <CardContent className='flex flex-col gap-1'>
                 <FormControlLabel
-                  control={
-                    <Switch
-                      checked={trackOpens}
-                      onChange={e => setTrackOpens(e.target.checked)}
-                    />
-                  }
+                  control={<Switch checked={trackOpens} onChange={e => setTrackOpens(e.target.checked)} />}
                   label='Track opens'
                 />
                 <FormControlLabel
-                  control={
-                    <Switch
-                      checked={trackClicks}
-                      onChange={e => setTrackClicks(e.target.checked)}
-                    />
-                  }
+                  control={<Switch checked={trackClicks} onChange={e => setTrackClicks(e.target.checked)} />}
                   label='Track clicks (UTM tags)'
                 />
               </CardContent>
@@ -727,7 +716,9 @@ const CreateCampaign = () => {
           {loadingLists ? (
             <div className='flex justify-center items-center py-8'>
               <CircularProgress size={24} />
-              <Typography className='ml-2' color='text.secondary'>Loading lists...</Typography>
+              <Typography className='ml-2' color='text.secondary'>
+                Loading lists...
+              </Typography>
             </div>
           ) : availableLists.length === 0 ? (
             <Alert severity='warning' className='mt-2'>
@@ -803,7 +794,9 @@ const CreateCampaign = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTestEmailOpen(false)} color='secondary'>Cancel</Button>
+          <Button onClick={() => setTestEmailOpen(false)} color='secondary'>
+            Cancel
+          </Button>
           <Button
             onClick={handleSendTestEmail}
             variant='contained'
@@ -816,13 +809,7 @@ const CreateCampaign = () => {
       </Dialog>
 
       {/* HTML Editor Dialog */}
-      <Dialog
-        open={htmlEditOpen}
-        onClose={() => setHtmlEditOpen(false)}
-        maxWidth='md'
-        fullWidth
-        fullScreen={isMobile}
-      >
+      <Dialog open={htmlEditOpen} onClose={() => setHtmlEditOpen(false)} maxWidth='md' fullWidth fullScreen={isMobile}>
         <DialogTitle>Edit HTML</DialogTitle>
         <DialogContent>
           <TextField
@@ -837,7 +824,9 @@ const CreateCampaign = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setHtmlEditOpen(false)} color='secondary'>Cancel</Button>
+          <Button onClick={() => setHtmlEditOpen(false)} color='secondary'>
+            Cancel
+          </Button>
           <Button onClick={handleSaveHtml} variant='contained'>
             Save Changes
           </Button>
@@ -851,11 +840,7 @@ const CreateCampaign = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

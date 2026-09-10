@@ -64,11 +64,7 @@ const StatCard = ({
       <div className='flex flex-col gap-1 grow'>
         <Typography color='text.primary'>{title}</Typography>
         <div className='flex items-center gap-2 flex-wrap'>
-          {loading ? (
-            <CircularProgress size={24} />
-          ) : (
-            <Typography variant='h4'>{value}</Typography>
-          )}
+          {loading ? <CircularProgress size={24} /> : <Typography variant='h4'>{value}</Typography>}
         </div>
       </div>
       <CustomAvatar color={color} skin='light' variant='rounded' size={42}>
@@ -121,10 +117,12 @@ const WADashboard = () => {
   }, [])
 
   const recentCampaigns = stats?.recent_campaigns || []
+
   const deliveryRate =
     stats?.messages?.total_sent && stats.messages.total_sent > 0
       ? ((stats.messages.total_delivered / stats.messages.total_sent) * 100).toFixed(1)
       : '0.0'
+
   const readRate =
     stats?.messages?.total_sent && stats.messages.total_sent > 0
       ? ((stats.messages.total_read / stats.messages.total_sent) * 100).toFixed(1)
@@ -157,22 +155,10 @@ const WADashboard = () => {
         />
       </Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard
-          title='Delivery Rate'
-          value={`${deliveryRate}%`}
-          icon='tabler-check'
-          color='info'
-          loading={loading}
-        />
+        <StatCard title='Delivery Rate' value={`${deliveryRate}%`} icon='tabler-check' color='info' loading={loading} />
       </Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard
-          title='Read Rate'
-          value={`${readRate}%`}
-          icon='tabler-checks'
-          color='warning'
-          loading={loading}
-        />
+        <StatCard title='Read Rate' value={`${readRate}%`} icon='tabler-checks' color='warning' loading={loading} />
       </Grid>
 
       {/* Quick Actions */}
@@ -274,7 +260,9 @@ const WADashboard = () => {
             <div className='flex flex-col gap-4'>
               <div className='flex items-center justify-between'>
                 <Typography>Total Contacts</Typography>
-                <Typography className='font-medium'>{stats?.contacts?.total_contacts?.toLocaleString() || '0'}</Typography>
+                <Typography className='font-medium'>
+                  {stats?.contacts?.total_contacts?.toLocaleString() || '0'}
+                </Typography>
               </div>
               <div className='flex items-center justify-between'>
                 <Typography>Opted In</Typography>
@@ -287,7 +275,9 @@ const WADashboard = () => {
               </div>
               <div className='flex items-center justify-between'>
                 <Typography>Total Campaigns</Typography>
-                <Typography className='font-medium'>{stats?.contacts?.total_campaigns?.toLocaleString() || '0'}</Typography>
+                <Typography className='font-medium'>
+                  {stats?.contacts?.total_campaigns?.toLocaleString() || '0'}
+                </Typography>
               </div>
               <Button
                 fullWidth
@@ -345,7 +335,7 @@ const WADashboard = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {recentCampaigns.map((campaign) => (
+                  {recentCampaigns.map(campaign => (
                     <TableRow
                       key={campaign.id}
                       hover
@@ -377,7 +367,9 @@ const WADashboard = () => {
                         )}
                       </TableCell>
                       <TableCell align='right'>
-                        <Typography>{campaign.delivered_count > 0 ? campaign.delivered_count.toLocaleString() : '-'}</Typography>
+                        <Typography>
+                          {campaign.delivered_count > 0 ? campaign.delivered_count.toLocaleString() : '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell align='right'>
                         <Typography>{campaign.read_count > 0 ? campaign.read_count.toLocaleString() : '-'}</Typography>

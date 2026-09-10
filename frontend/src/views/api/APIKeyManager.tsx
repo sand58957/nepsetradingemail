@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
-import CardHeader from '@mui/material/CardHeader'
 import Grid from '@mui/material/Grid'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
@@ -43,7 +43,7 @@ const APIKeyManager = () => {
   const [keys, setKeys] = useState<APIKey[]>([])
   const [credits, setCredits] = useState<CreditBalance[]>([])
   const [transactions, setTransactions] = useState<CreditTransaction[]>([])
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(0)
   const [channelFilter, setChannelFilter] = useState<string>('')
 
@@ -67,20 +67,24 @@ const APIKeyManager = () => {
 
   useEffect(() => {
     loadData()
+    // loadData is redefined every render; depending on it would loop. Refetch on filter change only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelFilter])
 
   const loadData = async () => {
     try {
       setLoading(true)
+
       const [keysRes, creditsRes, txnRes] = await Promise.all([
         apiKeyService.list(channelFilter || undefined),
         creditService.getMyCredits(),
         creditService.getMyTransactions(channelFilter || undefined)
       ])
+
       setKeys(keysRes.data)
       setCredits(creditsRes.data)
       setTransactions(txnRes.data || [])
-    } catch (err) {
+    } catch (_err) {
       setSnackbar({ open: true, message: 'Failed to load API data', severity: 'error' })
     } finally {
       setLoading(false)
@@ -95,6 +99,7 @@ const APIKeyManager = () => {
         is_test: createIsTest,
         webhook_url: createWebhook || undefined
       })
+
       setRevealKey(res.data.key)
       setRevealSecret(res.data.webhook_secret)
       setCreateOpen(false)
@@ -118,6 +123,7 @@ const APIKeyManager = () => {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this API key? This cannot be undone.')) return
+
     try {
       await apiKeyService.delete(id)
       loadData()
@@ -138,6 +144,7 @@ const APIKeyManager = () => {
     if (channel === 'whatsapp') return 'success'
     if (channel === 'telegram') return 'info'
     if (channel === 'messenger') return 'secondary'
+
     return 'warning'
   }
 
@@ -152,16 +159,12 @@ const APIKeyManager = () => {
         <Grid container spacing={4}>
           {['sms', 'whatsapp', 'email', 'telegram', 'messenger'].map(ch => {
             const credit = getCreditForChannel(ch)
+
             return (
               <Grid size={{ xs: 12, sm: 6, md: 2.4 }} key={ch}>
                 <Card>
                   <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                    <Chip
-                      label={ch.toUpperCase()}
-                      color={getChannelColor(ch)}
-                      size='small'
-                      sx={{ mb: 2 }}
-                    />
+                    <Chip label={ch.toUpperCase()} color={getChannelColor(ch)} size='small' sx={{ mb: 2 }} />
                     <Typography variant='h4' fontWeight='bold'>
                       {credit ? credit.balance.toLocaleString() : '0'}
                     </Typography>
@@ -207,7 +210,11 @@ const APIKeyManager = () => {
                     <MenuItem value='messenger'>Messenger</MenuItem>
                   </Select>
                 </FormControl>
-                <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => setCreateOpen(true)}>
+                <Button
+                  variant='contained'
+                  startIcon={<i className='tabler-plus' />}
+                  onClick={() => setCreateOpen(true)}
+                >
                   Create API Key
                 </Button>
               </Box>
@@ -324,7 +331,8 @@ const APIKeyManager = () => {
                           </TableCell>
                           <TableCell align='right'>
                             <Typography color={txn.amount > 0 ? 'success.main' : 'error.main'} fontWeight='bold'>
-                              {txn.amount > 0 ? '+' : ''}{txn.amount}
+                              {txn.amount > 0 ? '+' : ''}
+                              {txn.amount}
                             </Typography>
                           </TableCell>
                           <TableCell align='right'>{txn.balance_after}</TableCell>
@@ -341,7 +349,9 @@ const APIKeyManager = () => {
           {/* Documentation Tab */}
           {activeTab === 2 && (
             <CardContent>
-              <Typography variant='h6' gutterBottom>API Endpoints</Typography>
+              <Typography variant='h6' gutterBottom>
+                API Endpoints
+              </Typography>
               <Divider sx={{ mb: 3 }} />
 
               {[
@@ -454,7 +464,11 @@ const APIKeyManager = () => {
                   base: '/api/v1/messenger',
                   endpoints: [
                     { method: 'GET', path: '/settings', desc: 'Get Messenger settings (page ID, app ID, webhook)' },
-                    { method: 'PUT', path: '/settings', desc: 'Update settings (page token, app secret, opt-in keyword)' },
+                    {
+                      method: 'PUT',
+                      path: '/settings',
+                      desc: 'Update settings (page token, app secret, opt-in keyword)'
+                    },
                     { method: 'POST', path: '/settings/test', desc: 'Test Facebook Page connection' },
                     { method: 'POST', path: '/settings/generate-keyword', desc: 'Generate random opt-in keyword' },
                     { method: 'POST', path: '/settings/qr', desc: 'Upload QR code image' },
@@ -481,7 +495,9 @@ const APIKeyManager = () => {
                 }
               ].map(section => (
                 <Box key={section.title} sx={{ mb: 4 }}>
-                  <Typography variant='subtitle1' fontWeight='bold' gutterBottom>{section.title}</Typography>
+                  <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                    {section.title}
+                  </Typography>
                   <Typography variant='body2' color='text.secondary' gutterBottom>
                     Base URL: <code>https://nepalfillings.com{section.base}</code>
                   </Typography>
@@ -491,10 +507,16 @@ const APIKeyManager = () => {
                         {section.endpoints.map((ep, i) => (
                           <TableRow key={i}>
                             <TableCell sx={{ width: 80 }}>
-                              <Chip label={ep.method} size='small' color={ep.method === 'POST' ? 'primary' : 'default'} />
+                              <Chip
+                                label={ep.method}
+                                size='small'
+                                color={ep.method === 'POST' ? 'primary' : 'default'}
+                              />
                             </TableCell>
                             <TableCell>
-                              <Typography variant='body2' fontFamily='monospace'>{ep.path}</Typography>
+                              <Typography variant='body2' fontFamily='monospace'>
+                                {ep.path}
+                              </Typography>
                             </TableCell>
                             <TableCell>{ep.desc}</TableCell>
                           </TableRow>
@@ -506,7 +528,9 @@ const APIKeyManager = () => {
               ))}
 
               <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>Authentication</Typography>
+              <Typography variant='h6' gutterBottom>
+                Authentication
+              </Typography>
               <Alert severity='info' sx={{ mb: 2 }}>
                 Include your API key in the Authorization header:
                 <Box component='pre' sx={{ mt: 1, p: 1, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto' }}>
@@ -514,9 +538,11 @@ const APIKeyManager = () => {
                 </Box>
               </Alert>
 
-              <Typography variant='h6' gutterBottom>Send SMS Example</Typography>
+              <Typography variant='h6' gutterBottom>
+                Send SMS Example
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/sms/send \\
+                {`curl -X POST https://nepalfillings.com/api/v1/sms/send \\
   -H "Authorization: Bearer nf_sms_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -526,14 +552,19 @@ const APIKeyManager = () => {
               </Box>
 
               <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>Telegram Bot Integration</Typography>
+              <Typography variant='h6' gutterBottom>
+                Telegram Bot Integration
+              </Typography>
 
               <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>Subscription Method (Password-Gated)</Typography>
+                <Typography variant='subtitle2' gutterBottom>
+                  Subscription Method (Password-Gated)
+                </Typography>
                 <Typography variant='body2'>
-                  Users subscribe to your Telegram bot by sending <strong>/start PAID4283</strong> (with the subscription code).
-                  Without the correct code, the bot will reject the subscription. They are automatically added to your contact list upon valid code.
-                  When they send <strong>/stop</strong>, they are automatically opted out.
+                  Users subscribe to your Telegram bot by sending <strong>/start PAID4283</strong> (with the
+                  subscription code). Without the correct code, the bot will reject the subscription. They are
+                  automatically added to your contact list upon valid code. When they send <strong>/stop</strong>, they
+                  are automatically opted out.
                 </Typography>
               </Alert>
 
@@ -546,27 +577,41 @@ const APIKeyManager = () => {
                   <TableBody>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Bot Username</TableCell>
-                      <TableCell><code>@nepsemarket_alert_bot</code></TableCell>
+                      <TableCell>
+                        <code>@nepsemarket_alert_bot</code>
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Bot Link</TableCell>
-                      <TableCell><a href='https://t.me/nepsemarket_alert_bot' target='_blank' rel='noopener'>https://t.me/nepsemarket_alert_bot</a></TableCell>
+                      <TableCell>
+                        <a href='https://t.me/nepsemarket_alert_bot' target='_blank' rel='noopener'>
+                          https://t.me/nepsemarket_alert_bot
+                        </a>
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Webhook Endpoint</TableCell>
-                      <TableCell><code>POST /telegram/:webhook_secret</code></TableCell>
+                      <TableCell>
+                        <code>POST /telegram/:webhook_secret</code>
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Subscribe Command</TableCell>
-                      <TableCell><code>/start PAID4283</code> — Requires valid code to subscribe</TableCell>
+                      <TableCell>
+                        <code>/start PAID4283</code> — Requires valid code to subscribe
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Subscription Code</TableCell>
-                      <TableCell><code>PAID4283</code> — Required access code for new subscribers</TableCell>
+                      <TableCell>
+                        <code>PAID4283</code> — Required access code for new subscribers
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Unsubscribe Command</TableCell>
-                      <TableCell><code>/stop</code> — Opts out user from campaigns</TableCell>
+                      <TableCell>
+                        <code>/stop</code> — Opts out user from campaigns
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Auto-Captured Data</TableCell>
@@ -576,9 +621,11 @@ const APIKeyManager = () => {
                 </Table>
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>Send Telegram Message Example</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                Send Telegram Message Example
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/telegram/campaigns \\
+                {`curl -X POST https://nepalfillings.com/api/v1/telegram/campaigns \\
   -H "Authorization: Bearer nf_telegram_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -591,9 +638,11 @@ const APIKeyManager = () => {
   }'`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>List Subscribers Example</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                List Subscribers Example
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl https://nepalfillings.com/api/v1/telegram/contacts \\
+                {`curl https://nepalfillings.com/api/v1/telegram/contacts \\
   -H "Authorization: Bearer nf_telegram_your_key"
 
 # Response:
@@ -613,9 +662,11 @@ const APIKeyManager = () => {
 }`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Add Contact to Group Example</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Add Contact to Group Example
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/telegram/groups/1/members \\
+                {`curl -X POST https://nepalfillings.com/api/v1/telegram/groups/1/members \\
   -H "Authorization: Bearer nf_telegram_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -625,15 +676,19 @@ const APIKeyManager = () => {
 
               {/* ============== SMS Integration ============== */}
               <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>SMS Integration (Aakash SMS)</Typography>
+              <Typography variant='h6' gutterBottom>
+                SMS Integration (Aakash SMS)
+              </Typography>
 
               <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>How SMS Works</Typography>
+                <Typography variant='subtitle2' gutterBottom>
+                  How SMS Works
+                </Typography>
                 <Typography variant='body2'>
-                  SMS messages are sent through <strong>Aakash SMS</strong>, Nepal&apos;s leading bulk SMS provider.
-                  You need to configure your Aakash SMS credentials (auth token &amp; sender ID) in Settings before sending.
-                  Each SMS consumes <strong>1 credit</strong> per message. Bulk sending supports up to 100 recipients per request.
-                  Messages are queued and sent at the configured rate limit to avoid throttling.
+                  SMS messages are sent through <strong>Aakash SMS</strong>, Nepal&apos;s leading bulk SMS provider. You
+                  need to configure your Aakash SMS credentials (auth token &amp; sender ID) in Settings before sending.
+                  Each SMS consumes <strong>1 credit</strong> per message. Bulk sending supports up to 100 recipients
+                  per request. Messages are queued and sent at the configured rate limit to avoid throttling.
                 </Typography>
               </Alert>
 
@@ -646,7 +701,13 @@ const APIKeyManager = () => {
                   <TableBody>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Provider</TableCell>
-                      <TableCell>Aakash SMS (<a href='https://aakashsms.com' target='_blank' rel='noopener'>aakashsms.com</a>)</TableCell>
+                      <TableCell>
+                        Aakash SMS (
+                        <a href='https://aakashsms.com' target='_blank' rel='noopener'>
+                          aakashsms.com
+                        </a>
+                        )
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Auth Token</TableCell>
@@ -654,15 +715,21 @@ const APIKeyManager = () => {
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Sender ID</TableCell>
-                      <TableCell>Your registered sender ID (e.g., <code>InfoAlert</code>, <code>NepseTrade</code>)</TableCell>
+                      <TableCell>
+                        Your registered sender ID (e.g., <code>InfoAlert</code>, <code>NepseTrade</code>)
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Credit Cost</TableCell>
-                      <TableCell><strong>1 credit</strong> per SMS message (160 characters max per segment)</TableCell>
+                      <TableCell>
+                        <strong>1 credit</strong> per SMS message (160 characters max per segment)
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Bulk Limit</TableCell>
-                      <TableCell>Max <strong>100 recipients</strong> per bulk API call</TableCell>
+                      <TableCell>
+                        Max <strong>100 recipients</strong> per bulk API call
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Rate Limit</TableCell>
@@ -674,15 +741,19 @@ const APIKeyManager = () => {
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>API Key Format</TableCell>
-                      <TableCell><code>nf_sms_xxxxxxxx...</code> (live) or <code>nf_test_sms_xxxxxxxx...</code> (test)</TableCell>
+                      <TableCell>
+                        <code>nf_sms_xxxxxxxx...</code> (live) or <code>nf_test_sms_xxxxxxxx...</code> (test)
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>Send Single SMS</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                Send Single SMS
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/sms/send \\
+                {`curl -X POST https://nepalfillings.com/api/v1/sms/send \\
   -H "Authorization: Bearer nf_sms_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -699,9 +770,11 @@ const APIKeyManager = () => {
 }`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Send Bulk SMS</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Send Bulk SMS
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/sms/send/bulk \\
+                {`curl -X POST https://nepalfillings.com/api/v1/sms/send/bulk \\
   -H "Authorization: Bearer nf_sms_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -718,9 +791,11 @@ const APIKeyManager = () => {
 }`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Create SMS Campaign</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Create SMS Campaign
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/sms/campaigns \\
+                {`curl -X POST https://nepalfillings.com/api/v1/sms/campaigns \\
   -H "Authorization: Bearer nf_sms_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -733,9 +808,11 @@ const APIKeyManager = () => {
   }'`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Manage SMS Contacts</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Manage SMS Contacts
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`# Add a contact
+                {`# Add a contact
 curl -X POST https://nepalfillings.com/api/v1/sms/contacts \\
   -H "Authorization: Bearer nf_sms_your_key" \\
   -H "Content-Type: application/json" \\
@@ -768,16 +845,20 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
 
               {/* ============== WhatsApp Integration ============== */}
               <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>WhatsApp Integration (Gupshup)</Typography>
+              <Typography variant='h6' gutterBottom>
+                WhatsApp Integration (Gupshup)
+              </Typography>
 
               <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>How WhatsApp Works</Typography>
+                <Typography variant='subtitle2' gutterBottom>
+                  How WhatsApp Works
+                </Typography>
                 <Typography variant='body2'>
-                  WhatsApp messages are sent through <strong>Gupshup</strong>, a Meta-approved Business Solution Provider (BSP).
-                  You must configure your Gupshup credentials (API key, App Name, Source Phone) in Settings.
-                  WhatsApp requires <strong>pre-approved templates</strong> for outbound messages outside the 24-hour conversation window.
-                  Use the template sync feature to pull your approved templates from Gupshup.
-                  Each message consumes <strong>1 credit</strong>.
+                  WhatsApp messages are sent through <strong>Gupshup</strong>, a Meta-approved Business Solution
+                  Provider (BSP). You must configure your Gupshup credentials (API key, App Name, Source Phone) in
+                  Settings. WhatsApp requires <strong>pre-approved templates</strong> for outbound messages outside the
+                  24-hour conversation window. Use the template sync feature to pull your approved templates from
+                  Gupshup. Each message consumes <strong>1 credit</strong>.
                 </Typography>
               </Alert>
 
@@ -790,7 +871,13 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
                   <TableBody>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Provider</TableCell>
-                      <TableCell>Gupshup (<a href='https://www.gupshup.io' target='_blank' rel='noopener'>gupshup.io</a>)</TableCell>
+                      <TableCell>
+                        Gupshup (
+                        <a href='https://www.gupshup.io' target='_blank' rel='noopener'>
+                          gupshup.io
+                        </a>
+                        )
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>API Key</TableCell>
@@ -802,7 +889,9 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Source Phone</TableCell>
-                      <TableCell>Your WhatsApp Business phone number (e.g., <code>9779800000000</code>)</TableCell>
+                      <TableCell>
+                        Your WhatsApp Business phone number (e.g., <code>9779800000000</code>)
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>WABA ID</TableCell>
@@ -810,15 +899,21 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Templates</TableCell>
-                      <TableCell>Pre-approved message templates required for outbound messages (sync from Gupshup)</TableCell>
+                      <TableCell>
+                        Pre-approved message templates required for outbound messages (sync from Gupshup)
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Credit Cost</TableCell>
-                      <TableCell><strong>1 credit</strong> per WhatsApp message</TableCell>
+                      <TableCell>
+                        <strong>1 credit</strong> per WhatsApp message
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Bulk Limit</TableCell>
-                      <TableCell>Max <strong>100 recipients</strong> per bulk API call</TableCell>
+                      <TableCell>
+                        Max <strong>100 recipients</strong> per bulk API call
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Rate Limit</TableCell>
@@ -830,15 +925,19 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>API Key Format</TableCell>
-                      <TableCell><code>nf_whatsapp_xxxxxxxx...</code> (live) or <code>nf_test_whatsapp_xxxxxxxx...</code> (test)</TableCell>
+                      <TableCell>
+                        <code>nf_whatsapp_xxxxxxxx...</code> (live) or <code>nf_test_whatsapp_xxxxxxxx...</code> (test)
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>Send WhatsApp Template Message</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                Send WhatsApp Template Message
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/whatsapp/send \\
+                {`curl -X POST https://nepalfillings.com/api/v1/whatsapp/send \\
   -H "Authorization: Bearer nf_whatsapp_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -860,9 +959,11 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
 }`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Send Bulk WhatsApp Messages</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Send Bulk WhatsApp Messages
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/whatsapp/send/bulk \\
+                {`curl -X POST https://nepalfillings.com/api/v1/whatsapp/send/bulk \\
   -H "Authorization: Bearer nf_whatsapp_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -875,9 +976,11 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
   }'`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Create WhatsApp Campaign</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Create WhatsApp Campaign
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/whatsapp/campaigns \\
+                {`curl -X POST https://nepalfillings.com/api/v1/whatsapp/campaigns \\
   -H "Authorization: Bearer nf_whatsapp_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -895,9 +998,11 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
   }'`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Sync & List Templates</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Sync & List Templates
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`# Sync templates from Gupshup
+                {`# Sync templates from Gupshup
 curl -X POST https://nepalfillings.com/api/v1/whatsapp/templates/sync \\
   -H "Authorization: Bearer nf_whatsapp_your_key"
 
@@ -920,9 +1025,11 @@ curl https://nepalfillings.com/api/v1/whatsapp/templates \\
 }`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Manage WhatsApp Contacts</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Manage WhatsApp Contacts
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`# Add a contact
+                {`# Add a contact
 curl -X POST https://nepalfillings.com/api/v1/whatsapp/contacts \\
   -H "Authorization: Bearer nf_whatsapp_your_key" \\
   -H "Content-Type: application/json" \\
@@ -944,16 +1051,22 @@ curl https://nepalfillings.com/api/v1/whatsapp/balance \\
 
               {/* ============== Messenger Integration ============== */}
               <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>Messenger Integration (Facebook Page)</Typography>
+              <Typography variant='h6' gutterBottom>
+                Messenger Integration (Facebook Page)
+              </Typography>
 
               <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>How Messenger Works</Typography>
+                <Typography variant='subtitle2' gutterBottom>
+                  How Messenger Works
+                </Typography>
                 <Typography variant='body2'>
-                  Messenger contacts are collected when users message your <strong>Facebook Page</strong> with the opt-in keyword.
-                  Each contact has a unique <strong>PSID (Page-Scoped ID)</strong> assigned by Facebook.
-                  Due to Facebook&apos;s <strong>24-hour messaging policy</strong>, you can only send messages to users who interacted
-                  with your page within the last 24 hours, unless you use approved <strong>Message Tags</strong> (e.g., account updates, confirmed events).
-                  Each message consumes <strong>1 credit</strong>. Share the <code>m.me/PAGE_ID?ref=KEYWORD</code> link or QR code for easy subscription.
+                  Messenger contacts are collected when users message your <strong>Facebook Page</strong> with the
+                  opt-in keyword. Each contact has a unique <strong>PSID (Page-Scoped ID)</strong> assigned by Facebook.
+                  Due to Facebook&apos;s <strong>24-hour messaging policy</strong>, you can only send messages to users
+                  who interacted with your page within the last 24 hours, unless you use approved{' '}
+                  <strong>Message Tags</strong> (e.g., account updates, confirmed events). Each message consumes{' '}
+                  <strong>1 credit</strong>. Share the <code>m.me/PAGE_ID?ref=KEYWORD</code> link or QR code for easy
+                  subscription.
                 </Typography>
               </Alert>
 
@@ -970,7 +1083,9 @@ curl https://nepalfillings.com/api/v1/whatsapp/balance \\
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Facebook Page</TableCell>
-                      <TableCell>NEPSE Trading (ID: <code>104960767808713</code>)</TableCell>
+                      <TableCell>
+                        NEPSE Trading (ID: <code>104960767808713</code>)
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Page Token</TableCell>
@@ -982,15 +1097,21 @@ curl https://nepalfillings.com/api/v1/whatsapp/balance \\
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Webhook Endpoint</TableCell>
-                      <TableCell><code>POST /messenger/:account_id/webhook</code></TableCell>
+                      <TableCell>
+                        <code>POST /messenger/:account_id/webhook</code>
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Opt-in Keyword</TableCell>
-                      <TableCell>Users send this keyword to subscribe (e.g., <code>XYBJKJQ3</code>)</TableCell>
+                      <TableCell>
+                        Users send this keyword to subscribe (e.g., <code>XYBJKJQ3</code>)
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Subscribe Link</TableCell>
-                      <TableCell><code>https://m.me/104960767808713?ref=XYBJKJQ3</code></TableCell>
+                      <TableCell>
+                        <code>https://m.me/104960767808713?ref=XYBJKJQ3</code>
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>24-Hour Policy</TableCell>
@@ -998,7 +1119,9 @@ curl https://nepalfillings.com/api/v1/whatsapp/balance \\
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Credit Cost</TableCell>
-                      <TableCell><strong>1 credit</strong> per Messenger message</TableCell>
+                      <TableCell>
+                        <strong>1 credit</strong> per Messenger message
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Auto-Captured Data</TableCell>
@@ -1010,15 +1133,20 @@ curl https://nepalfillings.com/api/v1/whatsapp/balance \\
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>API Key Format</TableCell>
-                      <TableCell><code>nf_messenger_xxxxxxxx...</code> (live) or <code>nf_test_messenger_xxxxxxxx...</code> (test)</TableCell>
+                      <TableCell>
+                        <code>nf_messenger_xxxxxxxx...</code> (live) or <code>nf_test_messenger_xxxxxxxx...</code>{' '}
+                        (test)
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>Send Messenger Message</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                Send Messenger Message
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/messenger/send \\
+                {`curl -X POST https://nepalfillings.com/api/v1/messenger/send \\
   -H "Authorization: Bearer nf_messenger_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1035,9 +1163,11 @@ curl https://nepalfillings.com/api/v1/whatsapp/balance \\
 }`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Send Message with Image</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Send Message with Image
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/messenger/send \\
+                {`curl -X POST https://nepalfillings.com/api/v1/messenger/send \\
   -H "Authorization: Bearer nf_messenger_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1047,9 +1177,11 @@ curl https://nepalfillings.com/api/v1/whatsapp/balance \\
   }'`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Create Messenger Campaign</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Create Messenger Campaign
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/messenger/campaigns \\
+                {`curl -X POST https://nepalfillings.com/api/v1/messenger/campaigns \\
   -H "Authorization: Bearer nf_messenger_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1063,9 +1195,11 @@ curl https://nepalfillings.com/api/v1/whatsapp/balance \\
   }'`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>Manage Messenger Contacts</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Manage Messenger Contacts
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`# List contacts
+                {`# List contacts
 curl https://nepalfillings.com/api/v1/messenger/contacts?page=1 \\
   -H "Authorization: Bearer nf_messenger_your_key"
 
@@ -1107,9 +1241,11 @@ curl https://nepalfillings.com/api/v1/messenger/overview \\
   -H "Authorization: Bearer nf_messenger_your_key"`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>QR Code & Opt-in Settings</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                QR Code & Opt-in Settings
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`# Generate a new opt-in keyword
+                {`# Generate a new opt-in keyword
 curl -X POST https://nepalfillings.com/api/v1/messenger/settings/generate-keyword \\
   -H "Authorization: Bearer nf_messenger_your_key"
 
@@ -1131,15 +1267,19 @@ curl -X DELETE https://nepalfillings.com/api/v1/messenger/settings/qr \\
 
               {/* ============== Email Integration ============== */}
               <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>Email Integration</Typography>
+              <Typography variant='h6' gutterBottom>
+                Email Integration
+              </Typography>
 
               <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>How Email Works</Typography>
+                <Typography variant='subtitle2' gutterBottom>
+                  How Email Works
+                </Typography>
                 <Typography variant='body2'>
-                  Email campaigns are powered by <strong>Listmonk</strong> (self-hosted newsletter engine) with delivery through
-                  your configured SMTP provider (SendGrid, Amazon SES, Mailgun, Postmark, etc.).
-                  You must verify a <strong>sending domain</strong> with SPF, DKIM, and DMARC records before sending.
-                  Each email consumes <strong>1 credit</strong>. Subscriber management happens through Listmonk lists.
+                  Email campaigns are powered by <strong>Listmonk</strong> (self-hosted newsletter engine) with delivery
+                  through your configured SMTP provider (SendGrid, Amazon SES, Mailgun, Postmark, etc.). You must verify
+                  a <strong>sending domain</strong> with SPF, DKIM, and DMARC records before sending. Each email
+                  consumes <strong>1 credit</strong>. Subscriber management happens through Listmonk lists.
                 </Typography>
               </Alert>
 
@@ -1164,23 +1304,31 @@ curl -X DELETE https://nepalfillings.com/api/v1/messenger/settings/qr \\
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Credit Cost</TableCell>
-                      <TableCell><strong>1 credit</strong> per email sent</TableCell>
+                      <TableCell>
+                        <strong>1 credit</strong> per email sent
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Bulk Limit</TableCell>
-                      <TableCell>Max <strong>100 recipients</strong> per bulk API call</TableCell>
+                      <TableCell>
+                        Max <strong>100 recipients</strong> per bulk API call
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>API Key Format</TableCell>
-                      <TableCell><code>nf_email_xxxxxxxx...</code> (live) or <code>nf_test_email_xxxxxxxx...</code> (test)</TableCell>
+                      <TableCell>
+                        <code>nf_email_xxxxxxxx...</code> (live) or <code>nf_test_email_xxxxxxxx...</code> (test)
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>Send Email</Typography>
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                Send Email
+              </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`curl -X POST https://nepalfillings.com/api/v1/email/send \\
+                {`curl -X POST https://nepalfillings.com/api/v1/email/send \\
   -H "Authorization: Bearer nf_email_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -1201,20 +1349,25 @@ curl -X DELETE https://nepalfillings.com/api/v1/messenger/settings/qr \\
 
               {/* ============== Credit Management ============== */}
               <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>Credit Management</Typography>
+              <Typography variant='h6' gutterBottom>
+                Credit Management
+              </Typography>
 
               <Alert severity='warning' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>How Credits Work</Typography>
+                <Typography variant='subtitle2' gutterBottom>
+                  How Credits Work
+                </Typography>
                 <Typography variant='body2'>
-                  Each channel (SMS, WhatsApp, Email, Telegram, Messenger) has its own <strong>separate credit balance</strong>.
-                  Credits are deducted when messages are sent successfully. In test mode, no credits are charged.
-                  When sending a campaign, credits are <strong>reserved</strong> first, then confirmed after delivery, or <strong>refunded</strong> on failure.
-                  Contact your administrator to purchase or adjust credit balances.
+                  Each channel (SMS, WhatsApp, Email, Telegram, Messenger) has its own{' '}
+                  <strong>separate credit balance</strong>. Credits are deducted when messages are sent successfully. In
+                  test mode, no credits are charged. When sending a campaign, credits are <strong>reserved</strong>{' '}
+                  first, then confirmed after delivery, or <strong>refunded</strong> on failure. Contact your
+                  administrator to purchase or adjust credit balances.
                 </Typography>
               </Alert>
 
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-{`# Check all credit balances
+                {`# Check all credit balances
 curl https://nepalfillings.com/api/v1/credits \\
   -H "Authorization: Bearer nf_sms_your_key"
 
@@ -1260,7 +1413,9 @@ curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
               </Box>
 
               <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>Credit Flow</Typography>
+                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                  Credit Flow
+                </Typography>
                 <Table size='small'>
                   <TableHead>
                     <TableRow>
@@ -1271,27 +1426,37 @@ curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
                   </TableHead>
                   <TableBody>
                     <TableRow>
-                      <TableCell><Chip label='purchase' size='small' color='success' /></TableCell>
+                      <TableCell>
+                        <Chip label='purchase' size='small' color='success' />
+                      </TableCell>
                       <TableCell>Credits added by admin</TableCell>
                       <TableCell>Balance increases</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><Chip label='deduct' size='small' color='error' /></TableCell>
+                      <TableCell>
+                        <Chip label='deduct' size='small' color='error' />
+                      </TableCell>
                       <TableCell>Credits used for sending messages</TableCell>
                       <TableCell>Balance decreases</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><Chip label='refund' size='small' color='info' /></TableCell>
+                      <TableCell>
+                        <Chip label='refund' size='small' color='info' />
+                      </TableCell>
                       <TableCell>Credits returned on send failure</TableCell>
                       <TableCell>Balance increases</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><Chip label='bonus' size='small' color='warning' /></TableCell>
+                      <TableCell>
+                        <Chip label='bonus' size='small' color='warning' />
+                      </TableCell>
                       <TableCell>Promotional credits added</TableCell>
                       <TableCell>Balance increases</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><Chip label='admin adjust' size='small' color='secondary' /></TableCell>
+                      <TableCell>
+                        <Chip label='admin adjust' size='small' color='secondary' />
+                      </TableCell>
                       <TableCell>Manual adjustment by admin</TableCell>
                       <TableCell>Balance increases or decreases</TableCell>
                     </TableRow>
@@ -1300,7 +1465,9 @@ curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
               </Box>
 
               <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>Rate Limits & Error Handling</Typography>
+              <Typography variant='h6' gutterBottom>
+                Rate Limits & Error Handling
+              </Typography>
 
               <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                 <Table size='small'>
@@ -1313,42 +1480,58 @@ curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
                   </TableHead>
                   <TableBody>
                     <TableRow>
-                      <TableCell><code>200</code></TableCell>
+                      <TableCell>
+                        <code>200</code>
+                      </TableCell>
                       <TableCell>Success</TableCell>
                       <TableCell>Request processed successfully</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>201</code></TableCell>
+                      <TableCell>
+                        <code>201</code>
+                      </TableCell>
                       <TableCell>Created</TableCell>
                       <TableCell>Resource created successfully</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>400</code></TableCell>
+                      <TableCell>
+                        <code>400</code>
+                      </TableCell>
                       <TableCell>Bad Request</TableCell>
                       <TableCell>Check request body and parameters</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>401</code></TableCell>
+                      <TableCell>
+                        <code>401</code>
+                      </TableCell>
                       <TableCell>Unauthorized</TableCell>
                       <TableCell>Invalid or missing API key</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>402</code></TableCell>
+                      <TableCell>
+                        <code>402</code>
+                      </TableCell>
                       <TableCell>Payment Required</TableCell>
                       <TableCell>Insufficient credits — top up your balance</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>404</code></TableCell>
+                      <TableCell>
+                        <code>404</code>
+                      </TableCell>
                       <TableCell>Not Found</TableCell>
                       <TableCell>Resource does not exist</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>429</code></TableCell>
+                      <TableCell>
+                        <code>429</code>
+                      </TableCell>
                       <TableCell>Rate Limited</TableCell>
                       <TableCell>Too many requests — wait and retry after the rate limit window</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>500</code></TableCell>
+                      <TableCell>
+                        <code>500</code>
+                      </TableCell>
                       <TableCell>Server Error</TableCell>
                       <TableCell>Internal error — contact support</TableCell>
                     </TableRow>
@@ -1378,10 +1561,22 @@ curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label='Key Name' value={createName} onChange={e => setCreateName(e.target.value)} placeholder='e.g. Production Key' />
+              <TextField
+                fullWidth
+                label='Key Name'
+                value={createName}
+                onChange={e => setCreateName(e.target.value)}
+                placeholder='e.g. Production Key'
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label='Webhook URL (optional)' value={createWebhook} onChange={e => setCreateWebhook(e.target.value)} placeholder='https://your-app.com/webhooks/sms' />
+              <TextField
+                fullWidth
+                label='Webhook URL (optional)'
+                value={createWebhook}
+                onChange={e => setCreateWebhook(e.target.value)}
+                placeholder='https://your-app.com/webhooks/sms'
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <FormControlLabel
@@ -1393,18 +1588,30 @@ curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button variant='contained' onClick={handleCreate}>Create Key</Button>
+          <Button variant='contained' onClick={handleCreate}>
+            Create Key
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Key Reveal Dialog */}
-      <Dialog open={!!revealKey} onClose={() => { setRevealKey(null); setRevealSecret(null) }} maxWidth='sm' fullWidth>
+      <Dialog
+        open={!!revealKey}
+        onClose={() => {
+          setRevealKey(null)
+          setRevealSecret(null)
+        }}
+        maxWidth='sm'
+        fullWidth
+      >
         <DialogTitle>API Key Created</DialogTitle>
         <DialogContent>
           <Alert severity='warning' sx={{ mb: 3 }}>
             Save this key now! It will not be shown again.
           </Alert>
-          <Typography variant='subtitle2' gutterBottom>API Key:</Typography>
+          <Typography variant='subtitle2' gutterBottom>
+            API Key:
+          </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <TextField
               fullWidth
@@ -1417,7 +1624,9 @@ curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
           </Box>
           {revealSecret && (
             <>
-              <Typography variant='subtitle2' gutterBottom>Webhook Secret:</Typography>
+              <Typography variant='subtitle2' gutterBottom>
+                Webhook Secret:
+              </Typography>
               <TextField
                 fullWidth
                 value={revealSecret}
@@ -1427,8 +1636,14 @@ curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
           )}
         </DialogContent>
         <DialogActions>
-          <Button variant='contained' onClick={() => { setRevealKey(null); setRevealSecret(null) }}>
-            I've Saved the Key
+          <Button
+            variant='contained'
+            onClick={() => {
+              setRevealKey(null)
+              setRevealSecret(null)
+            }}
+          >
+            I&apos;ve Saved the Key
           </Button>
         </DialogActions>
       </Dialog>

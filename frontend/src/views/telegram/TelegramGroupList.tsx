@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import { useRouter, useParams } from 'next/navigation'
 
 import Card from '@mui/material/Card'
@@ -58,13 +59,17 @@ const TelegramGroupList = () => {
   const [menuGroup, setMenuGroup] = useState<TelegramContactGroupWithCount | null>(null)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
+    open: false,
+    message: '',
+    severity: 'success'
   })
 
   const fetchGroups = async () => {
     setLoading(true)
+
     try {
       const response = await telegramService.getGroups()
+
       setGroups(response.data || [])
     } catch {
       setSnackbar({ open: true, message: 'Failed to fetch groups', severity: 'error' })
@@ -73,23 +78,32 @@ const TelegramGroupList = () => {
     }
   }
 
-  useEffect(() => { fetchGroups() }, [])
+  useEffect(() => {
+    fetchGroups()
+  }, [])
 
   const handleSave = async () => {
     if (!formName.trim()) {
       setSnackbar({ open: true, message: 'Group name is required', severity: 'error' })
+
       return
     }
 
     setSaving(true)
+
     try {
       if (editingId) {
-        await telegramService.updateGroup(editingId, { name: formName.trim(), description: formDescription, color: formColor })
+        await telegramService.updateGroup(editingId, {
+          name: formName.trim(),
+          description: formDescription,
+          color: formColor
+        })
         setSnackbar({ open: true, message: 'Group updated', severity: 'success' })
       } else {
         await telegramService.createGroup({ name: formName.trim(), description: formDescription, color: formColor })
         setSnackbar({ open: true, message: 'Group created', severity: 'success' })
       }
+
       setDialogOpen(false)
       resetForm()
       fetchGroups()
@@ -102,6 +116,7 @@ const TelegramGroupList = () => {
 
   const handleDelete = async () => {
     if (!deletingId) return
+
     try {
       await telegramService.deleteGroup(deletingId)
       setSnackbar({ open: true, message: 'Group deleted', severity: 'success' })
@@ -148,7 +163,9 @@ const TelegramGroupList = () => {
 
         {loading ? (
           <CardContent>
-            <Box display='flex' justifyContent='center' p={4}><CircularProgress /></Box>
+            <Box display='flex' justifyContent='center' p={4}>
+              <CircularProgress />
+            </Box>
           </CardContent>
         ) : groups.length === 0 ? (
           <CardContent>
@@ -178,7 +195,15 @@ const TelegramGroupList = () => {
                   >
                     <TableCell>
                       <div className='flex items-center gap-2'>
-                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: group.color, flexShrink: 0 }} />
+                        <Box
+                          sx={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: '50%',
+                            backgroundColor: group.color,
+                            flexShrink: 0
+                          }}
+                        />
                         <Typography className='font-medium'>{group.name}</Typography>
                       </div>
                     </TableCell>
@@ -192,14 +217,18 @@ const TelegramGroupList = () => {
                     </TableCell>
                     <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <Typography variant='body2'>
-                        {new Date(group.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(group.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
                       </Typography>
                     </TableCell>
                     <TableCell align='center'>
                       <IconButton
                         size='small'
                         aria-label='Group actions'
-                        onClick={(e) => {
+                        onClick={e => {
                           e.stopPropagation()
                           setAnchorEl(e.currentTarget)
                           setMenuGroup(group)
@@ -218,25 +247,32 @@ const TelegramGroupList = () => {
 
       {/* Action Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
-          if (menuGroup) router.push(`/${locale}/telegram/groups/${menuGroup.id}`)
-        }}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
+            if (menuGroup) router.push(`/${locale}/telegram/groups/${menuGroup.id}`)
+          }}
+        >
           <i className='tabler-eye text-[18px] mr-2' /> View Members
         </MenuItem>
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
-          if (menuGroup) openEdit(menuGroup)
-        }}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
+            if (menuGroup) openEdit(menuGroup)
+          }}
+        >
           <i className='tabler-edit text-[18px] mr-2' /> Edit
         </MenuItem>
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
-          if (menuGroup) {
-            setDeletingId(menuGroup.id)
-            setDeleteDialogOpen(true)
-          }
-        }}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
+
+            if (menuGroup) {
+              setDeletingId(menuGroup.id)
+              setDeleteDialogOpen(true)
+            }
+          }}
+        >
           <i className='tabler-trash text-[18px] mr-2' /> Delete
         </MenuItem>
       </Menu>
@@ -263,16 +299,22 @@ const TelegramGroupList = () => {
               rows={2}
             />
             <div>
-              <Typography variant='body2' className='mb-2'>Color</Typography>
+              <Typography variant='body2' className='mb-2'>
+                Color
+              </Typography>
               <div className='flex gap-2 flex-wrap'>
                 {COLOR_OPTIONS.map(color => (
                   <Box
                     key={color}
                     onClick={() => setFormColor(color)}
                     sx={{
-                      width: 32, height: 32, borderRadius: '50%', backgroundColor: color, cursor: 'pointer',
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      backgroundColor: color,
+                      cursor: 'pointer',
                       border: formColor === color ? '3px solid' : '2px solid transparent',
-                      borderColor: formColor === color ? 'text.primary' : 'transparent',
+                      borderColor: formColor === color ? 'text.primary' : 'transparent'
                     }}
                   />
                 ))}
@@ -297,11 +339,15 @@ const TelegramGroupList = () => {
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Group</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to delete this group? Contacts in the group will not be deleted.</Typography>
+          <Typography>
+            Are you sure you want to delete this group? Contacts in the group will not be deleted.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button variant='contained' color='error' onClick={handleDelete}>Delete</Button>
+          <Button variant='contained' color='error' onClick={handleDelete}>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -38,7 +38,6 @@ import InputLabel from '@mui/material/InputLabel'
 import InputAdornment from '@mui/material/InputAdornment'
 import Grid from '@mui/material/Grid'
 import Checkbox from '@mui/material/Checkbox'
-import Divider from '@mui/material/Divider'
 import Stepper from '@mui/material/Stepper'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
@@ -288,7 +287,11 @@ const TelegramContactList = () => {
     setAddingContact(true)
 
     try {
-      await telegramService.createContact({ ...newContact, chat_id: Number(newContact.chat_id), group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined })
+      await telegramService.createContact({
+        ...newContact,
+        chat_id: Number(newContact.chat_id),
+        group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined
+      })
       setSnackbar({ open: true, message: 'Contact added', severity: 'success' })
       setAddDialogOpen(false)
       setNewContact({ chat_id: '', username: '', first_name: '', last_name: '' })
@@ -427,7 +430,12 @@ const TelegramContactList = () => {
                     <StepContent>
                       <Typography variant='body2' color='text.secondary'>
                         Open the Telegram app on your phone or desktop. If you don&apos;t have it, download it from{' '}
-                        <a href='https://telegram.org' target='_blank' rel='noopener noreferrer' className='text-primary'>
+                        <a
+                          href='https://telegram.org'
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='text-primary'
+                        >
                           telegram.org
                         </a>
                       </Typography>
@@ -440,7 +448,9 @@ const TelegramContactList = () => {
                     <StepContent>
                       <Typography variant='body2' color='text.secondary'>
                         {botUsername ? (
-                          <>Search for <strong>@{botUsername}</strong> in Telegram, or scan the QR code shown here.</>
+                          <>
+                            Search for <strong>@{botUsername}</strong> in Telegram, or scan the QR code shown here.
+                          </>
                         ) : (
                           <>Search for the bot username in Telegram, or scan the QR code shown here.</>
                         )}
@@ -467,7 +477,10 @@ const TelegramContactList = () => {
                       <Typography variant='body2' color='text.secondary'>
                         Send the subscription command with your access code:
                       </Typography>
-                      <Box className='mt-2 p-2 rounded' sx={{ bgcolor: 'action.hover', fontFamily: 'monospace', fontSize: 14 }}>
+                      <Box
+                        className='mt-2 p-2 rounded'
+                        sx={{ bgcolor: 'action.hover', fontFamily: 'monospace', fontSize: 14 }}
+                      >
                         /start PAID4283
                       </Box>
                       <Typography variant='caption' color='text.secondary' className='mt-1 block'>
@@ -481,7 +494,8 @@ const TelegramContactList = () => {
                     </StepLabel>
                     <StepContent>
                       <Typography variant='body2' color='text.secondary'>
-                        You&apos;ll receive a confirmation message. You&apos;re now subscribed and will receive campaign messages. To unsubscribe, send <strong>/stop</strong> or block the bot.
+                        You&apos;ll receive a confirmation message. You&apos;re now subscribed and will receive campaign
+                        messages. To unsubscribe, send <strong>/stop</strong> or block the bot.
                       </Typography>
                     </StepContent>
                   </Step>
@@ -523,7 +537,12 @@ const TelegramContactList = () => {
                           disabled={uploadingQR}
                         >
                           Replace
-                          <input type='file' hidden accept='image/png,image/jpeg,image/webp' onChange={handleQRUpload} />
+                          <input
+                            type='file'
+                            hidden
+                            accept='image/png,image/jpeg,image/webp'
+                            onChange={handleQRUpload}
+                          />
                         </Button>
                         <Button
                           size='small'
@@ -636,7 +655,10 @@ const TelegramContactList = () => {
                 <Select
                   value={optedInFilter}
                   label='Opt-in Status'
-                  onChange={e => { setOptedInFilter(e.target.value); setPage(0) }}
+                  onChange={e => {
+                    setOptedInFilter(e.target.value)
+                    setPage(0)
+                  }}
                 >
                   <MenuItem value=''>All</MenuItem>
                   <MenuItem value='true'>Opted In</MenuItem>
@@ -650,7 +672,10 @@ const TelegramContactList = () => {
                 <Select
                   value={tagFilter}
                   label='Tag'
-                  onChange={e => { setTagFilter(e.target.value); setPage(0) }}
+                  onChange={e => {
+                    setTagFilter(e.target.value)
+                    setPage(0)
+                  }}
                 >
                   <MenuItem value=''>All Tags</MenuItem>
                   {availableTags.map(t => (
@@ -674,7 +699,9 @@ const TelegramContactList = () => {
         ) : contacts.length === 0 ? (
           <CardContent>
             <Typography color='text.secondary' align='center' className='py-8'>
-              {globalFilter || optedInFilter || tagFilter ? 'No contacts match your search' : 'No contacts yet. Add or import contacts to get started.'}
+              {globalFilter || optedInFilter || tagFilter
+                ? 'No contacts match your search'
+                : 'No contacts yet. Add or import contacts to get started.'}
             </Typography>
           </CardContent>
         ) : (
@@ -727,12 +754,15 @@ const TelegramContactList = () => {
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <div className='flex gap-1 flex-wrap'>
-                          {contact.tags && contact.tags.length > 0
-                            ? contact.tags.slice(0, 3).map((tag, i) => (
-                              <Chip key={i} label={tag} size='small' variant='outlined' />
-                            ))
-                            : <Typography variant='body2' color='text.secondary'>-</Typography>
-                          }
+                          {contact.tags && contact.tags.length > 0 ? (
+                            contact.tags
+                              .slice(0, 3)
+                              .map((tag, i) => <Chip key={i} label={tag} size='small' variant='outlined' />)
+                          ) : (
+                            <Typography variant='body2' color='text.secondary'>
+                              -
+                            </Typography>
+                          )}
                           {contact.tags && contact.tags.length > 3 && (
                             <Chip label={`+${contact.tags.length - 3}`} size='small' variant='outlined' />
                           )}
@@ -751,7 +781,7 @@ const TelegramContactList = () => {
                         <IconButton
                           size='small'
                           aria-label='Contact actions'
-                          onClick={(e) => {
+                          onClick={e => {
                             setAnchorEl(e.currentTarget)
                             setMenuContactId(contact.id)
                             setMenuContact(contact)
@@ -782,26 +812,26 @@ const TelegramContactList = () => {
       </Card>
 
       {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-      >
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
 
-          if (menuContact) {
-            openEditDialog(menuContact)
-          }
-        }}>
+            if (menuContact) {
+              openEditDialog(menuContact)
+            }
+          }}
+        >
           <i className='tabler-edit text-[18px] mr-2' />
           Edit
         </MenuItem>
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
-          setDeletingId(menuContactId)
-          setDeleteDialogOpen(true)
-        }}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
+            setDeletingId(menuContactId)
+            setDeleteDialogOpen(true)
+          }}
+        >
           <i className='tabler-trash text-[18px] mr-2' />
           Delete
         </MenuItem>
@@ -815,7 +845,9 @@ const TelegramContactList = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button variant='contained' color='error' onClick={handleDelete}>Delete</Button>
+          <Button variant='contained' color='error' onClick={handleDelete}>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -823,7 +855,9 @@ const TelegramContactList = () => {
       <Dialog open={bulkDeleteDialogOpen} onClose={() => setBulkDeleteDialogOpen(false)}>
         <DialogTitle>Delete {selectedIds.length} Contacts</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to delete {selectedIds.length} selected contacts? This action cannot be undone.</Typography>
+          <Typography>
+            Are you sure you want to delete {selectedIds.length} selected contacts? This action cannot be undone.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBulkDeleteDialogOpen(false)}>Cancel</Button>
@@ -883,7 +917,7 @@ const TelegramContactList = () => {
                   value={selectedGroupIds}
                   label='Groups'
                   onChange={e => setSelectedGroupIds(e.target.value as number[])}
-                  renderValue={(selected) => (
+                  renderValue={selected => (
                     <div className='flex gap-1 flex-wrap'>
                       {(selected as number[]).map(id => {
                         const group = availableGroups.find(g => g.id === id)
@@ -960,7 +994,7 @@ const TelegramContactList = () => {
                     value={editGroupIds}
                     label='Groups'
                     onChange={e => setEditGroupIds(e.target.value as number[])}
-                    renderValue={(selected) => (
+                    renderValue={selected => (
                       <div className='flex gap-1 flex-wrap'>
                         {(selected as number[]).map(id => {
                           const group = availableGroups.find(g => g.id === id)
@@ -1006,11 +1040,7 @@ const TelegramContactList = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

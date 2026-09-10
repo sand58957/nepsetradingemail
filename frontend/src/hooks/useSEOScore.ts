@@ -39,6 +39,7 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
 
     // 1. Keyword in title (10 pts)
     const titleHasKeyword = kw && input.title.toLowerCase().includes(kw)
+
     checks.push({
       id: 'keyword-title',
       label: 'Primary keyword in title',
@@ -51,6 +52,7 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
     // 2. Keyword in first 100 words (10 pts)
     const first100 = input.contentText.split(/\s+/).slice(0, 100).join(' ').toLowerCase()
     const kwInFirst100 = kw && first100.includes(kw)
+
     checks.push({
       id: 'keyword-intro',
       label: 'Keyword in first 100 words',
@@ -62,13 +64,16 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
 
     // 3. Keyword density 1-3% (15 pts)
     let densityOk = false
+
     if (kw && input.wordCount > 0) {
       const kwRegex = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
       const matches = input.contentText.match(kwRegex)
       const count = matches ? matches.length : 0
       const density = (count / input.wordCount) * 100
+
       densityOk = density >= 0.5 && density <= 3.5
     }
+
     checks.push({
       id: 'keyword-density',
       label: 'Keyword density (0.5-3.5%)',
@@ -81,6 +86,7 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
     // 4. Meta title length 50-60 chars (10 pts)
     const mtLen = input.metaTitle.length
     const metaTitleOk = mtLen >= 30 && mtLen <= 65
+
     checks.push({
       id: 'meta-title',
       label: `Meta title length (${mtLen}/60)`,
@@ -93,6 +99,7 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
     // 5. Meta description 120-155 chars (10 pts)
     const mdLen = input.metaDescription.length
     const metaDescOk = mdLen >= 80 && mdLen <= 160
+
     checks.push({
       id: 'meta-desc',
       label: `Meta description length (${mdLen}/155)`,
@@ -104,6 +111,7 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
 
     // 6. Has H2 headings (10 pts)
     const hasH2 = input.headings.length >= 2
+
     checks.push({
       id: 'headings',
       label: `Heading structure (${input.headings.length} headings)`,
@@ -115,6 +123,7 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
 
     // 7. Content length > 1000 words (15 pts)
     const lengthOk = input.wordCount >= 1000
+
     checks.push({
       id: 'content-length',
       label: `Content length (${input.wordCount} words)`,
@@ -126,6 +135,7 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
 
     // 8. Has internal/external links (10 pts)
     const hasLinks = input.hasInternalLinks || input.hasExternalLinks
+
     checks.push({
       id: 'links',
       label: 'Internal or external links',
@@ -137,6 +147,7 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
 
     // 9. Images with alt tags (10 pts)
     const imgOk = !input.hasImages || input.imagesHaveAlt
+
     checks.push({
       id: 'image-alt',
       label: 'Images have alt text',
@@ -148,6 +159,7 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
 
     // BONUS: Quick Answer for AEO (+5 pts counted in total but doesn't exceed 100)
     const hasQuickAnswer = input.quickAnswer.length > 30
+
     checks.push({
       id: 'quick-answer',
       label: 'Quick answer for AEO',
@@ -167,20 +179,45 @@ export function useSEOScore(input: SEOInput): SEOScoreResult {
       suggestion: input.hasFAQs ? undefined : 'Add FAQ section for Answer Engine Optimization'
     })
 
-    const score = Math.min(100, checks.reduce((sum, c) => sum + c.points, 0))
+    const score = Math.min(
+      100,
+      checks.reduce((sum, c) => sum + c.points, 0)
+    )
 
     let grade: 'A' | 'B' | 'C' | 'D' | 'F'
     let gradeColor: string
-    if (score >= 80) { grade = 'A'; gradeColor = '#4caf50' }
-    else if (score >= 60) { grade = 'B'; gradeColor = '#8bc34a' }
-    else if (score >= 40) { grade = 'C'; gradeColor = '#ff9800' }
-    else if (score >= 20) { grade = 'D'; gradeColor = '#f44336' }
-    else { grade = 'F'; gradeColor = '#9e9e9e' }
+
+    if (score >= 80) {
+      grade = 'A'
+      gradeColor = '#4caf50'
+    } else if (score >= 60) {
+      grade = 'B'
+      gradeColor = '#8bc34a'
+    } else if (score >= 40) {
+      grade = 'C'
+      gradeColor = '#ff9800'
+    } else if (score >= 20) {
+      grade = 'D'
+      gradeColor = '#f44336'
+    } else {
+      grade = 'F'
+      gradeColor = '#9e9e9e'
+    }
 
     return { score, checks, grade, gradeColor }
   }, [
-    input.title, input.contentText, input.metaTitle, input.metaDescription,
-    input.primaryKeyword, input.headings, input.hasInternalLinks, input.hasExternalLinks,
-    input.hasImages, input.imagesHaveAlt, input.wordCount, input.quickAnswer, input.hasFAQs
+    input.title,
+    input.contentText,
+    input.metaTitle,
+    input.metaDescription,
+    input.primaryKeyword,
+    input.headings,
+    input.hasInternalLinks,
+    input.hasExternalLinks,
+    input.hasImages,
+    input.imagesHaveAlt,
+    input.wordCount,
+    input.quickAnswer,
+    input.hasFAQs
   ])
 }

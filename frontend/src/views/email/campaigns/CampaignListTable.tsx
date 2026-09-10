@@ -35,12 +35,7 @@ import DialogActions from '@mui/material/DialogActions'
 
 // Third-party Imports
 import classnames from 'classnames'
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable
-} from '@tanstack/react-table'
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import type { ColumnDef } from '@tanstack/react-table'
 
 // Type Imports
@@ -93,7 +88,9 @@ const CampaignListTable = () => {
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
+    open: false,
+    message: '',
+    severity: 'success'
   })
 
   const isMobile = useMobileBreakpoint()
@@ -132,6 +129,7 @@ const CampaignListTable = () => {
           .replace(/[;\-\\]/g, '')
           .replace(/\/\*/g, '')
           .slice(0, 200)
+
         const searchQuery = `campaigns.name ILIKE '%${sanitized}%' OR campaigns.subject ILIKE '%${sanitized}%'`
 
         query = query ? `(${query}) AND (${searchQuery})` : searchQuery
@@ -233,9 +231,7 @@ const CampaignListTable = () => {
         header: 'Sent',
         cell: ({ row }) => (
           <div>
-            <Typography>
-              {row.original.sent > 0 ? row.original.sent.toLocaleString() : '-'}
-            </Typography>
+            <Typography>{row.original.sent > 0 ? row.original.sent.toLocaleString() : '-'}</Typography>
             {row.original.status === 'running' && row.original.to_send > 0 && (
               <div className='flex items-center gap-2 mt-1'>
                 <LinearProgress
@@ -304,7 +300,11 @@ const CampaignListTable = () => {
         cell: ({ row }) => (
           <div className='flex items-center gap-1'>
             <Tooltip title='Edit'>
-              <IconButton size='small' aria-label='Edit campaign' onClick={() => router.push(`/${locale}/campaigns/${row.original.id}`)}>
+              <IconButton
+                size='small'
+                aria-label='Edit campaign'
+                onClick={() => router.push(`/${locale}/campaigns/${row.original.id}`)}
+              >
                 <i className='tabler-pencil text-[22px] text-textSecondary' />
               </IconButton>
             </Tooltip>
@@ -395,7 +395,9 @@ const CampaignListTable = () => {
         {loading ? (
           <div className='flex justify-center items-center py-16'>
             <CircularProgress size={32} />
-            <Typography className='ml-3' color='text.secondary'>Loading campaigns...</Typography>
+            <Typography className='ml-3' color='text.secondary'>
+              Loading campaigns...
+            </Typography>
           </div>
         ) : (
           <>
@@ -465,25 +467,26 @@ const CampaignListTable = () => {
       </Card>
 
       {/* Action Menu */}
-      <Menu
-        anchorEl={actionMenuAnchor}
-        open={Boolean(actionMenuAnchor)}
-        onClose={() => setActionMenuAnchor(null)}
-      >
-        <MenuItem onClick={() => {
-          if (selectedCampaignId) handleDuplicate(selectedCampaignId)
-          setActionMenuAnchor(null)
-        }}>
+      <Menu anchorEl={actionMenuAnchor} open={Boolean(actionMenuAnchor)} onClose={() => setActionMenuAnchor(null)}>
+        <MenuItem
+          onClick={() => {
+            if (selectedCampaignId) handleDuplicate(selectedCampaignId)
+            setActionMenuAnchor(null)
+          }}
+        >
           <i className='tabler-copy text-[18px] mie-2' /> Duplicate
         </MenuItem>
-        <MenuItem onClick={() => {
-          setActionMenuAnchor(null)
+        <MenuItem
+          onClick={() => {
+            setActionMenuAnchor(null)
 
-          if (selectedCampaignId) {
-            setDeletingId(selectedCampaignId)
-            setDeleteDialogOpen(true)
-          }
-        }} className='text-error'>
+            if (selectedCampaignId) {
+              setDeletingId(selectedCampaignId)
+              setDeleteDialogOpen(true)
+            }
+          }}
+          className='text-error'
+        >
           <i className='tabler-trash text-[18px] mie-2' /> Delete
         </MenuItem>
       </Menu>
@@ -497,8 +500,12 @@ const CampaignListTable = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color='secondary'>Cancel</Button>
-          <Button onClick={handleDelete} color='error' variant='contained'>Delete</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='secondary'>
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} color='error' variant='contained'>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -509,11 +516,7 @@ const CampaignListTable = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

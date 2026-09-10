@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+
 import { useRouter, useParams } from 'next/navigation'
 
 import Card from '@mui/material/Card'
@@ -75,17 +76,27 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
+    open: false,
+    message: '',
+    severity: 'success'
   })
 
   // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => { setDebouncedSearch(searchTerm); setPage(0) }, 300)
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+      setPage(0)
+    }, 300)
+
     return () => clearTimeout(timer)
   }, [searchTerm])
 
   useEffect(() => {
-    const timer = setTimeout(() => { setAddDebouncedSearch(addSearch); setAddPage(0) }, 300)
+    const timer = setTimeout(() => {
+      setAddDebouncedSearch(addSearch)
+      setAddPage(0)
+    }, 300)
+
     return () => clearTimeout(timer)
   }, [addSearch])
 
@@ -93,8 +104,10 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
   useEffect(() => {
     const fetchGroup = async () => {
       setLoadingGroup(true)
+
       try {
         const response = await telegramService.getGroup(groupId)
+
         setGroup(response.data.group)
         setMemberCount(response.data.member_count)
       } catch {
@@ -103,18 +116,21 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
         setLoadingGroup(false)
       }
     }
+
     fetchGroup()
   }, [groupId])
 
   // Fetch members
   const fetchMembers = useCallback(async () => {
     setLoadingMembers(true)
+
     try {
       const response = await telegramService.getGroupMembers(groupId, {
         page: page + 1,
         per_page: rowsPerPage,
         query: debouncedSearch || undefined
       })
+
       setMembers(response.data?.results || [])
       setTotalMembers(response.data?.total || 0)
     } catch {
@@ -124,17 +140,21 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
     }
   }, [groupId, page, rowsPerPage, debouncedSearch])
 
-  useEffect(() => { fetchMembers() }, [fetchMembers])
+  useEffect(() => {
+    fetchMembers()
+  }, [fetchMembers])
 
   // Fetch all contacts for add dialog
   const fetchAllContacts = useCallback(async () => {
     setLoadingAllContacts(true)
+
     try {
       const response = await telegramService.getContacts({
         page: addPage + 1,
         per_page: 25,
         query: addDebouncedSearch || undefined
       })
+
       setAllContacts(response.data?.results || [])
       setAllContactsTotal(response.data?.total || 0)
     } catch {
@@ -152,15 +172,19 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
   const handleAddMembers = async () => {
     if (addSelectedIds.length === 0) return
     setAddingMembers(true)
+
     try {
       const response = await telegramService.addGroupMembers(groupId, addSelectedIds)
+
       setSnackbar({ open: true, message: `${response.data.added} contacts added to group`, severity: 'success' })
       setAddDialogOpen(false)
       setAddSelectedIds([])
       setAddSearch('')
       fetchMembers()
+
       // Update member count
       const groupRes = await telegramService.getGroup(groupId)
+
       setMemberCount(groupRes.data.member_count)
     } catch {
       setSnackbar({ open: true, message: 'Failed to add members', severity: 'error' })
@@ -172,13 +196,16 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
   // Remove members
   const handleRemoveMembers = async () => {
     if (selectedIds.length === 0) return
+
     try {
       const response = await telegramService.removeGroupMembers(groupId, selectedIds)
+
       setSnackbar({ open: true, message: `${response.data.removed} contacts removed from group`, severity: 'success' })
       setRemoveDialogOpen(false)
       setSelectedIds([])
       fetchMembers()
       const groupRes = await telegramService.getGroup(groupId)
+
       setMemberCount(groupRes.data.member_count)
     } catch {
       setSnackbar({ open: true, message: 'Failed to remove members', severity: 'error' })
@@ -190,7 +217,7 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
   }
 
   const handleSelectOne = (id: number, checked: boolean) => {
-    setSelectedIds(prev => checked ? [...prev, id] : prev.filter(i => i !== id))
+    setSelectedIds(prev => (checked ? [...prev, id] : prev.filter(i => i !== id)))
   }
 
   const getDisplayName = (contact: TelegramContact) => {
@@ -205,7 +232,9 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
     return (
       <Card>
         <CardContent>
-          <Box display='flex' justifyContent='center' p={4}><CircularProgress /></Box>
+          <Box display='flex' justifyContent='center' p={4}>
+            <CircularProgress />
+          </Box>
         </CardContent>
       </Card>
     )
@@ -215,7 +244,9 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
     return (
       <Card>
         <CardContent>
-          <Typography color='text.secondary' align='center' className='py-8'>Group not found</Typography>
+          <Typography color='text.secondary' align='center' className='py-8'>
+            Group not found
+          </Typography>
         </CardContent>
       </Card>
     )
@@ -232,7 +263,9 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
               <div>
                 <Typography variant='h5'>{group.name}</Typography>
                 {group.description && (
-                  <Typography variant='body2' color='text.secondary'>{group.description}</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    {group.description}
+                  </Typography>
                 )}
               </div>
               <Chip label={`${memberCount} members`} size='small' variant='tonal' color='primary' />
@@ -301,12 +334,16 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
 
         {loadingMembers ? (
           <CardContent>
-            <Box display='flex' justifyContent='center' p={4}><CircularProgress /></Box>
+            <Box display='flex' justifyContent='center' p={4}>
+              <CircularProgress />
+            </Box>
           </CardContent>
         ) : members.length === 0 ? (
           <CardContent>
             <Typography color='text.secondary' align='center' className='py-8'>
-              {debouncedSearch ? 'No members match your search' : 'No members in this group yet. Click "Add Members" to get started.'}
+              {debouncedSearch
+                ? 'No members match your search'
+                : 'No members in this group yet. Click "Add Members" to get started.'}
             </Typography>
           </CardContent>
         ) : (
@@ -339,22 +376,34 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
                           onChange={e => handleSelectOne(contact.id, e.target.checked)}
                         />
                       </TableCell>
-                      <TableCell><Typography className='font-medium'>{contact.chat_id}</Typography></TableCell>
-                      <TableCell><Typography>{contact.username ? `@${contact.username}` : '-'}</Typography></TableCell>
-                      <TableCell><Typography>{getDisplayName(contact)}</Typography></TableCell>
+                      <TableCell>
+                        <Typography className='font-medium'>{contact.chat_id}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography>{contact.username ? `@${contact.username}` : '-'}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography>{getDisplayName(contact)}</Typography>
+                      </TableCell>
                       <TableCell>
                         <Chip
                           label={contact.opted_in ? 'Opted In' : 'Opted Out'}
                           color={contact.opted_in ? 'success' : 'default'}
-                          size='small' variant='tonal'
+                          size='small'
+                          variant='tonal'
                         />
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <div className='flex gap-1 flex-wrap'>
-                          {contact.tags && contact.tags.length > 0
-                            ? contact.tags.slice(0, 3).map((tag, i) => <Chip key={i} label={tag} size='small' variant='outlined' />)
-                            : <Typography variant='body2' color='text.secondary'>-</Typography>
-                          }
+                          {contact.tags && contact.tags.length > 0 ? (
+                            contact.tags
+                              .slice(0, 3)
+                              .map((tag, i) => <Chip key={i} label={tag} size='small' variant='outlined' />)
+                          ) : (
+                            <Typography variant='body2' color='text.secondary'>
+                              -
+                            </Typography>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell align='center'>
@@ -381,7 +430,10 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={(_, newPage) => setPage(newPage)}
-              onRowsPerPageChange={e => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0) }}
+              onRowsPerPageChange={e => {
+                setRowsPerPage(parseInt(e.target.value, 10))
+                setPage(0)
+              }}
               rowsPerPageOptions={[10, 25, 50, 100]}
             />
           </>
@@ -415,7 +467,9 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
             </Alert>
           )}
           {loadingAllContacts ? (
-            <Box display='flex' justifyContent='center' p={4}><CircularProgress /></Box>
+            <Box display='flex' justifyContent='center' p={4}>
+              <CircularProgress />
+            </Box>
           ) : (
             <>
               <TableContainer>
@@ -425,7 +479,10 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
                       <TableCell padding='checkbox'>
                         <Checkbox
                           checked={allContacts.length > 0 && allContacts.every(c => addSelectedIds.includes(c.id))}
-                          indeterminate={allContacts.some(c => addSelectedIds.includes(c.id)) && !allContacts.every(c => addSelectedIds.includes(c.id))}
+                          indeterminate={
+                            allContacts.some(c => addSelectedIds.includes(c.id)) &&
+                            !allContacts.every(c => addSelectedIds.includes(c.id))
+                          }
                           onChange={e => {
                             if (e.target.checked) {
                               setAddSelectedIds(prev => [...new Set([...prev, ...allContacts.map(c => c.id)])])
@@ -463,7 +520,8 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
                           <Chip
                             label={contact.opted_in ? 'Opted In' : 'Opted Out'}
                             color={contact.opted_in ? 'success' : 'default'}
-                            size='small' variant='tonal'
+                            size='small'
+                            variant='tonal'
                           />
                         </TableCell>
                       </TableRow>
@@ -490,7 +548,9 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
             disabled={addingMembers || addSelectedIds.length === 0}
             startIcon={addingMembers ? <CircularProgress size={18} /> : <i className='tabler-user-plus' />}
           >
-            {addingMembers ? 'Adding...' : `Add ${addSelectedIds.length} Contact${addSelectedIds.length !== 1 ? 's' : ''}`}
+            {addingMembers
+              ? 'Adding...'
+              : `Add ${addSelectedIds.length} Contact${addSelectedIds.length !== 1 ? 's' : ''}`}
           </Button>
         </DialogActions>
       </Dialog>
@@ -500,13 +560,15 @@ const TelegramGroupDetail = ({ id }: TelegramGroupDetailProps) => {
         <DialogTitle>Remove Members</DialogTitle>
         <DialogContent>
           <Typography>
-            Remove {selectedIds.length} selected contact{selectedIds.length !== 1 ? 's' : ''} from this group?
-            The contacts will not be deleted, only removed from the group.
+            Remove {selectedIds.length} selected contact{selectedIds.length !== 1 ? 's' : ''} from this group? The
+            contacts will not be deleted, only removed from the group.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRemoveDialogOpen(false)}>Cancel</Button>
-          <Button variant='contained' color='error' onClick={handleRemoveMembers}>Remove</Button>
+          <Button variant='contained' color='error' onClick={handleRemoveMembers}>
+            Remove
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -76,8 +76,6 @@ const MessengerSettings = () => {
         }
       } catch (err: any) {
         if (err?.response?.status === 401) return
-
-
       } finally {
         setLoading(false)
       }
@@ -87,7 +85,13 @@ const MessengerSettings = () => {
   }, [])
 
   const handleSave = async () => {
-    if (!settings.page_id || !settings.page_access_token || !settings.app_id || !settings.app_secret || !settings.verify_token) {
+    if (
+      !settings.page_id ||
+      !settings.page_access_token ||
+      !settings.app_id ||
+      !settings.app_secret ||
+      !settings.verify_token
+    ) {
       setSnackbar({ open: true, message: 'Please fill in all required fields', severity: 'error' })
 
       return
@@ -203,7 +207,9 @@ const MessengerSettings = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading settings...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading settings...
+        </Typography>
       </div>
     )
   }
@@ -233,7 +239,12 @@ const MessengerSettings = () => {
                     <Chip label='Disconnected' color='error' variant='tonal' icon={<i className='tabler-x' />} />
                   )}
                   {pageName && (
-                    <Chip label={pageName} color='info' variant='tonal' icon={<i className='tabler-brand-facebook' />} />
+                    <Chip
+                      label={pageName}
+                      color='info'
+                      variant='tonal'
+                      icon={<i className='tabler-brand-facebook' />}
+                    />
                   )}
                 </div>
               </div>
@@ -268,7 +279,11 @@ const MessengerSettings = () => {
                     input: {
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <IconButton onClick={() => setShowPageAccessToken(!showPageAccessToken)} edge='end' aria-label={showPageAccessToken ? 'Hide page access token' : 'Show page access token'}>
+                          <IconButton
+                            onClick={() => setShowPageAccessToken(!showPageAccessToken)}
+                            edge='end'
+                            aria-label={showPageAccessToken ? 'Hide page access token' : 'Show page access token'}
+                          >
                             <i className={showPageAccessToken ? 'tabler-eye-off' : 'tabler-eye'} />
                           </IconButton>
                         </InputAdornment>
@@ -300,7 +315,11 @@ const MessengerSettings = () => {
                     input: {
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <IconButton onClick={() => setShowAppSecret(!showAppSecret)} edge='end' aria-label={showAppSecret ? 'Hide app secret' : 'Show app secret'}>
+                          <IconButton
+                            onClick={() => setShowAppSecret(!showAppSecret)}
+                            edge='end'
+                            aria-label={showAppSecret ? 'Hide app secret' : 'Show app secret'}
+                          >
                             <i className={showAppSecret ? 'tabler-eye-off' : 'tabler-eye'} />
                           </IconButton>
                         </InputAdornment>
@@ -338,7 +357,8 @@ const MessengerSettings = () => {
                   Opt-in Keyword Settings
                 </Typography>
                 <Typography variant='body2' color='text.secondary' className='-mt-3'>
-                  Require users to send a secret keyword before adding them as contacts. Leave empty to auto-subscribe all users who message the page.
+                  Require users to send a secret keyword before adding them as contacts. Leave empty to auto-subscribe
+                  all users who message the page.
                 </Typography>
 
                 <div className='flex flex-col sm:flex-row gap-3 sm:items-start'>
@@ -417,86 +437,140 @@ const MessengerSettings = () => {
                     You need a Facebook App with Messenger product to use this feature.
                   </Alert>
 
-                  <Typography variant='subtitle2' color='primary'>Step 1: Create a Facebook App</Typography>
+                  <Typography variant='subtitle2' color='primary'>
+                    Step 1: Create a Facebook App
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
                     Go to{' '}
-                    <a href='https://developers.facebook.com/apps/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
+                    <a
+                      href='https://developers.facebook.com/apps/'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      style={{ color: 'var(--mui-palette-primary-main)' }}
+                    >
                       developers.facebook.com/apps
-                    </a>
-                    {' '}&rarr; Click <strong>&ldquo;Create App&rdquo;</strong> &rarr; Select <strong>&ldquo;Business&rdquo;</strong> type &rarr; Enter app name &rarr; Click <strong>&ldquo;Create&rdquo;</strong>.
+                    </a>{' '}
+                    &rarr; Click <strong>&ldquo;Create App&rdquo;</strong> &rarr; Select{' '}
+                    <strong>&ldquo;Business&rdquo;</strong> type &rarr; Enter app name &rarr; Click{' '}
+                    <strong>&ldquo;Create&rdquo;</strong>.
                   </Typography>
 
                   <Divider />
 
-                  <Typography variant='subtitle2' color='primary'>Step 2: Add Messenger Product</Typography>
+                  <Typography variant='subtitle2' color='primary'>
+                    Step 2: Add Messenger Product
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    In your App Dashboard &rarr; Click <strong>&ldquo;Use Cases&rdquo;</strong> in sidebar &rarr; Select <strong>&ldquo;Messenger from Meta&rdquo;</strong> &rarr; Click <strong>&ldquo;Messenger API Settings&rdquo;</strong>.
+                    In your App Dashboard &rarr; Click <strong>&ldquo;Use Cases&rdquo;</strong> in sidebar &rarr; Select{' '}
+                    <strong>&ldquo;Messenger from Meta&rdquo;</strong> &rarr; Click{' '}
+                    <strong>&ldquo;Messenger API Settings&rdquo;</strong>.
                   </Typography>
 
                   <Divider />
 
-                  <Typography variant='subtitle2' color='primary'>Step 3: Get App ID &amp; App Secret</Typography>
+                  <Typography variant='subtitle2' color='primary'>
+                    Step 3: Get App ID &amp; App Secret
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
                     In your app at{' '}
-                    <a href='https://developers.facebook.com/apps/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
+                    <a
+                      href='https://developers.facebook.com/apps/'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      style={{ color: 'var(--mui-palette-primary-main)' }}
+                    >
                       developers.facebook.com
-                    </a>
-                    {' '}&rarr; Sidebar &rarr; <strong>&ldquo;App Settings&rdquo;</strong> &rarr; <strong>&ldquo;Basic&rdquo;</strong>. Copy the <strong>App ID</strong> and click <strong>&ldquo;Show&rdquo;</strong> next to App Secret to copy it.
+                    </a>{' '}
+                    &rarr; Sidebar &rarr; <strong>&ldquo;App Settings&rdquo;</strong> &rarr;{' '}
+                    <strong>&ldquo;Basic&rdquo;</strong>. Copy the <strong>App ID</strong> and click{' '}
+                    <strong>&ldquo;Show&rdquo;</strong> next to App Secret to copy it.
                   </Typography>
 
                   <Divider />
 
-                  <Typography variant='subtitle2' color='primary'>Step 4: Get Page ID</Typography>
+                  <Typography variant='subtitle2' color='primary'>
+                    Step 4: Get Page ID
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    Go to your Facebook Page &rarr; Click <strong>&ldquo;About&rdquo;</strong> &rarr; Scroll to <strong>&ldquo;Page Transparency&rdquo;</strong> section &rarr; Copy the <strong>Page ID</strong> (numeric). Or use Graph API Explorer: select your page and the ID shows in the response.
+                    Go to your Facebook Page &rarr; Click <strong>&ldquo;About&rdquo;</strong> &rarr; Scroll to{' '}
+                    <strong>&ldquo;Page Transparency&rdquo;</strong> section &rarr; Copy the <strong>Page ID</strong>{' '}
+                    (numeric). Or use Graph API Explorer: select your page and the ID shows in the response.
                   </Typography>
 
                   <Divider />
 
-                  <Typography variant='subtitle2' color='primary'>Step 5: Generate Page Access Token</Typography>
+                  <Typography variant='subtitle2' color='primary'>
+                    Step 5: Generate Page Access Token
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
                     Go to{' '}
-                    <a href='https://developers.facebook.com/tools/explorer/' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
+                    <a
+                      href='https://developers.facebook.com/tools/explorer/'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      style={{ color: 'var(--mui-palette-primary-main)' }}
+                    >
                       Graph API Explorer
-                    </a>
-                    {' '}&rarr; Select your app &rarr; Add permissions: <strong>pages_messaging, pages_manage_metadata, pages_read_engagement, pages_show_list</strong> &rarr; Click <strong>&ldquo;Generate Access Token&rdquo;</strong> &rarr; Approve all permissions &rarr; Change dropdown from <strong>&ldquo;User Token&rdquo;</strong> to <strong>&ldquo;Page Token&rdquo;</strong> &rarr; Select your page &rarr; Copy the token.
+                    </a>{' '}
+                    &rarr; Select your app &rarr; Add permissions:{' '}
+                    <strong>pages_messaging, pages_manage_metadata, pages_read_engagement, pages_show_list</strong>{' '}
+                    &rarr; Click <strong>&ldquo;Generate Access Token&rdquo;</strong> &rarr; Approve all permissions
+                    &rarr; Change dropdown from <strong>&ldquo;User Token&rdquo;</strong> to{' '}
+                    <strong>&ldquo;Page Token&rdquo;</strong> &rarr; Select your page &rarr; Copy the token.
                   </Typography>
                   <Alert severity='warning' variant='outlined' sx={{ py: 0.5 }}>
                     <Typography variant='caption'>
-                      Short-lived tokens expire in ~2 hours. For production, generate a long-lived token from the Messenger API Settings page under &ldquo;Generate access tokens&rdquo;.
+                      Short-lived tokens expire in ~2 hours. For production, generate a long-lived token from the
+                      Messenger API Settings page under &ldquo;Generate access tokens&rdquo;.
                     </Typography>
                   </Alert>
 
                   <Divider />
 
-                  <Typography variant='subtitle2' color='primary'>Step 6: Configure Webhook</Typography>
+                  <Typography variant='subtitle2' color='primary'>
+                    Step 6: Configure Webhook
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    In Messenger API Settings &rarr; <strong>&ldquo;Configure webhooks&rdquo;</strong> &rarr; Click <strong>&ldquo;Edit&rdquo;</strong> &rarr; Set Callback URL to: <strong>https://nepalfillings.com/api/webhooks/messenger/YOUR_ACCOUNT_ID</strong> &rarr; Set Verify Token to the same value entered here &rarr; Click <strong>&ldquo;Verify and Save&rdquo;</strong>.
+                    In Messenger API Settings &rarr; <strong>&ldquo;Configure webhooks&rdquo;</strong> &rarr; Click{' '}
+                    <strong>&ldquo;Edit&rdquo;</strong> &rarr; Set Callback URL to:{' '}
+                    <strong>https://nepalfillings.com/api/webhooks/messenger/YOUR_ACCOUNT_ID</strong> &rarr; Set Verify
+                    Token to the same value entered here &rarr; Click <strong>&ldquo;Verify and Save&rdquo;</strong>.
                   </Typography>
 
                   <Divider />
 
-                  <Typography variant='subtitle2' color='primary'>Step 7: Subscribe Page to Webhook</Typography>
+                  <Typography variant='subtitle2' color='primary'>
+                    Step 7: Subscribe Page to Webhook
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    In Messenger API Settings &rarr; <strong>&ldquo;Generate access tokens&rdquo;</strong> section &rarr; Find your page &rarr; Click <strong>&ldquo;Subscribe&rdquo;</strong> button next to it. Ensure <strong>messages, messaging_postbacks, messaging_optins</strong> are checked.
+                    In Messenger API Settings &rarr; <strong>&ldquo;Generate access tokens&rdquo;</strong> section
+                    &rarr; Find your page &rarr; Click <strong>&ldquo;Subscribe&rdquo;</strong> button next to it.
+                    Ensure <strong>messages, messaging_postbacks, messaging_optins</strong> are checked.
                   </Typography>
 
                   <Divider />
 
-                  <Typography variant='subtitle2' color='primary'>Step 8: Test Connection</Typography>
+                  <Typography variant='subtitle2' color='primary'>
+                    Step 8: Test Connection
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    Fill all fields above &rarr; Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click <strong>&ldquo;Test Connection&rdquo;</strong>. If successful, your Page name will appear. Then send a message from your personal Messenger to test the webhook.
+                    Fill all fields above &rarr; Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click{' '}
+                    <strong>&ldquo;Test Connection&rdquo;</strong>. If successful, your Page name will appear. Then send
+                    a message from your personal Messenger to test the webhook.
                   </Typography>
 
                   <Divider />
 
                   <Alert severity='success' icon={<i className='tabler-free-rights' />}>
-                    Messenger messaging is free within the 24-hour window. After 24 hours since user&apos;s last message, you need a Message Tag to send.
+                    Messenger messaging is free within the 24-hour window. After 24 hours since user&apos;s last
+                    message, you need a Message Tag to send.
                   </Alert>
 
                   <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
                     <Typography variant='caption'>
-                      <strong>Note:</strong> In Development mode, only app admins, developers, and testers can receive messages. Go to <strong>App Roles</strong> to add testers, or submit for <strong>App Review</strong> to go live.
+                      <strong>Note:</strong> In Development mode, only app admins, developers, and testers can receive
+                      messages. Go to <strong>App Roles</strong> to add testers, or submit for{' '}
+                      <strong>App Review</strong> to go live.
                     </Typography>
                   </Alert>
                 </div>
@@ -578,7 +652,8 @@ const MessengerSettings = () => {
 
                   <Alert severity='info' variant='outlined'>
                     <Typography variant='caption'>
-                      Share this QR code with customers. When they scan it, it will open Messenger and they can send the opt-in keyword to subscribe.
+                      Share this QR code with customers. When they scan it, it will open Messenger and they can send the
+                      opt-in keyword to subscribe.
                     </Typography>
                   </Alert>
                 </div>
@@ -595,11 +670,7 @@ const MessengerSettings = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

@@ -8,8 +8,7 @@ import Box from '@mui/material/Box'
 
 export const metadata = {
   title: 'Terms of Service - Nepal Fillings',
-  description:
-    'Terms of Service for Nepal Fillings Digital Marketing Platform by Marketminds Investment Group Pvt Ltd.'
+  description: 'Terms of Service for Nepal Fillings Digital Marketing Platform by Marketminds Investment Group Pvt Ltd.'
 }
 
 const TermsOfServicePage = () => {
@@ -75,11 +74,11 @@ const TermsOfServicePage = () => {
                 <li>You must provide accurate, complete, and current information during registration</li>
                 <li>You are responsible for maintaining the confidentiality of your login credentials and API keys</li>
                 <li>You must notify us immediately of any unauthorized access to your account</li>
-                <li>One person or entity may maintain multiple accounts, each isolated with separate data and credits</li>
-                <li>You must be at least 18 years of age to use our services</li>
                 <li>
-                  Businesses must be registered under Nepalese law or the applicable laws of their jurisdiction
+                  One person or entity may maintain multiple accounts, each isolated with separate data and credits
                 </li>
+                <li>You must be at least 18 years of age to use our services</li>
+                <li>Businesses must be registered under Nepalese law or the applicable laws of their jurisdiction</li>
               </ul>
             </Typography>
           </Box>
@@ -139,7 +138,8 @@ const TermsOfServicePage = () => {
             <Typography variant='body1' component='div'>
               <ul style={{ paddingLeft: '1.5rem', lineHeight: 2 }}>
                 <li>
-                  Access to the Telegram bot (@nepsemarket_alert_bot) requires a valid <strong>subscription code</strong>
+                  Access to the Telegram bot (@nepsemarket_alert_bot) requires a valid{' '}
+                  <strong>subscription code</strong>
                 </li>
                 <li>Subscription codes are issued to authorized/paid subscribers only</li>
                 <li>Sharing subscription codes with unauthorized users is prohibited</li>
@@ -148,8 +148,7 @@ const TermsOfServicePage = () => {
                 </li>
                 <li>We reserve the right to revoke access for users who violate these terms</li>
                 <li>
-                  Telegram bot usage is subject to{' '}
-                  <strong>Telegram&apos;s Terms of Service and Bot API Terms</strong>
+                  Telegram bot usage is subject to <strong>Telegram&apos;s Terms of Service and Bot API Terms</strong>
                 </li>
               </ul>
             </Typography>
@@ -181,9 +180,7 @@ const TermsOfServicePage = () => {
               <ul style={{ paddingLeft: '1.5rem', lineHeight: 2 }}>
                 <li>API keys are confidential and must not be exposed in client-side code</li>
                 <li>Rate limits apply to all API endpoints (detailed in API Documentation)</li>
-                <li>
-                  We provide API access for Email, SMS, Telegram, and WhatsApp channels with per-channel API keys
-                </li>
+                <li>We provide API access for Email, SMS, Telegram, and WhatsApp channels with per-channel API keys</li>
                 <li>Abuse of API endpoints may result in key revocation and account suspension</li>
                 <li>We reserve the right to modify API endpoints with 14 days advance notice</li>
               </ul>
@@ -242,8 +239,8 @@ const TermsOfServicePage = () => {
             <Typography variant='body1' paragraph>
               All platform code, design, branding, and documentation are the intellectual property of Marketminds
               Investment Group Pvt Ltd. You retain ownership of your content (subscriber data, campaign content,
-              templates you create). By using our platform, you grant us a limited license to process your content solely
-              for the purpose of delivering your campaigns.
+              templates you create). By using our platform, you grant us a limited license to process your content
+              solely for the purpose of delivering your campaigns.
             </Typography>
           </Box>
 
@@ -253,16 +250,12 @@ const TermsOfServicePage = () => {
             </Typography>
             <Typography variant='body1' component='div'>
               <ul style={{ paddingLeft: '1.5rem', lineHeight: 2 }}>
-                <li>
-                  We provide our services &quot;as is&quot; without warranties of any kind, express or implied
-                </li>
+                <li>We provide our services &quot;as is&quot; without warranties of any kind, express or implied</li>
                 <li>
                   We are not liable for losses arising from email delivery failures, SMS gateway issues, Telegram API
                   downtime, or third-party service outages
                 </li>
-                <li>
-                  Our total liability is limited to the amount of credits purchased in the preceding 12 months
-                </li>
+                <li>Our total liability is limited to the amount of credits purchased in the preceding 12 months</li>
                 <li>
                   We are not responsible for any financial losses resulting from NEPSE trading decisions made based on
                   alerts sent through our platform
@@ -322,8 +315,8 @@ const TermsOfServicePage = () => {
             </Typography>
             <Typography variant='body1' paragraph>
               We may update these Terms at any time. Material changes will be communicated via email or platform
-              notification at least 14 days before taking effect. Continued use of the platform after changes constitutes
-              acceptance of the updated Terms.
+              notification at least 14 days before taking effect. Continued use of the platform after changes
+              constitutes acceptance of the updated Terms.
             </Typography>
           </Box>
 

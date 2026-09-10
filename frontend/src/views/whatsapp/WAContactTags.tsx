@@ -36,6 +36,7 @@ const WAContactTags = () => {
   const [creating, setCreating] = useState(false)
   const [deleteTag, setDeleteTag] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -110,7 +111,9 @@ const WAContactTags = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={28} />
-        <Typography className='ml-3' color='text.secondary'>Loading tags...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading tags...
+        </Typography>
       </div>
     )
   }
@@ -136,7 +139,9 @@ const WAContactTags = () => {
           {tags.length === 0 ? (
             <div className='text-center py-8'>
               <i className='tabler-tags text-[48px] mb-3' style={{ color: 'var(--mui-palette-text-secondary)' }} />
-              <Typography color='text.secondary' className='mb-2'>No tags found</Typography>
+              <Typography color='text.secondary' className='mb-2'>
+                No tags found
+              </Typography>
               <Typography variant='body2' color='text.secondary'>
                 Create tags to organize your contacts into groups for targeted campaigns.
               </Typography>
@@ -214,18 +219,13 @@ const WAContactTags = () => {
         <DialogTitle>Delete Tag</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to remove the tag &quot;{deleteTag}&quot; from all contacts?
-            This will not delete the contacts themselves.
+            Are you sure you want to remove the tag &quot;{deleteTag}&quot; from all contacts? This will not delete the
+            contacts themselves.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteTag(null)}>Cancel</Button>
-          <Button
-            variant='contained'
-            color='error'
-            onClick={handleDelete}
-            disabled={deleting}
-          >
+          <Button variant='contained' color='error' onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Deleting...' : 'Delete Tag'}
           </Button>
         </DialogActions>
@@ -238,11 +238,7 @@ const WAContactTags = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

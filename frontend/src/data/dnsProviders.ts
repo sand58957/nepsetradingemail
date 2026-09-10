@@ -37,7 +37,8 @@ export const DNS_PROVIDERS: DnsProvider[] = [
         'Click Save'
       ]
     },
-    notes: 'Important: Set proxy status to "DNS only" (grey cloud) for the CNAME record. Orange cloud (proxied) will cause verification to fail.'
+    notes:
+      'Important: Set proxy status to "DNS only" (grey cloud) for the CNAME record. Orange cloud (proxied) will cause verification to fail.'
   },
   {
     id: 'godaddy',
@@ -71,7 +72,8 @@ export const DNS_PROVIDERS: DnsProvider[] = [
     name: 'Namecheap',
     icon: 'tabler-letter-n',
     color: '#DE3723',
-    dnsManagementUrl: (domain: string) => `https://ap.www.namecheap.com/Domains/DomainControlPanel/${domain}/advancedns`,
+    dnsManagementUrl: (domain: string) =>
+      `https://ap.www.namecheap.com/Domains/DomainControlPanel/${domain}/advancedns`,
     instructions: {
       cname: [
         'Log in to your Namecheap account',
@@ -255,7 +257,7 @@ export const DNS_PROVIDERS: DnsProvider[] = [
       cname: [
         'Log in to the AWS Console',
         'Navigate to Route 53 > Hosted zones',
-        'Click on your domain\'s hosted zone',
+        "Click on your domain's hosted zone",
         'Click "Create record"',
         'Enter the Record name (subdomain part only)',
         'Set Record type to CNAME',
@@ -280,7 +282,7 @@ export const DNS_PROVIDERS: DnsProvider[] = [
     dnsManagementUrl: '',
     instructions: {
       cname: [
-        'Log in to your DNS provider\'s dashboard',
+        "Log in to your DNS provider's dashboard",
         'Find the DNS management section for your domain',
         'Add a new CNAME record',
         'Set the host/name to the value shown below',

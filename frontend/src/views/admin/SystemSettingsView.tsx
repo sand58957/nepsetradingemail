@@ -27,6 +27,7 @@ const SystemSettingsView = () => {
   const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [testResult, setTestResult] = useState<{ valid: boolean; message: string } | null>(null)
+
   const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -152,10 +153,7 @@ const SystemSettingsView = () => {
                   <Typography variant='subtitle2' sx={{ minWidth: 120 }}>
                     Current key:
                   </Typography>
-                  <Typography
-                    variant='body1'
-                    sx={{ fontFamily: 'monospace', flex: 1 }}
-                  >
+                  <Typography variant='body1' sx={{ fontFamily: 'monospace', flex: 1 }}>
                     {status?.has_key ? status.masked_key : <em>not configured</em>}
                   </Typography>
                   {status && sourceChip(status.source)}
@@ -201,9 +199,7 @@ const SystemSettingsView = () => {
                     helperText='Paste the full key. We will validate it against SendGrid before saving.'
                   />
 
-                  {testResult && (
-                    <Alert severity={testResult.valid ? 'success' : 'error'}>{testResult.message}</Alert>
-                  )}
+                  {testResult && <Alert severity={testResult.valid ? 'success' : 'error'}>{testResult.message}</Alert>}
 
                   <Stack direction='row' spacing={2}>
                     <Button

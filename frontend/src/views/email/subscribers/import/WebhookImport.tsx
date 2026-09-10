@@ -179,11 +179,7 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
       {/* Webhook List */}
       <Box className='flex items-center justify-between'>
         <Typography variant='h6'>Configured Webhooks</Typography>
-        <Button
-          variant='contained'
-          startIcon={<i className='tabler-plus' />}
-          onClick={() => setCreateOpen(true)}
-        >
+        <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => setCreateOpen(true)}>
           Create Webhook
         </Button>
       </Box>
@@ -332,7 +328,11 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
                           aria-label={copied === `wh-${wh.id}` ? 'Copied' : 'Copy URL'}
                           onClick={() => handleCopy(getWebhookURL(wh.secret_key), `wh-${wh.id}`)}
                         >
-                          <i className={copied === `wh-${wh.id}` ? 'tabler-check text-[14px]' : 'tabler-copy text-[14px]'} />
+                          <i
+                            className={
+                              copied === `wh-${wh.id}` ? 'tabler-check text-[14px]' : 'tabler-copy text-[14px]'
+                            }
+                          />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -342,9 +342,7 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
                       {(wh.list_ids || []).map(id => {
                         const list = availableLists.find(l => l.id === id)
 
-                        return (
-                          <Chip key={id} label={list?.name || `List #${id}`} size='small' variant='outlined' />
-                        )
+                        return <Chip key={id} label={list?.name || `List #${id}`} size='small' variant='outlined' />
                       })}
                     </Box>
                   </TableCell>
@@ -356,7 +354,15 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
                   </TableCell>
                   <TableCell align='center'>
                     <Tooltip title='Delete'>
-                      <IconButton size='small' color='error' aria-label='Delete webhook' onClick={() => { setDeleteId(wh.id); setDeleteOpen(true) }}>
+                      <IconButton
+                        size='small'
+                        color='error'
+                        aria-label='Delete webhook'
+                        onClick={() => {
+                          setDeleteId(wh.id)
+                          setDeleteOpen(true)
+                        }}
+                      >
                         <i className='tabler-trash text-[16px]' />
                       </IconButton>
                     </Tooltip>
@@ -390,9 +396,7 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
             renderTags={(value, getTagProps) =>
               value.map((opt, index) => <Chip label={opt.name} size='small' {...getTagProps({ index })} key={opt.id} />)
             }
-            renderInput={params => (
-              <TextField {...params} label='Assign to Lists' placeholder='Select lists...' />
-            )}
+            renderInput={params => <TextField {...params} label='Assign to Lists' placeholder='Select lists...' />}
           />
           <Alert severity='info' variant='outlined'>
             A unique secret key and URL will be generated. Incoming POST requests to the URL will create subscribers in
@@ -417,7 +421,8 @@ const WebhookImport = ({ onWebhookChange }: WebhookImportProps) => {
         <DialogTitle>Delete Webhook</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete this webhook? This action cannot be undone and the secret key will be permanently lost.
+            Are you sure you want to delete this webhook? This action cannot be undone and the secret key will be
+            permanently lost.
           </Typography>
         </DialogContent>
         <DialogActions>

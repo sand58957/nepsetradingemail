@@ -84,14 +84,18 @@ const WAAnalytics = () => {
 
     fetchStats()
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   if (loading) {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading analytics...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading analytics...
+        </Typography>
       </div>
     )
   }
@@ -112,19 +116,20 @@ const WAAnalytics = () => {
   const totalFailed = stats?.messages?.total_failed || 0
 
   // Donut chart data
-  const donutSeries = totalSent > 0
-    ? [Math.max(0, totalDelivered - totalRead), totalRead, totalFailed, Math.max(0, totalSent - totalDelivered - totalFailed)]
-    : [0, 0, 0, 0]
+  const donutSeries =
+    totalSent > 0
+      ? [
+          Math.max(0, totalDelivered - totalRead),
+          totalRead,
+          totalFailed,
+          Math.max(0, totalSent - totalDelivered - totalFailed)
+        ]
+      : [0, 0, 0, 0]
 
   const donutOptions: ApexOptions = {
     chart: { parentHeightOffset: 0 },
     labels: ['Delivered', 'Read', 'Failed', 'Pending'],
-    colors: [
-      theme.palette.success.main,
-      theme.palette.primary.main,
-      theme.palette.error.main,
-      theme.palette.grey[400]
-    ],
+    colors: [theme.palette.success.main, theme.palette.primary.main, theme.palette.error.main, theme.palette.grey[400]],
     legend: {
       position: 'bottom'
     },
@@ -214,7 +219,9 @@ const WAAnalytics = () => {
             </CustomAvatar>
             <div>
               <Typography variant='h5'>{totalSent.toLocaleString()}</Typography>
-              <Typography variant='body2' color='text.secondary'>Total Sent</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Total Sent
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -229,7 +236,9 @@ const WAAnalytics = () => {
               <Typography variant='h5'>
                 {totalSent > 0 ? `${((totalDelivered / totalSent) * 100).toFixed(1)}%` : '0%'}
               </Typography>
-              <Typography variant='body2' color='text.secondary'>Delivery Rate</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Delivery Rate
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -244,7 +253,9 @@ const WAAnalytics = () => {
               <Typography variant='h5'>
                 {totalSent > 0 ? `${((totalRead / totalSent) * 100).toFixed(1)}%` : '0%'}
               </Typography>
-              <Typography variant='body2' color='text.secondary'>Read Rate</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Read Rate
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -259,7 +270,9 @@ const WAAnalytics = () => {
               <Typography variant='h5'>
                 {totalSent > 0 ? `${((totalFailed / totalSent) * 100).toFixed(1)}%` : '0%'}
               </Typography>
-              <Typography variant='body2' color='text.secondary'>Fail Rate</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Fail Rate
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -271,13 +284,7 @@ const WAAnalytics = () => {
           <CardHeader title='Message Distribution' subheader='Breakdown of message delivery status' />
           <CardContent>
             {totalSent > 0 ? (
-              <AppReactApexCharts
-                type='donut'
-                height={300}
-                width='100%'
-                series={donutSeries}
-                options={donutOptions}
-              />
+              <AppReactApexCharts type='donut' height={300} width='100%' series={donutSeries} options={donutOptions} />
             ) : (
               <Box display='flex' justifyContent='center' alignItems='center' p={8}>
                 <Typography color='text.secondary'>No message data yet</Typography>
@@ -293,13 +300,7 @@ const WAAnalytics = () => {
           <CardHeader title='Campaign Performance' subheader='Sent, Delivered, and Read for recent campaigns' />
           <CardContent>
             {recentCampaigns.length > 0 ? (
-              <AppReactApexCharts
-                type='bar'
-                height={300}
-                width='100%'
-                series={barSeries}
-                options={barOptions}
-              />
+              <AppReactApexCharts type='bar' height={300} width='100%' series={barSeries} options={barOptions} />
             ) : (
               <Box display='flex' justifyContent='center' alignItems='center' p={8}>
                 <Typography color='text.secondary'>No campaign data yet</Typography>
@@ -328,11 +329,7 @@ const WAAnalytics = () => {
                         {item.value.toLocaleString()} ({((item.value / item.total) * 100).toFixed(1)}%)
                       </Typography>
                     </div>
-                    <LinearProgress
-                      variant='determinate'
-                      value={(item.value / item.total) * 100}
-                      color={item.color}
-                    />
+                    <LinearProgress variant='determinate' value={(item.value / item.total) * 100} color={item.color} />
                   </div>
                 ))}
               </div>
@@ -389,8 +386,7 @@ const WAAnalytics = () => {
                       <TableCell align='right'>
                         {campaign.sent_count > 0
                           ? `${((campaign.delivered_count / campaign.sent_count) * 100).toFixed(1)}%`
-                          : '-'
-                        }
+                          : '-'}
                       </TableCell>
                     </TableRow>
                   ))}

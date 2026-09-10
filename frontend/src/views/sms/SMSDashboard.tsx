@@ -68,11 +68,7 @@ const StatCard = ({
       <div className='flex flex-col gap-1 grow'>
         <Typography color='text.primary'>{title}</Typography>
         <div className='flex items-center gap-2 flex-wrap'>
-          {loading ? (
-            <CircularProgress size={24} />
-          ) : (
-            <Typography variant='h4'>{value}</Typography>
-          )}
+          {loading ? <CircularProgress size={24} /> : <Typography variant='h4'>{value}</Typography>}
         </div>
       </div>
       <div className='flex flex-col items-end gap-1'>
@@ -145,6 +141,7 @@ const SMSDashboard = () => {
   }
 
   const recentCampaigns = stats?.recent_campaigns || []
+
   const deliveryRate =
     stats?.messages?.total_sent && stats.messages.total_sent > 0
       ? ((stats.messages.total_delivered / stats.messages.total_sent) * 100).toFixed(1)
@@ -173,11 +170,7 @@ const SMSDashboard = () => {
                 onClick={handleRefreshCredits}
                 disabled={refreshingCredits}
               >
-                {refreshingCredits ? (
-                  <CircularProgress size={16} />
-                ) : (
-                  <i className='tabler-refresh text-[16px]' />
-                )}
+                {refreshingCredits ? <CircularProgress size={16} /> : <i className='tabler-refresh text-[16px]' />}
               </IconButton>
             </Tooltip>
           }
@@ -326,7 +319,9 @@ const SMSDashboard = () => {
             <div className='flex flex-col gap-4'>
               <div className='flex items-center justify-between'>
                 <Typography>Total Contacts</Typography>
-                <Typography className='font-medium'>{stats?.contacts?.total_contacts?.toLocaleString() || '0'}</Typography>
+                <Typography className='font-medium'>
+                  {stats?.contacts?.total_contacts?.toLocaleString() || '0'}
+                </Typography>
               </div>
               <div className='flex items-center justify-between'>
                 <Typography>Opted In</Typography>
@@ -339,7 +334,9 @@ const SMSDashboard = () => {
               </div>
               <div className='flex items-center justify-between'>
                 <Typography>Total Campaigns</Typography>
-                <Typography className='font-medium'>{stats?.contacts?.total_campaigns?.toLocaleString() || '0'}</Typography>
+                <Typography className='font-medium'>
+                  {stats?.contacts?.total_campaigns?.toLocaleString() || '0'}
+                </Typography>
               </div>
               <Button
                 fullWidth
@@ -390,14 +387,20 @@ const SMSDashboard = () => {
                     <TableCell>Campaign</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell align='right'>Sent</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Delivered</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Failed</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>Credits</TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      Delivered
+                    </TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      Failed
+                    </TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                      Credits
+                    </TableCell>
                     <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Date</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {recentCampaigns.slice(0, 5).map((campaign) => (
+                  {recentCampaigns.slice(0, 5).map(campaign => (
                     <TableRow
                       key={campaign.id}
                       hover
@@ -429,7 +432,9 @@ const SMSDashboard = () => {
                         )}
                       </TableCell>
                       <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                        <Typography>{campaign.delivered_count > 0 ? campaign.delivered_count.toLocaleString() : '-'}</Typography>
+                        <Typography>
+                          {campaign.delivered_count > 0 ? campaign.delivered_count.toLocaleString() : '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                         <Typography color={campaign.failed_count > 0 ? 'error.main' : 'text.primary'}>
@@ -437,7 +442,9 @@ const SMSDashboard = () => {
                         </Typography>
                       </TableCell>
                       <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                        <Typography>{campaign.credits_used > 0 ? campaign.credits_used.toLocaleString() : '-'}</Typography>
+                        <Typography>
+                          {campaign.credits_used > 0 ? campaign.credits_used.toLocaleString() : '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Typography variant='body2'>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 
@@ -9,7 +9,6 @@ import dynamic from 'next/dynamic'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
-import Tooltip from '@mui/material/Tooltip'
 import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
@@ -27,13 +26,13 @@ import DialogActions from '@mui/material/DialogActions'
 
 import { useColorScheme } from '@mui/material/styles'
 
+import type { EditorRef } from 'react-email-editor'
+
 import { useMobileBreakpoint } from '@/hooks/useMobileBreakpoint'
 import campaignService from '@/services/campaigns'
 import subscriberService from '@/services/subscribers'
 import listService from '@/services/lists'
 import templateService from '@/services/templates'
-
-import type { EditorRef } from 'react-email-editor'
 
 import { blockCategories, BlockMiniPreview, blockRowTemplates } from './emailBlockData'
 
@@ -79,118 +78,127 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
   const fromTemplateLoadedRef = useRef(false)
   const fromUploadLoadedRef = useRef(false)
 
-  const onReady = useCallback((unlayer: EditorRef) => {
-    unlayerRef.current = unlayer
+  const onReady = useCallback(
+    (unlayer: EditorRef) => {
+      unlayerRef.current = unlayer
 
-    // Register custom image picker — opens media library instead of default file upload
-    ;(unlayer as any).registerCallback('selectImage', (data: any, done: (result: { url: string }) => void) => {
-      const w = Math.min(window.innerWidth - 40, 1100)
-      const h = Math.min(window.innerHeight - 40, 700)
-      const picker = window.open(`/${locale}/media?picker=true`, 'mediaPicker', `width=${w},height=${h},scrollbars=yes`)
+      // Register custom image picker — opens media library instead of default file upload
+      ;(unlayer as any).registerCallback('selectImage', (data: any, done: (result: { url: string }) => void) => {
+        const w = Math.min(window.innerWidth - 40, 1100)
+        const h = Math.min(window.innerHeight - 40, 700)
+        const picker = window.open(
+          `/${locale}/media?picker=true`,
+          'mediaPicker',
+          `width=${w},height=${h},scrollbars=yes`
+        )
 
-      const handleMessage = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return
+        const handleMessage = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return
 
-        if (event.data?.type === 'media-picker-select' && event.data?.url) {
-          done({ url: event.data.url })
+          if (event.data?.type === 'media-picker-select' && event.data?.url) {
+            done({ url: event.data.url })
+            window.removeEventListener('message', handleMessage)
+            if (checkClosed) clearInterval(checkClosed)
+          }
+        }
+
+        window.addEventListener('message', handleMessage)
+
+        let checkClosed: ReturnType<typeof setInterval> | null = null
+
+        if (picker) {
+          checkClosed = setInterval(() => {
+            if (picker.closed) {
+              clearInterval(checkClosed!)
+              checkClosed = null
+              window.removeEventListener('message', handleMessage)
+            }
+          }, 500)
+        } else {
           window.removeEventListener('message', handleMessage)
-          if (checkClosed) clearInterval(checkClosed)
+        }
+      })
+
+      // Load uploaded HTML template from sessionStorage
+      if (fromUpload && !fromUploadLoadedRef.current) {
+        fromUploadLoadedRef.current = true
+        const uploadedHtml = sessionStorage.getItem('campaign_email_html_upload')
+
+        if (uploadedHtml) {
+          ;(unlayer as any).loadDesign({
+            html: uploadedHtml,
+            classic: true
+          })
+
+          sessionStorage.removeItem('campaign_email_html_upload')
+          setFeedbackMsg('Uploaded template loaded')
         }
       }
 
-      window.addEventListener('message', handleMessage)
-
-      let checkClosed: ReturnType<typeof setInterval> | null = null
-
-      if (picker) {
-        checkClosed = setInterval(() => {
-          if (picker.closed) {
-            clearInterval(checkClosed!)
-            checkClosed = null
-            window.removeEventListener('message', handleMessage)
-          }
-        }, 500)
-      } else {
-        window.removeEventListener('message', handleMessage)
+      // Load default design when starting from scratch (no campaign/template/upload source)
+      if (!fromCampaignId && !fromTemplateId && !fromUpload) {
+        // Unlayer will load with its own default starter template
+        // No custom HTML injection needed — Unlayer's native editor handles it
       }
-    })
 
-    // Load uploaded HTML template from sessionStorage
-    if (fromUpload && !fromUploadLoadedRef.current) {
-      fromUploadLoadedRef.current = true
-      const uploadedHtml = sessionStorage.getItem('campaign_email_html_upload')
+      // Load recent campaign content if from_campaign param is present
+      if (fromCampaignId && !fromCampaignLoadedRef.current) {
+        fromCampaignLoadedRef.current = true
+        setLoadingTemplate(true)
 
-      if (uploadedHtml) {
-        ;(unlayer as any).loadDesign({
-          html: uploadedHtml,
-          classic: true
-        })
+        campaignService
+          .getById(parseInt(fromCampaignId, 10))
+          .then(response => {
+            const campaign = response.data
 
-        sessionStorage.removeItem('campaign_email_html_upload')
-        setFeedbackMsg('Uploaded template loaded')
+            if (campaign?.body) {
+              ;(unlayer as any).loadDesign({
+                html: campaign.body,
+                classic: true
+              })
+
+              setFeedbackMsg('Template loaded from recent email')
+            }
+          })
+          .catch(err => {
+            console.error('Failed to load campaign:', err)
+            setFeedbackMsg('Failed to load campaign template')
+          })
+          .finally(() => {
+            setLoadingTemplate(false)
+          })
       }
-    }
 
-    // Load default design when starting from scratch (no campaign/template/upload source)
-    if (!fromCampaignId && !fromTemplateId && !fromUpload) {
-      // Unlayer will load with its own default starter template
-      // No custom HTML injection needed — Unlayer's native editor handles it
-    }
+      // Load template content if from_template param is present
+      if (fromTemplateId && !fromTemplateLoadedRef.current) {
+        fromTemplateLoadedRef.current = true
+        setLoadingTemplate(true)
 
-    // Load recent campaign content if from_campaign param is present
-    if (fromCampaignId && !fromCampaignLoadedRef.current) {
-      fromCampaignLoadedRef.current = true
-      setLoadingTemplate(true)
+        templateService
+          .getById(parseInt(fromTemplateId, 10))
+          .then(response => {
+            const template = response.data
 
-      campaignService.getById(parseInt(fromCampaignId, 10))
-        .then((response) => {
-          const campaign = response.data
+            if (template?.body) {
+              ;(unlayer as any).loadDesign({
+                html: template.body,
+                classic: true
+              })
 
-          if (campaign?.body) {
-            ;(unlayer as any).loadDesign({
-              html: campaign.body,
-              classic: true
-            })
-
-            setFeedbackMsg('Template loaded from recent email')
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to load campaign:', err)
-          setFeedbackMsg('Failed to load campaign template')
-        })
-        .finally(() => {
-          setLoadingTemplate(false)
-        })
-    }
-
-    // Load template content if from_template param is present
-    if (fromTemplateId && !fromTemplateLoadedRef.current) {
-      fromTemplateLoadedRef.current = true
-      setLoadingTemplate(true)
-
-      templateService.getById(parseInt(fromTemplateId, 10))
-        .then((response) => {
-          const template = response.data
-
-          if (template?.body) {
-            ;(unlayer as any).loadDesign({
-              html: template.body,
-              classic: true
-            })
-
-            setFeedbackMsg('Template loaded successfully')
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to load template:', err)
-          setFeedbackMsg('Failed to load template')
-        })
-        .finally(() => {
-          setLoadingTemplate(false)
-        })
-    }
-  }, [fromCampaignId, fromTemplateId, fromUpload])
+              setFeedbackMsg('Template loaded successfully')
+            }
+          })
+          .catch(err => {
+            console.error('Failed to load template:', err)
+            setFeedbackMsg('Failed to load template')
+          })
+          .finally(() => {
+            setLoadingTemplate(false)
+          })
+      }
+    },
+    [fromCampaignId, fromTemplateId, fromUpload, locale]
+  )
 
   const handleGoBack = () => {
     router.push(`/${locale}/campaigns/create?type=${campaignType}`)
@@ -200,7 +208,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
     const unlayer = unlayerRef.current
 
     if (unlayer) {
-      (unlayer as any).exportHtml((data: { design: object; html: string }) => {
+      ;(unlayer as any).exportHtml((data: { design: object; html: string }) => {
         const { html } = data
 
         sessionStorage.setItem('campaign_email_html', html)
@@ -240,7 +248,6 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
     if (!testEmailAddress.trim()) return
 
     setTestEmailSending(true)
-
     ;(unlayer as any).exportHtml(async (data: { html: string }) => {
       const email = testEmailAddress.trim()
       let tempCampaignId: number | null = null
@@ -262,7 +269,10 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         let subscriberId: number | null = null
 
         try {
-          const sanitizedEmail = email.replace(/'/g, "''").replace(/[;\-\\]/g, '').replace(/\/\*/g, '')
+          const sanitizedEmail = email
+            .replace(/'/g, "''")
+            .replace(/[;\-\\]/g, '')
+            .replace(/\/\*/g, '')
 
           const searchResult = await subscriberService.getAll({
             query: `subscribers.email='${sanitizedEmail}'`,
@@ -272,7 +282,9 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           const results = searchResult.data?.results || []
 
           if (results.length > 0) subscriberId = results[0].id
-        } catch { /* will create temp subscriber */ }
+        } catch {
+          /* will create temp subscriber */
+        }
 
         if (!subscriberId) {
           const subResult = await subscriberService.create({
@@ -310,11 +322,19 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         setFeedbackMsg(`Failed: ${msg}`)
       } finally {
         if (tempCampaignId) {
-          try { await campaignService.delete(tempCampaignId) } catch { /* ignore */ }
+          try {
+            await campaignService.delete(tempCampaignId)
+          } catch {
+            /* ignore */
+          }
         }
 
         if (tempSubscriberId) {
-          try { await subscriberService.delete(tempSubscriberId) } catch { /* ignore */ }
+          try {
+            await subscriberService.delete(tempSubscriberId)
+          } catch {
+            /* ignore */
+          }
         }
 
         setTestEmailSending(false)
@@ -328,7 +348,6 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
     if (!unlayer || !saveTemplateName.trim()) return
 
     setSavingTemplate(true)
-
     ;(unlayer as any).exportHtml(async (data: { design: object; html: string }) => {
       try {
         await templateService.create({
@@ -342,6 +361,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
         setSaveTemplateName('')
       } catch (err: any) {
         const msg = err?.response?.data?.message || err?.message || 'Failed to save template'
+
         console.error('Failed to save template:', err)
         setFeedbackMsg(`Failed: ${msg}`)
       } finally {
@@ -356,7 +376,6 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
     const rowTemplate = blockRowTemplates[previewKey]
 
     if (!unlayer || !rowTemplate) return
-
     ;(unlayer as any).saveDesign((design: any) => {
       const updatedDesign = { ...design }
 
@@ -366,7 +385,8 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
       updatedDesign.body.rows = [...updatedDesign.body.rows, JSON.parse(JSON.stringify(rowTemplate))]
       ;(unlayer as any).loadDesign(updatedDesign)
 
-      const name = blockName || blockCategories.flatMap(c => c.blocks).find(b => b.previewKey === previewKey)?.name || 'Block'
+      const name =
+        blockName || blockCategories.flatMap(c => c.blocks).find(b => b.previewKey === previewKey)?.name || 'Block'
 
       setFeedbackMsg(`${name} added to email`)
     })
@@ -374,9 +394,8 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
 
   const activeCat = blockCategories.find(c => c.name === activeCategory)
 
-  const filteredBlocks = activeCat?.blocks.filter(b =>
-    searchQuery ? b.name.toLowerCase().includes(searchQuery.toLowerCase()) : true
-  ) || []
+  const filteredBlocks =
+    activeCat?.blocks.filter(b => (searchQuery ? b.name.toLowerCase().includes(searchQuery.toLowerCase()) : true)) || []
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', mx: -6, mt: -6 }}>
@@ -420,7 +439,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           {/* Actions dropdown */}
           <Button
             size='small'
-            onClick={(e) => setActionsMenuAnchor(e.currentTarget)}
+            onClick={e => setActionsMenuAnchor(e.currentTarget)}
             sx={{
               color: '#fff',
               bgcolor: 'rgba(255,255,255,0.1)',
@@ -440,8 +459,15 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
-            <MenuItem onClick={() => { setActionsMenuAnchor(null); setSaveTemplateOpen(true) }}>
-              <ListItemIcon><i className='tabler-bookmark text-[18px]' /></ListItemIcon>
+            <MenuItem
+              onClick={() => {
+                setActionsMenuAnchor(null)
+                setSaveTemplateOpen(true)
+              }}
+            >
+              <ListItemIcon>
+                <i className='tabler-bookmark text-[18px]' />
+              </ListItemIcon>
               <ListItemText>Save as template</ListItemText>
             </MenuItem>
           </Menu>
@@ -449,7 +475,7 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
           {/* Preview and test dropdown */}
           <Button
             size='small'
-            onClick={(e) => setPreviewMenuAnchor(e.currentTarget)}
+            onClick={e => setPreviewMenuAnchor(e.currentTarget)}
             sx={{
               color: '#fff',
               bgcolor: 'rgba(255,255,255,0.1)',
@@ -461,7 +487,9 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             startIcon={<i className='tabler-eye text-[16px]' />}
             endIcon={<i className='tabler-chevron-down text-[12px]' />}
           >
-            <Box component='span' sx={{ display: { xs: 'none', sm: 'inline' } }}>Preview and test</Box>
+            <Box component='span' sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              Preview and test
+            </Box>
           </Button>
           <Menu
             anchorEl={previewMenuAnchor}
@@ -470,12 +498,26 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
-            <MenuItem onClick={() => { setPreviewMenuAnchor(null); handlePreview() }}>
-              <ListItemIcon><i className='tabler-eye text-[18px]' /></ListItemIcon>
+            <MenuItem
+              onClick={() => {
+                setPreviewMenuAnchor(null)
+                handlePreview()
+              }}
+            >
+              <ListItemIcon>
+                <i className='tabler-eye text-[18px]' />
+              </ListItemIcon>
               <ListItemText>Preview mode</ListItemText>
             </MenuItem>
-            <MenuItem onClick={() => { setPreviewMenuAnchor(null); setTestEmailOpen(true) }}>
-              <ListItemIcon><i className='tabler-send text-[18px]' /></ListItemIcon>
+            <MenuItem
+              onClick={() => {
+                setPreviewMenuAnchor(null)
+                setTestEmailOpen(true)
+              }}
+            >
+              <ListItemIcon>
+                <i className='tabler-send text-[18px]' />
+              </ListItemIcon>
               <ListItemText>Send a test email</ListItemText>
             </MenuItem>
           </Menu>
@@ -523,48 +565,50 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             ref={emailEditorRef as any}
             onReady={onReady as any}
             minHeight='100%'
-            options={{
-              displayMode: 'email',
-              features: {
-                textEditor: { spellChecker: true },
-                userUploads: { enabled: true },
-                stockImages: { enabled: true },
-                undoRedo: { enabled: true },
-                preview: { enabled: true }
-              },
-              appearance: {
-                theme: isDark ? 'modern_dark' : 'modern_light',
-                panels: {
-                  tools: { dock: 'left' }
-                }
-              },
-              tabs: {
-                content: { enabled: true, active: true },
-                blocks: { enabled: true },
-                body: { enabled: true },
-                images: { enabled: true },
-                uploads: { enabled: true }
-              },
-              tools: {
-                image: { enabled: true },
-                button: { enabled: true },
-                divider: { enabled: true },
-                heading: { enabled: true },
-                html: { enabled: true },
-                menu: { enabled: true },
-                social: { enabled: true },
-                text: { enabled: true },
-                timer: { enabled: true },
-                video: { enabled: true }
-              },
-              mergeTags: [
-                { name: 'Subscriber Name', value: '{{ .Subscriber.Name }}' },
-                { name: 'Subscriber Email', value: '{{ .Subscriber.Email }}' },
-                { name: 'Campaign Subject', value: '{{ .Campaign.Subject }}' },
-                { name: 'Unsubscribe URL', value: '{{ UnsubscribeURL . }}' },
-                { name: 'Message URL', value: '{{ MessageURL . }}' }
-              ]
-            } as any}
+            options={
+              {
+                displayMode: 'email',
+                features: {
+                  textEditor: { spellChecker: true },
+                  userUploads: { enabled: true },
+                  stockImages: { enabled: true },
+                  undoRedo: { enabled: true },
+                  preview: { enabled: true }
+                },
+                appearance: {
+                  theme: isDark ? 'modern_dark' : 'modern_light',
+                  panels: {
+                    tools: { dock: 'left' }
+                  }
+                },
+                tabs: {
+                  content: { enabled: true, active: true },
+                  blocks: { enabled: true },
+                  body: { enabled: true },
+                  images: { enabled: true },
+                  uploads: { enabled: true }
+                },
+                tools: {
+                  image: { enabled: true },
+                  button: { enabled: true },
+                  divider: { enabled: true },
+                  heading: { enabled: true },
+                  html: { enabled: true },
+                  menu: { enabled: true },
+                  social: { enabled: true },
+                  text: { enabled: true },
+                  timer: { enabled: true },
+                  video: { enabled: true }
+                },
+                mergeTags: [
+                  { name: 'Subscriber Name', value: '{{ .Subscriber.Name }}' },
+                  { name: 'Subscriber Email', value: '{{ .Subscriber.Email }}' },
+                  { name: 'Campaign Subject', value: '{{ .Campaign.Subject }}' },
+                  { name: 'Unsubscribe URL', value: '{{ UnsubscribeURL . }}' },
+                  { name: 'Message URL', value: '{{ MessageURL . }}' }
+                ]
+              } as any
+            }
           />
         </Box>
 
@@ -616,14 +660,35 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             {activeCategory ? (
               <>
                 {/* Block list header with back button */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, pt: 1.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-                  <IconButton size='small' aria-label='Back' onClick={() => setActiveCategory('')} sx={{ color: 'text.secondary' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    px: 1.5,
+                    pt: 1.5,
+                    pb: 1,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider'
+                  }}
+                >
+                  <IconButton
+                    size='small'
+                    aria-label='Back'
+                    onClick={() => setActiveCategory('')}
+                    sx={{ color: 'text.secondary' }}
+                  >
                     <i className='tabler-arrow-left text-[18px]' />
                   </IconButton>
                   <Typography variant='subtitle2' fontWeight={600} sx={{ fontSize: '0.85rem', flex: 1 }}>
                     {activeCategory}
                   </Typography>
-                  <IconButton size='small' aria-label='Close' onClick={() => setDrawerOpen(false)} sx={{ color: 'text.secondary' }}>
+                  <IconButton
+                    size='small'
+                    aria-label='Close'
+                    onClick={() => setDrawerOpen(false)}
+                    sx={{ color: 'text.secondary' }}
+                  >
                     <i className='tabler-x text-[16px]' />
                   </IconButton>
                 </Box>
@@ -694,11 +759,27 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             ) : (
               <>
                 {/* Category list view */}
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, pt: 1.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    px: 2,
+                    pt: 1.5,
+                    pb: 1,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider'
+                  }}
+                >
                   <Typography variant='subtitle2' fontWeight={600} sx={{ fontSize: '0.85rem' }}>
                     Blocks
                   </Typography>
-                  <IconButton size='small' aria-label='Close' onClick={() => setDrawerOpen(false)} sx={{ color: 'text.secondary' }}>
+                  <IconButton
+                    size='small'
+                    aria-label='Close'
+                    onClick={() => setDrawerOpen(false)}
+                    sx={{ color: 'text.secondary' }}
+                  >
                     <i className='tabler-x text-[16px]' />
                   </IconButton>
                 </Box>
@@ -724,46 +805,55 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
 
                 {/* Category items */}
                 <Box sx={{ overflowY: 'auto', flex: 1 }}>
-                  {blockCategories.filter(cat =>
-                    !searchQuery ||
-                    cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    cat.blocks.some(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                  ).map(cat => (
-                    <Box
-                      key={cat.name}
-                      onClick={() => { setActiveCategory(cat.name); setSearchQuery('') }}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1.5,
-                        px: 2,
-                        py: 1.25,
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: 'action.hover' }
-                      }}
-                    >
+                  {blockCategories
+                    .filter(
+                      cat =>
+                        !searchQuery ||
+                        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        cat.blocks.some(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    )
+                    .map(cat => (
                       <Box
+                        key={cat.name}
+                        onClick={() => {
+                          setActiveCategory(cat.name)
+                          setSearchQuery('')
+                        }}
                         sx={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 1,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: isDark ? 'rgba(255,255,255,0.08)' : '#f5f5f5'
+                          gap: 1.5,
+                          px: 2,
+                          py: 1.25,
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' }
                         }}
                       >
-                        <i className={`${cat.icon} text-[17px]`} style={{ color: isDark ? '#aaa' : '#757575' }} />
+                        <Box
+                          sx={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: isDark ? 'rgba(255,255,255,0.08)' : '#f5f5f5'
+                          }}
+                        >
+                          <i className={`${cat.icon} text-[17px]`} style={{ color: isDark ? '#aaa' : '#757575' }} />
+                        </Box>
+                        <Typography variant='body2' sx={{ flex: 1, fontSize: '0.85rem' }}>
+                          {cat.name}
+                        </Typography>
+                        <Typography variant='caption' color='text.secondary' sx={{ mr: 0.5 }}>
+                          {cat.blocks.length}
+                        </Typography>
+                        <i
+                          className='tabler-chevron-right text-[14px]'
+                          style={{ color: isDark ? '#666' : '#bdbdbd' }}
+                        />
                       </Box>
-                      <Typography variant='body2' sx={{ flex: 1, fontSize: '0.85rem' }}>
-                        {cat.name}
-                      </Typography>
-                      <Typography variant='caption' color='text.secondary' sx={{ mr: 0.5 }}>
-                        {cat.blocks.length}
-                      </Typography>
-                      <i className='tabler-chevron-right text-[14px]' style={{ color: isDark ? '#666' : '#bdbdbd' }} />
-                    </Box>
-                  ))}
+                    ))}
                 </Box>
               </>
             )}
@@ -790,7 +880,13 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
       </Snackbar>
 
       {/* Send test email dialog */}
-      <Dialog open={testEmailOpen} onClose={() => setTestEmailOpen(false)} maxWidth='xs' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={testEmailOpen}
+        onClose={() => setTestEmailOpen(false)}
+        maxWidth='xs'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <i className='tabler-send text-[20px]' />
           Send a test email
@@ -808,7 +904,9 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             value={testEmailAddress}
             onChange={e => setTestEmailAddress(e.target.value)}
             placeholder='test@example.com'
-            onKeyDown={e => { if (e.key === 'Enter' && testEmailAddress.trim()) handleSendTestEmail() }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && testEmailAddress.trim()) handleSendTestEmail()
+            }}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -820,7 +918,13 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             size='small'
             onClick={handleSendTestEmail}
             disabled={!testEmailAddress.trim() || testEmailSending}
-            startIcon={testEmailSending ? <i className='tabler-loader-2 animate-spin text-[16px]' /> : <i className='tabler-send text-[16px]' />}
+            startIcon={
+              testEmailSending ? (
+                <i className='tabler-loader-2 animate-spin text-[16px]' />
+              ) : (
+                <i className='tabler-send text-[16px]' />
+              )
+            }
           >
             {testEmailSending ? 'Sending...' : 'Send test'}
           </Button>
@@ -858,14 +962,21 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
       </Dialog>
 
       {/* Save as Template dialog */}
-      <Dialog open={saveTemplateOpen} onClose={() => setSaveTemplateOpen(false)} maxWidth='xs' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={saveTemplateOpen}
+        onClose={() => setSaveTemplateOpen(false)}
+        maxWidth='xs'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <i className='tabler-bookmark text-[20px]' />
           Save as template
         </DialogTitle>
         <DialogContent>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-            Save this email design as a reusable template. You can find it under &ldquo;My templates&rdquo; in the Template gallery.
+            Save this email design as a reusable template. You can find it under &ldquo;My templates&rdquo; in the
+            Template gallery.
           </Typography>
           <TextField
             autoFocus
@@ -875,7 +986,9 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             value={saveTemplateName}
             onChange={e => setSaveTemplateName(e.target.value)}
             placeholder='e.g. Monthly Newsletter'
-            onKeyDown={e => { if (e.key === 'Enter' && saveTemplateName.trim()) handleSaveAsTemplate() }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && saveTemplateName.trim()) handleSaveAsTemplate()
+            }}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -887,7 +1000,13 @@ const DragDropEmailEditor = ({ campaignType }: DragDropEmailEditorProps) => {
             size='small'
             onClick={handleSaveAsTemplate}
             disabled={!saveTemplateName.trim() || savingTemplate}
-            startIcon={savingTemplate ? <i className='tabler-loader-2 animate-spin text-[16px]' /> : <i className='tabler-bookmark text-[16px]' />}
+            startIcon={
+              savingTemplate ? (
+                <i className='tabler-loader-2 animate-spin text-[16px]' />
+              ) : (
+                <i className='tabler-bookmark text-[16px]' />
+              )
+            }
           >
             {savingTemplate ? 'Saving...' : 'Save template'}
           </Button>

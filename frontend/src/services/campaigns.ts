@@ -48,7 +48,9 @@ export const campaignService = {
     return response.data
   },
 
-  getStats: async (id: number): Promise<{
+  getStats: async (
+    id: number
+  ): Promise<{
     data: {
       campaign: Campaign
       views: number

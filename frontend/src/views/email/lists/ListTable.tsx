@@ -4,7 +4,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 
 // Next Imports
-import { useParams } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -87,7 +86,6 @@ const ListTable = () => {
   })
 
   const isMobile = useMobileBreakpoint()
-  const { lang: locale } = useParams()
 
   const fetchLists = useCallback(async () => {
     try {
@@ -203,9 +201,7 @@ const ListTable = () => {
 
     const q = globalFilter.toLowerCase()
 
-    return lists.filter(l =>
-      l.name.toLowerCase().includes(q) || (l.description || '').toLowerCase().includes(q)
-    )
+    return lists.filter(l => l.name.toLowerCase().includes(q) || (l.description || '').toLowerCase().includes(q))
   }, [lists, globalFilter])
 
   const columns = useMemo<ColumnDef<ListWithAction, any>[]>(
@@ -248,9 +244,7 @@ const ListTable = () => {
       columnHelper.accessor('subscriber_count', {
         header: 'Subscribers',
         cell: ({ row }) => (
-          <Typography className='font-medium'>
-            {(row.original.subscriber_count || 0).toLocaleString()}
-          </Typography>
+          <Typography className='font-medium'>{(row.original.subscriber_count || 0).toLocaleString()}</Typography>
         )
       }),
       columnHelper.accessor('created_at', {
@@ -312,10 +306,14 @@ const ListTable = () => {
           title='Subscriber Lists'
           sx={{ flexWrap: 'wrap', rowGap: 2 }}
           action={
-            <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => {
-              setNewList({ name: '', type: 'public', optin: 'double', description: '' })
-              setAddDialogOpen(true)
-            }}>
+            <Button
+              variant='contained'
+              startIcon={<i className='tabler-plus' />}
+              onClick={() => {
+                setNewList({ name: '', type: 'public', optin: 'double', description: '' })
+                setAddDialogOpen(true)
+              }}
+            >
               Create List
             </Button>
           }
@@ -340,7 +338,9 @@ const ListTable = () => {
         {loading && lists.length === 0 ? (
           <div className='flex justify-center items-center py-16'>
             <CircularProgress size={32} />
-            <Typography className='ml-3' color='text.secondary'>Loading lists...</Typography>
+            <Typography className='ml-3' color='text.secondary'>
+              Loading lists...
+            </Typography>
           </div>
         ) : (
           <>
@@ -408,7 +408,13 @@ const ListTable = () => {
       </Card>
 
       {/* Create List Dialog */}
-      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Create New List</DialogTitle>
         <DialogContent>
           <Grid container spacing={4} className='pt-2'>
@@ -472,7 +478,13 @@ const ListTable = () => {
       </Dialog>
 
       {/* Edit List Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Edit List</DialogTitle>
         <DialogContent>
           <Grid container spacing={4} className='pt-2'>
@@ -556,7 +568,11 @@ const ListTable = () => {
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} severity={snackbar.severity} variant='filled'>
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          variant='filled'
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

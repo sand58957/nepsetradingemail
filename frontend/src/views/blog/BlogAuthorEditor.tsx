@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import { useRouter, useParams } from 'next/navigation'
 
 import Grid from '@mui/material/Grid'
@@ -39,25 +40,34 @@ const BlogAuthorEditor = () => {
   const [socialWebsite, setSocialWebsite] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' })
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
 
   useEffect(() => {
     if (authorId) {
       setLoading(true)
-      blogService.getAuthor(authorId).then(res => {
-        const a = res.data
-        setName(a.name)
-        setEmail(a.email)
-        setBio(a.bio)
-        setAvatarUrl(a.avatar_url)
-        setCredentials(a.credentials)
-        setExpertise(a.expertise || [])
-        setSocialLinkedin(a.social_links?.linkedin || '')
-        setSocialTwitter(a.social_links?.twitter || '')
-        setSocialWebsite(a.social_links?.website || '')
-      }).catch(() => {
-        setSnackbar({ open: true, message: 'Failed to load author', severity: 'error' })
-      }).finally(() => setLoading(false))
+      blogService
+        .getAuthor(authorId)
+        .then(res => {
+          const a = res.data
+
+          setName(a.name)
+          setEmail(a.email)
+          setBio(a.bio)
+          setAvatarUrl(a.avatar_url)
+          setCredentials(a.credentials)
+          setExpertise(a.expertise || [])
+          setSocialLinkedin(a.social_links?.linkedin || '')
+          setSocialTwitter(a.social_links?.twitter || '')
+          setSocialWebsite(a.social_links?.website || '')
+        })
+        .catch(() => {
+          setSnackbar({ open: true, message: 'Failed to load author', severity: 'error' })
+        })
+        .finally(() => setLoading(false))
     }
   }, [authorId])
 
@@ -71,6 +81,7 @@ const BlogAuthorEditor = () => {
   const handleSave = async () => {
     if (!name.trim()) return
     setSaving(true)
+
     try {
       const data = {
         name,
@@ -85,6 +96,7 @@ const BlogAuthorEditor = () => {
           website: socialWebsite
         }
       }
+
       if (isEditing) {
         await blogService.updateAuthor(authorId!, data)
         setSnackbar({ open: true, message: 'Author updated', severity: 'success' })
@@ -92,6 +104,7 @@ const BlogAuthorEditor = () => {
         await blogService.createAuthor(data)
         setSnackbar({ open: true, message: 'Author created', severity: 'success' })
       }
+
       setTimeout(() => router.push(`/${locale}/blog/authors`), 1000)
     } catch {
       setSnackbar({ open: true, message: 'Failed to save author', severity: 'error' })
@@ -100,32 +113,66 @@ const BlogAuthorEditor = () => {
     }
   }
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><CircularProgress /></div>
+  if (loading)
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+        <CircularProgress />
+      </div>
+    )
 
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant='h5'>{isEditing ? 'Edit Author' : 'Create Author'}</Typography>
-        <Button variant='outlined' onClick={() => router.push(`/${locale}/blog/authors`)}>Back to Authors</Button>
+        <Button variant='outlined' onClick={() => router.push(`/${locale}/blog/authors`)}>
+          Back to Authors
+        </Button>
       </Box>
 
       <Grid container spacing={4}>
         <Grid size={{ xs: 12, md: 8 }}>
           <Card>
-            <CardHeader title='Author Profile' subheader='EEAT (Experience, Expertise, Authoritativeness, Trustworthiness)' />
+            <CardHeader
+              title='Author Profile'
+              subheader='EEAT (Experience, Expertise, Authoritativeness, Trustworthiness)'
+            />
             <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField label='Full Name' fullWidth value={name} onChange={e => setName(e.target.value)} required />
+                  <TextField
+                    label='Full Name'
+                    fullWidth
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    required
+                  />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField label='Email' fullWidth value={email} onChange={e => setEmail(e.target.value)} type='email' />
+                  <TextField
+                    label='Email'
+                    fullWidth
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    type='email'
+                  />
                 </Grid>
               </Grid>
-              <TextField label='Bio' fullWidth multiline rows={4} value={bio} onChange={e => setBio(e.target.value)}
-                helperText='Professional biography. Important for EEAT and author authority.' />
-              <TextField label='Credentials / Certifications' fullWidth value={credentials} onChange={e => setCredentials(e.target.value)}
-                helperText='e.g., CFA, PhD Finance, 10+ years NEPSE experience' />
+              <TextField
+                label='Bio'
+                fullWidth
+                multiline
+                rows={4}
+                value={bio}
+                onChange={e => setBio(e.target.value)}
+                helperText='Professional biography. Important for EEAT and author authority.'
+              />
+              <TextField
+                label='Credentials / Certifications'
+                fullWidth
+                value={credentials}
+                onChange={e => setCredentials(e.target.value)}
+                helperText='e.g., CFA, PhD Finance, 10+ years NEPSE experience'
+              />
               <Divider />
               <Typography variant='subtitle2'>Expertise Areas</Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
@@ -134,9 +181,21 @@ const BlogAuthorEditor = () => {
                 ))}
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField label='Add Expertise' size='small' value={expertiseInput} onChange={e => setExpertiseInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddExpertise() } }} />
-                <Button variant='outlined' onClick={handleAddExpertise}>Add</Button>
+                <TextField
+                  label='Add Expertise'
+                  size='small'
+                  value={expertiseInput}
+                  onChange={e => setExpertiseInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddExpertise()
+                    }
+                  }}
+                />
+                <Button variant='outlined' onClick={handleAddExpertise}>
+                  Add
+                </Button>
               </Box>
             </CardContent>
           </Card>
@@ -149,16 +208,40 @@ const BlogAuthorEditor = () => {
               <Avatar src={avatarUrl} sx={{ width: 100, height: 100, fontSize: '2.5rem' }}>
                 {name.charAt(0) || '?'}
               </Avatar>
-              <TextField label='Avatar URL' fullWidth size='small' value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} />
+              <TextField
+                label='Avatar URL'
+                fullWidth
+                size='small'
+                value={avatarUrl}
+                onChange={e => setAvatarUrl(e.target.value)}
+              />
             </CardContent>
           </Card>
 
           <Card sx={{ mb: 3 }}>
             <CardHeader title='Social Links' />
             <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField label='LinkedIn' fullWidth size='small' value={socialLinkedin} onChange={e => setSocialLinkedin(e.target.value)} />
-              <TextField label='Twitter/X' fullWidth size='small' value={socialTwitter} onChange={e => setSocialTwitter(e.target.value)} />
-              <TextField label='Website' fullWidth size='small' value={socialWebsite} onChange={e => setSocialWebsite(e.target.value)} />
+              <TextField
+                label='LinkedIn'
+                fullWidth
+                size='small'
+                value={socialLinkedin}
+                onChange={e => setSocialLinkedin(e.target.value)}
+              />
+              <TextField
+                label='Twitter/X'
+                fullWidth
+                size='small'
+                value={socialTwitter}
+                onChange={e => setSocialTwitter(e.target.value)}
+              />
+              <TextField
+                label='Website'
+                fullWidth
+                size='small'
+                value={socialWebsite}
+                onChange={e => setSocialWebsite(e.target.value)}
+              />
             </CardContent>
           </Card>
 
@@ -168,8 +251,14 @@ const BlogAuthorEditor = () => {
         </Grid>
       </Grid>
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
-        <Alert severity={snackbar.severity} variant='filled'>{snackbar.message}</Alert>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+      >
+        <Alert severity={snackbar.severity} variant='filled'>
+          {snackbar.message}
+        </Alert>
       </Snackbar>
     </>
   )

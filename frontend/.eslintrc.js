@@ -2,6 +2,11 @@ module.exports = {
   extends: ['next/core-web-vitals', 'plugin:@typescript-eslint/recommended', 'plugin:import/recommended', 'prettier'],
   ignorePatterns: ['next-env.d.ts', '.next/**', 'node_modules/**'],
   rules: {
+    // Blank-line/formatting rules are intentionally NOT set here: `extends: [... 'prettier']`
+    // (eslint-config-prettier) turns them off so Prettier owns formatting. Re-enabling
+    // padding-line-between-statements / newline-before-return / lines-around-comment makes
+    // `lint:fix` and `format` undo each other. Import ordering below is safe: Prettier
+    // does not reorder imports.
     'jsx-a11y/alt-text': 'off',
     'react/display-name': 'off',
     'react/no-children-prop': 'off',
@@ -10,49 +15,20 @@ module.exports = {
     '@typescript-eslint/consistent-type-imports': 'error',
     '@typescript-eslint/ban-ts-comment': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
-    '@typescript-eslint/no-unused-vars': 'error',
+    // A leading underscore marks a binding that is intentionally unused
+    // (unused catch params, placeholder callback args). Everything else is dead code.
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_'
+      }
+    ],
     '@typescript-eslint/no-non-null-assertion': 'off',
     '@typescript-eslint/no-unused-expressions': 'off',
     'import/no-named-as-default': 'off',
-    'lines-around-comment': [
-      'error',
-      {
-        beforeBlockComment: true,
-        beforeLineComment: true,
-        allowBlockStart: true,
-        allowObjectStart: true,
-        allowArrayStart: true
-      }
-    ],
-    'padding-line-between-statements': [
-      'error',
-      {
-        blankLine: 'any',
-        prev: 'export',
-        next: 'export'
-      },
-      {
-        blankLine: 'always',
-        prev: ['const', 'let', 'var'],
-        next: '*'
-      },
-      {
-        blankLine: 'any',
-        prev: ['const', 'let', 'var'],
-        next: ['const', 'let', 'var']
-      },
-      {
-        blankLine: 'always',
-        prev: '*',
-        next: ['function', 'multiline-const', 'multiline-block-like']
-      },
-      {
-        blankLine: 'always',
-        prev: ['function', 'multiline-const', 'multiline-block-like'],
-        next: '*'
-      }
-    ],
-    'newline-before-return': 'error',
     'import/newline-after-import': [
       'error',
       {

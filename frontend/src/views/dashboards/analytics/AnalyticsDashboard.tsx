@@ -232,7 +232,11 @@ const AnalyticsDashboard = () => {
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
             <StatCard
               title='Total Subscribers'
-              value={overviewData?.subscribers?.total?.toLocaleString() || dashboardData?.total_subscribers?.toLocaleString() || '0'}
+              value={
+                overviewData?.subscribers?.total?.toLocaleString() ||
+                dashboardData?.total_subscribers?.toLocaleString() ||
+                '0'
+              }
               icon='tabler-users'
               color='primary'
               loading={loading}
@@ -241,7 +245,11 @@ const AnalyticsDashboard = () => {
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
             <StatCard
               title='Active Subscribers'
-              value={overviewData?.subscribers?.active?.toLocaleString() || dashboardData?.active_subscribers?.toLocaleString() || '0'}
+              value={
+                overviewData?.subscribers?.active?.toLocaleString() ||
+                dashboardData?.active_subscribers?.toLocaleString() ||
+                '0'
+              }
               icon='tabler-user-check'
               color='success'
               loading={loading}
@@ -268,7 +276,11 @@ const AnalyticsDashboard = () => {
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
             <StatCard
               title='Total Campaigns'
-              value={overviewData?.campaigns?.total?.toLocaleString() || dashboardData?.total_campaigns?.toLocaleString() || '0'}
+              value={
+                overviewData?.campaigns?.total?.toLocaleString() ||
+                dashboardData?.total_campaigns?.toLocaleString() ||
+                '0'
+              }
               icon='tabler-speakerphone'
               color='secondary'
               loading={loading}
@@ -277,7 +289,9 @@ const AnalyticsDashboard = () => {
           <Grid size={{ xs: 6, sm: 4, md: 2 }}>
             <StatCard
               title='Mailing Lists'
-              value={overviewData?.lists?.total?.toLocaleString() || dashboardData?.total_lists?.toLocaleString() || '0'}
+              value={
+                overviewData?.lists?.total?.toLocaleString() || dashboardData?.total_lists?.toLocaleString() || '0'
+              }
               icon='tabler-list'
               color='info'
               loading={loading}

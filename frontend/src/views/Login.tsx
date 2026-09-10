@@ -71,7 +71,11 @@ type FormData = InferInput<typeof schema>
 
 const schema = object({
   email: pipe(string(), minLength(1, 'This field is required'), email('Email is invalid')),
-  password: pipe(string(), nonEmpty('This field is required'), minLength(5, 'Password must be at least 5 characters long'))
+  password: pipe(
+    string(),
+    nonEmpty('This field is required'),
+    minLength(5, 'Password must be at least 5 characters long')
+  )
 })
 
 const Login = ({ mode }: { mode: SystemMode }) => {
@@ -101,7 +105,11 @@ const Login = ({ mode }: { mode: SystemMode }) => {
   const authBackground = useImageVariant(mode, lightImg, darkImg)
   const _mode = mode
 
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<FormData>({
     resolver: valibotResolver(schema),
     defaultValues: { email: '', password: '' }
   })
@@ -265,27 +273,115 @@ const Login = ({ mode }: { mode: SystemMode }) => {
     <div className='flex bs-full justify-center'>
       {/* Left side - Illustration */}
       <div
-        className={classnames('flex bs-full items-center justify-center flex-1 min-bs-[100dvh] relative p-6 max-md:hidden', {
-          'border-ie': settings.skin === 'bordered'
-        })}
+        className={classnames(
+          'flex bs-full items-center justify-center flex-1 min-bs-[100dvh] relative p-6 max-md:hidden',
+          {
+            'border-ie': settings.skin === 'bordered'
+          }
+        )}
         style={{ background: 'linear-gradient(135deg, #0a0a18 0%, #12122a 40%, #1a1040 70%, #0f0f1a 100%)' }}
       >
-        <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', border: '1px solid rgba(115, 103, 240, 0.15)', boxShadow: '0 0 60px rgba(115, 103, 240, 0.08), inset 0 0 60px rgba(115, 103, 240, 0.04)' }} />
-          <div style={{ position: 'absolute', width: 560, height: 560, borderRadius: '50%', border: '1px dashed rgba(115, 103, 240, 0.08)' }} />
+        <div
+          style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              width: 420,
+              height: 420,
+              borderRadius: '50%',
+              border: '1px solid rgba(115, 103, 240, 0.15)',
+              boxShadow: '0 0 60px rgba(115, 103, 240, 0.08), inset 0 0 60px rgba(115, 103, 240, 0.04)'
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              width: 560,
+              height: 560,
+              borderRadius: '50%',
+              border: '1px dashed rgba(115, 103, 240, 0.08)'
+            }}
+          />
           <LoginIllustration src='/images/illustrations/characters/5.png' alt='character-illustration' />
           {[
-            { icon: 'tabler-mail', label: 'Email', color: '#7367f0', glow: 'rgba(115,103,240,0.4)', top: '-5%', left: '15%' },
-            { icon: 'tabler-message-2', label: 'SMS', color: '#28c76f', glow: 'rgba(40,199,111,0.4)', top: '5%', right: '-5%' },
-            { icon: 'tabler-brand-whatsapp', label: 'WhatsApp', color: '#25D366', glow: 'rgba(37,211,102,0.4)', top: '42%', left: '-12%' },
-            { icon: 'tabler-brand-telegram', label: 'Telegram', color: '#0088cc', glow: 'rgba(0,136,204,0.4)', top: '38%', right: '-8%' },
-            { icon: 'tabler-brand-messenger', label: 'Messenger', color: '#0084ff', glow: 'rgba(0,132,255,0.4)', bottom: '12%', left: '5%' }
+            {
+              icon: 'tabler-mail',
+              label: 'Email',
+              color: '#7367f0',
+              glow: 'rgba(115,103,240,0.4)',
+              top: '-5%',
+              left: '15%'
+            },
+            {
+              icon: 'tabler-message-2',
+              label: 'SMS',
+              color: '#28c76f',
+              glow: 'rgba(40,199,111,0.4)',
+              top: '5%',
+              right: '-5%'
+            },
+            {
+              icon: 'tabler-brand-whatsapp',
+              label: 'WhatsApp',
+              color: '#25D366',
+              glow: 'rgba(37,211,102,0.4)',
+              top: '42%',
+              left: '-12%'
+            },
+            {
+              icon: 'tabler-brand-telegram',
+              label: 'Telegram',
+              color: '#0088cc',
+              glow: 'rgba(0,136,204,0.4)',
+              top: '38%',
+              right: '-8%'
+            },
+            {
+              icon: 'tabler-brand-messenger',
+              label: 'Messenger',
+              color: '#0084ff',
+              glow: 'rgba(0,132,255,0.4)',
+              bottom: '12%',
+              left: '5%'
+            }
           ].map((ch, i) => (
-            <div key={i} style={{ position: 'absolute', ...(ch.top ? { top: ch.top } : {}), ...(ch.bottom ? { bottom: ch.bottom } : {}), ...(ch.left ? { left: ch.left } : {}), ...(ch.right ? { right: ch.right } : {}), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg, ${ch.color}22, ${ch.color}44)`, border: `1.5px solid ${ch.color}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 24px ${ch.glow}, 0 0 40px ${ch.color}15`, backdropFilter: 'blur(8px)' }}>
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                ...(ch.top ? { top: ch.top } : {}),
+                ...(ch.bottom ? { bottom: ch.bottom } : {}),
+                ...(ch.left ? { left: ch.left } : {}),
+                ...(ch.right ? { right: ch.right } : {}),
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <div
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 16,
+                  background: `linear-gradient(135deg, ${ch.color}22, ${ch.color}44)`,
+                  border: `1.5px solid ${ch.color}66`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: `0 4px 24px ${ch.glow}, 0 0 40px ${ch.color}15`,
+                  backdropFilter: 'blur(8px)'
+                }}
+              >
                 <i className={ch.icon} style={{ fontSize: 26, color: ch.color }} />
               </div>
-              <Typography variant='caption' style={{ fontWeight: 600, color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>{ch.label}</Typography>
+              <Typography
+                variant='caption'
+                style={{ fontWeight: 600, color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+              >
+                {ch.label}
+              </Typography>
             </div>
           ))}
         </div>
@@ -295,7 +391,15 @@ const Login = ({ mode }: { mode: SystemMode }) => {
       {/* Right side - Login Form */}
       <div
         className='flex justify-center items-center bs-full bg-backgroundPaper !min-is-full p-6 md:!min-is-[unset] md:p-12 md:is-[480px]'
-        style={_mode === 'dark' ? { background: 'rgba(22, 22, 38, 0.7)', backdropFilter: 'blur(16px)', borderInlineStart: '1px solid rgba(115, 103, 240, 0.1)' } : undefined}
+        style={
+          _mode === 'dark'
+            ? {
+                background: 'rgba(22, 22, 38, 0.7)',
+                backdropFilter: 'blur(16px)',
+                borderInlineStart: '1px solid rgba(115, 103, 240, 0.1)'
+              }
+            : undefined
+        }
       >
         <div className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px] flex items-center gap-4'>
           <Link href='/'>
@@ -305,7 +409,16 @@ const Login = ({ mode }: { mode: SystemMode }) => {
             component={Link}
             href='/'
             color='primary.main'
-            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none', opacity: 0.8, '&:hover': { opacity: 1 } }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              fontSize: '0.85rem',
+              fontWeight: 500,
+              textDecoration: 'none',
+              opacity: 0.8,
+              '&:hover': { opacity: 1 }
+            }}
           >
             <i className='tabler-arrow-left text-base' />
             Home
@@ -315,7 +428,9 @@ const Login = ({ mode }: { mode: SystemMode }) => {
         <div className='flex flex-col gap-5 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
           <div className='flex flex-col gap-1'>
             <Typography variant='h4'>Welcome to Nepal Fillings!</Typography>
-            <Typography variant='body2' color='text.secondary'>Sign in to your account</Typography>
+            <Typography variant='body2' color='text.secondary'>
+              Sign in to your account
+            </Typography>
           </div>
 
           {/* Error display */}
@@ -328,7 +443,10 @@ const Login = ({ mode }: { mode: SystemMode }) => {
           {/* Auth method tabs */}
           <Tabs
             value={authTab}
-            onChange={(_, v) => { setAuthTab(v); setErrorState(null) }}
+            onChange={(_, v) => {
+              setAuthTab(v)
+              setErrorState(null)
+            }}
             variant='fullWidth'
             sx={{ '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 40 } }}
           >
@@ -338,7 +456,13 @@ const Login = ({ mode }: { mode: SystemMode }) => {
 
           {/* Email/Password Tab */}
           {authTab === 0 && (
-            <form noValidate autoComplete='off' action={() => {}} onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-5'>
+            <form
+              noValidate
+              autoComplete='off'
+              action={() => {}}
+              onSubmit={handleSubmit(onSubmit)}
+              className='flex flex-col gap-5'
+            >
               <Controller
                 name='email'
                 control={control}
@@ -351,7 +475,10 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                     type='email'
                     label='Email'
                     placeholder='Enter your email'
-                    onChange={e => { field.onChange(e.target.value); errorState !== null && setErrorState(null) }}
+                    onChange={e => {
+                      field.onChange(e.target.value)
+                      errorState !== null && setErrorState(null)
+                    }}
                     {...((errors.email || errorState !== null) && { error: true, helperText: errors?.email?.message })}
                   />
                 )}
@@ -367,12 +494,20 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                     label='Password'
                     placeholder='Enter your password'
                     type={isPasswordShown ? 'text' : 'password'}
-                    onChange={e => { field.onChange(e.target.value); errorState !== null && setErrorState(null) }}
+                    onChange={e => {
+                      field.onChange(e.target.value)
+                      errorState !== null && setErrorState(null)
+                    }}
                     slotProps={{
                       input: {
                         endAdornment: (
                           <InputAdornment position='end'>
-                            <IconButton edge='end' aria-label={isPasswordShown ? 'Hide password' : 'Show password'} onClick={() => setIsPasswordShown(!isPasswordShown)} onMouseDown={e => e.preventDefault()}>
+                            <IconButton
+                              edge='end'
+                              aria-label={isPasswordShown ? 'Hide password' : 'Show password'}
+                              onClick={() => setIsPasswordShown(!isPasswordShown)}
+                              onMouseDown={e => e.preventDefault()}
+                            >
                               <i className={isPasswordShown ? 'tabler-eye' : 'tabler-eye-off'} />
                             </IconButton>
                           </InputAdornment>
@@ -410,12 +545,17 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                     label='Phone Number'
                     placeholder='98XXXXXXXX'
                     value={phone}
-                    onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setErrorState(null) }}
+                    onChange={e => {
+                      setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                      setErrorState(null)
+                    }}
                     slotProps={{
                       input: {
                         startAdornment: (
                           <InputAdornment position='start'>
-                            <Typography variant='body2' sx={{ fontWeight: 600 }}>+977</Typography>
+                            <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                              +977
+                            </Typography>
                           </InputAdornment>
                         )
                       }
@@ -426,7 +566,9 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                       fullWidth
                       variant='contained'
                       color='success'
-                      startIcon={otpLoading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-message-2' />}
+                      startIcon={
+                        otpLoading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-message-2' />
+                      }
                       onClick={() => handleSendOTP('sms')}
                       disabled={otpLoading || phone.length < 10}
                     >
@@ -436,7 +578,13 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                       fullWidth
                       variant='contained'
                       sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#1da851' } }}
-                      startIcon={otpLoading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-brand-whatsapp' />}
+                      startIcon={
+                        otpLoading ? (
+                          <CircularProgress size={18} color='inherit' />
+                        ) : (
+                          <i className='tabler-brand-whatsapp' />
+                        )
+                      }
                       onClick={() => handleSendOTP('whatsapp')}
                       disabled={otpLoading || phone.length < 10}
                     >
@@ -449,7 +597,10 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                 </>
               ) : (
                 <>
-                  <Alert severity='success' icon={<i className={otpChannel === 'sms' ? 'tabler-message-2' : 'tabler-brand-whatsapp'} />}>
+                  <Alert
+                    severity='success'
+                    icon={<i className={otpChannel === 'sms' ? 'tabler-message-2' : 'tabler-brand-whatsapp'} />}
+                  >
                     Code sent via {otpChannel === 'sms' ? 'SMS' : 'WhatsApp'} to +977 {phone}
                   </Alert>
                   <CustomTextField
@@ -457,7 +608,10 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                     label='Verification Code'
                     placeholder='Enter 6-digit code'
                     value={otpCode}
-                    onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrorState(null) }}
+                    onChange={e => {
+                      setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                      setErrorState(null)
+                    }}
                     slotProps={{
                       input: {
                         style: { letterSpacing: '0.5em', textAlign: 'center', fontSize: '1.2rem', fontWeight: 700 }
@@ -469,18 +623,34 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                     variant='contained'
                     onClick={handleVerifyOTP}
                     disabled={otpLoading || otpCode.length !== 6}
-                    startIcon={otpLoading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-shield-check' />}
+                    startIcon={
+                      otpLoading ? (
+                        <CircularProgress size={18} color='inherit' />
+                      ) : (
+                        <i className='tabler-shield-check' />
+                      )
+                    }
                   >
                     {otpLoading ? 'Verifying...' : 'Verify & Sign In'}
                   </Button>
                   <Box className='flex justify-between items-center'>
-                    <Button size='small' onClick={() => { setOtpSent(false); setOtpCode('') }}>
+                    <Button
+                      size='small'
+                      onClick={() => {
+                        setOtpSent(false)
+                        setOtpCode('')
+                      }}
+                    >
                       <i className='tabler-arrow-left mie-1' /> Change Number
                     </Button>
                     {countdown > 0 ? (
-                      <Typography variant='caption' color='text.secondary'>Resend in {countdown}s</Typography>
+                      <Typography variant='caption' color='text.secondary'>
+                        Resend in {countdown}s
+                      </Typography>
                     ) : (
-                      <Button size='small' onClick={() => handleSendOTP(otpChannel)}>Resend Code</Button>
+                      <Button size='small' onClick={() => handleSendOTP(otpChannel)}>
+                        Resend Code
+                      </Button>
                     )}
                   </Box>
                 </>
@@ -490,7 +660,9 @@ const Login = ({ mode }: { mode: SystemMode }) => {
 
           {/* Divider */}
           <Divider sx={{ '& .MuiDivider-wrapper': { px: 2 } }}>
-            <Typography variant='caption' color='text.secondary'>or continue with</Typography>
+            <Typography variant='caption' color='text.secondary'>
+              or continue with
+            </Typography>
           </Divider>
 
           {/* Google Sign In */}
@@ -523,7 +695,12 @@ const Login = ({ mode }: { mode: SystemMode }) => {
           {/* Register link */}
           <div className='flex justify-center items-center flex-wrap gap-2'>
             <Typography variant='body2'>New on our platform?</Typography>
-            <Typography variant='body2' component={Link} href={getLocalizedUrl('/register', locale as Locale)} color='primary.main'>
+            <Typography
+              variant='body2'
+              component={Link}
+              href={getLocalizedUrl('/register', locale as Locale)}
+              color='primary.main'
+            >
               Create an account
             </Typography>
           </div>

@@ -1,6 +1,7 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+
+import type { Metadata } from 'next'
 
 import { getApiBase } from '@/utils/apiBase'
 
@@ -71,11 +72,7 @@ async function getCategoryPosts(slug: string, page = 1): Promise<PostsResponse> 
   }
 }
 
-export async function generateMetadata({
-  params
-}: {
-  params: Promise<{ slug: string }>
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const category = await getCategory(slug)
 
@@ -84,7 +81,9 @@ export async function generateMetadata({
   }
 
   const title = `${category.name} - Digital Marketing Articles | Nepal Fillings Blog`
-  const description = category.description || `Read expert articles about ${category.name}. Digital marketing insights and strategies for Nepali businesses.`
+  const description =
+    category.description ||
+    `Read expert articles about ${category.name}. Digital marketing insights and strategies for Nepali businesses.`
 
   return {
     title,

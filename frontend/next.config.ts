@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname)
   },
+
   // Tree-shake / barrel-optimize the heaviest UI deps. Without this, importing
   // a single MUI component drags the entire library into the bundle.
   experimental: {
@@ -22,6 +23,7 @@ const nextConfig: NextConfig = {
       '@tabler/icons-react'
     ]
   },
+
   // Image optimization: AVIF/WebP at edge, long browser cache.
   images: {
     formats: ['image/avif', 'image/webp'],

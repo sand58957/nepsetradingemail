@@ -51,11 +51,7 @@ const StatCard = ({
       <div className='flex flex-col gap-1 grow'>
         <Typography color='text.primary'>{title}</Typography>
         <div className='flex items-center gap-2 flex-wrap'>
-          {loading ? (
-            <CircularProgress size={24} />
-          ) : (
-            <Typography variant='h4'>{value}</Typography>
-          )}
+          {loading ? <CircularProgress size={24} /> : <Typography variant='h4'>{value}</Typography>}
         </div>
       </div>
       <CustomAvatar color={color} skin='light' variant='rounded' size={42}>
@@ -271,12 +267,14 @@ const BlogDashboard = () => {
                     <TableCell>Title</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell align='right'>SEO Score</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Views</TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      Views
+                    </TableCell>
                     <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Date</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {recentPosts.slice(0, 5).map((post) => (
+                  {recentPosts.slice(0, 5).map(post => (
                     <TableRow
                       key={post.id}
                       hover

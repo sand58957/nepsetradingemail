@@ -75,7 +75,9 @@ const RecentCampaignsTable = ({ campaigns, loading }: RecentCampaignsTableProps)
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={campaign.status ? campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1) : 'Unknown'}
+                      label={
+                        campaign.status ? campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1) : 'Unknown'
+                      }
                       color={statusColorMap[campaign.status] || 'default'}
                       size='small'
                       variant='tonal'

@@ -126,9 +126,7 @@ const MediaGallery = () => {
     }
   })
 
-  const filteredMedia = mockMedia.filter(m =>
-    m.filename.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredMedia = mockMedia.filter(m => m.filename.toLowerCase().includes(search.toLowerCase()))
 
   const handleCopyUrl = (media: (typeof mockMedia)[0]) => {
     const fullUrl = `${window.location.origin}${media.url}`
@@ -214,7 +212,11 @@ const MediaGallery = () => {
               <Divider />
               <CardActions className='flex justify-between'>
                 <Tooltip title={copiedUrl === media.id ? 'Copied!' : 'Copy URL'}>
-                  <IconButton size='small' aria-label={copiedUrl === media.id ? 'Copied' : 'Copy URL'} onClick={() => handleCopyUrl(media)}>
+                  <IconButton
+                    size='small'
+                    aria-label={copiedUrl === media.id ? 'Copied' : 'Copy URL'}
+                    onClick={() => handleCopyUrl(media)}
+                  >
                     <i className={`tabler-${copiedUrl === media.id ? 'check' : 'link'} text-[18px]`} />
                   </IconButton>
                 </Tooltip>
@@ -237,7 +239,13 @@ const MediaGallery = () => {
       </Grid>
 
       {/* Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Upload Media</DialogTitle>
         <DialogContent>
           <div
@@ -253,9 +261,7 @@ const MediaGallery = () => {
               <i className='tabler-cloud-upload text-[32px]' />
             </CustomAvatar>
             <div className='text-center'>
-              <Typography variant='h6'>
-                {isDragActive ? 'Drop files here' : 'Drag & drop files here'}
-              </Typography>
+              <Typography variant='h6'>{isDragActive ? 'Drop files here' : 'Drag & drop files here'}</Typography>
               <Typography variant='body2' color='text.secondary'>
                 or click to browse
               </Typography>
@@ -273,7 +279,13 @@ const MediaGallery = () => {
       </Dialog>
 
       {/* Media Detail Dialog */}
-      <Dialog open={!!selectedMedia} onClose={() => setSelectedMedia(null)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={!!selectedMedia}
+        onClose={() => setSelectedMedia(null)}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         {selectedMedia && (
           <>
             <DialogTitle>{selectedMedia.filename}</DialogTitle>

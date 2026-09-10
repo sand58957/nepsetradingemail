@@ -153,8 +153,7 @@ const CustomerReviews = () => {
         >
           <Chip label='Testimonials' variant='tonal' color='primary' size='small' />
           <Typography variant='h3' component='h2' className='font-extrabold'>
-            Trusted by Leading{' '}
-            <span style={{ color: 'var(--mui-palette-primary-main)' }}>Nepali Brands</span>
+            Trusted by Leading <span style={{ color: 'var(--mui-palette-primary-main)' }}>Nepali Brands</span>
           </Typography>
           <Typography color='text.secondary' sx={{ maxWidth: 560 }}>
             See how businesses across Nepal are growing with our digital marketing platform
@@ -184,12 +183,12 @@ const CustomerReviews = () => {
                       gap: 20,
                       background: 'var(--mui-palette-background-paper)',
                       border: '1px solid',
-                      borderColor: currentSlide === index
-                        ? 'var(--mui-palette-primary-main)'
-                        : 'var(--mui-palette-divider)',
-                      boxShadow: currentSlide === index
-                        ? '0 12px 40px rgba(var(--mui-palette-primary-mainChannel), 0.15)'
-                        : '0 4px 20px rgba(0,0,0,0.06)',
+                      borderColor:
+                        currentSlide === index ? 'var(--mui-palette-primary-main)' : 'var(--mui-palette-divider)',
+                      boxShadow:
+                        currentSlide === index
+                          ? '0 12px 40px rgba(var(--mui-palette-primary-mainChannel), 0.15)'
+                          : '0 4px 20px rgba(0,0,0,0.06)',
                       transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                       transform: currentSlide === index ? 'scale(1.02)' : 'scale(1)',
                       overflow: 'hidden'
@@ -203,15 +202,18 @@ const CustomerReviews = () => {
                         left: 0,
                         right: 0,
                         height: 4,
-                        background: currentSlide === index
-                          ? 'linear-gradient(90deg, var(--mui-palette-primary-main), #7c3aed, #a855f7)'
-                          : 'transparent',
+                        background:
+                          currentSlide === index
+                            ? 'linear-gradient(90deg, var(--mui-palette-primary-main), #7c3aed, #a855f7)'
+                            : 'transparent',
                         transition: 'background 0.4s ease'
                       }}
                     />
 
                     {/* Quote icon */}
-                    <div style={{ position: 'absolute', top: 20, right: 24, opacity: 0.06, fontSize: 80, lineHeight: 1 }}>
+                    <div
+                      style={{ position: 'absolute', top: 20, right: 24, opacity: 0.06, fontSize: 80, lineHeight: 1 }}
+                    >
                       <i className='tabler-quote' />
                     </div>
 
@@ -316,9 +318,8 @@ const CustomerReviews = () => {
                     width: currentSlide === i ? 28 : 8,
                     height: 8,
                     borderRadius: 4,
-                    background: currentSlide === i
-                      ? 'var(--mui-palette-primary-main)'
-                      : 'var(--mui-palette-action-disabled)',
+                    background:
+                      currentSlide === i ? 'var(--mui-palette-primary-main)' : 'var(--mui-palette-action-disabled)',
                     transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                     cursor: 'pointer'
                   }}

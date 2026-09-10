@@ -136,7 +136,14 @@ const ImportHistoryTable = () => {
       <Box className='flex items-center flex-wrap gap-3'>
         <FormControl size='small' sx={{ minWidth: 140 }}>
           <InputLabel>Source</InputLabel>
-          <Select value={sourceFilter} label='Source' onChange={e => { setSourceFilter(e.target.value); setPage(0) }}>
+          <Select
+            value={sourceFilter}
+            label='Source'
+            onChange={e => {
+              setSourceFilter(e.target.value)
+              setPage(0)
+            }}
+          >
             <MenuItem value=''>All Sources</MenuItem>
             <MenuItem value='csv'>CSV</MenuItem>
             <MenuItem value='api'>API</MenuItem>
@@ -145,7 +152,14 @@ const ImportHistoryTable = () => {
         </FormControl>
         <FormControl size='small' sx={{ minWidth: 140 }}>
           <InputLabel>Status</InputLabel>
-          <Select value={statusFilter} label='Status' onChange={e => { setStatusFilter(e.target.value); setPage(0) }}>
+          <Select
+            value={statusFilter}
+            label='Status'
+            onChange={e => {
+              setStatusFilter(e.target.value)
+              setPage(0)
+            }}
+          >
             <MenuItem value=''>All Statuses</MenuItem>
             <MenuItem value='completed'>Completed</MenuItem>
             <MenuItem value='processing'>Processing</MenuItem>
@@ -213,11 +227,7 @@ const ImportHistoryTable = () => {
                       <Typography variant='body2'>{record.filename || '—'}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={record.status}
-                        size='small'
-                        color={statusColorMap[record.status] || 'default'}
-                      />
+                      <Chip label={record.status} size='small' color={statusColorMap[record.status] || 'default'} />
                     </TableCell>
                     <TableCell align='center'>
                       <Box className='flex items-center justify-center gap-1'>
@@ -240,9 +250,7 @@ const ImportHistoryTable = () => {
                       <Typography variant='body2'>{formatDate(record.started_at)}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant='body2'>
-                        {getDuration(record.started_at, record.completed_at)}
-                      </Typography>
+                      <Typography variant='body2'>{getDuration(record.started_at, record.completed_at)}</Typography>
                     </TableCell>
                     <TableCell align='center'>
                       <Tooltip title='Delete'>
@@ -418,7 +426,9 @@ const ImportHistoryTable = () => {
       <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} fullScreen={isMobile}>
         <DialogTitle>Delete Import Record</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to delete this import history record? This action cannot be undone.</Typography>
+          <Typography>
+            Are you sure you want to delete this import history record? This action cannot be undone.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>

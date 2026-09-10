@@ -51,27 +51,33 @@ export interface BlogPost {
   featured_image_url: string
   featured_image_alt: string
   status: 'draft' | 'published' | 'scheduled' | 'archived'
+
   // SEO
   meta_title: string
   meta_description: string
   canonical_url: string
   primary_keyword: string
   secondary_keywords: string[]
+
   // AEO
   quick_answer: string
   schema_type: string
   schema_json: any
+
   // GEO
   entity_tags: any[]
   source_citations: any[]
+
   // Structure
   table_of_contents: any[]
   key_points: any[]
+
   // Scoring
   seo_score: number
   readability_score: number
   word_count: number
   reading_time_min: number
+
   // Publishing
   published_at: string | null
   scheduled_at: string | null
@@ -79,6 +85,7 @@ export interface BlogPost {
   created_by: number | null
   created_at: string
   updated_at: string
+
   // Joined
   author_name?: string
   category_name?: string

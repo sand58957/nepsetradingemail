@@ -78,7 +78,14 @@ const ImportUrlDialog = ({ open, onClose, onSuccess }: Props) => {
           {error && <Alert severity='error'>{error}</Alert>}
         </div>
       </DialogContent>
-      <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 1.5 }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 0 } }}>
+      <DialogActions
+        sx={{
+          px: { xs: 2, sm: 3 },
+          pb: { xs: 2, sm: 1.5 },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 1, sm: 0 }
+        }}
+      >
         <Button onClick={handleClose} color='secondary' fullWidth={isXs}>
           Cancel
         </Button>

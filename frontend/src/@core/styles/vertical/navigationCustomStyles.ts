@@ -38,6 +38,7 @@ const navigationCustomStyles = (verticalNavOptions: VerticalNavState, theme: The
       }),
       borderColor: 'transparent',
       boxShadow: 'var(--mui-customShadows-sm)',
+
       // Dark mode sidebar gradient
       '[data-mui-color-scheme="dark"] &': {
         background: 'linear-gradient(180deg, #0f0f1a 0%, #161626 50%, #1a1a2e 100%)',

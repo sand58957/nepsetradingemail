@@ -1,6 +1,7 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+
+import type { Metadata } from 'next'
 
 import type { BlogPost, BlogAuthor, BlogFAQ } from '@/utils/blogSchema'
 import {
@@ -42,11 +43,7 @@ async function getPost(slug: string): Promise<FullPostData | null> {
   }
 }
 
-export async function generateMetadata({
-  params
-}: {
-  params: Promise<{ slug: string }>
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const data = await getPost(slug)
 
@@ -101,7 +98,7 @@ export async function generateMetadata({
       'geo.region': 'NP',
       'geo.placename': 'Kathmandu',
       'geo.position': '27.7172;85.3240',
-      'ICBM': '27.7172, 85.3240'
+      ICBM: '27.7172, 85.3240'
     }
   }
 }
@@ -114,7 +111,12 @@ function extractHeadings(html: string): Array<{ id: string; text: string; level:
   while ((match = regex.exec(html)) !== null) {
     const level = parseInt(match[1])
     const text = match[3].replace(/<[^>]*>/g, '').trim()
-    const id = match[2] || text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    const id =
+      match[2] ||
+      text
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
 
     headings.push({ id, text, level })
   }
@@ -127,7 +129,10 @@ function injectHeadingIds(html: string): string {
     if (attrs.includes('id=')) return fullMatch
 
     const text = content.replace(/<[^>]*>/g, '').trim()
-    const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    const id = text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
 
     return `<h${level} id="${id}"${attrs}>${content}</h${closeLevel}>`
   })
@@ -149,7 +154,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   // Generate schemas
   const articleSchema = generateArticleSchema(post as any, author as any, BASE_URL)
-  const breadcrumbSchema = generateBreadcrumbSchema(post as any, post.category_name ? { name: post.category_name, slug: '' } as any : undefined, BASE_URL)
+  const breadcrumbSchema = generateBreadcrumbSchema(
+    post as any,
+    post.category_name ? ({ name: post.category_name, slug: '' } as any) : undefined,
+    BASE_URL
+  )
   const faqSchema = faqs.length > 0 ? generateFAQSchema(faqs) : null
   const authorSchema = author ? generateAuthorSchema(author, BASE_URL) : null
 
@@ -166,7 +175,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       )}
 
       {/* Breadcrumb Navigation */}
-      <nav className='blog-breadcrumb' style={{ marginBottom: 24, fontSize: 14, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+      <nav
+        className='blog-breadcrumb'
+        style={{ marginBottom: 24, fontSize: 14, overflowWrap: 'break-word', wordBreak: 'break-word' }}
+      >
         <Link href='/' style={{ color: '#7c3aed', textDecoration: 'none' }}>
           Home
         </Link>
@@ -177,9 +189,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         {post.category_name && (
           <>
             <span style={{ margin: '0 8px' }}>/</span>
-            <span style={{ color: '#7c3aed' }}>
-              {post.category_name}
-            </span>
+            <span style={{ color: '#7c3aed' }}>{post.category_name}</span>
           </>
         )}
         <span style={{ margin: '0 8px' }}>/</span>
@@ -191,9 +201,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <article style={{ flex: 1, minWidth: 0 }}>
           {/* Post Header */}
           <header className='blog-header'>
-            {post.category_name && (
-              <span className='blog-category-badge'>{post.category_name}</span>
-            )}
+            {post.category_name && <span className='blog-category-badge'>{post.category_name}</span>}
 
             <h1 className='blog-post-title-h1'>{post.title}</h1>
 
@@ -213,7 +221,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               )}
               <span className='blog-meta-divider'>·</span>
               <time dateTime={post.published_at}>
-                {new Date(post.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                {new Date(post.published_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
               </time>
               {post.reading_time_min && (
                 <>
@@ -233,11 +245,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           {/* Featured Image */}
           {post.featured_image_url && (
             <figure className='blog-featured-img'>
-              <img
-                src={post.featured_image_url}
-                alt={post.featured_image_alt || post.title}
-                loading='eager'
-              />
+              <img src={post.featured_image_url} alt={post.featured_image_alt || post.title} loading='eager' />
             </figure>
           )}
 
@@ -245,7 +253,19 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           {post.quick_answer && (
             <div className='blog-qa-box'>
               <div className='blog-qa-header'>
-                <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'><path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><polyline points='22 4 12 14.01 9 11.01'/></svg>
+                <svg
+                  width='20'
+                  height='20'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeWidth='2.5'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                >
+                  <path d='M22 11.08V12a10 10 0 1 1-5.93-9.14' />
+                  <polyline points='22 4 12 14.01 9 11.01' />
+                </svg>
                 <span>Quick Answer</span>
               </div>
               <p className='blog-qa-text'>{post.quick_answer}</p>
@@ -253,26 +273,47 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           )}
 
           {/* Article Content */}
-          <div
-            className='blog-content'
-            dangerouslySetInnerHTML={{ __html: processedContent }}
-          />
+          <div className='blog-content' dangerouslySetInnerHTML={{ __html: processedContent }} />
 
           {/* FAQ Section */}
           {faqs.length > 0 && (
             <section className='blog-faq-section' itemScope itemType='https://schema.org/FAQPage'>
               <div className='blog-faq-header'>
-                <svg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'><circle cx='12' cy='12' r='10'/><path d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'/><line x1='12' y1='17' x2='12.01' y2='17'/></svg>
+                <svg
+                  width='24'
+                  height='24'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeWidth='2'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                >
+                  <circle cx='12' cy='12' r='10' />
+                  <path d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3' />
+                  <line x1='12' y1='17' x2='12.01' y2='17' />
+                </svg>
                 <h2>Frequently Asked Questions</h2>
               </div>
               <div className='blog-faq-list'>
                 {faqs.map((faq: BlogFAQ, index: number) => (
-                  <details key={index} className='blog-faq-item' itemScope itemProp='mainEntity' itemType='https://schema.org/Question'>
+                  <details
+                    key={index}
+                    className='blog-faq-item'
+                    itemScope
+                    itemProp='mainEntity'
+                    itemType='https://schema.org/Question'
+                  >
                     <summary itemProp='name' className='blog-faq-q'>
                       <span className='blog-faq-num'>{String(index + 1).padStart(2, '0')}</span>
                       {faq.question}
                     </summary>
-                    <div itemScope itemProp='acceptedAnswer' itemType='https://schema.org/Answer' className='blog-faq-answer'>
+                    <div
+                      itemScope
+                      itemProp='acceptedAnswer'
+                      itemType='https://schema.org/Answer'
+                      className='blog-faq-answer'
+                    >
                       <p itemProp='text'>{faq.answer}</p>
                     </div>
                   </details>
@@ -285,7 +326,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           {post.tags && post.tags.length > 0 && (
             <div className='blog-tags'>
               {post.tags.map((tag: string) => (
-                <span key={tag} className='blog-tag'>#{tag}</span>
+                <span key={tag} className='blog-tag'>
+                  #{tag}
+                </span>
               ))}
             </div>
           )}
@@ -309,15 +352,33 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 {author.expertise && author.expertise.length > 0 && (
                   <div className='blog-author-skills'>
                     {author.expertise.map((skill: string) => (
-                      <span key={skill} className='blog-skill-badge'>{skill}</span>
+                      <span key={skill} className='blog-skill-badge'>
+                        {skill}
+                      </span>
                     ))}
                   </div>
                 )}
                 <div className='blog-author-socials'>
-                  {author.social_links?.twitter && <a href={author.social_links?.twitter} target='_blank' rel='noopener noreferrer'><i className='tabler-brand-x' /></a>}
-                  {author.social_links?.linkedin && <a href={author.social_links?.linkedin} target='_blank' rel='noopener noreferrer'><i className='tabler-brand-linkedin' /></a>}
-                  {author.social_links?.facebook && <a href={author.social_links?.facebook} target='_blank' rel='noopener noreferrer'><i className='tabler-brand-facebook' /></a>}
-                  {author.social_links?.website && <a href={author.social_links?.website} target='_blank' rel='noopener noreferrer'><i className='tabler-world' /></a>}
+                  {author.social_links?.twitter && (
+                    <a href={author.social_links?.twitter} target='_blank' rel='noopener noreferrer'>
+                      <i className='tabler-brand-x' />
+                    </a>
+                  )}
+                  {author.social_links?.linkedin && (
+                    <a href={author.social_links?.linkedin} target='_blank' rel='noopener noreferrer'>
+                      <i className='tabler-brand-linkedin' />
+                    </a>
+                  )}
+                  {author.social_links?.facebook && (
+                    <a href={author.social_links?.facebook} target='_blank' rel='noopener noreferrer'>
+                      <i className='tabler-brand-facebook' />
+                    </a>
+                  )}
+                  {author.social_links?.website && (
+                    <a href={author.social_links?.website} target='_blank' rel='noopener noreferrer'>
+                      <i className='tabler-world' />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -326,7 +387,17 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
         {/* Table of Contents Sidebar */}
         {headings.length > 3 && (
-          <aside className='blog-toc-sidebar' style={{ width: 260, flexShrink: 0, position: 'sticky', top: 100, alignSelf: 'flex-start', display: 'none' }}>
+          <aside
+            className='blog-toc-sidebar'
+            style={{
+              width: 260,
+              flexShrink: 0,
+              position: 'sticky',
+              top: 100,
+              alignSelf: 'flex-start',
+              display: 'none'
+            }}
+          >
             <nav className='blog-toc'>
               <h4>On This Page</h4>
               <ul>

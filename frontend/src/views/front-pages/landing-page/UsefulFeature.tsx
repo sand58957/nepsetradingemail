@@ -28,32 +28,38 @@ const feature = [
   {
     icon: <LaptopCharging color='var(--mui-palette-primary-main)' />,
     title: 'Email Marketing',
-    description: 'Design beautiful campaigns with drag-and-drop templates, track opens, clicks and deliveries in real-time.'
+    description:
+      'Design beautiful campaigns with drag-and-drop templates, track opens, clicks and deliveries in real-time.'
   },
   {
     icon: <Rocket color='var(--mui-palette-primary-main)' />,
     title: 'Telegram Marketing',
-    description: 'Auto-subscribe users via bot, send bulk alerts to NEPSE traders, and manage contacts with group segmentation.'
+    description:
+      'Auto-subscribe users via bot, send bulk alerts to NEPSE traders, and manage contacts with group segmentation.'
   },
   {
     icon: <Paper color='var(--mui-palette-primary-main)' />,
     title: 'SMS Campaigns',
-    description: 'Reach customers instantly with bulk SMS via Nepal Telecom and Ncell networks with high delivery rates.'
+    description:
+      'Reach customers instantly with bulk SMS via Nepal Telecom and Ncell networks with high delivery rates.'
   },
   {
     icon: <Check color='var(--mui-palette-primary-main)' />,
     title: 'API Integration',
-    description: 'RESTful APIs for all channels — automate campaign sending, manage contacts, and track analytics programmatically.'
+    description:
+      'RESTful APIs for all channels — automate campaign sending, manage contacts, and track analytics programmatically.'
   },
   {
     icon: <User color='var(--mui-palette-primary-main)' />,
     title: 'WhatsApp & Messenger',
-    description: 'Engage customers on WhatsApp Business and Facebook Messenger with automated responses and broadcast campaigns.'
+    description:
+      'Engage customers on WhatsApp Business and Facebook Messenger with automated responses and broadcast campaigns.'
   },
   {
     icon: <Document color='var(--mui-palette-primary-main)' />,
     title: 'Analytics & Reporting',
-    description: 'Comprehensive dashboards with delivery rates, engagement metrics, and campaign performance across all channels.'
+    description:
+      'Comprehensive dashboards with delivery rates, engagement metrics, and campaign performance across all channels.'
   }
 ]
 

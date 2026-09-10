@@ -45,14 +45,32 @@ const subscriberTiers = [
 // Monthly price per subscriber tier for each plan (NPR)
 const planPricing: Record<string, Record<number, number>> = {
   Advanced: {
-    500: 4200, 1500: 5500, 2500: 7500, 5000: 10500,
-    10000: 16800, 15000: 26800, 20000: 33600, 30000: 46900,
-    50000: 67200, 100000: 107600, 150000: 147000, 200000: 186500
+    500: 4200,
+    1500: 5500,
+    2500: 7500,
+    5000: 10500,
+    10000: 16800,
+    15000: 26800,
+    20000: 33600,
+    30000: 46900,
+    50000: 67200,
+    100000: 107600,
+    150000: 147000,
+    200000: 186500
   },
   'Growing Business': {
-    500: 1750, 1500: 2350, 2500: 3100, 5000: 4700,
-    10000: 8700, 15000: 14700, 20000: 17500, 30000: 25200,
-    50000: 37800, 100000: 67200, 150000: 100800, 200000: 134400
+    500: 1750,
+    1500: 2350,
+    2500: 3100,
+    5000: 4700,
+    10000: 8700,
+    15000: 14700,
+    20000: 17500,
+    30000: 25200,
+    50000: 37800,
+    100000: 67200,
+    150000: 100800,
+    200000: 134400
   }
 }
 
@@ -304,7 +322,9 @@ const PricingPlan = () => {
                   sx={{
                     height: '100%',
                     position: 'relative',
-                    boxShadow: plan.highlight ? '0 8px 30px rgba(var(--mui-palette-primary-mainChannel), 0.2)' : undefined
+                    boxShadow: plan.highlight
+                      ? '0 8px 30px rgba(var(--mui-palette-primary-mainChannel), 0.2)'
+                      : undefined
                   }}
                 >
                   {plan.badge && (
@@ -327,14 +347,23 @@ const PricingPlan = () => {
                       <Typography variant='h6' component='h3' fontWeight={700}>
                         {plan.title}
                       </Typography>
-                      <Typography variant='caption' color='text.secondary' sx={{ lineHeight: 1.4, display: 'block', mt: 0.5 }}>
+                      <Typography
+                        variant='caption'
+                        color='text.secondary'
+                        sx={{ lineHeight: 1.4, display: 'block', mt: 0.5 }}
+                      >
                         {plan.tagline}
                       </Typography>
                     </div>
 
                     {/* Price */}
                     <div>
-                      <Typography variant='h4' component='p' fontWeight={800} color={plan.title === 'Free' ? 'success.main' : 'primary.main'}>
+                      <Typography
+                        variant='h4'
+                        component='p'
+                        fontWeight={800}
+                        color={plan.title === 'Free' ? 'success.main' : 'primary.main'}
+                      >
                         {pricing.display}
                       </Typography>
                       {pricing.sub && (
@@ -361,14 +390,23 @@ const PricingPlan = () => {
                     {/* Features */}
                     <div className='flex flex-col gap-2'>
                       {plan.sectionTitle && (
-                        <Typography variant='caption' fontWeight={700} color='text.secondary' sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 0.5 }}>
+                        <Typography
+                          variant='caption'
+                          fontWeight={700}
+                          color='text.secondary'
+                          sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 0.5 }}
+                        >
                           {plan.sectionTitle}
                         </Typography>
                       )}
                       {plan.features.map((feature, fi) => (
                         <div key={fi} className='flex items-start gap-2'>
                           <i className='tabler-check text-sm text-green-500' style={{ marginTop: 3, flexShrink: 0 }} />
-                          <Typography variant='body2' color='text.secondary' sx={{ fontSize: '0.8rem', lineHeight: 1.4 }}>
+                          <Typography
+                            variant='body2'
+                            color='text.secondary'
+                            sx={{ fontSize: '0.8rem', lineHeight: 1.4 }}
+                          >
                             {feature}
                           </Typography>
                         </div>
@@ -383,8 +421,8 @@ const PricingPlan = () => {
 
         {/* Note */}
         <Typography variant='caption' color='text.secondary' className='text-center block mbs-6'>
-          All prices are in NPR (Nepali Rupees). Annual plans are billed yearly with up to 15% savings.
-          Prices may vary based on subscriber count. Contact us for custom enterprise pricing.
+          All prices are in NPR (Nepali Rupees). Annual plans are billed yearly with up to 15% savings. Prices may vary
+          based on subscriber count. Contact us for custom enterprise pricing.
         </Typography>
       </div>
     </section>

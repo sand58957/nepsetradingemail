@@ -56,7 +56,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Greet new contacts when they join your list',
     body: 'Welcome to NepseTrading {{1}}! We are excited to have you on board. Stay tuned for exclusive market insights and trading updates. Reply STOP to unsubscribe.',
-    example: 'Welcome to NepseTrading John! We are excited to have you on board. Stay tuned for exclusive market insights and trading updates. Reply STOP to unsubscribe.',
+    example:
+      'Welcome to NepseTrading John! We are excited to have you on board. Stay tuned for exclusive market insights and trading updates. Reply STOP to unsubscribe.',
     variables: ['Contact Name'],
     tags: ['onboarding', 'welcome'],
     icon: 'tabler-hand-wave'
@@ -69,7 +70,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Send promotions and discount offers to your audience',
     body: 'Hi {{1}}, great news! We have a special offer for you. {{2}}. This offer is valid until {{3}}. Do not miss out! Reply STOP to unsubscribe.',
-    example: 'Hi John, great news! We have a special offer for you. Get 20 percent off on premium membership. This offer is valid until March 31 2026. Do not miss out! Reply STOP to unsubscribe.',
+    example:
+      'Hi John, great news! We have a special offer for you. Get 20 percent off on premium membership. This offer is valid until March 31 2026. Do not miss out! Reply STOP to unsubscribe.',
     variables: ['Contact Name', 'Offer Details', 'Expiry Date'],
     tags: ['promotion', 'offer', 'discount'],
     icon: 'tabler-discount-2'
@@ -82,7 +84,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Invite contacts to workshops, webinars, or events',
     body: 'Hello {{1}}, you are invited to our upcoming event {{2}} on {{3}}. Join us to learn about the latest market trends and strategies. Reply STOP to unsubscribe.',
-    example: 'Hello John, you are invited to our upcoming event NEPSE Market Analysis Workshop on March 20 2026 at 3 PM. Join us to learn about the latest market trends and strategies. Reply STOP to unsubscribe.',
+    example:
+      'Hello John, you are invited to our upcoming event NEPSE Market Analysis Workshop on March 20 2026 at 3 PM. Join us to learn about the latest market trends and strategies. Reply STOP to unsubscribe.',
     variables: ['Contact Name', 'Event Name', 'Date & Time'],
     tags: ['event', 'invitation', 'webinar'],
     icon: 'tabler-calendar-event'
@@ -95,7 +98,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Share market updates and newsletters with subscribers',
     body: 'Hi {{1}}, here is your market update for {{2}}. {{3}}. Visit our website for detailed analysis. Reply STOP to unsubscribe.',
-    example: 'Hi John, here is your market update for March 2026. NEPSE index closed at 2850 points with a gain of 15 points today. Visit our website for detailed analysis. Reply STOP to unsubscribe.',
+    example:
+      'Hi John, here is your market update for March 2026. NEPSE index closed at 2850 points with a gain of 15 points today. Visit our website for detailed analysis. Reply STOP to unsubscribe.',
     variables: ['Contact Name', 'Period', 'Update Summary'],
     tags: ['newsletter', 'market', 'update'],
     icon: 'tabler-news'
@@ -108,7 +112,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Announce new products or services to your audience',
     body: 'Hello {{1}}, we are thrilled to announce {{2}}! {{3}}. Be among the first to try it out. Visit {{4}} for more details. Reply STOP to unsubscribe.',
-    example: 'Hello John, we are thrilled to announce our new Premium Trading Signals service! Get real-time buy and sell alerts directly on WhatsApp. Be among the first to try it out. Visit www.nepsetrading.com/premium for more details. Reply STOP to unsubscribe.',
+    example:
+      'Hello John, we are thrilled to announce our new Premium Trading Signals service! Get real-time buy and sell alerts directly on WhatsApp. Be among the first to try it out. Visit www.nepsetrading.com/premium for more details. Reply STOP to unsubscribe.',
     variables: ['Contact Name', 'Product Name', 'Description', 'URL'],
     tags: ['launch', 'product', 'announcement'],
     icon: 'tabler-rocket'
@@ -121,7 +126,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Ask customers for feedback on your services',
     body: 'Hi {{1}}, we value your opinion! How was your experience with {{2}}? Please take a moment to share your feedback. Reply with a rating from 1 to 5. Reply STOP to unsubscribe.',
-    example: 'Hi John, we value your opinion! How was your experience with our Premium Membership? Please take a moment to share your feedback. Reply with a rating from 1 to 5. Reply STOP to unsubscribe.',
+    example:
+      'Hi John, we value your opinion! How was your experience with our Premium Membership? Please take a moment to share your feedback. Reply with a rating from 1 to 5. Reply STOP to unsubscribe.',
     variables: ['Contact Name', 'Service/Product Name'],
     tags: ['feedback', 'survey', 'review'],
     icon: 'tabler-message-star'
@@ -134,7 +140,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Send festival or holiday greetings to your audience',
     body: 'Dear {{1}}, wishing you a very Happy {{2}} from the NepseTrading family! May this occasion bring you prosperity and success in all your ventures. Reply STOP to unsubscribe.',
-    example: 'Dear John, wishing you a very Happy Dashain from the NepseTrading family! May this occasion bring you prosperity and success in all your ventures. Reply STOP to unsubscribe.',
+    example:
+      'Dear John, wishing you a very Happy Dashain from the NepseTrading family! May this occasion bring you prosperity and success in all your ventures. Reply STOP to unsubscribe.',
     variables: ['Contact Name', 'Festival/Occasion'],
     tags: ['greeting', 'festival', 'holiday'],
     icon: 'tabler-confetti'
@@ -147,7 +154,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Promote your referral program to existing customers',
     body: 'Hi {{1}}, share NepseTrading with your friends and earn rewards! Use your referral code {{2}} and both you and your friend get {{3}}. Start sharing today! Reply STOP to unsubscribe.',
-    example: 'Hi John, share NepseTrading with your friends and earn rewards! Use your referral code REF-JOHN123 and both you and your friend get 1 month free premium access. Start sharing today! Reply STOP to unsubscribe.',
+    example:
+      'Hi John, share NepseTrading with your friends and earn rewards! Use your referral code REF-JOHN123 and both you and your friend get 1 month free premium access. Start sharing today! Reply STOP to unsubscribe.',
     variables: ['Contact Name', 'Referral Code', 'Reward'],
     tags: ['referral', 'rewards', 'invite'],
     icon: 'tabler-users-plus'
@@ -162,7 +170,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Confirm customer orders with delivery details',
     body: 'Hello {{1}}, your order {{2}} has been confirmed. Expected delivery by {{3}}. Thank you for choosing NepseTrading!',
-    example: 'Hello John, your order ORD-12345 has been confirmed. Expected delivery by March 15 2026. Thank you for choosing NepseTrading!',
+    example:
+      'Hello John, your order ORD-12345 has been confirmed. Expected delivery by March 15 2026. Thank you for choosing NepseTrading!',
     variables: ['Contact Name', 'Order ID', 'Delivery Date'],
     tags: ['order', 'confirmation', 'delivery'],
     icon: 'tabler-package'
@@ -175,7 +184,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Remind customers about their upcoming appointments',
     body: 'Hi {{1}}, this is a reminder about your upcoming appointment on {{2}} at {{3}}. Please reply YES to confirm or NO to reschedule.',
-    example: 'Hi John, this is a reminder about your upcoming appointment on March 15 2026 at 2:30 PM. Please reply YES to confirm or NO to reschedule.',
+    example:
+      'Hi John, this is a reminder about your upcoming appointment on March 15 2026 at 2:30 PM. Please reply YES to confirm or NO to reschedule.',
     variables: ['Contact Name', 'Date', 'Time'],
     tags: ['appointment', 'reminder', 'schedule'],
     icon: 'tabler-calendar-check'
@@ -188,7 +198,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Notify users about changes to their account',
     body: 'Hello {{1}}, your account has been updated successfully. If you did not make this change please contact our support team immediately.',
-    example: 'Hello John, your account has been updated successfully. If you did not make this change please contact our support team immediately.',
+    example:
+      'Hello John, your account has been updated successfully. If you did not make this change please contact our support team immediately.',
     variables: ['Contact Name'],
     tags: ['account', 'security', 'notification'],
     icon: 'tabler-user-check'
@@ -201,7 +212,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Confirm payment receipt to customers',
     body: 'Hello {{1}}, we have received your payment of {{2}} for {{3}}. Transaction ID: {{4}}. Thank you!',
-    example: 'Hello John, we have received your payment of NPR 5000 for Premium Membership. Transaction ID: TXN-789456. Thank you!',
+    example:
+      'Hello John, we have received your payment of NPR 5000 for Premium Membership. Transaction ID: TXN-789456. Thank you!',
     variables: ['Contact Name', 'Amount', 'Service', 'Transaction ID'],
     tags: ['payment', 'receipt', 'transaction'],
     icon: 'tabler-receipt'
@@ -214,7 +226,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Update customers on shipping status',
     body: 'Hi {{1}}, your order {{2}} is now {{3}}. Tracking number: {{4}}. Contact us if you have any questions.',
-    example: 'Hi John, your order ORD-12345 is now out for delivery. Tracking number: TRK-987654. Contact us if you have any questions.',
+    example:
+      'Hi John, your order ORD-12345 is now out for delivery. Tracking number: TRK-987654. Contact us if you have any questions.',
     variables: ['Contact Name', 'Order ID', 'Status', 'Tracking Number'],
     tags: ['shipping', 'delivery', 'tracking'],
     icon: 'tabler-truck-delivery'
@@ -227,7 +240,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Notify customers about support ticket status changes',
     body: 'Hello {{1}}, your support ticket {{2}} has been updated. Status: {{3}}. Our team is working to resolve your issue as quickly as possible.',
-    example: 'Hello John, your support ticket TICKET-456 has been updated. Status: In Progress. Our team is working to resolve your issue as quickly as possible.',
+    example:
+      'Hello John, your support ticket TICKET-456 has been updated. Status: In Progress. Our team is working to resolve your issue as quickly as possible.',
     variables: ['Contact Name', 'Ticket ID', 'Status'],
     tags: ['support', 'ticket', 'helpdesk'],
     icon: 'tabler-headset'
@@ -240,7 +254,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Remind customers about upcoming subscription renewals',
     body: 'Hi {{1}}, your {{2}} subscription expires on {{3}}. Renew now to continue enjoying uninterrupted service. Contact us for any questions.',
-    example: 'Hi John, your Premium Membership subscription expires on March 31 2026. Renew now to continue enjoying uninterrupted service. Contact us for any questions.',
+    example:
+      'Hi John, your Premium Membership subscription expires on March 31 2026. Renew now to continue enjoying uninterrupted service. Contact us for any questions.',
     variables: ['Contact Name', 'Plan Name', 'Expiry Date'],
     tags: ['subscription', 'renewal', 'billing'],
     icon: 'tabler-refresh'
@@ -255,7 +270,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Send OTP codes for account verification',
     body: 'Your NepseTrading verification code is {{1}}. This code expires in 10 minutes. Do not share this code with anyone.',
-    example: 'Your NepseTrading verification code is 456789. This code expires in 10 minutes. Do not share this code with anyone.',
+    example:
+      'Your NepseTrading verification code is 456789. This code expires in 10 minutes. Do not share this code with anyone.',
     variables: ['OTP Code'],
     tags: ['otp', 'verification', 'security'],
     icon: 'tabler-shield-lock'
@@ -268,7 +284,8 @@ const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     language: 'en',
     description: 'Send password reset codes or links',
     body: 'Hello {{1}}, your password reset code is {{2}}. This code is valid for 15 minutes. If you did not request this please ignore this message.',
-    example: 'Hello John, your password reset code is 123456. This code is valid for 15 minutes. If you did not request this please ignore this message.',
+    example:
+      'Hello John, your password reset code is 123456. This code is valid for 15 minutes. If you did not request this please ignore this message.',
     variables: ['Contact Name', 'Reset Code'],
     tags: ['password', 'reset', 'security'],
     icon: 'tabler-key'
@@ -294,6 +311,7 @@ const WATemplateLibrary = () => {
   const [previewTemplate, setPreviewTemplate] = useState<LibraryTemplate | null>(null)
   const [customBody, setCustomBody] = useState('')
   const [customExample, setCustomExample] = useState('')
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
     open: false,
     message: '',
@@ -306,7 +324,9 @@ const WATemplateLibrary = () => {
 
   const filteredTemplates = TEMPLATE_LIBRARY.filter(t => {
     const matchesCategory = activeCategory === 'ALL' || t.category === activeCategory
-    const matchesSearch = search === '' ||
+
+    const matchesSearch =
+      search === '' ||
       t.displayName.toLowerCase().includes(search.toLowerCase()) ||
       t.description.toLowerCase().includes(search.toLowerCase()) ||
       t.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()))
@@ -369,7 +389,8 @@ const WATemplateLibrary = () => {
                     Template Library
                   </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    Browse pre-built WhatsApp message templates. Pick a template, customize it, and submit for Meta approval.
+                    Browse pre-built WhatsApp message templates. Pick a template, customize it, and submit for Meta
+                    approval.
                   </Typography>
                 </div>
                 <div className='flex gap-2'>
@@ -396,8 +417,9 @@ const WATemplateLibrary = () => {
         {/* Info Banner */}
         <Grid size={{ xs: 12 }}>
           <Alert severity='info' icon={<i className='tabler-info-circle' />}>
-            <strong>How it works:</strong> Select a template from the library → Customize the message if needed → Click &quot;Use Template&quot; to submit it to Meta for approval.
-            Templates are usually approved within a few minutes. Only approved templates can be used in campaigns.
+            <strong>How it works:</strong> Select a template from the library → Customize the message if needed → Click
+            &quot;Use Template&quot; to submit it to Meta for approval. Templates are usually approved within a few
+            minutes. Only approved templates can be used in campaigns.
           </Alert>
         </Grid>
 
@@ -430,7 +452,9 @@ const WATemplateLibrary = () => {
                   <Tab label={`All (${TEMPLATE_LIBRARY.length})`} />
                   <Tab label={`Marketing (${TEMPLATE_LIBRARY.filter(t => t.category === 'MARKETING').length})`} />
                   <Tab label={`Utility (${TEMPLATE_LIBRARY.filter(t => t.category === 'UTILITY').length})`} />
-                  <Tab label={`Authentication (${TEMPLATE_LIBRARY.filter(t => t.category === 'AUTHENTICATION').length})`} />
+                  <Tab
+                    label={`Authentication (${TEMPLATE_LIBRARY.filter(t => t.category === 'AUTHENTICATION').length})`}
+                  />
                 </Tabs>
               </div>
             </CardContent>
@@ -442,11 +466,14 @@ const WATemplateLibrary = () => {
           <Grid size={{ xs: 12 }}>
             <Card>
               <CardContent className='text-center py-12'>
-                <i className='tabler-search-off text-[48px] mb-4' style={{ color: 'var(--mui-palette-text-secondary)' }} />
-                <Typography variant='h6' className='mb-2'>No templates found</Typography>
-                <Typography color='text.secondary'>
-                  Try adjusting your search or filter to find templates.
+                <i
+                  className='tabler-search-off text-[48px] mb-4'
+                  style={{ color: 'var(--mui-palette-text-secondary)' }}
+                />
+                <Typography variant='h6' className='mb-2'>
+                  No templates found
                 </Typography>
+                <Typography color='text.secondary'>Try adjusting your search or filter to find templates.</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -467,7 +494,10 @@ const WATemplateLibrary = () => {
                         backgroundColor: 'action.hover'
                       }}
                     >
-                      <i className={`${template.icon} text-[24px]`} style={{ color: 'var(--mui-palette-primary-main)' }} />
+                      <i
+                        className={`${template.icon} text-[24px]`}
+                        style={{ color: 'var(--mui-palette-primary-main)' }}
+                      />
                     </Box>
                   }
                   title={
@@ -483,11 +513,7 @@ const WATemplateLibrary = () => {
                         size='small'
                         variant='outlined'
                       />
-                      <Chip
-                        label={template.language.toUpperCase()}
-                        size='small'
-                        variant='outlined'
-                      />
+                      <Chip label={template.language.toUpperCase()} size='small' variant='outlined' />
                     </div>
                   }
                 />
@@ -497,14 +523,9 @@ const WATemplateLibrary = () => {
                   </Typography>
 
                   {/* Preview Body */}
-                  <Box
-                    className='p-3 rounded mb-3'
-                    sx={{ backgroundColor: 'action.hover', whiteSpace: 'pre-wrap' }}
-                  >
+                  <Box className='p-3 rounded mb-3' sx={{ backgroundColor: 'action.hover', whiteSpace: 'pre-wrap' }}>
                     <Typography variant='body2' sx={{ fontSize: '0.8rem' }}>
-                      {template.body.length > 150
-                        ? template.body.substring(0, 150) + '...'
-                        : template.body}
+                      {template.body.length > 150 ? template.body.substring(0, 150) + '...' : template.body}
                     </Typography>
                   </Box>
 
@@ -543,9 +564,7 @@ const WATemplateLibrary = () => {
                     onClick={() => handleUseTemplate(template)}
                     disabled={creating === template.id}
                     startIcon={
-                      creating === template.id
-                        ? <CircularProgress size={16} />
-                        : <i className='tabler-plus' />
+                      creating === template.id ? <CircularProgress size={16} /> : <i className='tabler-plus' />
                     }
                   >
                     {creating === template.id ? 'Creating...' : 'Use Template'}
@@ -558,12 +577,7 @@ const WATemplateLibrary = () => {
       </Grid>
 
       {/* Preview & Customize Dialog */}
-      <Dialog
-        open={previewTemplate !== null}
-        onClose={() => setPreviewTemplate(null)}
-        maxWidth='md'
-        fullWidth
-      >
+      <Dialog open={previewTemplate !== null} onClose={() => setPreviewTemplate(null)} maxWidth='md' fullWidth>
         {previewTemplate && (
           <>
             <DialogTitle>
@@ -593,16 +607,12 @@ const WATemplateLibrary = () => {
                 {/* Variables Info */}
                 {previewTemplate.variables.length > 0 && (
                   <Box>
-                    <Typography variant='subtitle2' className='mb-2'>Template Variables</Typography>
+                    <Typography variant='subtitle2' className='mb-2'>
+                      Template Variables
+                    </Typography>
                     <div className='flex gap-2 flex-wrap'>
                       {previewTemplate.variables.map((v, i) => (
-                        <Chip
-                          key={i}
-                          label={`{{${i + 1}}} = ${v}`}
-                          variant='outlined'
-                          color='secondary'
-                          size='small'
-                        />
+                        <Chip key={i} label={`{{${i + 1}}} = ${v}`} variant='outlined' color='secondary' size='small' />
                       ))}
                     </div>
                   </Box>
@@ -632,7 +642,9 @@ const WATemplateLibrary = () => {
 
                 {/* WhatsApp Preview */}
                 <Box>
-                  <Typography variant='subtitle2' className='mb-2'>WhatsApp Preview</Typography>
+                  <Typography variant='subtitle2' className='mb-2'>
+                    WhatsApp Preview
+                  </Typography>
                   <Box
                     sx={{
                       backgroundColor: '#DCF8C6',
@@ -671,9 +683,7 @@ const WATemplateLibrary = () => {
                 onClick={() => handleUseTemplate(previewTemplate, customBody, customExample)}
                 disabled={creating === previewTemplate.id}
                 startIcon={
-                  creating === previewTemplate.id
-                    ? <CircularProgress size={18} />
-                    : <i className='tabler-plus' />
+                  creating === previewTemplate.id ? <CircularProgress size={18} /> : <i className='tabler-plus' />
                 }
               >
                 {creating === previewTemplate.id ? 'Creating...' : 'Create & Submit for Approval'}
@@ -690,11 +700,7 @@ const WATemplateLibrary = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

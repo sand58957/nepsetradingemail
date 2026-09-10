@@ -110,7 +110,6 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
   }, [])
 
   const parseCSV = useCallback(
-
     // Quote-aware parse (handles commas/newlines/"" inside quoted fields), then trim each cell.
     (text: string) => parseCSVText(text, delimiter).map(row => row.map(cell => cell.trim())),
     [delimiter]
@@ -486,7 +485,11 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
         <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth>
             <InputLabel>Import Mode</InputLabel>
-            <Select value={mode} label='Import Mode' onChange={e => setMode(e.target.value as 'subscribe' | 'blocklist')}>
+            <Select
+              value={mode}
+              label='Import Mode'
+              onChange={e => setMode(e.target.value as 'subscribe' | 'blocklist')}
+            >
               <MenuItem value='subscribe'>Subscribe — Add to lists</MenuItem>
               <MenuItem value='blocklist'>Blocklist — Block these emails</MenuItem>
             </Select>
@@ -528,9 +531,7 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
     <Box className='flex flex-col gap-4'>
       {!importing && !importComplete && (
         <>
-          <Alert severity='info'>
-            Review your import configuration before starting.
-          </Alert>
+          <Alert severity='info'>Review your import configuration before starting.</Alert>
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
               <Typography variant='body2' color='text.secondary'>
@@ -553,10 +554,11 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
                 Lists
               </Typography>
               <Box className='flex gap-1 flex-wrap mt-1'>
-                {selectedLists.length > 0
-                  ? selectedLists.map(l => <Chip key={l.id} label={l.name} size='small' />)
-                  : <Typography variant='body2'>None</Typography>
-                }
+                {selectedLists.length > 0 ? (
+                  selectedLists.map(l => <Chip key={l.id} label={l.name} size='small' />)
+                ) : (
+                  <Typography variant='body2'>None</Typography>
+                )}
               </Box>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -575,12 +577,7 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
                 {Object.entries(fieldMapping)
                   .filter(([, v]) => v)
                   .map(([idx, val]) => (
-                    <Chip
-                      key={idx}
-                      label={`${headers[Number(idx)]} → ${val}`}
-                      size='small'
-                      variant='outlined'
-                    />
+                    <Chip key={idx} label={`${headers[Number(idx)]} → ${val}`} size='small' variant='outlined' />
                   ))}
               </Box>
             </Grid>
@@ -612,11 +609,7 @@ const CSVImportWizard = ({ onImportComplete }: CSVImportWizardProps) => {
         </Box>
       )}
 
-      {error && (
-        <Alert severity='error'>
-          {error}
-        </Alert>
-      )}
+      {error && <Alert severity='error'>{error}</Alert>}
 
       {importComplete && importResult && (
         <Box className='flex flex-col gap-4'>

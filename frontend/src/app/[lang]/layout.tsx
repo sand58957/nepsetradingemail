@@ -30,8 +30,7 @@ import '@assets/iconify-icons/generated-icons.css'
 
 export const metadata = {
   title: 'Nepal Fillings - Email Marketing Platform',
-  description:
-    'Nepal Fillings Email Marketing Platform - Manage subscribers, campaigns, and email lists with ease.'
+  description: 'Nepal Fillings Email Marketing Platform - Manage subscribers, campaigns, and email lists with ease.'
 }
 
 const RootLayout = async (props: ChildrenType & { params: Promise<{ lang: string }> }) => {

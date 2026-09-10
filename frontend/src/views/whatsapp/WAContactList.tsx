@@ -148,7 +148,10 @@ const WAContactList = () => {
     setAddingContact(true)
 
     try {
-      await whatsappService.createContact({ ...newContact, group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined })
+      await whatsappService.createContact({
+        ...newContact,
+        group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined
+      })
       setSnackbar({ open: true, message: 'Contact added', severity: 'success' })
       setAddDialogOpen(false)
       setNewContact({ phone: '', name: '', email: '' })
@@ -233,7 +236,10 @@ const WAContactList = () => {
                 <Select
                   value={optedInFilter}
                   label='Opt-in Status'
-                  onChange={e => { setOptedInFilter(e.target.value); setPage(0) }}
+                  onChange={e => {
+                    setOptedInFilter(e.target.value)
+                    setPage(0)
+                  }}
                 >
                   <MenuItem value=''>All</MenuItem>
                   <MenuItem value='true'>Opted In</MenuItem>
@@ -284,7 +290,9 @@ const WAContactList = () => {
                         <Typography>{contact.name || '-'}</Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant='body2' color='text.secondary'>{contact.email || '-'}</Typography>
+                        <Typography variant='body2' color='text.secondary'>
+                          {contact.email || '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -296,12 +304,15 @@ const WAContactList = () => {
                       </TableCell>
                       <TableCell>
                         <div className='flex gap-1 flex-wrap'>
-                          {contact.tags && contact.tags.length > 0
-                            ? contact.tags.slice(0, 3).map((tag, i) => (
-                              <Chip key={i} label={tag} size='small' variant='outlined' />
-                            ))
-                            : <Typography variant='body2' color='text.secondary'>-</Typography>
-                          }
+                          {contact.tags && contact.tags.length > 0 ? (
+                            contact.tags
+                              .slice(0, 3)
+                              .map((tag, i) => <Chip key={i} label={tag} size='small' variant='outlined' />)
+                          ) : (
+                            <Typography variant='body2' color='text.secondary'>
+                              -
+                            </Typography>
+                          )}
                           {contact.tags && contact.tags.length > 3 && (
                             <Chip label={`+${contact.tags.length - 3}`} size='small' variant='outlined' />
                           )}
@@ -320,7 +331,7 @@ const WAContactList = () => {
                         <IconButton
                           size='small'
                           aria-label='Contact actions'
-                          onClick={(e) => {
+                          onClick={e => {
                             setAnchorEl(e.currentTarget)
                             setMenuContactId(contact.id)
                           }}
@@ -350,16 +361,14 @@ const WAContactList = () => {
       </Card>
 
       {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-      >
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
-          setDeletingId(menuContactId)
-          setDeleteDialogOpen(true)
-        }}>
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
+            setDeletingId(menuContactId)
+            setDeleteDialogOpen(true)
+          }}
+        >
           <i className='tabler-trash text-[18px] mr-2' />
           Delete
         </MenuItem>
@@ -373,7 +382,9 @@ const WAContactList = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button variant='contained' color='error' onClick={handleDelete}>Delete</Button>
+          <Button variant='contained' color='error' onClick={handleDelete}>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -412,7 +423,7 @@ const WAContactList = () => {
                   value={selectedGroupIds}
                   label='Groups'
                   onChange={e => setSelectedGroupIds(e.target.value as number[])}
-                  renderValue={(selected) => (
+                  renderValue={selected => (
                     <div className='flex gap-1 flex-wrap'>
                       {(selected as number[]).map(id => {
                         const group = availableGroups.find(g => g.id === id)
@@ -453,11 +464,7 @@ const WAContactList = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

@@ -8,6 +8,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: ['/', '/api/public/blog/sitemap.xml'],
         disallow: ['/api/', '/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       },
+
       // AI/LLM bots - allow blog and public pages for AIO optimization
       {
         userAgent: 'GPTBot',
@@ -45,9 +46,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
       }
     ],
-    sitemap: [
-      'https://nepalfillings.com/sitemap.xml',
-      'https://nepalfillings.com/api/public/blog/sitemap.xml'
-    ]
+    sitemap: ['https://nepalfillings.com/sitemap.xml', 'https://nepalfillings.com/api/public/blog/sitemap.xml']
   }
 }

@@ -8,13 +8,11 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 
 // MUI Imports
-import Typography from '@mui/material/Typography'
 import Drawer from '@mui/material/Drawer'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import IconButton from '@mui/material/IconButton'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -80,7 +78,7 @@ const menuItems = [
 
 const FrontMenu = (props: Props) => {
   // Props
-  const { isDrawerOpen, setIsDrawerOpen, mode } = props
+  const { isDrawerOpen, setIsDrawerOpen } = props
 
   // Hooks
   const pathname = usePathname()
@@ -130,9 +128,7 @@ const FrontMenu = (props: Props) => {
             fontWeight: 500,
             fontSize: '0.9rem',
             color: isActive(item) ? 'primary.main' : 'text.primary',
-            backgroundColor: isActive(item)
-              ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)'
-              : 'transparent',
+            backgroundColor: isActive(item) ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)' : 'transparent',
             transition: 'all 0.2s ease',
             '&:hover': {
               color: 'primary.main',

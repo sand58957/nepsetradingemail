@@ -204,26 +204,37 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         const imageFiles = files.filter(f => {
           const ext = f.toLowerCase()
 
-          return ext.endsWith('.png') || ext.endsWith('.jpg') || ext.endsWith('.jpeg') ||
-                 ext.endsWith('.gif') || ext.endsWith('.svg') || ext.endsWith('.webp') || ext.endsWith('.ico')
+          return (
+            ext.endsWith('.png') ||
+            ext.endsWith('.jpg') ||
+            ext.endsWith('.jpeg') ||
+            ext.endsWith('.gif') ||
+            ext.endsWith('.svg') ||
+            ext.endsWith('.webp') ||
+            ext.endsWith('.ico')
+          )
         })
 
         for (let i = 0; i < imageFiles.length; i += UPLOAD_CONCURRENCY) {
           const chunk = imageFiles.slice(i, i + UPLOAD_CONCURRENCY)
 
-          setUploadProgress(`Uploading images ${i + 1}-${Math.min(i + UPLOAD_CONCURRENCY, imageFiles.length)} of ${imageFiles.length}...`)
+          setUploadProgress(
+            `Uploading images ${i + 1}-${Math.min(i + UPLOAD_CONCURRENCY, imageFiles.length)} of ${imageFiles.length}...`
+          )
 
-          const results = await Promise.allSettled(chunk.map(async (imgPath) => {
-            const imgData = await zip.files[imgPath].async('blob')
-            const ext = imgPath.split('.').pop()?.toLowerCase() || 'png'
-            const mime = EXT_TO_MIME[ext] || 'image/png'
-            const imgFileName = imgPath.split('/').pop() || imgPath
-            const imageFile = new File([imgData], imgFileName, { type: mime })
+          const results = await Promise.allSettled(
+            chunk.map(async imgPath => {
+              const imgData = await zip.files[imgPath].async('blob')
+              const ext = imgPath.split('.').pop()?.toLowerCase() || 'png'
+              const mime = EXT_TO_MIME[ext] || 'image/png'
+              const imgFileName = imgPath.split('/').pop() || imgPath
+              const imageFile = new File([imgData], imgFileName, { type: mime })
 
-            const result = await templateService.uploadMedia(imageFile)
+              const result = await templateService.uploadMedia(imageFile)
 
-            return { imgPath, imgFileName, url: result.data.url }
-          }))
+              return { imgPath, imgFileName, url: result.data.url }
+            })
+          )
 
           for (const result of results) {
             if (result.status === 'fulfilled') {
@@ -245,7 +256,7 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         html = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
 
-          reader.onload = (event) => {
+          reader.onload = event => {
             const content = event.target?.result as string
 
             if (content) resolve(content)
@@ -262,15 +273,19 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
         for (let i = 0; i < matches.length; i += UPLOAD_CONCURRENCY) {
           const chunk = matches.slice(i, i + UPLOAD_CONCURRENCY)
 
-          setUploadProgress(`Uploading images ${i + 1}-${Math.min(i + UPLOAD_CONCURRENCY, matches.length)} of ${matches.length}...`)
+          setUploadProgress(
+            `Uploading images ${i + 1}-${Math.min(i + UPLOAD_CONCURRENCY, matches.length)} of ${matches.length}...`
+          )
 
-          const results = await Promise.allSettled(chunk.map(async ([fullMatch, mime, base64Data], idx) => {
-            const ext = MIME_TO_EXT[mime] || 'png'
-            const imageFile = base64ToFile(base64Data, mime, `image-${i + idx}.${ext}`)
-            const result = await templateService.uploadMedia(imageFile)
+          const results = await Promise.allSettled(
+            chunk.map(async ([fullMatch, mime, base64Data], idx) => {
+              const ext = MIME_TO_EXT[mime] || 'png'
+              const imageFile = base64ToFile(base64Data, mime, `image-${i + idx}.${ext}`)
+              const result = await templateService.uploadMedia(imageFile)
 
-            return { fullMatch, url: result.data.url }
-          }))
+              return { fullMatch, url: result.data.url }
+            })
+          )
 
           for (const result of results) {
             if (result.status === 'fulfilled') {
@@ -411,156 +426,161 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
               gap: 3
             }}
           >
-              <Card
-                role='button'
-                tabIndex={0}
-                aria-label='Start from scratch'
+            <Card
+              role='button'
+              tabIndex={0}
+              aria-label='Start from scratch'
+              sx={{
+                cursor: 'pointer',
+                '&:hover': { boxShadow: 6, transform: 'translateY(-2px)' },
+                '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
+                transition: 'all 0.2s',
+                overflow: 'hidden',
+                borderRadius: 3
+              }}
+              onClick={handleStartFromScratch}
+              onKeyDown={activateOnKey(handleStartFromScratch)}
+            >
+              <Box
                 sx={{
-                  cursor: 'pointer',
-                  '&:hover': { boxShadow: 6, transform: 'translateY(-2px)' },
-                  '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
-                  transition: 'all 0.2s',
-                  overflow: 'hidden',
-                  borderRadius: 3
+                  bgcolor: 'action.hover',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'column',
+                  gap: 2,
+                  py: 5,
+                  px: 3
                 }}
-                onClick={handleStartFromScratch}
-                onKeyDown={activateOnKey(handleStartFromScratch)}
               >
                 <Box
                   sx={{
-                    bgcolor: 'action.hover',
+                    width: 56,
+                    height: 56,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column',
-                    gap: 2,
-                    py: 5,
-                    px: 3
+                    justifyContent: 'center'
                   }}
                 >
-                  <Box
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <i className='tabler-layout-dashboard text-[40px]' style={{ color: 'var(--mui-palette-primary-main)' }} />
-                  </Box>
-                  <Typography variant='subtitle1' fontWeight={700} sx={{ color: 'text.primary' }}>
-                    Start from scratch
-                  </Typography>
-                  <Typography variant='body2' color='text.secondary' sx={{ textAlign: 'center', lineHeight: 1.5 }}>
-                    Create a custom design or<br />use ready-made blocks.
-                  </Typography>
-                  <Button
-                    variant='contained'
-                    color='success'
-                    sx={{
-                      mt: 1,
-                      px: 5,
-                      py: 1,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      fontSize: '0.95rem'
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleStartFromScratch()
-                    }}
-                  >
-                    Choose
-                  </Button>
+                  <i
+                    className='tabler-layout-dashboard text-[40px]'
+                    style={{ color: 'var(--mui-palette-primary-main)' }}
+                  />
                 </Box>
-              </Card>
-
-              <Card
-                role='button'
-                tabIndex={uploading ? -1 : 0}
-                aria-label='Upload email template (.html, .htm or .zip)'
-                aria-disabled={uploading}
-                sx={{
-                  border: '2px dashed',
-                  borderColor: uploading ? 'primary.main' : 'divider',
-                  cursor: uploading ? 'default' : 'pointer',
-                  '&:hover': uploading ? {} : { borderColor: 'primary.main', boxShadow: 4, transform: 'translateY(-2px)' },
-                  '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
-                  transition: 'all 0.2s',
-                  opacity: uploading ? 0.8 : 1
-                }}
-                onClick={() => !uploading && fileInputRef.current?.click()}
-                onKeyDown={activateOnKey(() => !uploading && fileInputRef.current?.click())}
-              >
-                <Box
+                <Typography variant='subtitle1' fontWeight={700} sx={{ color: 'text.primary' }}>
+                  Start from scratch
+                </Typography>
+                <Typography variant='body2' color='text.secondary' sx={{ textAlign: 'center', lineHeight: 1.5 }}>
+                  Create a custom design or
+                  <br />
+                  use ready-made blocks.
+                </Typography>
+                <Button
+                  variant='contained'
+                  color='success'
                   sx={{
-                    height: 220,
-                    bgcolor: 'action.hover',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column',
-                    gap: 1.5
+                    mt: 1,
+                    px: 5,
+                    py: 1,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.95rem'
+                  }}
+                  onClick={e => {
+                    e.stopPropagation()
+                    handleStartFromScratch()
                   }}
                 >
-                  {uploading ? (
-                    <>
-                      <CircularProgress size={48} />
-                      <Typography variant='body2' color='primary.main' fontWeight={500} textAlign='center' px={2}>
-                        {uploadProgress}
-                      </Typography>
-                    </>
-                  ) : (
-                    <>
-                      <Box
-                        sx={{
-                          width: 64,
-                          height: 64,
-                          borderRadius: 2,
-                          bgcolor: 'action.hover',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <i className='tabler-upload text-[32px]' style={{ color: 'var(--mui-palette-primary-main)' }} />
-                      </Box>
-                      <Typography variant='body2' color='text.secondary' fontWeight={500}>
-                        .html, .htm or .zip file
-                      </Typography>
-                    </>
-                  )}
-                </Box>
-                <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 }, textAlign: 'center' }}>
-                  <Typography variant='subtitle2' fontWeight={600}>
-                    {uploading ? 'Processing...' : 'Upload Email Template'}
-                  </Typography>
-                  <Typography variant='caption' color='text.secondary'>
-                    Import HTML or ZIP with images
-                  </Typography>
-                </CardContent>
-              </Card>
+                  Choose
+                </Button>
+              </Box>
+            </Card>
 
-              <input
-                ref={fileInputRef}
-                type='file'
-                accept='.html,.htm,.zip'
-                style={{ display: 'none' }}
-                onChange={handleUploadTemplate}
-              />
+            <Card
+              role='button'
+              tabIndex={uploading ? -1 : 0}
+              aria-label='Upload email template (.html, .htm or .zip)'
+              aria-disabled={uploading}
+              sx={{
+                border: '2px dashed',
+                borderColor: uploading ? 'primary.main' : 'divider',
+                cursor: uploading ? 'default' : 'pointer',
+                '&:hover': uploading
+                  ? {}
+                  : { borderColor: 'primary.main', boxShadow: 4, transform: 'translateY(-2px)' },
+                '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 2 },
+                transition: 'all 0.2s',
+                opacity: uploading ? 0.8 : 1
+              }}
+              onClick={() => !uploading && fileInputRef.current?.click()}
+              onKeyDown={activateOnKey(() => !uploading && fileInputRef.current?.click())}
+            >
+              <Box
+                sx={{
+                  height: 220,
+                  bgcolor: 'action.hover',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'column',
+                  gap: 1.5
+                }}
+              >
+                {uploading ? (
+                  <>
+                    <CircularProgress size={48} />
+                    <Typography variant='body2' color='primary.main' fontWeight={500} textAlign='center' px={2}>
+                      {uploadProgress}
+                    </Typography>
+                  </>
+                ) : (
+                  <>
+                    <Box
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 2,
+                        bgcolor: 'action.hover',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <i className='tabler-upload text-[32px]' style={{ color: 'var(--mui-palette-primary-main)' }} />
+                    </Box>
+                    <Typography variant='body2' color='text.secondary' fontWeight={500}>
+                      .html, .htm or .zip file
+                    </Typography>
+                  </>
+                )}
+              </Box>
+              <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 }, textAlign: 'center' }}>
+                <Typography variant='subtitle2' fontWeight={600}>
+                  {uploading ? 'Processing...' : 'Upload Email Template'}
+                </Typography>
+                <Typography variant='caption' color='text.secondary'>
+                  Import HTML or ZIP with images
+                </Typography>
+              </CardContent>
+            </Card>
 
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4, gridColumn: '1 / -1' }}>
-                  <CircularProgress size={24} />
-                </Box>
-              ) : (
-                filteredUserTemplates.map(template => (
-                  <TemplateCard key={`user-${template.id}`} template={template} />
-                ))
-              )}
-            </Box>
+            <input
+              ref={fileInputRef}
+              type='file'
+              accept='.html,.htm,.zip'
+              style={{ display: 'none' }}
+              onChange={handleUploadTemplate}
+            />
+
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4, gridColumn: '1 / -1' }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              filteredUserTemplates.map(template => <TemplateCard key={`user-${template.id}`} template={template} />)
+            )}
+          </Box>
         </Box>
       )}
 
@@ -700,7 +720,6 @@ const TemplateGallery = ({ campaignType }: TemplateGalleryProps) => {
           {errorMsg}
         </Alert>
       </Snackbar>
-
     </div>
   )
 }

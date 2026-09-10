@@ -115,7 +115,9 @@ const SMSSettings = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading settings...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading settings...
+        </Typography>
       </div>
     )
   }
@@ -168,7 +170,11 @@ const SMSSettings = () => {
                     input: {
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <IconButton onClick={() => setShowToken(!showToken)} edge='end' aria-label={showToken ? 'Hide token' : 'Show token'}>
+                          <IconButton
+                            onClick={() => setShowToken(!showToken)}
+                            edge='end'
+                            aria-label={showToken ? 'Hide token' : 'Show token'}
+                          >
                             <i className={showToken ? 'tabler-eye-off' : 'tabler-eye'} />
                           </IconButton>
                         </InputAdornment>
@@ -230,66 +236,102 @@ const SMSSettings = () => {
                   You need an Aakash SMS account to use this feature.
                 </Alert>
 
-                <Typography variant='subtitle2' color='primary'>Step 1: Create Aakash SMS Account</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 1: Create Aakash SMS Account
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
                   Go to{' '}
-                  <a href='https://aakashsms.com/register' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
+                  <a
+                    href='https://aakashsms.com/register'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    style={{ color: 'var(--mui-palette-primary-main)' }}
+                  >
                     aakashsms.com/register
-                  </a>
-                  {' '}&rarr; Fill in your details &rarr; Verify your phone number &rarr; Complete registration.
+                  </a>{' '}
+                  &rarr; Fill in your details &rarr; Verify your phone number &rarr; Complete registration.
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 2: Purchase SMS Credits</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 2: Purchase SMS Credits
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
                   Login to{' '}
-                  <a href='https://aakashsms.com/login' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
+                  <a
+                    href='https://aakashsms.com/login'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    style={{ color: 'var(--mui-palette-primary-main)' }}
+                  >
                     Aakash SMS Dashboard
-                  </a>
-                  {' '}&rarr; Go to <strong>&ldquo;Buy Credits&rdquo;</strong> &rarr; Choose a package and complete payment. Credits are required to send messages.
+                  </a>{' '}
+                  &rarr; Go to <strong>&ldquo;Buy Credits&rdquo;</strong> &rarr; Choose a package and complete payment.
+                  Credits are required to send messages.
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 3: Get Auth Token</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 3: Get Auth Token
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  In Aakash SMS Dashboard &rarr; Go to <strong>&ldquo;API Settings&rdquo;</strong> or <strong>&ldquo;Developer&rdquo;</strong> section &rarr; Copy your <strong>Auth Token</strong>. This is the API key used to authenticate your requests.
+                  In Aakash SMS Dashboard &rarr; Go to <strong>&ldquo;API Settings&rdquo;</strong> or{' '}
+                  <strong>&ldquo;Developer&rdquo;</strong> section &rarr; Copy your <strong>Auth Token</strong>. This is
+                  the API key used to authenticate your requests.
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 4: Set Sender ID</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 4: Set Sender ID
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  The <strong>Sender ID</strong> is the name displayed on recipients&apos; phones (e.g. &ldquo;InfoSMS&rdquo;, &ldquo;NEPSE&rdquo;). You can find your approved Sender IDs in the Aakash SMS dashboard under <strong>&ldquo;Sender ID&rdquo;</strong> section.
+                  The <strong>Sender ID</strong> is the name displayed on recipients&apos; phones (e.g.
+                  &ldquo;InfoSMS&rdquo;, &ldquo;NEPSE&rdquo;). You can find your approved Sender IDs in the Aakash SMS
+                  dashboard under <strong>&ldquo;Sender ID&rdquo;</strong> section.
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 5: Save &amp; Test</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 5: Save &amp; Test
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  Enter your <strong>Auth Token</strong> and <strong>Sender ID</strong> &rarr; Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click <strong>&ldquo;Test Connection&rdquo;</strong> to verify credentials and check your credit balance.
+                  Enter your <strong>Auth Token</strong> and <strong>Sender ID</strong> &rarr; Click{' '}
+                  <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click{' '}
+                  <strong>&ldquo;Test Connection&rdquo;</strong> to verify credentials and check your credit balance.
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 6: Send Your First Campaign</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 6: Send Your First Campaign
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  Go to <strong>SMS &rarr; Campaigns &rarr; Create Campaign</strong> &rarr; Write your message &rarr; Select target contacts or groups &rarr; Send or schedule your campaign.
+                  Go to <strong>SMS &rarr; Campaigns &rarr; Create Campaign</strong> &rarr; Write your message &rarr;
+                  Select target contacts or groups &rarr; Send or schedule your campaign.
                 </Typography>
 
                 <Divider />
 
                 <Alert severity='warning' icon={<i className='tabler-alert-triangle' />}>
                   <Typography variant='caption'>
-                    SMS credits are deducted per message. <strong>English:</strong> 1 credit per 160 characters. <strong>Nepali/Unicode:</strong> 1 credit per 70 characters. Long messages use multiple credits.
+                    SMS credits are deducted per message. <strong>English:</strong> 1 credit per 160 characters.{' '}
+                    <strong>Nepali/Unicode:</strong> 1 credit per 70 characters. Long messages use multiple credits.
                   </Typography>
                 </Alert>
 
                 <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
                   <Typography variant='caption'>
                     <strong>Aakash SMS API Docs:</strong>{' '}
-                    <a href='https://aakashsms.com/developers' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
+                    <a
+                      href='https://aakashsms.com/developers'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      style={{ color: 'var(--mui-palette-primary-main)' }}
+                    >
                       aakashsms.com/developers
                     </a>
                   </Typography>
@@ -307,11 +349,7 @@ const SMSSettings = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

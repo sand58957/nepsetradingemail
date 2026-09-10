@@ -38,11 +38,35 @@ interface DiscoveredField {
 const systemFields: SystemField[] = [
   { name: 'Email', key: 'email', type: 'Email', tag: '{{ .Subscriber.Email }}', description: 'Primary email address' },
   { name: 'Name', key: 'name', type: 'Text', tag: '{{ .Subscriber.Name }}', description: 'Display name' },
-  { name: 'Status', key: 'status', type: 'Enum', tag: '{{ .Subscriber.Status }}', description: 'enabled, blocklisted, or unsubscribed' },
+  {
+    name: 'Status',
+    key: 'status',
+    type: 'Enum',
+    tag: '{{ .Subscriber.Status }}',
+    description: 'enabled, blocklisted, or unsubscribed'
+  },
   { name: 'UUID', key: 'uuid', type: 'Text', tag: '{{ .Subscriber.UUID }}', description: 'Unique identifier' },
-  { name: 'Lists', key: 'lists', type: 'Array', tag: '{{ .Subscriber.Lists }}', description: 'Subscribed mailing lists' },
-  { name: 'Created At', key: 'created_at', type: 'Timestamp', tag: '{{ .Subscriber.CreatedAt }}', description: 'Date subscriber was added' },
-  { name: 'Updated At', key: 'updated_at', type: 'Timestamp', tag: '{{ .Subscriber.UpdatedAt }}', description: 'Last updated date' },
+  {
+    name: 'Lists',
+    key: 'lists',
+    type: 'Array',
+    tag: '{{ .Subscriber.Lists }}',
+    description: 'Subscribed mailing lists'
+  },
+  {
+    name: 'Created At',
+    key: 'created_at',
+    type: 'Timestamp',
+    tag: '{{ .Subscriber.CreatedAt }}',
+    description: 'Date subscriber was added'
+  },
+  {
+    name: 'Updated At',
+    key: 'updated_at',
+    type: 'Timestamp',
+    tag: '{{ .Subscriber.UpdatedAt }}',
+    description: 'Last updated date'
+  }
 ]
 
 const SubscriberFields = () => {
@@ -53,7 +77,7 @@ const SubscriberFields = () => {
   const [scannedCount, setScannedCount] = useState(0)
   const [systemOpen, setSystemOpen] = useState(true)
   const [customOpen, setCustomOpen] = useState(true)
-  const [systemFieldStats, setSystemFieldStats] = useState<Record<string, number>>({})
+  const [, setSystemFieldStats] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const fetchFields = async () => {
@@ -84,13 +108,24 @@ const SubscriberFields = () => {
           if (sub.attribs && typeof sub.attribs === 'object') {
             for (const [key, value] of Object.entries(sub.attribs)) {
               const existing = fieldMap.get(key)
-              const type = typeof value === 'number' ? 'Number' :
-                typeof value === 'boolean' ? 'Boolean' :
-                  Array.isArray(value) ? 'Array' :
-                    (value && typeof value === 'object') ? 'JSON' : 'Text'
 
-              const sampleStr = value === null || value === undefined ? '' :
-                typeof value === 'object' ? JSON.stringify(value) : String(value)
+              const type =
+                typeof value === 'number'
+                  ? 'Number'
+                  : typeof value === 'boolean'
+                    ? 'Boolean'
+                    : Array.isArray(value)
+                      ? 'Array'
+                      : value && typeof value === 'object'
+                        ? 'JSON'
+                        : 'Text'
+
+              const sampleStr =
+                value === null || value === undefined
+                  ? ''
+                  : typeof value === 'object'
+                    ? JSON.stringify(value)
+                    : String(value)
 
               if (existing) {
                 existing.count++
@@ -119,6 +154,7 @@ const SubscriberFields = () => {
         setCustomFields(fieldList)
       } catch (err: any) {
         const msg = err?.response?.data?.message || err?.message || 'Failed to fetch subscriber data'
+
         setError(msg)
       } finally {
         setLoading(false)
@@ -132,7 +168,9 @@ const SubscriberFields = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Scanning subscriber data...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Scanning subscriber data...
+        </Typography>
       </div>
     )
   }
@@ -147,13 +185,18 @@ const SubscriberFields = () => {
         <Typography variant='body2' color='text.secondary' sx={{ mt: 0.5 }}>
           All available fields for your subscribers. Use merge tags to personalize your email templates.
           {totalSubscribers > 0 && (
-            <> Scanned {scannedCount} of {totalSubscribers} subscribers to discover custom attributes.</>
+            <>
+              {' '}
+              Scanned {scannedCount} of {totalSubscribers} subscribers to discover custom attributes.
+            </>
           )}
         </Typography>
       </Box>
 
       {error && (
-        <Alert severity='error' onClose={() => setError('')}>{error}</Alert>
+        <Alert severity='error' onClose={() => setError('')}>
+          {error}
+        </Alert>
       )}
 
       {/* System Fields */}
@@ -175,9 +218,18 @@ const SubscriberFields = () => {
             <Typography variant='subtitle1' fontWeight={600}>
               System Fields
             </Typography>
-            <Chip label={`${systemFields.length} fields`} size='small' variant='outlined' sx={{ height: 22, fontSize: '0.7rem' }} />
+            <Chip
+              label={`${systemFields.length} fields`}
+              size='small'
+              variant='outlined'
+              sx={{ height: 22, fontSize: '0.7rem' }}
+            />
           </Box>
-          <Chip label='BUILT-IN' size='small' sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600, fontSize: '0.65rem', height: 22 }} />
+          <Chip
+            label='BUILT-IN'
+            size='small'
+            sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600, fontSize: '0.65rem', height: 22 }}
+          />
         </Box>
         <Collapse in={systemOpen}>
           <TableContainer>
@@ -188,11 +240,18 @@ const SubscriberFields = () => {
                     <TableCell sx={{ minWidth: 100 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <i className='tabler-lock text-[14px] text-gray-500' />
-                        <Typography variant='body2' fontWeight={500}>{field.name}</Typography>
+                        <Typography variant='body2' fontWeight={500}>
+                          {field.name}
+                        </Typography>
                       </Box>
                     </TableCell>
                     <TableCell sx={{ minWidth: 80, display: { xs: 'none', sm: 'table-cell' } }}>
-                      <Chip label={field.type} size='small' variant='outlined' sx={{ height: 22, fontSize: '0.7rem' }} />
+                      <Chip
+                        label={field.type}
+                        size='small'
+                        variant='outlined'
+                        sx={{ height: 22, fontSize: '0.7rem' }}
+                      />
                     </TableCell>
                     <TableCell sx={{ minWidth: 180 }}>
                       <Typography
@@ -250,19 +309,22 @@ const SubscriberFields = () => {
               sx={{ height: 22, fontSize: '0.7rem' }}
             />
           </Box>
-          <Chip label='FROM DATA' size='small' sx={{ bgcolor: 'success.main', color: 'white', fontWeight: 600, fontSize: '0.65rem', height: 22 }} />
+          <Chip
+            label='FROM DATA'
+            size='small'
+            sx={{ bgcolor: 'success.main', color: 'white', fontWeight: 600, fontSize: '0.65rem', height: 22 }}
+          />
         </Box>
         <Collapse in={customOpen}>
           {customFields.length === 0 ? (
             <Box sx={{ px: 2.5, py: 4, textAlign: 'center', borderTop: 1, borderColor: 'divider' }}>
               <i className='tabler-database-off text-[32px] text-gray-500 mb-2' />
-              <Typography color='text.secondary'>
-                No custom attributes found in your subscriber data.
-              </Typography>
+              <Typography color='text.secondary'>No custom attributes found in your subscriber data.</Typography>
               <Typography variant='body2' color='text.disabled' sx={{ mt: 0.5 }}>
                 Add attributes when creating subscribers or via CSV import.
                 <br />
-                Example: <code style={{ fontSize: '0.8rem' }}>{'{"city": "Kathmandu", "company": "NepseTrading"}'}</code>
+                Example:{' '}
+                <code style={{ fontSize: '0.8rem' }}>{'{"city": "Kathmandu", "company": "NepseTrading"}'}</code>
               </Typography>
             </Box>
           ) : (
@@ -274,11 +336,18 @@ const SubscriberFields = () => {
                       <TableCell sx={{ minWidth: 100 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <i className='tabler-variable text-[14px] text-gray-500' />
-                          <Typography variant='body2' fontWeight={500}>{field.name}</Typography>
+                          <Typography variant='body2' fontWeight={500}>
+                            {field.name}
+                          </Typography>
                         </Box>
                       </TableCell>
                       <TableCell sx={{ minWidth: 70, display: { xs: 'none', sm: 'table-cell' } }}>
-                        <Chip label={field.type} size='small' variant='outlined' sx={{ height: 22, fontSize: '0.7rem' }} />
+                        <Chip
+                          label={field.type}
+                          size='small'
+                          variant='outlined'
+                          sx={{ height: 22, fontSize: '0.7rem' }}
+                        />
                       </TableCell>
                       <TableCell sx={{ minWidth: 180 }}>
                         <Typography
@@ -304,7 +373,12 @@ const SubscriberFields = () => {
                             value={scannedCount > 0 ? (field.usageCount / scannedCount) * 100 : 0}
                             sx={{ flex: 1, height: 6, borderRadius: 3 }}
                           />
-                          <Typography variant='body2' color='text.secondary' fontSize='0.75rem' sx={{ whiteSpace: 'nowrap' }}>
+                          <Typography
+                            variant='body2'
+                            color='text.secondary'
+                            fontSize='0.75rem'
+                            sx={{ whiteSpace: 'nowrap' }}
+                          >
                             {field.usageCount}/{scannedCount}
                           </Typography>
                         </Box>
@@ -334,11 +408,15 @@ const SubscriberFields = () => {
           </Typography>
           <Typography variant='body2' color='text.secondary'>
             Copy any merge tag above and paste it into your email template. For example, use{' '}
-            <code style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4 }}>
+            <code
+              style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4 }}
+            >
               {'{{ .Subscriber.Name }}'}
             </code>{' '}
             to personalize with the subscriber&apos;s name. Custom attributes use{' '}
-            <code style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4 }}>
+            <code
+              style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4 }}
+            >
               {'{{ .Subscriber.Attribs.<key> }}'}
             </code>{' '}
             format.

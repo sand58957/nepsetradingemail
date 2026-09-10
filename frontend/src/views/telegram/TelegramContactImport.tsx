@@ -125,7 +125,7 @@ const TelegramContactImport = () => {
       // Parse preview
       const reader = new FileReader()
 
-      reader.onload = (event) => {
+      reader.onload = event => {
         const text = event.target?.result as string
 
         if (text) {
@@ -227,8 +227,11 @@ const TelegramContactImport = () => {
                   }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <i className={`${selectedFile ? 'tabler-file-check' : 'tabler-cloud-upload'} text-[48px] mb-2`}
-                    style={{ color: selectedFile ? 'var(--mui-palette-success-main)' : 'var(--mui-palette-text-secondary)' }}
+                  <i
+                    className={`${selectedFile ? 'tabler-file-check' : 'tabler-cloud-upload'} text-[48px] mb-2`}
+                    style={{
+                      color: selectedFile ? 'var(--mui-palette-success-main)' : 'var(--mui-palette-text-secondary)'
+                    }}
                   />
                   {selectedFile ? (
                     <>
@@ -258,10 +261,7 @@ const TelegramContactImport = () => {
                 {/* Column Mapping */}
                 {showPreview && csvHeaders.length > 0 && (
                   <Card variant='outlined'>
-                    <CardHeader
-                      title='Column Mapping'
-                      subheader='Map your CSV columns to contact fields'
-                    />
+                    <CardHeader title='Column Mapping' subheader='Map your CSV columns to contact fields' />
                     <CardContent>
                       <Grid container spacing={3}>
                         {csvHeaders.map(header => (
@@ -271,10 +271,12 @@ const TelegramContactImport = () => {
                               <Select
                                 value={columnMapping[header] || ''}
                                 label={header}
-                                onChange={e => setColumnMapping(prev => ({
-                                  ...prev,
-                                  [header]: e.target.value
-                                }))}
+                                onChange={e =>
+                                  setColumnMapping(prev => ({
+                                    ...prev,
+                                    [header]: e.target.value
+                                  }))
+                                }
                               >
                                 {targetFields.map(f => (
                                   <MenuItem key={f.value} value={f.value}>
@@ -293,10 +295,7 @@ const TelegramContactImport = () => {
                 {/* Preview Table */}
                 {showPreview && previewData.length > 0 && (
                   <Card variant='outlined'>
-                    <CardHeader
-                      title='Preview'
-                      subheader={`Showing first ${previewData.length} rows`}
-                    />
+                    <CardHeader title='Preview' subheader={`Showing first ${previewData.length} rows`} />
                     <TableContainer>
                       <Table size='small'>
                         <TableHead>
@@ -304,10 +303,14 @@ const TelegramContactImport = () => {
                             {csvHeaders.map(h => (
                               <TableCell key={h}>
                                 <div className='flex flex-col'>
-                                  <Typography variant='caption' color='text.secondary'>{h}</Typography>
+                                  <Typography variant='caption' color='text.secondary'>
+                                    {h}
+                                  </Typography>
                                   {columnMapping[h] && (
                                     <Chip
-                                      label={targetFields.find(f => f.value === columnMapping[h])?.label || columnMapping[h]}
+                                      label={
+                                        targetFields.find(f => f.value === columnMapping[h])?.label || columnMapping[h]
+                                      }
                                       size='small'
                                       color='primary'
                                       variant='outlined'
@@ -343,7 +346,7 @@ const TelegramContactImport = () => {
                       value={selectedGroupIds}
                       label='Add to Groups'
                       onChange={e => setSelectedGroupIds(e.target.value as number[])}
-                      renderValue={(selected) => (
+                      renderValue={selected => (
                         <div className='flex gap-1 flex-wrap'>
                           {(selected as number[]).map(id => {
                             const group = availableGroups.find(g => g.id === id)
@@ -419,16 +422,16 @@ const TelegramContactImport = () => {
             <CardHeader title='CSV Format' />
             <CardContent>
               <div className='flex flex-col gap-3'>
-                <Alert severity='info'>
-                  Your CSV file should have headers in the first row.
-                </Alert>
+                <Alert severity='info'>Your CSV file should have headers in the first row.</Alert>
 
                 <Typography variant='subtitle2'>Required Columns:</Typography>
                 <Typography variant='body2' color='text.secondary'>
                   <strong>chat_id</strong> -- Telegram chat ID (numeric, e.g. 123456789)
                 </Typography>
 
-                <Typography variant='subtitle2' className='mt-2'>Optional Columns:</Typography>
+                <Typography variant='subtitle2' className='mt-2'>
+                  Optional Columns:
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
                   <strong>username</strong> -- Telegram username (without @)
                 </Typography>
@@ -442,13 +445,17 @@ const TelegramContactImport = () => {
                   <strong>tags</strong> -- Comma-separated tags
                 </Typography>
 
-                <Typography variant='subtitle2' className='mt-2'>Example:</Typography>
+                <Typography variant='subtitle2' className='mt-2'>
+                  Example:
+                </Typography>
                 <Box
                   className='p-3 rounded'
                   sx={{ backgroundColor: 'action.hover', fontFamily: 'monospace', fontSize: '0.75rem' }}
                 >
-                  chat_id,username,first_name,last_name,tags<br />
-                  123456789,johndoe,John,Doe,&quot;vip,investor&quot;<br />
+                  chat_id,username,first_name,last_name,tags
+                  <br />
+                  123456789,johndoe,John,Doe,&quot;vip,investor&quot;
+                  <br />
                   987654321,janedoe,Jane,Doe,trader
                 </Box>
 
@@ -468,11 +475,7 @@ const TelegramContactImport = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

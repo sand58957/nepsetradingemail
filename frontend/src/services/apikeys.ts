@@ -5,11 +5,13 @@ export const apiKeyService = {
   list: async (channel?: string): Promise<{ data: APIKey[] }> => {
     const params = channel ? { channel } : {}
     const response = await api.get('/api-keys', { params })
+
     return response.data
   },
 
   create: async (data: APIKeyCreateRequest): Promise<{ data: APIKeyCreateResponse }> => {
     const response = await api.post('/api-keys', data)
+
     return response.data
   },
 

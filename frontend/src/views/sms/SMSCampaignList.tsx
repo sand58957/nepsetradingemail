@@ -184,7 +184,10 @@ const SMSCampaignList = () => {
                 <Select
                   value={statusFilter}
                   label='Status'
-                  onChange={e => { setStatusFilter(e.target.value); setPage(0) }}
+                  onChange={e => {
+                    setStatusFilter(e.target.value)
+                    setPage(0)
+                  }}
                 >
                   <MenuItem value=''>All</MenuItem>
                   <MenuItem value='draft'>Draft</MenuItem>
@@ -209,7 +212,9 @@ const SMSCampaignList = () => {
         ) : campaigns.length === 0 ? (
           <CardContent>
             <Typography color='text.secondary' align='center' className='py-8'>
-              {globalFilter || statusFilter ? 'No campaigns match your filters' : 'No campaigns yet. Create your first SMS campaign.'}
+              {globalFilter || statusFilter
+                ? 'No campaigns match your filters'
+                : 'No campaigns yet. Create your first SMS campaign.'}
             </Typography>
           </CardContent>
         ) : (
@@ -222,9 +227,15 @@ const SMSCampaignList = () => {
                     <TableCell>Status</TableCell>
                     <TableCell align='right'>Targets</TableCell>
                     <TableCell align='right'>Sent</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Delivered</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Failed</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>Credits</TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      Delivered
+                    </TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      Failed
+                    </TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                      Credits
+                    </TableCell>
                     <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Date</TableCell>
                     <TableCell align='center'>Actions</TableCell>
                   </TableRow>
@@ -250,7 +261,9 @@ const SMSCampaignList = () => {
                         />
                       </TableCell>
                       <TableCell align='right'>
-                        <Typography>{campaign.total_targets > 0 ? campaign.total_targets.toLocaleString() : '-'}</Typography>
+                        <Typography>
+                          {campaign.total_targets > 0 ? campaign.total_targets.toLocaleString() : '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell align='right'>
                         <Typography>{campaign.sent_count > 0 ? campaign.sent_count.toLocaleString() : '-'}</Typography>
@@ -272,7 +285,9 @@ const SMSCampaignList = () => {
                         </Typography>
                       </TableCell>
                       <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                        <Typography>{campaign.credits_used > 0 ? campaign.credits_used.toLocaleString() : '-'}</Typography>
+                        <Typography>
+                          {campaign.credits_used > 0 ? campaign.credits_used.toLocaleString() : '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <Typography variant='body2'>
@@ -287,7 +302,7 @@ const SMSCampaignList = () => {
                         <IconButton
                           size='small'
                           aria-label='Campaign actions'
-                          onClick={(e) => {
+                          onClick={e => {
                             setAnchorEl(e.currentTarget)
                             setMenuCampaign(campaign)
                           }}
@@ -317,29 +332,29 @@ const SMSCampaignList = () => {
       </Card>
 
       {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-      >
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
 
-          if (menuCampaign) {
-            router.push(`/${locale}/sms/campaigns/${menuCampaign.id}`)
-          }
-        }}>
+            if (menuCampaign) {
+              router.push(`/${locale}/sms/campaigns/${menuCampaign.id}`)
+            }
+          }}
+        >
           <i className='tabler-eye text-[18px] mr-2' />
           View Details
         </MenuItem>
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
 
-          if (menuCampaign) {
-            setDeletingId(menuCampaign.id)
-            setDeleteDialogOpen(true)
-          }
-        }}>
+            if (menuCampaign) {
+              setDeletingId(menuCampaign.id)
+              setDeleteDialogOpen(true)
+            }
+          }}
+        >
           <i className='tabler-trash text-[18px] mr-2' />
           Delete
         </MenuItem>
@@ -353,7 +368,9 @@ const SMSCampaignList = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button variant='contained' color='error' onClick={handleDelete}>Delete</Button>
+          <Button variant='contained' color='error' onClick={handleDelete}>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -364,11 +381,7 @@ const SMSCampaignList = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

@@ -47,7 +47,8 @@ const steps: ChecklistStep[] = [
   {
     id: 'create_template',
     title: 'Create a message template',
-    description: 'Design your first WhatsApp message template for campaigns. Choose from our template library or create your own.',
+    description:
+      'Design your first WhatsApp message template for campaigns. Choose from our template library or create your own.',
     buttonLabel: 'Browse templates',
     buttonUrl: '/whatsapp/templates/library',
     icon: 'tabler-template'

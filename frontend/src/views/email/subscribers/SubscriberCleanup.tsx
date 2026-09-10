@@ -38,7 +38,9 @@ const SubscriberCleanup = () => {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
+    open: false,
+    message: '',
+    severity: 'success'
   })
 
   const fetchInactive = useCallback(async () => {
@@ -91,9 +93,7 @@ const SubscriberCleanup = () => {
   const handleDisableInactive = async () => {
     setConfirmOpen(false)
 
-    const targets = selectedIds.size > 0
-      ? inactiveSubscribers.filter(s => selectedIds.has(s.id))
-      : inactiveSubscribers
+    const targets = selectedIds.size > 0 ? inactiveSubscribers.filter(s => selectedIds.has(s.id)) : inactiveSubscribers
 
     if (targets.length === 0) return
 
@@ -134,7 +134,9 @@ const SubscriberCleanup = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading inactive subscribers...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading inactive subscribers...
+        </Typography>
       </div>
     )
   }
@@ -145,15 +147,17 @@ const SubscriberCleanup = () => {
     <>
       <Card className='mb-6'>
         <CardContent>
-          <Typography variant='h6' className='mb-4'>Clean up inactive</Typography>
+          <Typography variant='h6' className='mb-4'>
+            Clean up inactive
+          </Typography>
           <Typography color='text.secondary' className='mb-4'>
-            Inactive subscribers are people who have either never opened an email from you or have previously
-            opened an email from you BUT haven&apos;t opened one in more than 6 months. You can change the time
-            period using the <strong>Time inactive</strong> and <strong>Emails sent</strong> options.
+            Inactive subscribers are people who have either never opened an email from you or have previously opened an
+            email from you BUT haven&apos;t opened one in more than 6 months. You can change the time period using the{' '}
+            <strong>Time inactive</strong> and <strong>Emails sent</strong> options.
           </Typography>
           <Typography color='text.secondary'>
-            Before you unsubscribe your inactive subscribers, we highly recommend that you remove these
-            email addresses to maintain healthy deliverability and optimal performance.
+            Before you unsubscribe your inactive subscribers, we highly recommend that you remove these email addresses
+            to maintain healthy deliverability and optimal performance.
           </Typography>
         </CardContent>
       </Card>
@@ -162,8 +166,12 @@ const SubscriberCleanup = () => {
         <CardContent>
           <div className='flex items-center justify-between mb-6 flex-wrap gap-4'>
             <div>
-              <Typography variant='body2' color='text.secondary'>This list contains inactive subscribers</Typography>
-              <Typography variant='h4' className='font-bold'>{inactiveCount}</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                This list contains inactive subscribers
+              </Typography>
+              <Typography variant='h4' className='font-bold'>
+                {inactiveCount}
+              </Typography>
             </div>
             <Button
               variant='contained'
@@ -171,9 +179,11 @@ const SubscriberCleanup = () => {
               onClick={() => setConfirmOpen(true)}
               disabled={processing || inactiveSubscribers.length === 0}
             >
-              {processing ? 'Processing...' : selectedIds.size > 0
-                ? `Disable ${selectedIds.size} selected`
-                : `Disable ${inactiveSubscribers.length} loaded`}
+              {processing
+                ? 'Processing...'
+                : selectedIds.size > 0
+                  ? `Disable ${selectedIds.size} selected`
+                  : `Disable ${inactiveSubscribers.length} loaded`}
             </Button>
           </div>
 
@@ -190,7 +200,9 @@ const SubscriberCleanup = () => {
           {processing && (
             <div className='flex items-center gap-2 mb-4'>
               <CircularProgress size={18} />
-              <Typography variant='body2' color='text.secondary'>Processing subscribers...</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Processing subscribers...
+              </Typography>
             </div>
           )}
 
@@ -209,14 +221,18 @@ const SubscriberCleanup = () => {
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, minWidth: 180 }}>Email</TableCell>
                   <TableCell sx={{ fontWeight: 600, minWidth: 80 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 600, minWidth: 100, display: { xs: 'none', sm: 'table-cell' } }}>Subscribed</TableCell>
+                  <TableCell sx={{ fontWeight: 600, minWidth: 100, display: { xs: 'none', sm: 'table-cell' } }}>
+                    Subscribed
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {inactiveSubscribers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className='text-center'>
-                      <Typography color='text.secondary' className='py-4'>No inactive subscribers found. Great job!</Typography>
+                      <Typography color='text.secondary' className='py-4'>
+                        No inactive subscribers found. Great job!
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -230,7 +246,9 @@ const SubscriberCleanup = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography color='primary' className='font-medium'>{sub.email}</Typography>
+                        <Typography color='primary' className='font-medium'>
+                          {sub.email}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography color='text.secondary'>{sub.status}</Typography>
@@ -238,7 +256,9 @@ const SubscriberCleanup = () => {
                       <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                         <Typography variant='body2' color='text.secondary'>
                           {new Date(sub.created_at).toLocaleDateString('en-US', {
-                            year: 'numeric', month: '2-digit', day: '2-digit'
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit'
                           })}
                         </Typography>
                       </TableCell>
@@ -257,9 +277,9 @@ const SubscriberCleanup = () => {
         <DialogContent>
           <DialogContentText>
             Are you sure you want to disable{' '}
-            <strong>{selectedIds.size > 0 ? selectedIds.size : inactiveSubscribers.length}</strong>{' '}
-            inactive subscriber{(selectedIds.size > 0 ? selectedIds.size : inactiveSubscribers.length) !== 1 ? 's' : ''}?
-            They will no longer receive any emails.
+            <strong>{selectedIds.size > 0 ? selectedIds.size : inactiveSubscribers.length}</strong> inactive subscriber
+            {(selectedIds.size > 0 ? selectedIds.size : inactiveSubscribers.length) !== 1 ? 's' : ''}? They will no
+            longer receive any emails.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -270,8 +290,15 @@ const SubscriberCleanup = () => {
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>{snackbar.message}</Alert>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
+          {snackbar.message}
+        </Alert>
       </Snackbar>
     </>
   )

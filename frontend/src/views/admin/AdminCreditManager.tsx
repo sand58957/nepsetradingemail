@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid'
@@ -44,14 +45,14 @@ const AdminCreditManager = () => {
   const [credits, setCredits] = useState<AdminCreditEntry[]>([])
   const [transactions, setTransactions] = useState<CreditTransaction[]>([])
   const [messages, setMessages] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(0)
 
   // Adjust dialog
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [adjustAccountId, setAdjustAccountId] = useState(0)
   const [adjustAccountName, setAdjustAccountName] = useState('')
-  const [adjustChannel, setAdjustChannel] = useState<typeof CHANNELS[number]>('sms')
+  const [adjustChannel, setAdjustChannel] = useState<(typeof CHANNELS)[number]>('sms')
   const [adjustAmount, setAdjustAmount] = useState('')
   const [adjustDescription, setAdjustDescription] = useState('')
 
@@ -61,7 +62,7 @@ const AdminCreditManager = () => {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
-  const [giveChannel, setGiveChannel] = useState<typeof CHANNELS[number]>('email')
+  const [giveChannel, setGiveChannel] = useState<(typeof CHANNELS)[number]>('email')
   const [giveAmount, setGiveAmount] = useState('')
   const [giveDescription, setGiveDescription] = useState('')
   const [giving, setGiving] = useState(false)
@@ -74,33 +75,52 @@ const AdminCreditManager = () => {
 
   // Search users by email/name
   const searchUsers = async (query: string) => {
-    if (query.length < 2) { setSearchResults([]); return }
+    if (query.length < 2) {
+      setSearchResults([])
+
+      return
+    }
+
     setSearching(true)
+
     try {
       const res = await api.get(`/users?query=${encodeURIComponent(query)}`)
+
       setSearchResults(res.data?.data || [])
-    } catch { setSearchResults([]) }
-    finally { setSearching(false) }
+    } catch {
+      setSearchResults([])
+    } finally {
+      setSearching(false)
+    }
   }
 
   const handleGiveCredits = async () => {
     if (!selectedUser) return
     const amount = parseFloat(giveAmount)
+
     if (isNaN(amount) || amount <= 0) {
-      setSnackbar({ open: true, message: 'Enter a positive amount', severity: 'error' }); return
+      setSnackbar({ open: true, message: 'Enter a positive amount', severity: 'error' })
+
+      return
     }
+
     if (!giveDescription.trim()) {
-      setSnackbar({ open: true, message: 'Description is required for audit', severity: 'error' }); return
+      setSnackbar({ open: true, message: 'Description is required for audit', severity: 'error' })
+
+      return
     }
 
     setGiving(true)
+
     try {
       const accountId = selectedUser.current_account_id
+
       const res = await creditService.adminAdjustCredits(accountId, {
         channel: giveChannel as any,
         amount,
         description: giveDescription
       })
+
       setSnackbar({
         open: true,
         message: `${amount} ${giveChannel.toUpperCase()} credits added to ${selectedUser.name || selectedUser.email}. New balance: ${res.data.new_balance}`,
@@ -115,7 +135,9 @@ const AdminCreditManager = () => {
       loadData()
     } catch (err: any) {
       setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to give credits', severity: 'error' })
-    } finally { setGiving(false) }
+    } finally {
+      setGiving(false)
+    }
   }
 
   useEffect(() => {
@@ -125,15 +147,17 @@ const AdminCreditManager = () => {
   const loadData = async () => {
     try {
       setLoading(true)
+
       const [creditsRes, txnRes, msgRes] = await Promise.all([
         creditService.adminListCredits(),
         creditService.adminListTransactions({ page: 1 }),
         creditService.adminListMessages({ page: 1 })
       ])
+
       setCredits(creditsRes.data)
       setTransactions(txnRes.data || [])
       setMessages(msgRes.data || [])
-    } catch (err) {
+    } catch (_err) {
       setSnackbar({ open: true, message: 'Failed to load credit data', severity: 'error' })
     } finally {
       setLoading(false)
@@ -142,12 +166,16 @@ const AdminCreditManager = () => {
 
   const handleAdjust = async () => {
     const amount = parseFloat(adjustAmount)
+
     if (isNaN(amount) || amount === 0) {
       setSnackbar({ open: true, message: 'Enter a valid non-zero amount', severity: 'error' })
+
       return
     }
+
     if (!adjustDescription.trim()) {
       setSnackbar({ open: true, message: 'Description is required', severity: 'error' })
+
       return
     }
 
@@ -157,7 +185,12 @@ const AdminCreditManager = () => {
         amount,
         description: adjustDescription
       })
-      setSnackbar({ open: true, message: `Credits adjusted. New balance: ${res.data.new_balance}`, severity: 'success' })
+
+      setSnackbar({
+        open: true,
+        message: `Credits adjusted. New balance: ${res.data.new_balance}`,
+        severity: 'success'
+      })
       setAdjustOpen(false)
       setAdjustAmount('')
       setAdjustDescription('')
@@ -167,9 +200,14 @@ const AdminCreditManager = () => {
     }
   }
 
+  // Not yet wired to a control in this table. The backend endpoint exists
+  // (creditService.adminToggleAPI), so this is an unfinished feature rather than
+  // dead code — kept so the wire-up is a one-line change.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleToggleAPI = async (accountId: number) => {
     try {
       const res = await creditService.adminToggleAPI(accountId)
+
       setSnackbar({
         open: true,
         message: `API access ${res.data.api_enabled ? 'enabled' : 'disabled'} for account ${accountId}`,
@@ -192,15 +230,18 @@ const AdminCreditManager = () => {
     if (channel === 'sms') return 'primary'
     if (channel === 'whatsapp') return 'success'
     if (channel === 'telegram') return 'info'
+
     return 'warning'
   }
 
   // Group credits by account
   const accountMap = new Map<number, { name: string; credits: AdminCreditEntry[] }>()
+
   credits.forEach(c => {
     if (!accountMap.has(c.account_id)) {
       accountMap.set(c.account_id, { name: c.account_name, credits: [] })
     }
+
     accountMap.get(c.account_id)!.credits.push(c)
   })
 
@@ -240,18 +281,39 @@ const AdminCreditManager = () => {
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Typography variant='subtitle1' fontWeight='bold'>
-                          {name} <Typography component='span' variant='body2' color='text.secondary'>(ID: {accountId})</Typography>
+                          {name}{' '}
+                          <Typography component='span' variant='body2' color='text.secondary'>
+                            (ID: {accountId})
+                          </Typography>
                         </Typography>
                       </Box>
                       <Grid container spacing={2}>
                         {acCredits.map(credit => (
                           <Grid size={{ xs: 12, sm: 3 }} key={credit.channel}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                p: 1.5,
+                                border: 1,
+                                borderColor: 'divider',
+                                borderRadius: 1
+                              }}
+                            >
                               <Box>
-                                <Chip label={credit.channel.toUpperCase()} color={getChannelColor(credit.channel)} size='small' />
-                                <Typography variant='h6' sx={{ mt: 0.5 }}>{credit.balance.toLocaleString()}</Typography>
+                                <Chip
+                                  label={credit.channel.toUpperCase()}
+                                  color={getChannelColor(credit.channel)}
+                                  size='small'
+                                />
+                                <Typography variant='h6' sx={{ mt: 0.5 }}>
+                                  {credit.balance.toLocaleString()}
+                                </Typography>
                                 {credit.reserved > 0 && (
-                                  <Typography variant='caption' color='warning.main'>({credit.reserved} reserved)</Typography>
+                                  <Typography variant='caption' color='warning.main'>
+                                    ({credit.reserved} reserved)
+                                  </Typography>
                                 )}
                               </Box>
                               <Tooltip title='Adjust Credits'>
@@ -309,7 +371,8 @@ const AdminCreditManager = () => {
                           </TableCell>
                           <TableCell align='right'>
                             <Typography color={txn.amount > 0 ? 'success.main' : 'error.main'} fontWeight='bold'>
-                              {txn.amount > 0 ? '+' : ''}{txn.amount}
+                              {txn.amount > 0 ? '+' : ''}
+                              {txn.amount}
                             </Typography>
                           </TableCell>
                           <TableCell align='right'>{txn.balance_after}</TableCell>
@@ -383,7 +446,9 @@ const AdminCreditManager = () => {
                 <InputLabel>Channel</InputLabel>
                 <Select value={adjustChannel} label='Channel' onChange={e => setAdjustChannel(e.target.value as any)}>
                   {CHANNELS.map(ch => (
-                    <MenuItem key={ch} value={ch}>{ch.toUpperCase()}</MenuItem>
+                    <MenuItem key={ch} value={ch}>
+                      {ch.toUpperCase()}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -420,7 +485,16 @@ const AdminCreditManager = () => {
       </Dialog>
 
       {/* Give Credits to Any User Dialog */}
-      <Dialog open={giveOpen} onClose={() => { setGiveOpen(false); setSelectedUser(null); setSearchResults([]) }} maxWidth='sm' fullWidth>
+      <Dialog
+        open={giveOpen}
+        onClose={() => {
+          setGiveOpen(false)
+          setSelectedUser(null)
+          setSearchResults([])
+        }}
+        maxWidth='sm'
+        fullWidth
+      >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <i className='tabler-coin text-xl' />
           Give Credits to User
@@ -434,7 +508,10 @@ const AdminCreditManager = () => {
                 label='Search user by email or name'
                 placeholder='Type email or name...'
                 value={searchQuery}
-                onChange={e => { setSearchQuery(e.target.value); searchUsers(e.target.value) }}
+                onChange={e => {
+                  setSearchQuery(e.target.value)
+                  searchUsers(e.target.value)
+                }}
                 InputProps={{
                   startAdornment: <i className='tabler-search text-lg mr-2' style={{ opacity: 0.5 }} />,
                   endAdornment: searching ? <CircularProgress size={18} /> : null
@@ -448,22 +525,40 @@ const AdminCreditManager = () => {
                       key={user.id}
                       onClick={() => setSelectedUser(user)}
                       sx={{
-                        display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1.5,
-                        cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' },
-                        borderBottom: '1px solid', borderColor: 'divider'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        px: 2,
+                        py: 1.5,
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'action.hover' },
+                        borderBottom: '1px solid',
+                        borderColor: 'divider'
                       }}
                     >
-                      <Box sx={{
-                        width: 36, height: 36, borderRadius: '50%',
-                        bgcolor: 'primary.main', color: '#fff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 700, fontSize: 14
-                      }}>
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: '50%',
+                          bgcolor: 'primary.main',
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: 14
+                        }}
+                      >
                         {(user.name || user.email || '?').charAt(0).toUpperCase()}
                       </Box>
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant='body2' fontWeight={600}>{user.name || 'No Name'}</Typography>
-                        <Typography variant='caption' color='text.secondary'>{user.email}</Typography>
+                        <Typography variant='body2' fontWeight={600}>
+                          {user.name || 'No Name'}
+                        </Typography>
+                        <Typography variant='caption' color='text.secondary'>
+                          {user.email}
+                        </Typography>
                       </Box>
                       <Chip label={user.role} size='small' variant='outlined' />
                     </Box>
@@ -471,27 +566,47 @@ const AdminCreditManager = () => {
                 </Box>
               )}
               {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
-                <Typography color='text.secondary' textAlign='center' py={2}>No users found</Typography>
+                <Typography color='text.secondary' textAlign='center' py={2}>
+                  No users found
+                </Typography>
               )}
             </Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
               {/* Selected user card */}
-              <Box sx={{
-                display: 'flex', alignItems: 'center', gap: 2, p: 2,
-                bgcolor: 'action.hover', borderRadius: 2, border: '1px solid', borderColor: 'primary.main'
-              }}>
-                <Box sx={{
-                  width: 44, height: 44, borderRadius: '50%',
-                  bgcolor: 'primary.main', color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: 18
-                }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  p: 2,
+                  bgcolor: 'action.hover',
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'primary.main'
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    bgcolor: 'primary.main',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: 18
+                  }}
+                >
                   {(selectedUser.name || selectedUser.email).charAt(0).toUpperCase()}
                 </Box>
                 <Box sx={{ flex: 1 }}>
                   <Typography fontWeight={700}>{selectedUser.name || 'No Name'}</Typography>
-                  <Typography variant='caption' color='text.secondary'>{selectedUser.email}</Typography>
+                  <Typography variant='caption' color='text.secondary'>
+                    {selectedUser.email}
+                  </Typography>
                   <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
                     Account ID: {selectedUser.current_account_id}
                   </Typography>
@@ -505,7 +620,9 @@ const AdminCreditManager = () => {
                 <InputLabel>Channel</InputLabel>
                 <Select value={giveChannel} label='Channel' onChange={e => setGiveChannel(e.target.value as any)}>
                   {CHANNELS.map(ch => (
-                    <MenuItem key={ch} value={ch}>{ch.toUpperCase()}</MenuItem>
+                    <MenuItem key={ch} value={ch}>
+                      {ch.toUpperCase()}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -533,7 +650,15 @@ const AdminCreditManager = () => {
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => { setGiveOpen(false); setSelectedUser(null); setSearchResults([]) }}>Cancel</Button>
+          <Button
+            onClick={() => {
+              setGiveOpen(false)
+              setSelectedUser(null)
+              setSearchResults([])
+            }}
+          >
+            Cancel
+          </Button>
           {selectedUser && (
             <Button
               variant='contained'

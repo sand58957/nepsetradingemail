@@ -70,11 +70,7 @@ const StatCard = ({
         <div className='flex flex-col gap-1 grow'>
           <Typography color='text.primary'>{title}</Typography>
           <div className='flex items-center gap-2 flex-wrap'>
-            {loading ? (
-              <CircularProgress size={24} />
-            ) : (
-              <Typography variant='h4'>{value}</Typography>
-            )}
+            {loading ? <CircularProgress size={24} /> : <Typography variant='h4'>{value}</Typography>}
           </div>
         </div>
         <CustomAvatar color={color} skin='light' variant='rounded' size={42}>
@@ -325,16 +321,18 @@ const EmailDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={campaign.status ? campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1) : 'Unknown'}
+                          label={
+                            campaign.status
+                              ? campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)
+                              : 'Unknown'
+                          }
                           color={statusColorMap[campaign.status] || 'default'}
                           size='small'
                           variant='tonal'
                         />
                       </TableCell>
                       <TableCell align='right'>
-                        <Typography>
-                          {campaign.sent > 0 ? campaign.sent.toLocaleString() : '-'}
-                        </Typography>
+                        <Typography>{campaign.sent > 0 ? campaign.sent.toLocaleString() : '-'}</Typography>
                         {campaign.status === 'running' && campaign.to_send > 0 && (
                           <LinearProgress
                             variant='determinate'
@@ -345,14 +343,10 @@ const EmailDashboard = () => {
                         )}
                       </TableCell>
                       <TableCell align='right'>
-                        <Typography>
-                          {campaign.views > 0 ? campaign.views.toLocaleString() : '-'}
-                        </Typography>
+                        <Typography>{campaign.views > 0 ? campaign.views.toLocaleString() : '-'}</Typography>
                       </TableCell>
                       <TableCell align='right'>
-                        <Typography>
-                          {campaign.clicks > 0 ? campaign.clicks.toLocaleString() : '-'}
-                        </Typography>
+                        <Typography>{campaign.clicks > 0 ? campaign.clicks.toLocaleString() : '-'}</Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant='body2'>

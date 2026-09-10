@@ -119,7 +119,9 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
       if (res.ok && data.success) {
         setStep('verify')
         setCountdown(60)
-        setSuccess(`Verification code sent via ${channel === 'email' ? 'Email' : channel === 'sms' ? 'SMS' : 'WhatsApp'}`)
+        setSuccess(
+          `Verification code sent via ${channel === 'email' ? 'Email' : channel === 'sms' ? 'SMS' : 'WhatsApp'}`
+        )
       } else {
         setError(data.message || 'Failed to send reset code')
       }
@@ -189,19 +191,28 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
     <div className='flex bs-full justify-center'>
       {/* Left side */}
       <div
-        className={classnames('flex bs-full items-center justify-center flex-1 min-bs-[100dvh] relative p-6 max-md:hidden', {
-          'border-ie': settings.skin === 'bordered'
-        })}
+        className={classnames(
+          'flex bs-full items-center justify-center flex-1 min-bs-[100dvh] relative p-6 max-md:hidden',
+          {
+            'border-ie': settings.skin === 'bordered'
+          }
+        )}
         style={{ background: 'linear-gradient(135deg, #0a0a18 0%, #12122a 40%, #1a1040 70%, #0f0f1a 100%)' }}
       >
         <div style={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
-          <div style={{
-            width: 120, height: 120, borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(115,103,240,0.2), rgba(115,103,240,0.05))',
-            border: '2px solid rgba(115,103,240,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 24px'
-          }}>
+          <div
+            style={{
+              width: 120,
+              height: 120,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(115,103,240,0.2), rgba(115,103,240,0.05))',
+              border: '2px solid rgba(115,103,240,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px'
+            }}
+          >
             <i className='tabler-lock-open' style={{ fontSize: 56, color: 'rgba(115,103,240,0.8)' }} />
           </div>
           <Typography variant='h4' style={{ color: '#fff', fontWeight: 700, marginBottom: 8 }}>
@@ -217,7 +228,15 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
       {/* Right side - Form */}
       <div
         className='flex justify-center items-center bs-full bg-backgroundPaper !min-is-full p-6 md:!min-is-[unset] md:p-12 md:is-[480px]'
-        style={_mode === 'dark' ? { background: 'rgba(22, 22, 38, 0.7)', backdropFilter: 'blur(16px)', borderInlineStart: '1px solid rgba(115, 103, 240, 0.1)' } : undefined}
+        style={
+          _mode === 'dark'
+            ? {
+                background: 'rgba(22, 22, 38, 0.7)',
+                backdropFilter: 'blur(16px)',
+                borderInlineStart: '1px solid rgba(115, 103, 240, 0.1)'
+              }
+            : undefined
+        }
       >
         <div className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'>
           <Link href='/'>
@@ -227,27 +246,35 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
 
         <div className='flex flex-col gap-5 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
           <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>
-              {step === 'request' ? 'Forgot Password' : 'Reset Password'}
-            </Typography>
+            <Typography variant='h4'>{step === 'request' ? 'Forgot Password' : 'Reset Password'}</Typography>
             <Typography variant='body2' color='text.secondary'>
               {step === 'request'
                 ? 'Enter your email or phone to receive a verification code'
-                : `Enter the code sent to ${otpChannel === 'email' ? email : '+977 ' + phone}`
-              }
+                : `Enter the code sent to ${otpChannel === 'email' ? email : '+977 ' + phone}`}
             </Typography>
           </div>
 
           {/* Error/Success alerts */}
-          {error && <Alert severity='error' onClose={() => setError('')}>{error}</Alert>}
-          {success && <Alert severity='success' onClose={() => setSuccess('')}>{success}</Alert>}
+          {error && (
+            <Alert severity='error' onClose={() => setError('')}>
+              {error}
+            </Alert>
+          )}
+          {success && (
+            <Alert severity='success' onClose={() => setSuccess('')}>
+              {success}
+            </Alert>
+          )}
 
           {/* Step 1: Request Code */}
           {step === 'request' && (
             <>
               <Tabs
                 value={channelTab}
-                onChange={(_, v) => { setChannelTab(v); setError('') }}
+                onChange={(_, v) => {
+                  setChannelTab(v)
+                  setError('')
+                }}
                 variant='fullWidth'
                 sx={{ '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 40 } }}
               >
@@ -264,14 +291,19 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
                     label='Email Address'
                     placeholder='Enter your registered email'
                     value={email}
-                    onChange={e => { setEmail(e.target.value); setError('') }}
+                    onChange={e => {
+                      setEmail(e.target.value)
+                      setError('')
+                    }}
                   />
                   <Button
                     fullWidth
                     variant='contained'
                     onClick={() => handleSendCode('email')}
                     disabled={loading || !email}
-                    startIcon={loading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-mail-forward' />}
+                    startIcon={
+                      loading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-mail-forward' />
+                    }
                   >
                     {loading ? 'Sending...' : 'Send Email OTP'}
                   </Button>
@@ -283,12 +315,17 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
                     label='Phone Number'
                     placeholder='98XXXXXXXX'
                     value={phone}
-                    onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
+                    onChange={e => {
+                      setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                      setError('')
+                    }}
                     slotProps={{
                       input: {
                         startAdornment: (
                           <InputAdornment position='start'>
-                            <Typography variant='body2' sx={{ fontWeight: 600 }}>+977</Typography>
+                            <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                              +977
+                            </Typography>
                           </InputAdornment>
                         )
                       }
@@ -299,7 +336,9 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
                       fullWidth
                       variant='contained'
                       color='success'
-                      startIcon={loading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-message-2' />}
+                      startIcon={
+                        loading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-message-2' />
+                      }
                       onClick={() => handleSendCode('sms')}
                       disabled={loading || phone.length < 10}
                     >
@@ -309,7 +348,13 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
                       fullWidth
                       variant='contained'
                       sx={{ bgcolor: '#25D366', '&:hover': { bgcolor: '#1da851' } }}
-                      startIcon={loading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-brand-whatsapp' />}
+                      startIcon={
+                        loading ? (
+                          <CircularProgress size={18} color='inherit' />
+                        ) : (
+                          <i className='tabler-brand-whatsapp' />
+                        )
+                      }
                       onClick={() => handleSendCode('whatsapp')}
                       disabled={loading || phone.length < 10}
                     >
@@ -329,7 +374,10 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
                 label='Verification Code'
                 placeholder='Enter 6-digit code'
                 value={otpCode}
-                onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
+                onChange={e => {
+                  setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                  setError('')
+                }}
                 slotProps={{
                   input: {
                     style: { letterSpacing: '0.5em', textAlign: 'center', fontSize: '1.2rem', fontWeight: 700 }
@@ -342,12 +390,19 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
                 placeholder='Enter new password'
                 type={showPassword ? 'text' : 'password'}
                 value={newPassword}
-                onChange={e => { setNewPassword(e.target.value); setError('') }}
+                onChange={e => {
+                  setNewPassword(e.target.value)
+                  setError('')
+                }}
                 slotProps={{
                   input: {
                     endAdornment: (
                       <InputAdornment position='end'>
-                        <IconButton edge='end' aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(!showPassword)}>
+                        <IconButton
+                          edge='end'
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
                           <i className={showPassword ? 'tabler-eye' : 'tabler-eye-off'} />
                         </IconButton>
                       </InputAdornment>
@@ -361,26 +416,42 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
                 placeholder='Confirm new password'
                 type={showPassword ? 'text' : 'password'}
                 value={confirmPassword}
-                onChange={e => { setConfirmPassword(e.target.value); setError('') }}
+                onChange={e => {
+                  setConfirmPassword(e.target.value)
+                  setError('')
+                }}
               />
               <Button
                 fullWidth
                 variant='contained'
                 onClick={handleResetPassword}
                 disabled={loading || otpCode.length !== 6 || newPassword.length < 5}
-                startIcon={loading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-lock-check' />}
+                startIcon={
+                  loading ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-lock-check' />
+                }
               >
                 {loading ? 'Resetting...' : 'Reset Password'}
               </Button>
 
               <Box className='flex justify-between items-center'>
-                <Button size='small' onClick={() => { setStep('request'); setOtpCode(''); setSuccess('') }}>
+                <Button
+                  size='small'
+                  onClick={() => {
+                    setStep('request')
+                    setOtpCode('')
+                    setSuccess('')
+                  }}
+                >
                   <i className='tabler-arrow-left mie-1' /> Back
                 </Button>
                 {countdown > 0 ? (
-                  <Typography variant='caption' color='text.secondary'>Resend in {countdown}s</Typography>
+                  <Typography variant='caption' color='text.secondary'>
+                    Resend in {countdown}s
+                  </Typography>
                 ) : (
-                  <Button size='small' onClick={() => handleSendCode(otpChannel)}>Resend Code</Button>
+                  <Button size='small' onClick={() => handleSendCode(otpChannel)}>
+                    Resend Code
+                  </Button>
                 )}
               </Box>
             </div>
@@ -389,7 +460,11 @@ const ForgotPassword = ({ mode }: { mode: SystemMode }) => {
           {/* Back to login */}
           <Typography className='flex justify-center items-center' color='primary.main'>
             <Link href={getLocalizedUrl('/login', locale as Locale)} className='flex items-center gap-1.5'>
-              <DirectionalIcon ltrIconClass='tabler-chevron-left' rtlIconClass='tabler-chevron-right' className='text-xl' />
+              <DirectionalIcon
+                ltrIconClass='tabler-chevron-left'
+                rtlIconClass='tabler-chevron-right'
+                className='text-xl'
+              />
               <span>Back to login</span>
             </Link>
           </Typography>

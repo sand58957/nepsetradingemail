@@ -77,7 +77,6 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
   const { lang: locale } = params
   const isSuperAdmin = role === 'superadmin'
   const isAdmin = role === 'admin' || role === 'superadmin'
-  const isCustomer = role === 'user' || role === 'subscriber'
 
   // Section visibility state
   const [visibility, setVisibility] = useState<SectionVisibility>(getDefaultVisibility())
@@ -147,12 +146,14 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
         {/* Email Marketing Section */}
-        <MenuSection label={
-          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            Email Marketing
-            <SectionToggle section='email' visible={visibility.email} />
-          </span>
-        }>
+        <MenuSection
+          label={
+            <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              Email Marketing
+              <SectionToggle section='email' visible={visibility.email} />
+            </span>
+          }
+        >
           {visibility.email ? (
             <>
               <MenuItem href={`/${locale}/dashboards/email-marketing`} icon={<i className='tabler-mail' />}>
@@ -184,22 +185,21 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
               </MenuItem>
             </>
           ) : (
-            <MenuItem
-              icon={<i className='tabler-eye' />}
-              onClick={() => toggleSection('email')}
-            >
+            <MenuItem icon={<i className='tabler-eye' />} onClick={() => toggleSection('email')}>
               Show Email Marketing
             </MenuItem>
           )}
         </MenuSection>
 
         {/* WhatsApp Marketing Section */}
-        <MenuSection label={
-          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            WhatsApp Marketing
-            <SectionToggle section='whatsapp' visible={visibility.whatsapp} />
-          </span>
-        }>
+        <MenuSection
+          label={
+            <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              WhatsApp Marketing
+              <SectionToggle section='whatsapp' visible={visibility.whatsapp} />
+            </span>
+          }
+        >
           {visibility.whatsapp ? (
             <>
               <MenuItem href={`/${locale}/whatsapp`} icon={<i className='tabler-brand-whatsapp' />}>
@@ -227,22 +227,21 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
               </MenuItem>
             </>
           ) : (
-            <MenuItem
-              icon={<i className='tabler-eye' />}
-              onClick={() => toggleSection('whatsapp')}
-            >
+            <MenuItem icon={<i className='tabler-eye' />} onClick={() => toggleSection('whatsapp')}>
               Show WhatsApp Marketing
             </MenuItem>
           )}
         </MenuSection>
 
         {/* SMS Marketing Section */}
-        <MenuSection label={
-          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            SMS Marketing
-            <SectionToggle section='sms' visible={visibility.sms} />
-          </span>
-        }>
+        <MenuSection
+          label={
+            <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              SMS Marketing
+              <SectionToggle section='sms' visible={visibility.sms} />
+            </span>
+          }
+        >
           {visibility.sms ? (
             <>
               <MenuItem href={`/${locale}/sms`} icon={<i className='tabler-message' />}>
@@ -266,22 +265,21 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
               </MenuItem>
             </>
           ) : (
-            <MenuItem
-              icon={<i className='tabler-eye' />}
-              onClick={() => toggleSection('sms')}
-            >
+            <MenuItem icon={<i className='tabler-eye' />} onClick={() => toggleSection('sms')}>
               Show SMS Marketing
             </MenuItem>
           )}
         </MenuSection>
 
         {/* Telegram Marketing Section */}
-        <MenuSection label={
-          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            Telegram Marketing
-            <SectionToggle section='telegram' visible={visibility.telegram} />
-          </span>
-        }>
+        <MenuSection
+          label={
+            <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              Telegram Marketing
+              <SectionToggle section='telegram' visible={visibility.telegram} />
+            </span>
+          }
+        >
           {visibility.telegram ? (
             <>
               <MenuItem href={`/${locale}/telegram`} icon={<i className='tabler-brand-telegram' />}>
@@ -305,22 +303,21 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
               </MenuItem>
             </>
           ) : (
-            <MenuItem
-              icon={<i className='tabler-eye' />}
-              onClick={() => toggleSection('telegram')}
-            >
+            <MenuItem icon={<i className='tabler-eye' />} onClick={() => toggleSection('telegram')}>
               Show Telegram Marketing
             </MenuItem>
           )}
         </MenuSection>
 
         {/* Messenger Marketing Section */}
-        <MenuSection label={
-          <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            Messenger Marketing
-            <SectionToggle section='messenger' visible={visibility.messenger} />
-          </span>
-        }>
+        <MenuSection
+          label={
+            <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              Messenger Marketing
+              <SectionToggle section='messenger' visible={visibility.messenger} />
+            </span>
+          }
+        >
           {visibility.messenger ? (
             <>
               <MenuItem href={`/${locale}/messenger`} icon={<i className='tabler-brand-facebook' />}>
@@ -344,10 +341,7 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
               </MenuItem>
             </>
           ) : (
-            <MenuItem
-              icon={<i className='tabler-eye' />}
-              onClick={() => toggleSection('messenger')}
-            >
+            <MenuItem icon={<i className='tabler-eye' />} onClick={() => toggleSection('messenger')}>
               Show Messenger Marketing
             </MenuItem>
           )}

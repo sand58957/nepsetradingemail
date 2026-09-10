@@ -78,17 +78,12 @@ const EcommerceTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
           </div>
 
           <Alert severity='info'>
-            E-commerce integration allows you to sync customer purchase data, create targeted segments based on
-            buying behavior, and send automated post-purchase emails. Connect your store provider below.
+            E-commerce integration allows you to sync customer purchase data, create targeted segments based on buying
+            behavior, and send automated post-purchase emails. Connect your store provider below.
           </Alert>
 
           <FormControlLabel
-            control={
-              <Switch
-                checked={form.enabled}
-                onChange={e => handleChange('enabled', e.target.checked)}
-              />
-            }
+            control={<Switch checked={form.enabled} onChange={e => handleChange('enabled', e.target.checked)} />}
             label='Enable e-commerce integration'
           />
 

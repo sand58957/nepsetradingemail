@@ -275,11 +275,7 @@ const DefaultSettingsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
             {form.logo_url ? (
               <div className='flex items-center gap-4'>
                 <div className='border rounded-lg p-3 bg-gray-50'>
-                  <img
-                    src={form.logo_url}
-                    alt='Logo'
-                    style={{ maxWidth: 200, maxHeight: 60, objectFit: 'contain' }}
-                  />
+                  <img src={form.logo_url} alt='Logo' style={{ maxWidth: 200, maxHeight: 60, objectFit: 'contain' }} />
                 </div>
                 <div className='flex flex-col gap-2'>
                   <Button
@@ -477,10 +473,7 @@ const DefaultSettingsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
 
           <FormControlLabel
             control={
-              <Switch
-                checked={form.track_opens}
-                onChange={e => handleChange('track_opens', e.target.checked)}
-              />
+              <Switch checked={form.track_opens} onChange={e => handleChange('track_opens', e.target.checked)} />
             }
             label={
               <div>
@@ -586,7 +579,12 @@ const DefaultSettingsTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
               </Grid>
               <Grid size={{ xs: 2, sm: 1 }}>
                 <Tooltip title='Remove'>
-                  <IconButton size='small' color='error' aria-label='Remove social link' onClick={() => handleRemoveSocialLink(index)}>
+                  <IconButton
+                    size='small'
+                    color='error'
+                    aria-label='Remove social link'
+                    onClick={() => handleRemoveSocialLink(index)}
+                  >
                     <i className='tabler-trash text-[18px]' />
                   </IconButton>
                 </Tooltip>

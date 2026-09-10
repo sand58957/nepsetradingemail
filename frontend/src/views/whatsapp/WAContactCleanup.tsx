@@ -35,6 +35,7 @@ const WAContactCleanup = () => {
   const [loading, setLoading] = useState(true)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [processing, setProcessing] = useState(false)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
     open: false,
     message: '',
@@ -84,7 +85,9 @@ const WAContactCleanup = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={28} />
-        <Typography className='ml-3' color='text.secondary'>Loading...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading...
+        </Typography>
       </div>
     )
   }
@@ -96,9 +99,9 @@ const WAContactCleanup = () => {
         <CardContent>
           <Alert severity='info'>
             <Typography variant='body2'>
-              <strong>Clean up inactive contacts</strong> — This tool helps you identify and remove contacts
-              who have opted out of receiving WhatsApp messages. Removing opted-out contacts keeps your
-              contact list clean and avoids sending messages to uninterested recipients.
+              <strong>Clean up inactive contacts</strong> — This tool helps you identify and remove contacts who have
+              opted out of receiving WhatsApp messages. Removing opted-out contacts keeps your contact list clean and
+              avoids sending messages to uninterested recipients.
             </Typography>
           </Alert>
         </CardContent>
@@ -187,7 +190,8 @@ const WAContactCleanup = () => {
             This action cannot be undone. All opted-out contacts will be permanently deleted.
           </Alert>
           <Typography>
-            Are you sure you want to permanently remove {totalOptedOut} opted-out contact{totalOptedOut !== 1 ? 's' : ''}?
+            Are you sure you want to permanently remove {totalOptedOut} opted-out contact
+            {totalOptedOut !== 1 ? 's' : ''}?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -211,11 +215,7 @@ const WAContactCleanup = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

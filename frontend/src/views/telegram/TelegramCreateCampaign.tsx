@@ -71,6 +71,7 @@ const TelegramCreateCampaign = () => {
   const [creating, setCreating] = useState(false)
   const [sendingNow, setSendingNow] = useState(false)
   const [confirmSendNow, setConfirmSendNow] = useState(false)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -93,6 +94,7 @@ const TelegramCreateCampaign = () => {
     const fetchGroups = async () => {
       try {
         const response = await telegramService.getGroups()
+
         setAvailableGroups(response.data || [])
       } catch {
         // Silently fail
@@ -142,7 +144,7 @@ const TelegramCreateCampaign = () => {
   }
 
   const handleButtonChange = (index: number, field: 'text' | 'url', value: string) => {
-    setButtons(prev => prev.map((btn, i) => i === index ? { ...btn, [field]: value } : btn))
+    setButtons(prev => prev.map((btn, i) => (i === index ? { ...btn, [field]: value } : btn)))
   }
 
   // Create campaign (draft)
@@ -255,7 +257,11 @@ const TelegramCreateCampaign = () => {
         await telegramService.sendCampaign(campaignId)
         setSnackbar({ open: true, message: 'Campaign created and sending started!', severity: 'success' })
       } catch {
-        setSnackbar({ open: true, message: 'Campaign created but failed to start sending. Go to campaign detail to retry.', severity: 'error' })
+        setSnackbar({
+          open: true,
+          message: 'Campaign created but failed to start sending. Go to campaign detail to retry.',
+          severity: 'error'
+        })
       }
 
       // Navigate to campaign detail
@@ -365,11 +371,15 @@ const TelegramCreateCampaign = () => {
 
                 {/* Message Type Selector */}
                 <div>
-                  <Typography variant='subtitle2' className='mb-2'>Message Type</Typography>
+                  <Typography variant='subtitle2' className='mb-2'>
+                    Message Type
+                  </Typography>
                   <ToggleButtonGroup
                     value={messageType}
                     exclusive
-                    onChange={(_, value) => { if (value) setMessageType(value) }}
+                    onChange={(_, value) => {
+                      if (value) setMessageType(value)
+                    }}
                     size='small'
                   >
                     <ToggleButton value='text'>
@@ -408,7 +418,8 @@ const TelegramCreateCampaign = () => {
                     helperText={
                       <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                         <span>
-                          Supports Telegram HTML formatting: &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;a href=&quot;...&quot;&gt;link&lt;/a&gt;
+                          Supports Telegram HTML formatting: &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;a
+                          href=&quot;...&quot;&gt;link&lt;/a&gt;
                         </span>
                         <span style={{ color: 'var(--mui-palette-text-secondary)' }}>
                           {messageText.length} characters
@@ -435,7 +446,14 @@ const TelegramCreateCampaign = () => {
                     </div>
                     {messageType === 'photo' && mediaUrl && (
                       <Box className='mb-2 rounded overflow-hidden' sx={{ maxWidth: 300 }}>
-                        <img src={mediaUrl} alt='Preview' style={{ width: '100%', display: 'block' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        <img
+                          src={mediaUrl}
+                          alt='Preview'
+                          style={{ width: '100%', display: 'block' }}
+                          onError={e => {
+                            ;(e.target as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
                       </Box>
                     )}
                     <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
@@ -443,17 +461,24 @@ const TelegramCreateCampaign = () => {
                     </Typography>
                     {buttons.filter(b => b.text && b.url).length > 0 && (
                       <div className='flex flex-col gap-1 mt-3'>
-                        {buttons.filter(b => b.text && b.url).map((btn, i) => (
-                          <Box
-                            key={i}
-                            className='text-center p-2 rounded'
-                            sx={{ backgroundColor: 'primary.lighter', border: '1px solid', borderColor: 'primary.main', cursor: 'pointer' }}
-                          >
-                            <Typography variant='body2' color='primary.main' className='font-medium'>
-                              {btn.text}
-                            </Typography>
-                          </Box>
-                        ))}
+                        {buttons
+                          .filter(b => b.text && b.url)
+                          .map((btn, i) => (
+                            <Box
+                              key={i}
+                              className='text-center p-2 rounded'
+                              sx={{
+                                backgroundColor: 'primary.lighter',
+                                border: '1px solid',
+                                borderColor: 'primary.main',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Typography variant='body2' color='primary.main' className='font-medium'>
+                                {btn.text}
+                              </Typography>
+                            </Box>
+                          ))}
                       </div>
                     )}
                   </Box>
@@ -465,11 +490,7 @@ const TelegramCreateCampaign = () => {
                 <div>
                   <div className='flex items-center justify-between mb-2'>
                     <Typography variant='subtitle1'>Inline Buttons (Optional)</Typography>
-                    <Button
-                      size='small'
-                      startIcon={<i className='tabler-plus' />}
-                      onClick={handleAddButton}
-                    >
+                    <Button size='small' startIcon={<i className='tabler-plus' />} onClick={handleAddButton}>
                       Add Button
                     </Button>
                   </div>
@@ -494,7 +515,12 @@ const TelegramCreateCampaign = () => {
                         onChange={e => handleButtonChange(index, 'url', e.target.value)}
                         sx={{ flex: 1 }}
                       />
-                      <IconButton size='small' color='error' aria-label='Remove button' onClick={() => handleRemoveButton(index)}>
+                      <IconButton
+                        size='small'
+                        color='error'
+                        aria-label='Remove button'
+                        onClick={() => handleRemoveButton(index)}
+                      >
                         <i className='tabler-trash' />
                       </IconButton>
                     </div>
@@ -518,14 +544,18 @@ const TelegramCreateCampaign = () => {
                     />
                   )}
                   <Typography variant='body2' color='text.secondary'>
-                    {tags.length > 0 || selectedGroups.length > 0 ? 'Contacts matching selected filters' : 'All opted-in contacts'}
+                    {tags.length > 0 || selectedGroups.length > 0
+                      ? 'Contacts matching selected filters'
+                      : 'All opted-in contacts'}
                   </Typography>
                 </div>
 
                 {/* Group filter */}
                 {availableGroups.length > 0 && (
                   <div>
-                    <Typography variant='body2' className='mb-2'>Filter by Groups</Typography>
+                    <Typography variant='body2' className='mb-2'>
+                      Filter by Groups
+                    </Typography>
                     <div className='flex gap-2 flex-wrap'>
                       {availableGroups.map(group => (
                         <Chip
@@ -536,14 +566,16 @@ const TelegramCreateCampaign = () => {
                           color={selectedGroups.includes(group.id) ? 'primary' : 'default'}
                           onClick={() => {
                             setSelectedGroups(prev =>
-                              prev.includes(group.id)
-                                ? prev.filter(id => id !== group.id)
-                                : [...prev, group.id]
+                              prev.includes(group.id) ? prev.filter(id => id !== group.id) : [...prev, group.id]
                             )
                           }}
-                          sx={selectedGroups.includes(group.id) ? {} : {
-                            borderLeft: `3px solid ${group.color}`,
-                          }}
+                          sx={
+                            selectedGroups.includes(group.id)
+                              ? {}
+                              : {
+                                  borderLeft: `3px solid ${group.color}`
+                                }
+                          }
                         />
                       ))}
                     </div>
@@ -562,9 +594,7 @@ const TelegramCreateCampaign = () => {
                   onInputChange={(_, value) => setTagInput(value)}
                   onChange={(_, value) => setTags(value as string[])}
                   renderTags={(value, getTagProps) =>
-                    value.map((tag, index) => (
-                      <Chip {...getTagProps({ index })} key={tag} label={tag} size='small' />
-                    ))
+                    value.map((tag, index) => <Chip {...getTagProps({ index })} key={tag} label={tag} size='small' />)
                   }
                   renderInput={params => (
                     <TextField
@@ -619,10 +649,7 @@ const TelegramCreateCampaign = () => {
                   >
                     Test Send
                   </Button>
-                  <Button
-                    variant='outlined'
-                    onClick={() => router.push(`/${locale}/telegram/campaigns`)}
-                  >
+                  <Button variant='outlined' onClick={() => router.push(`/${locale}/telegram/campaigns`)}>
                     Cancel
                   </Button>
                 </div>
@@ -671,12 +698,18 @@ const TelegramCreateCampaign = () => {
             <CardContent>
               <div className='flex flex-col gap-3'>
                 <Box className='p-3 rounded' sx={{ backgroundColor: 'action.hover' }}>
-                  <Typography variant='subtitle2' className='mb-1'>Telegram HTML</Typography>
+                  <Typography variant='subtitle2' className='mb-1'>
+                    Telegram HTML
+                  </Typography>
                   <Typography variant='body2' color='text.secondary' component='div'>
-                    <code>&lt;b&gt;bold&lt;/b&gt;</code><br />
-                    <code>&lt;i&gt;italic&lt;/i&gt;</code><br />
-                    <code>&lt;u&gt;underline&lt;/u&gt;</code><br />
-                    <code>&lt;code&gt;monospace&lt;/code&gt;</code><br />
+                    <code>&lt;b&gt;bold&lt;/b&gt;</code>
+                    <br />
+                    <code>&lt;i&gt;italic&lt;/i&gt;</code>
+                    <br />
+                    <code>&lt;u&gt;underline&lt;/u&gt;</code>
+                    <br />
+                    <code>&lt;code&gt;monospace&lt;/code&gt;</code>
+                    <br />
                     <code>&lt;a href=&quot;URL&quot;&gt;link&lt;/a&gt;</code>
                   </Typography>
                 </Box>
@@ -708,13 +741,17 @@ const TelegramCreateCampaign = () => {
           />
           {messageText && (
             <Box className='p-3 rounded mt-3' sx={{ backgroundColor: 'action.hover' }}>
-              <Typography variant='caption' color='text.secondary'>Message preview:</Typography>
+              <Typography variant='caption' color='text.secondary'>
+                Message preview:
+              </Typography>
               {messageType === 'photo' && mediaUrl && (
                 <Typography variant='caption' color='info.main' className='block mb-1'>
                   [Photo: {mediaUrl}]
                 </Typography>
               )}
-              <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>{messageText}</Typography>
+              <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>
+                {messageText}
+              </Typography>
               {buttons.filter(b => b.text).length > 0 && (
                 <Typography variant='caption' color='text.secondary' className='mt-1 block'>
                   {buttons.filter(b => b.text).length} inline button(s)
@@ -747,16 +784,23 @@ const TelegramCreateCampaign = () => {
         <DialogContent>
           <div className='flex flex-col gap-3 mt-1'>
             <Typography>
-              This will create the campaign and <strong>immediately start sending</strong> Telegram messages to all targeted contacts.
+              This will create the campaign and <strong>immediately start sending</strong> Telegram messages to all
+              targeted contacts.
             </Typography>
             <Box className='p-3 rounded' sx={{ backgroundColor: 'action.hover' }}>
-              <Typography variant='body2'><strong>Campaign:</strong> {name}</Typography>
-              <Typography variant='body2'><strong>Type:</strong> {messageType === 'photo' ? 'Photo with caption' : 'Text message'}</Typography>
               <Typography variant='body2'>
-                <strong>Message:</strong> {messageText.length > 100 ? messageText.substring(0, 100) + '...' : messageText}
+                <strong>Campaign:</strong> {name}
               </Typography>
               <Typography variant='body2'>
-                <strong>Audience:</strong> {tags.length > 0 ? `Contacts with tags: ${tags.join(', ')}` : 'All opted-in contacts'}
+                <strong>Type:</strong> {messageType === 'photo' ? 'Photo with caption' : 'Text message'}
+              </Typography>
+              <Typography variant='body2'>
+                <strong>Message:</strong>{' '}
+                {messageText.length > 100 ? messageText.substring(0, 100) + '...' : messageText}
+              </Typography>
+              <Typography variant='body2'>
+                <strong>Audience:</strong>{' '}
+                {tags.length > 0 ? `Contacts with tags: ${tags.join(', ')}` : 'All opted-in contacts'}
                 {audienceCount !== null && ` (${audienceCount.toLocaleString()} recipients)`}
               </Typography>
               {buttons.filter(b => b.text && b.url).length > 0 && (
@@ -790,11 +834,7 @@ const TelegramCreateCampaign = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

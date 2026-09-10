@@ -19,7 +19,6 @@ import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import IconButton from '@mui/material/IconButton'
 import CircularProgress from '@mui/material/CircularProgress'
-import Divider from '@mui/material/Divider'
 import Chip from '@mui/material/Chip'
 import Alert from '@mui/material/Alert'
 import Grid from '@mui/material/Grid'
@@ -77,6 +76,8 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
     if (automationId) {
       fetchAutomation()
     }
+    // fetchAutomation is redefined every render; depending on it would loop. Refetch per id only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [automationId])
 
   const fetchLists = async () => {
@@ -124,7 +125,7 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
           }))
         )
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to load automation')
     } finally {
       setLoading(false)
@@ -196,8 +197,8 @@ const AutomationEditor = ({ automationId }: { automationId?: number }) => {
   const handleSave = async () => {
     if (!name.trim()) {
       setError('Automation name is required')
-      
-return
+
+      return
     }
 
     try {
@@ -264,7 +265,16 @@ return
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, mb: 4 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          flexWrap: 'wrap',
+          gap: 2,
+          mb: 4
+        }}
+      >
         <Box>
           <Breadcrumbs sx={{ mb: 1 }}>
             <Link
@@ -306,7 +316,13 @@ return
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Chip label='1' size='small' color='primary' variant='outlined' sx={{ borderRadius: '50%', fontWeight: 700 }} />
+            <Chip
+              label='1'
+              size='small'
+              color='primary'
+              variant='outlined'
+              sx={{ borderRadius: '50%', fontWeight: 700 }}
+            />
             <Typography variant='subtitle1' fontWeight={700}>
               What is the name of this automation?
             </Typography>
@@ -326,7 +342,13 @@ return
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-            <Chip label='2' size='small' color='primary' variant='outlined' sx={{ borderRadius: '50%', fontWeight: 700 }} />
+            <Chip
+              label='2'
+              size='small'
+              color='primary'
+              variant='outlined'
+              sx={{ borderRadius: '50%', fontWeight: 700 }}
+            />
             <Typography variant='subtitle1' fontWeight={700}>
               When will your contacts enter the automation?
             </Typography>
@@ -337,22 +359,34 @@ return
 
           <Box sx={{ ml: 5 }}>
             <Typography variant='overline' sx={{ fontWeight: 600, color: 'text.secondary' }}>
-              Entry Criteria <Typography component='span' color='error.main'>*</Typography>
+              Entry Criteria{' '}
+              <Typography component='span' color='error.main'>
+                *
+              </Typography>
             </Typography>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, mt: 1, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, maxWidth: 500 }}>
-              <Typography variant='body2'>
-                The first time a contact is added to
-              </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 2,
+                mt: 1,
+                p: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                maxWidth: 500
+              }}
+            >
+              <Typography variant='body2'>The first time a contact is added to</Typography>
               <FormControl size='small' sx={{ minWidth: 180 }}>
-                <Select
-                  value={triggerListId}
-                  onChange={e => setTriggerListId(e.target.value)}
-                  displayEmpty
-                >
+                <Select value={triggerListId} onChange={e => setTriggerListId(e.target.value)} displayEmpty>
                   <MenuItem value=''>All Contacts</MenuItem>
                   {lists.map(list => (
-                    <MenuItem key={list.id} value={list.id}>{list.name}</MenuItem>
+                    <MenuItem key={list.id} value={list.id}>
+                      {list.name}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -368,18 +402,28 @@ return
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-            <Chip label='3' size='small' color='primary' variant='outlined' sx={{ borderRadius: '50%', fontWeight: 700 }} />
+            <Chip
+              label='3'
+              size='small'
+              color='primary'
+              variant='outlined'
+              sx={{ borderRadius: '50%', fontWeight: 700 }}
+            />
             <Typography variant='subtitle1' fontWeight={700}>
               When will your contacts leave the automation?
             </Typography>
           </Box>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2, ml: 5 }}>
-            Decide whether contacts will receive all emails in your series, exit once they no longer meet the entry criteria, or exit once they meet your own specified criteria.
+            Decide whether contacts will receive all emails in your series, exit once they no longer meet the entry
+            criteria, or exit once they meet your own specified criteria.
           </Typography>
 
           <Box sx={{ ml: 5 }}>
             <Typography variant='overline' sx={{ fontWeight: 600, color: 'text.secondary' }}>
-              Exit Criteria <Typography component='span' color='error.main'>*</Typography>
+              Exit Criteria{' '}
+              <Typography component='span' color='error.main'>
+                *
+              </Typography>
             </Typography>
 
             <RadioGroup value={exitCriteria} onChange={e => setExitCriteria(e.target.value)} sx={{ mt: 1 }}>
@@ -412,7 +456,13 @@ return
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Chip label='4' size='small' color='primary' variant='outlined' sx={{ borderRadius: '50%', fontWeight: 700 }} />
+            <Chip
+              label='4'
+              size='small'
+              color='primary'
+              variant='outlined'
+              sx={{ borderRadius: '50%', fontWeight: 700 }}
+            />
             <Typography variant='subtitle1' fontWeight={700}>
               Automation details
             </Typography>
@@ -432,11 +482,7 @@ return
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
                   <InputLabel>Trigger Type</InputLabel>
-                  <Select
-                    value={triggerType}
-                    label='Trigger Type'
-                    onChange={e => setTriggerType(e.target.value)}
-                  >
+                  <Select value={triggerType} label='Trigger Type' onChange={e => setTriggerType(e.target.value)}>
                     <MenuItem value='subscriber_added'>Subscriber Added to List</MenuItem>
                     <MenuItem value='manual'>Manual Trigger</MenuItem>
                     <MenuItem value='campaign_open'>Campaign Opened</MenuItem>
@@ -453,13 +499,20 @@ return
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-            <Chip label='5' size='small' color='primary' variant='outlined' sx={{ borderRadius: '50%', fontWeight: 700 }} />
+            <Chip
+              label='5'
+              size='small'
+              color='primary'
+              variant='outlined'
+              sx={{ borderRadius: '50%', fontWeight: 700 }}
+            />
             <Typography variant='subtitle1' fontWeight={700}>
               What email(s) are included in your automation?
             </Typography>
           </Box>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 3, ml: 5 }}>
-            You can choose to send a single message or create a series of messages to be sent at time intervals you define.
+            You can choose to send a single message or create a series of messages to be sent at time intervals you
+            define.
           </Typography>
 
           {/* Visual Flow */}

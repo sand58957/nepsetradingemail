@@ -24,27 +24,34 @@ export const blogService = {
   // ==================== Dashboard ====================
   getDashboardStats: async (): Promise<{ data: BlogDashboardStats }> => {
     const response = await api.get('/blog/stats')
+
     return response.data
   },
 
   // ==================== Posts ====================
-  listPosts: async (params?: BlogPaginationParams): Promise<{ data: BlogPost[]; total: number; page: number; per_page: number }> => {
+  listPosts: async (
+    params?: BlogPaginationParams
+  ): Promise<{ data: BlogPost[]; total: number; page: number; per_page: number }> => {
     const response = await api.get('/blog/posts', { params })
+
     return response.data
   },
 
   getPost: async (id: number): Promise<{ data: BlogPostDetail }> => {
     const response = await api.get(`/blog/posts/${id}`)
+
     return response.data
   },
 
   createPost: async (data: CreatePostRequest): Promise<{ data: BlogPost }> => {
     const response = await api.post('/blog/posts', data)
+
     return response.data
   },
 
   updatePost: async (id: number, data: CreatePostRequest): Promise<{ data: BlogPost }> => {
     const response = await api.put(`/blog/posts/${id}`, data)
+
     return response.data
   },
 
@@ -54,27 +61,39 @@ export const blogService = {
 
   publishPost: async (id: number): Promise<{ data: BlogPost }> => {
     const response = await api.post(`/blog/posts/${id}/publish`)
+
     return response.data
   },
 
   unpublishPost: async (id: number): Promise<{ data: BlogPost }> => {
     const response = await api.post(`/blog/posts/${id}/unpublish`)
+
     return response.data
   },
 
   // ==================== FAQs ====================
   listPostFAQs: async (postId: number): Promise<{ data: BlogPostFAQ[] }> => {
     const response = await api.get(`/blog/posts/${postId}/faqs`)
+
     return response.data
   },
 
-  createPostFAQ: async (postId: number, data: { question: string; answer: string; sort_order?: number }): Promise<{ data: BlogPostFAQ }> => {
+  createPostFAQ: async (
+    postId: number,
+    data: { question: string; answer: string; sort_order?: number }
+  ): Promise<{ data: BlogPostFAQ }> => {
     const response = await api.post(`/blog/posts/${postId}/faqs`, data)
+
     return response.data
   },
 
-  updatePostFAQ: async (postId: number, faqId: number, data: { question: string; answer: string; sort_order?: number }): Promise<{ data: BlogPostFAQ }> => {
+  updatePostFAQ: async (
+    postId: number,
+    faqId: number,
+    data: { question: string; answer: string; sort_order?: number }
+  ): Promise<{ data: BlogPostFAQ }> => {
     const response = await api.put(`/blog/posts/${postId}/faqs/${faqId}`, data)
+
     return response.data
   },
 
@@ -85,16 +104,27 @@ export const blogService = {
   // ==================== Categories ====================
   listCategories: async (): Promise<{ data: BlogCategory[] }> => {
     const response = await api.get('/blog/categories')
+
     return response.data
   },
 
-  createCategory: async (data: { name: string; description?: string; parent_id?: number | null; sort_order?: number }): Promise<{ data: BlogCategory }> => {
+  createCategory: async (data: {
+    name: string
+    description?: string
+    parent_id?: number | null
+    sort_order?: number
+  }): Promise<{ data: BlogCategory }> => {
     const response = await api.post('/blog/categories', data)
+
     return response.data
   },
 
-  updateCategory: async (id: number, data: { name: string; description?: string; parent_id?: number | null; sort_order?: number }): Promise<{ data: BlogCategory }> => {
+  updateCategory: async (
+    id: number,
+    data: { name: string; description?: string; parent_id?: number | null; sort_order?: number }
+  ): Promise<{ data: BlogCategory }> => {
     const response = await api.put(`/blog/categories/${id}`, data)
+
     return response.data
   },
 
@@ -105,11 +135,13 @@ export const blogService = {
   // ==================== Tags ====================
   listTags: async (): Promise<{ data: BlogTag[] }> => {
     const response = await api.get('/blog/tags')
+
     return response.data
   },
 
   createTag: async (name: string): Promise<{ data: BlogTag }> => {
     const response = await api.post('/blog/tags', { name })
+
     return response.data
   },
 
@@ -120,21 +152,25 @@ export const blogService = {
   // ==================== Authors ====================
   listAuthors: async (): Promise<{ data: BlogAuthor[] }> => {
     const response = await api.get('/blog/authors')
+
     return response.data
   },
 
   getAuthor: async (id: number): Promise<{ data: BlogAuthor }> => {
     const response = await api.get(`/blog/authors/${id}`)
+
     return response.data
   },
 
   createAuthor: async (data: Partial<BlogAuthor>): Promise<{ data: BlogAuthor }> => {
     const response = await api.post('/blog/authors', data)
+
     return response.data
   },
 
   updateAuthor: async (id: number, data: Partial<BlogAuthor>): Promise<{ data: BlogAuthor }> => {
     const response = await api.put(`/blog/authors/${id}`, data)
+
     return response.data
   },
 
@@ -145,11 +181,13 @@ export const blogService = {
   // ==================== Settings ====================
   getSettings: async (): Promise<{ data: BlogSettings }> => {
     const response = await api.get('/blog/settings')
+
     return response.data
   },
 
   updateSettings: async (data: Partial<BlogSettings>): Promise<{ data: BlogSettings }> => {
     const response = await api.put('/blog/settings', data)
+
     return response.data
   }
 }

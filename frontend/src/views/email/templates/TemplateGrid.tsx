@@ -109,9 +109,7 @@ const TemplateGrid = () => {
     fetchTemplates()
   }, [fetchTemplates])
 
-  const filteredTemplates = templates.filter(t =>
-    t.name.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredTemplates = templates.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
 
   const handleCreate = async () => {
     if (!newTemplate.name.trim()) return
@@ -195,9 +193,7 @@ const TemplateGrid = () => {
   }
 
   const handleToggleSendGrid = (id: string) => {
-    setSelectedSendGrid(prev =>
-      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
-    )
+    setSelectedSendGrid(prev => (prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]))
   }
 
   const handleImportSendGrid = async () => {
@@ -230,7 +226,9 @@ const TemplateGrid = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading templates...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading templates...
+        </Typography>
       </div>
     )
   }
@@ -243,11 +241,7 @@ const TemplateGrid = () => {
           sx={{ flexWrap: 'wrap', rowGap: 2 }}
           action={
             <div className='flex gap-2 flex-wrap'>
-              <Button
-                variant='outlined'
-                startIcon={<i className='tabler-download' />}
-                onClick={handleOpenSendGrid}
-              >
+              <Button variant='outlined' startIcon={<i className='tabler-download' />} onClick={handleOpenSendGrid}>
                 Import from SendGrid
               </Button>
               <Button
@@ -282,7 +276,9 @@ const TemplateGrid = () => {
         <Card>
           <CardContent className='text-center py-8'>
             <Typography color='text.secondary'>
-              {search ? 'No templates match your search' : 'No templates yet. Create your first template to get started.'}
+              {search
+                ? 'No templates match your search'
+                : 'No templates yet. Create your first template to get started.'}
             </Typography>
           </CardContent>
         </Card>
@@ -293,12 +289,15 @@ const TemplateGrid = () => {
               <Card className='h-full flex flex-col'>
                 <CardContent className='grow'>
                   <div className='flex items-start justify-between mb-4'>
-                    <CustomAvatar color={typeColorMap[template.type] || 'primary'} skin='light' variant='rounded' size={44}>
+                    <CustomAvatar
+                      color={typeColorMap[template.type] || 'primary'}
+                      skin='light'
+                      variant='rounded'
+                      size={44}
+                    >
                       <i className={`${typeIconMap[template.type] || 'tabler-file'} text-[24px]`} />
                     </CustomAvatar>
-                    {template.is_default && (
-                      <Chip label='Default' color='primary' size='small' variant='tonal' />
-                    )}
+                    {template.is_default && <Chip label='Default' color='primary' size='small' variant='tonal' />}
                   </div>
                   <Typography variant='h6' className='mb-1'>
                     {template.name}
@@ -320,7 +319,8 @@ const TemplateGrid = () => {
                 <Divider />
                 <CardActions className='flex justify-between'>
                   <Typography variant='caption' color='text.secondary'>
-                    Updated {new Date(template.updated_at).toLocaleDateString('en-US', {
+                    Updated{' '}
+                    {new Date(template.updated_at).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric'
                     })}
@@ -328,13 +328,22 @@ const TemplateGrid = () => {
                   <div className='flex gap-1'>
                     {!template.is_default && (
                       <Tooltip title='Set as Default'>
-                        <IconButton size='small' aria-label='Set as default' onClick={() => handleSetDefault(template.id)}>
+                        <IconButton
+                          size='small'
+                          aria-label='Set as default'
+                          onClick={() => handleSetDefault(template.id)}
+                        >
                           <i className='tabler-star text-[20px]' />
                         </IconButton>
                       </Tooltip>
                     )}
                     <Tooltip title='Edit'>
-                      <IconButton size='small' aria-label='Edit template' component={Link} href={`/${locale}/templates/editor/${template.id}`}>
+                      <IconButton
+                        size='small'
+                        aria-label='Edit template'
+                        component={Link}
+                        href={`/${locale}/templates/editor/${template.id}`}
+                      >
                         <i className='tabler-pencil text-[20px]' />
                       </IconButton>
                     </Tooltip>
@@ -361,7 +370,13 @@ const TemplateGrid = () => {
       )}
 
       {/* Create Template Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Create New Template</DialogTitle>
         <DialogContent>
           <Grid container spacing={4} className='pt-2'>
@@ -419,13 +434,21 @@ const TemplateGrid = () => {
       </Dialog>
 
       {/* SendGrid Import Dialog */}
-      <Dialog open={sendGridDialogOpen} onClose={() => setSendGridDialogOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={sendGridDialogOpen}
+        onClose={() => setSendGridDialogOpen(false)}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Import from SendGrid</DialogTitle>
         <DialogContent>
           {sendGridLoading ? (
             <div className='flex justify-center items-center py-8'>
               <CircularProgress size={32} />
-              <Typography className='ml-3' color='text.secondary'>Loading SendGrid templates...</Typography>
+              <Typography className='ml-3' color='text.secondary'>
+                Loading SendGrid templates...
+              </Typography>
             </div>
           ) : sendGridTemplates.length === 0 ? (
             <Typography color='text.secondary' className='py-4'>
@@ -466,8 +489,16 @@ const TemplateGrid = () => {
                         <img
                           src={`https:${activeVersion.thumbnail_url}`}
                           alt={tpl.name}
-                          style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--mui-palette-divider)' }}
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          style={{
+                            width: 60,
+                            height: 60,
+                            objectFit: 'cover',
+                            borderRadius: 8,
+                            border: '1px solid var(--mui-palette-divider)'
+                          }}
+                          onError={e => {
+                            ;(e.target as HTMLImageElement).style.display = 'none'
+                          }}
                         />
                       )}
                       <div className='grow'>
@@ -504,7 +535,11 @@ const TemplateGrid = () => {
             disabled={sendGridImporting || sendGridLoading || sendGridTemplates.length === 0}
             startIcon={sendGridImporting ? <CircularProgress size={18} /> : <i className='tabler-download' />}
           >
-            {sendGridImporting ? 'Importing...' : selectedSendGrid.length > 0 ? `Import Selected (${selectedSendGrid.length})` : 'Import All'}
+            {sendGridImporting
+              ? 'Importing...'
+              : selectedSendGrid.length > 0
+                ? `Import Selected (${selectedSendGrid.length})`
+                : 'Import All'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -516,7 +551,11 @@ const TemplateGrid = () => {
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} severity={snackbar.severity} variant='filled'>
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          variant='filled'
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

@@ -52,36 +52,43 @@ export interface UpdateAutomationPayload extends CreateAutomationPayload {
 const automationService = {
   getAll: async (params?: { page?: number; per_page?: number }) => {
     const response = await api.get('/automations', { params })
+
     return response.data
   },
 
   getById: async (id: number) => {
     const response = await api.get(`/automations/${id}`)
+
     return response.data
   },
 
   create: async (data: CreateAutomationPayload) => {
     const response = await api.post('/automations', data)
+
     return response.data
   },
 
   update: async (id: number, data: UpdateAutomationPayload) => {
     const response = await api.put(`/automations/${id}`, data)
+
     return response.data
   },
 
   delete: async (id: number) => {
     const response = await api.delete(`/automations/${id}`)
+
     return response.data
   },
 
   toggleStatus: async (id: number) => {
     const response = await api.put(`/automations/${id}/toggle`)
+
     return response.data
   },
 
   getLogs: async (id: number, params?: { page?: number; per_page?: number }) => {
     const response = await api.get(`/automations/${id}/logs`, { params })
+
     return response.data
   }
 }

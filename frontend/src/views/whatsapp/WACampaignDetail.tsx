@@ -190,7 +190,9 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading campaign...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading campaign...
+        </Typography>
       </div>
     )
   }
@@ -199,7 +201,9 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
     return (
       <Card>
         <CardContent className='text-center py-16'>
-          <Typography color='error' className='mb-4'>{error || 'Campaign not found'}</Typography>
+          <Typography color='error' className='mb-4'>
+            {error || 'Campaign not found'}
+          </Typography>
           <Button variant='outlined' onClick={() => router.push(`/${locale}/whatsapp/campaigns`)}>
             Back to Campaigns
           </Button>
@@ -228,7 +232,8 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                   </div>
                   {campaign.started_at && (
                     <Typography variant='body2' color='text.secondary'>
-                      Started {new Date(campaign.started_at).toLocaleDateString('en-US', {
+                      Started{' '}
+                      {new Date(campaign.started_at).toLocaleDateString('en-US', {
                         weekday: 'long',
                         month: 'long',
                         day: 'numeric',
@@ -393,11 +398,15 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                             size='small'
                             variant='tonal'
                             color={
-                              item.status === 'delivered' ? 'success' :
-                              item.status === 'read' ? 'primary' :
-                              item.status === 'failed' ? 'error' :
-                              item.status === 'sent' ? 'info' :
-                              'default'
+                              item.status === 'delivered'
+                                ? 'success'
+                                : item.status === 'read'
+                                  ? 'primary'
+                                  : item.status === 'failed'
+                                    ? 'error'
+                                    : item.status === 'sent'
+                                      ? 'info'
+                                      : 'default'
                             }
                           />
                         </TableCell>
@@ -433,7 +442,9 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                   </TableRow>
                   <TableRow>
                     <TableCell className='font-medium'>Total Targets</TableCell>
-                    <TableCell>{campaign.total_targets > 0 ? campaign.total_targets.toLocaleString() : 'Not calculated yet'}</TableCell>
+                    <TableCell>
+                      {campaign.total_targets > 0 ? campaign.total_targets.toLocaleString() : 'Not calculated yet'}
+                    </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className='font-medium'>Created</TableCell>
@@ -462,7 +473,11 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
           <Card>
             <CardHeader
               title={`Recipients (${recipients.length})`}
-              subheader={recipients.length === 0 ? 'No messages have been sent for this campaign yet' : 'Individual message delivery status for each contact'}
+              subheader={
+                recipients.length === 0
+                  ? 'No messages have been sent for this campaign yet'
+                  : 'Individual message delivery status for each contact'
+              }
             />
             <CardContent>
               {recipients.length === 0 ? (
@@ -505,12 +520,17 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                               size='small'
                               variant='tonal'
                               color={
-                                recipient.status === 'delivered' ? 'success' :
-                                recipient.status === 'read' ? 'primary' :
-                                recipient.status === 'failed' ? 'error' :
-                                recipient.status === 'sent' || recipient.status === 'submitted' ? 'info' :
-                                recipient.status === 'queued' ? 'warning' :
-                                'default'
+                                recipient.status === 'delivered'
+                                  ? 'success'
+                                  : recipient.status === 'read'
+                                    ? 'primary'
+                                    : recipient.status === 'failed'
+                                      ? 'error'
+                                      : recipient.status === 'sent' || recipient.status === 'submitted'
+                                        ? 'info'
+                                        : recipient.status === 'queued'
+                                          ? 'warning'
+                                          : 'default'
                               }
                             />
                           </TableCell>
@@ -582,9 +602,7 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
           <Alert severity='warning' className='mb-3'>
             This will send WhatsApp messages to all matching opted-in contacts. This action cannot be undone.
           </Alert>
-          <Typography>
-            Are you sure you want to send the campaign &quot;{campaign.name}&quot;?
-          </Typography>
+          <Typography>Are you sure you want to send the campaign &quot;{campaign.name}&quot;?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSendDialogOpen(false)}>Cancel</Button>
@@ -607,11 +625,7 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

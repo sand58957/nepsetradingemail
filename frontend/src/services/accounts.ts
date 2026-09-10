@@ -21,8 +21,7 @@ export interface AccountResponse {
 const accountsService = {
   list: () => api.get<{ success: boolean; data: Account[] }>('/accounts'),
 
-  create: (name: string) =>
-    api.post<{ success: boolean; data: AccountResponse }>('/accounts', { name }),
+  create: (name: string) => api.post<{ success: boolean; data: AccountResponse }>('/accounts', { name }),
 
   get: (id: number) => api.get<{ success: boolean; data: Account }>(`/accounts/${id}`),
 

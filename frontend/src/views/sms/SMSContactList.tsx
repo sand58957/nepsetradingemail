@@ -211,7 +211,10 @@ const SMSContactList = () => {
     setAddingContact(true)
 
     try {
-      await smsService.createContact({ ...newContact, group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined })
+      await smsService.createContact({
+        ...newContact,
+        group_ids: selectedGroupIds.length > 0 ? selectedGroupIds : undefined
+      })
       setSnackbar({ open: true, message: 'Contact added', severity: 'success' })
       setAddDialogOpen(false)
       setNewContact({ phone: '', name: '', email: '' })
@@ -356,7 +359,10 @@ const SMSContactList = () => {
                 <Select
                   value={optedInFilter}
                   label='Opt-in Status'
-                  onChange={e => { setOptedInFilter(e.target.value); setPage(0) }}
+                  onChange={e => {
+                    setOptedInFilter(e.target.value)
+                    setPage(0)
+                  }}
                 >
                   <MenuItem value=''>All</MenuItem>
                   <MenuItem value='true'>Opted In</MenuItem>
@@ -370,7 +376,10 @@ const SMSContactList = () => {
                 <Select
                   value={tagFilter}
                   label='Tag'
-                  onChange={e => { setTagFilter(e.target.value); setPage(0) }}
+                  onChange={e => {
+                    setTagFilter(e.target.value)
+                    setPage(0)
+                  }}
                 >
                   <MenuItem value=''>All Tags</MenuItem>
                   {availableTags.map(t => (
@@ -394,7 +403,9 @@ const SMSContactList = () => {
         ) : contacts.length === 0 ? (
           <CardContent>
             <Typography color='text.secondary' align='center' className='py-8'>
-              {globalFilter || optedInFilter || tagFilter ? 'No contacts match your search' : 'No contacts yet. Add or import contacts to get started.'}
+              {globalFilter || optedInFilter || tagFilter
+                ? 'No contacts match your search'
+                : 'No contacts yet. Add or import contacts to get started.'}
             </Typography>
           </CardContent>
         ) : (
@@ -435,7 +446,9 @@ const SMSContactList = () => {
                         <Typography>{contact.name || '-'}</Typography>
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                        <Typography variant='body2' color='text.secondary'>{contact.email || '-'}</Typography>
+                        <Typography variant='body2' color='text.secondary'>
+                          {contact.email || '-'}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -447,12 +460,15 @@ const SMSContactList = () => {
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <div className='flex gap-1 flex-wrap'>
-                          {contact.tags && contact.tags.length > 0
-                            ? contact.tags.slice(0, 3).map((tag, i) => (
-                              <Chip key={i} label={tag} size='small' variant='outlined' />
-                            ))
-                            : <Typography variant='body2' color='text.secondary'>-</Typography>
-                          }
+                          {contact.tags && contact.tags.length > 0 ? (
+                            contact.tags
+                              .slice(0, 3)
+                              .map((tag, i) => <Chip key={i} label={tag} size='small' variant='outlined' />)
+                          ) : (
+                            <Typography variant='body2' color='text.secondary'>
+                              -
+                            </Typography>
+                          )}
                           {contact.tags && contact.tags.length > 3 && (
                             <Chip label={`+${contact.tags.length - 3}`} size='small' variant='outlined' />
                           )}
@@ -471,7 +487,7 @@ const SMSContactList = () => {
                         <IconButton
                           size='small'
                           aria-label='Contact actions'
-                          onClick={(e) => {
+                          onClick={e => {
                             setAnchorEl(e.currentTarget)
                             setMenuContactId(contact.id)
                             setMenuContact(contact)
@@ -502,27 +518,27 @@ const SMSContactList = () => {
       </Card>
 
       {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-      >
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
 
-          if (menuContact) {
-            setEditingContact({ ...menuContact })
-            setEditDialogOpen(true)
-          }
-        }}>
+            if (menuContact) {
+              setEditingContact({ ...menuContact })
+              setEditDialogOpen(true)
+            }
+          }}
+        >
           <i className='tabler-edit text-[18px] mr-2' />
           Edit
         </MenuItem>
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
-          setDeletingId(menuContactId)
-          setDeleteDialogOpen(true)
-        }}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
+            setDeletingId(menuContactId)
+            setDeleteDialogOpen(true)
+          }}
+        >
           <i className='tabler-trash text-[18px] mr-2' />
           Delete
         </MenuItem>
@@ -536,7 +552,9 @@ const SMSContactList = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button variant='contained' color='error' onClick={handleDelete}>Delete</Button>
+          <Button variant='contained' color='error' onClick={handleDelete}>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -544,7 +562,9 @@ const SMSContactList = () => {
       <Dialog open={bulkDeleteDialogOpen} onClose={() => setBulkDeleteDialogOpen(false)}>
         <DialogTitle>Delete {selectedIds.length} Contacts</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to delete {selectedIds.length} selected contacts? This action cannot be undone.</Typography>
+          <Typography>
+            Are you sure you want to delete {selectedIds.length} selected contacts? This action cannot be undone.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBulkDeleteDialogOpen(false)}>Cancel</Button>
@@ -595,7 +615,7 @@ const SMSContactList = () => {
                   value={selectedGroupIds}
                   label='Groups'
                   onChange={e => setSelectedGroupIds(e.target.value as number[])}
-                  renderValue={(selected) => (
+                  renderValue={selected => (
                     <div className='flex gap-1 flex-wrap'>
                       {(selected as number[]).map(id => {
                         const group = availableGroups.find(g => g.id === id)
@@ -676,11 +696,7 @@ const SMSContactList = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

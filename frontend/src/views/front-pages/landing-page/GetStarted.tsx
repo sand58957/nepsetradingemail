@@ -39,7 +39,12 @@ const GetStarted = ({ mode }: { mode: SystemMode }) => {
       <div className={classnames('flex flex-col gap-8 plb-12', frontCommonStyles.layoutSpacing)}>
         <div className='flex flex-col items-center gap-y-6 z-1'>
           <div className='flex flex-col gap-1 items-center'>
-            <Typography variant='h3' component='h2' color='primary.main' className='font-bold text-[2.125rem] text-center'>
+            <Typography
+              variant='h3'
+              component='h2'
+              color='primary.main'
+              className='font-bold text-[2.125rem] text-center'
+            >
               Ready to Grow Your Business?
             </Typography>
             <Typography variant='h5' component='p' color='text.secondary' className='text-center'>
@@ -59,7 +64,12 @@ const GetStarted = ({ mode }: { mode: SystemMode }) => {
             loading='lazy'
             decoding='async'
             className='w-full sm:w-[48%]'
-            style={{ borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', objectFit: 'contain', height: 'auto' }}
+            style={{
+              borderRadius: '12px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+              objectFit: 'contain',
+              height: 'auto'
+            }}
           />
           <img
             src='/images/front-pages/landing-page/dashboard-telegram.webp'
@@ -69,7 +79,12 @@ const GetStarted = ({ mode }: { mode: SystemMode }) => {
             loading='lazy'
             decoding='async'
             className='w-full sm:w-[48%]'
-            style={{ borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', objectFit: 'contain', height: 'auto' }}
+            style={{
+              borderRadius: '12px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+              objectFit: 'contain',
+              height: 'auto'
+            }}
           />
         </div>
       </div>

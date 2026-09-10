@@ -62,7 +62,15 @@ const FileCard = ({ media, onDelete, pickerMode, onSelect }: Props) => {
   return (
     <Card
       className='h-full flex flex-col'
-      sx={pickerMode ? { cursor: 'pointer', '&:hover': { boxShadow: 6, outline: '2px solid', outlineColor: 'primary.main' }, transition: 'all 0.15s' } : {}}
+      sx={
+        pickerMode
+          ? {
+              cursor: 'pointer',
+              '&:hover': { boxShadow: 6, outline: '2px solid', outlineColor: 'primary.main' },
+              transition: 'all 0.15s'
+            }
+          : {}
+      }
       onClick={pickerMode ? () => onSelect?.(media) : undefined}
     >
       {/* Thumbnail / Preview — responsive height */}
@@ -107,7 +115,12 @@ const FileCard = ({ media, onDelete, pickerMode, onSelect }: Props) => {
         >
           {media.filename}
         </Typography>
-        <Typography variant='caption' color='text.secondary' display='block' sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
+        <Typography
+          variant='caption'
+          color='text.secondary'
+          display='block'
+          sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}
+        >
           {media.content_type}
         </Typography>
         <Typography
@@ -136,13 +149,25 @@ const FileCard = ({ media, onDelete, pickerMode, onSelect }: Props) => {
       ) : (
         <CardActions sx={{ justifyContent: 'space-between', px: { xs: 0.5, sm: 1 }, py: { xs: 0.5, sm: 0.5 } }}>
           <Tooltip title={copiedUrl ? 'Copied!' : 'Copy URL'}>
-            <IconButton onClick={handleCopyUrl} aria-label={copiedUrl ? 'Copied' : 'Copy URL'} sx={{ p: { xs: 1, sm: 0.75 } }}>
+            <IconButton
+              onClick={handleCopyUrl}
+              aria-label={copiedUrl ? 'Copied' : 'Copy URL'}
+              sx={{ p: { xs: 1, sm: 0.75 } }}
+            >
               <i className={`tabler-${copiedUrl ? 'check' : 'link'} text-[16px] sm:text-[18px]`} />
             </IconButton>
           </Tooltip>
           <div className='flex'>
             <Tooltip title='Download'>
-              <IconButton component='a' href={media.url} download={media.filename} target='_blank' rel='noopener' aria-label='Download' sx={{ p: { xs: 1, sm: 0.75 } }}>
+              <IconButton
+                component='a'
+                href={media.url}
+                download={media.filename}
+                target='_blank'
+                rel='noopener'
+                aria-label='Download'
+                sx={{ p: { xs: 1, sm: 0.75 } }}
+              >
                 <i className='tabler-download text-[16px] sm:text-[18px]' />
               </IconButton>
             </Tooltip>

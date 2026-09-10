@@ -30,7 +30,17 @@ interface Props {
   onSelect?: (media: MediaItem) => void
 }
 
-const FileManagerContent = ({ media, filterTab, onFilterTabChange, search, onSearchChange, loading, onDelete, pickerMode, onSelect }: Props) => {
+const FileManagerContent = ({
+  media,
+  filterTab,
+  onFilterTabChange,
+  search,
+  onSearchChange,
+  loading,
+  onDelete,
+  pickerMode,
+  onSelect
+}: Props) => {
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     const tabs: ('all' | 'images' | 'files')[] = ['all', 'images', 'files']
 
@@ -105,7 +115,12 @@ const FileManagerContent = ({ media, filterTab, onFilterTabChange, search, onSea
               <Typography variant='subtitle1' sx={{ fontSize: { xs: '0.95rem', sm: '1.1rem' } }} color='text.secondary'>
                 No files found
               </Typography>
-              <Typography variant='body2' color='text.secondary' className='text-center' sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+              <Typography
+                variant='body2'
+                color='text.secondary'
+                className='text-center'
+                sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+              >
                 Upload files or import from a URL to get started
               </Typography>
             </div>

@@ -333,12 +333,14 @@ const UserListView = () => {
         <DialogTitle>Delete User</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete <strong>{deleteDialog.user?.name}</strong> ({deleteDialog.user?.email})? This
-            action cannot be undone.
+            Are you sure you want to delete <strong>{deleteDialog.user?.name}</strong> ({deleteDialog.user?.email})?
+            This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialog({ open: false, user: null })} disabled={deleting}>Cancel</Button>
+          <Button onClick={() => setDeleteDialog({ open: false, user: null })} disabled={deleting}>
+            Cancel
+          </Button>
           <Button onClick={handleDelete} color='error' variant='contained' disabled={deleting}>
             {deleting ? <CircularProgress size={20} /> : 'Delete'}
           </Button>
@@ -346,7 +348,12 @@ const UserListView = () => {
       </Dialog>
 
       {/* Edit User Dialog */}
-      <Dialog open={editDialog.open} onClose={() => !saving && setEditDialog({ open: false, user: null })} maxWidth='sm' fullWidth>
+      <Dialog
+        open={editDialog.open}
+        onClose={() => !saving && setEditDialog({ open: false, user: null })}
+        maxWidth='sm'
+        fullWidth
+      >
         <DialogTitle>Edit User</DialogTitle>
         <DialogContent>
           <Box className='flex flex-col gap-4 mt-2'>
@@ -365,7 +372,10 @@ const UserListView = () => {
               onChange={e => setEditForm({ ...editForm, email: e.target.value })}
               disabled={saving}
             />
-            <FormControl fullWidth disabled={saving || (currentUserId != null && editDialog.user?.id === currentUserId)}>
+            <FormControl
+              fullWidth
+              disabled={saving || (currentUserId != null && editDialog.user?.id === currentUserId)}
+            >
               <InputLabel>Role</InputLabel>
               <Select
                 value={editForm.role}
@@ -400,7 +410,9 @@ const UserListView = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialog({ open: false, user: null })} disabled={saving}>Cancel</Button>
+          <Button onClick={() => setEditDialog({ open: false, user: null })} disabled={saving}>
+            Cancel
+          </Button>
           <Button onClick={handleEditSave} variant='contained' disabled={saving}>
             {saving ? <CircularProgress size={20} /> : 'Save Changes'}
           </Button>

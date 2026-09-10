@@ -216,7 +216,11 @@ const WACreateCampaign = () => {
         await whatsappService.sendCampaign(campaignId)
         setSnackbar({ open: true, message: 'Campaign created and sending started!', severity: 'success' })
       } catch {
-        setSnackbar({ open: true, message: 'Campaign created but failed to start sending. Go to campaign detail to retry.', severity: 'error' })
+        setSnackbar({
+          open: true,
+          message: 'Campaign created but failed to start sending. Go to campaign detail to retry.',
+          severity: 'error'
+        })
       }
 
       // Navigate to campaign detail
@@ -278,16 +282,16 @@ const WACreateCampaign = () => {
 
                 {/* Template Selection */}
                 {!loadingTemplates && approvedTemplates.length === 0 ? (
-                  <Alert severity='warning' action={
-                    <Button
-                      color='inherit'
-                      size='small'
-                      onClick={() => router.push(`/${locale}/whatsapp/templates`)}
-                    >
-                      Go to Templates
-                    </Button>
-                  }>
-                    No approved templates found. You need to create templates first and wait for Meta approval before creating campaigns.
+                  <Alert
+                    severity='warning'
+                    action={
+                      <Button color='inherit' size='small' onClick={() => router.push(`/${locale}/whatsapp/templates`)}>
+                        Go to Templates
+                      </Button>
+                    }
+                  >
+                    No approved templates found. You need to create templates first and wait for Meta approval before
+                    creating campaigns.
                   </Alert>
                 ) : (
                   <FormControl fullWidth>
@@ -324,7 +328,10 @@ const WACreateCampaign = () => {
 
                 {/* Template Variable Editing */}
                 {selectedTemplate && templateVars.length > 0 && (
-                  <Box className='p-4 rounded' sx={{ backgroundColor: 'primary.lighter', border: '1px solid', borderColor: 'primary.light' }}>
+                  <Box
+                    className='p-4 rounded'
+                    sx={{ backgroundColor: 'primary.lighter', border: '1px solid', borderColor: 'primary.light' }}
+                  >
                     <Typography variant='subtitle2' className='mb-1' color='primary.main'>
                       <i className='tabler-edit mr-1' />
                       Fill Template Variables
@@ -370,7 +377,9 @@ const WACreateCampaign = () => {
                                 }
                               }}
                             >
-                              <MenuItem value=''><em>Static value</em></MenuItem>
+                              <MenuItem value=''>
+                                <em>Static value</em>
+                              </MenuItem>
                               <MenuItem value='name'>Contact Name</MenuItem>
                               <MenuItem value='phone'>Phone Number</MenuItem>
                               <MenuItem value='email'>Email</MenuItem>
@@ -384,7 +393,10 @@ const WACreateCampaign = () => {
 
                 {/* Live Template Preview */}
                 {selectedTemplate && (
-                  <Box className='p-4 rounded' sx={{ backgroundColor: '#DCF8C6', border: '1px solid #c5e1a5', borderRadius: '12px' }}>
+                  <Box
+                    className='p-4 rounded'
+                    sx={{ backgroundColor: '#DCF8C6', border: '1px solid #c5e1a5', borderRadius: '12px' }}
+                  >
                     <div className='flex items-center gap-2 mb-2'>
                       <i className='tabler-brand-whatsapp' style={{ color: '#25D366', fontSize: 20 }} />
                       <Typography variant='subtitle2'>Message Preview</Typography>
@@ -451,7 +463,9 @@ const WACreateCampaign = () => {
                 {/* Group filter */}
                 {availableGroups.length > 0 && (
                   <div>
-                    <Typography variant='body2' className='mb-2'>Filter by Groups</Typography>
+                    <Typography variant='body2' className='mb-2'>
+                      Filter by Groups
+                    </Typography>
                     <div className='flex gap-2 flex-wrap'>
                       {availableGroups.map(group => (
                         <Chip
@@ -462,14 +476,16 @@ const WACreateCampaign = () => {
                           color={selectedGroups.includes(group.id) ? 'primary' : 'default'}
                           onClick={() => {
                             setSelectedGroups(prev =>
-                              prev.includes(group.id)
-                                ? prev.filter(id => id !== group.id)
-                                : [...prev, group.id]
+                              prev.includes(group.id) ? prev.filter(id => id !== group.id) : [...prev, group.id]
                             )
                           }}
-                          sx={selectedGroups.includes(group.id) ? {} : {
-                            borderLeft: `3px solid ${group.color}`,
-                          }}
+                          sx={
+                            selectedGroups.includes(group.id)
+                              ? {}
+                              : {
+                                  borderLeft: `3px solid ${group.color}`
+                                }
+                          }
                         />
                       ))}
                     </div>
@@ -488,9 +504,7 @@ const WACreateCampaign = () => {
                   onInputChange={(_, value) => setTagInput(value)}
                   onChange={(_, value) => setTags(value as string[])}
                   renderTags={(value, getTagProps) =>
-                    value.map((tag, index) => (
-                      <Chip {...getTagProps({ index })} key={tag} label={tag} size='small' />
-                    ))
+                    value.map((tag, index) => <Chip {...getTagProps({ index })} key={tag} label={tag} size='small' />)
                   }
                   renderInput={params => (
                     <TextField
@@ -537,10 +551,7 @@ const WACreateCampaign = () => {
                   >
                     {sendingNow ? 'Sending...' : 'Send Now'}
                   </Button>
-                  <Button
-                    variant='outlined'
-                    onClick={() => router.push(`/${locale}/whatsapp/campaigns`)}
-                  >
+                  <Button variant='outlined' onClick={() => router.push(`/${locale}/whatsapp/campaigns`)}>
                     Cancel
                   </Button>
                 </div>
@@ -561,7 +572,9 @@ const WACreateCampaign = () => {
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='2' size='small' color='primary' />
-                  <Typography variant='body2'>Fill in template variables with static values or use contact fields for personalization</Typography>
+                  <Typography variant='body2'>
+                    Fill in template variables with static values or use contact fields for personalization
+                  </Typography>
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='3' size='small' color='primary' />
@@ -569,11 +582,14 @@ const WACreateCampaign = () => {
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='4' size='small' color='primary' />
-                  <Typography variant='body2'>Click &quot;Create Campaign&quot; to save as draft, or &quot;Send Now&quot; to send immediately</Typography>
+                  <Typography variant='body2'>
+                    Click &quot;Create Campaign&quot; to save as draft, or &quot;Send Now&quot; to send immediately
+                  </Typography>
                 </div>
 
                 <Alert severity='warning' className='mt-2'>
-                  Only opted-in contacts will receive messages. Make sure your contacts have consented to receive WhatsApp messages.
+                  Only opted-in contacts will receive messages. Make sure your contacts have consented to receive
+                  WhatsApp messages.
                 </Alert>
               </div>
             </CardContent>
@@ -592,22 +608,36 @@ const WACreateCampaign = () => {
         <DialogContent>
           <div className='flex flex-col gap-3 mt-1'>
             <Typography>
-              This will create the campaign and <strong>immediately start sending</strong> messages to all targeted contacts.
+              This will create the campaign and <strong>immediately start sending</strong> messages to all targeted
+              contacts.
             </Typography>
             <Box className='p-3 rounded' sx={{ backgroundColor: 'action.hover' }}>
-              <Typography variant='body2'><strong>Campaign:</strong> {name}</Typography>
-              <Typography variant='body2'><strong>Template:</strong> {selectedTemplate?.name}</Typography>
+              <Typography variant='body2'>
+                <strong>Campaign:</strong> {name}
+              </Typography>
+              <Typography variant='body2'>
+                <strong>Template:</strong> {selectedTemplate?.name}
+              </Typography>
               {templateVars.length > 0 && (
                 <Typography variant='body2'>
-                  <strong>Variables:</strong> {templateVars.map(v => `${v} = "${templateVarValues[v] || '(empty)'}"`).join(', ')}
+                  <strong>Variables:</strong>{' '}
+                  {templateVars.map(v => `${v} = "${templateVarValues[v] || '(empty)'}"`).join(', ')}
                 </Typography>
               )}
               <Typography variant='body2'>
-                <strong>Audience:</strong> {tags.length > 0 || selectedGroups.length > 0
+                <strong>Audience:</strong>{' '}
+                {tags.length > 0 || selectedGroups.length > 0
                   ? [
                       tags.length > 0 ? `Tags: ${tags.join(', ')}` : '',
-                      selectedGroups.length > 0 ? `Groups: ${availableGroups.filter(g => selectedGroups.includes(g.id)).map(g => g.name).join(', ')}` : ''
-                    ].filter(Boolean).join(' + ')
+                      selectedGroups.length > 0
+                        ? `Groups: ${availableGroups
+                            .filter(g => selectedGroups.includes(g.id))
+                            .map(g => g.name)
+                            .join(', ')}`
+                        : ''
+                    ]
+                      .filter(Boolean)
+                      .join(' + ')
                   : 'All opted-in contacts'}
               </Typography>
             </Box>
@@ -636,11 +666,7 @@ const WACreateCampaign = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

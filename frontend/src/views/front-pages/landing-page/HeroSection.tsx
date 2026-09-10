@@ -82,7 +82,8 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
             All in One Digital Marketing Platform in Nepal
           </Typography>
           <Typography className='font-medium mbe-2' color='text.primary'>
-            Reach your audience through Email, SMS, Telegram, WhatsApp &amp; Messenger — all from one powerful dashboard.
+            Reach your audience through Email, SMS, Telegram, WhatsApp &amp; Messenger — all from one powerful
+            dashboard.
           </Typography>
           <Typography variant='body2' color='text.secondary' className='md:max-is-[550px] mli-auto'>
             Built for Nepali businesses, NEPSE traders &amp; digital marketers. Manage subscribers, automate campaigns,
@@ -91,52 +92,108 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
           <div className='flex flex-wrap mbs-6 items-baseline justify-center relative gap-4'>
             <div className='flex gap-2 absolute inline-start-[0%] block-start-[41%] max-md:hidden'>
               <Typography className='font-medium'>5 Channels</Typography>
-              <img src='/images/front-pages/landing-page/join-community-arrow.webp' alt='' aria-hidden='true' height='42' width='60' loading='lazy' decoding='async' />
+              <img
+                src='/images/front-pages/landing-page/join-community-arrow.webp'
+                alt=''
+                aria-hidden='true'
+                height='42'
+                width='60'
+                loading='lazy'
+                decoding='async'
+              />
             </div>
-            <Button
-              component={Link}
-              size='large'
-              href='/en/register'
-              variant='contained'
-              color='primary'
-            >
+            <Button component={Link} size='large' href='/en/register' variant='contained' color='primary'>
               Start Free Trial
             </Button>
-            <Button
-              component={Link}
-              size='large'
-              href='/#pricing-plans'
-              variant='outlined'
-              color='primary'
-            >
+            <Button component={Link} size='large' href='/#pricing-plans' variant='outlined' color='primary'>
               View Pricing
             </Button>
           </div>
         </div>
       </div>
       {/* Channel badges */}
-      <div className={classnames('flex flex-wrap justify-center gap-2 sm:gap-3 mbs-8 mbe-6', frontCommonStyles.layoutSpacing)}>
+      <div
+        className={classnames(
+          'flex flex-wrap justify-center gap-2 sm:gap-3 mbs-8 mbe-6',
+          frontCommonStyles.layoutSpacing
+        )}
+      >
         {[
-          { icon: 'tabler-mail', label: 'Email', sub: '99.5% Delivery', color: 'var(--mui-palette-primary-main)', bg: 'rgba(var(--mui-palette-primary-mainChannel), 0.12)', border: 'rgba(var(--mui-palette-primary-mainChannel), 0.2)' },
-          { icon: 'tabler-message-2', label: 'SMS', sub: 'Bulk Nepal', color: 'var(--mui-palette-success-main)', bg: 'rgba(var(--mui-palette-success-mainChannel), 0.12)', border: 'rgba(var(--mui-palette-success-mainChannel), 0.2)' },
-          { icon: 'tabler-brand-whatsapp', label: 'WhatsApp', sub: 'Business API', color: '#28a745', bg: 'rgba(40,167,69,0.12)', border: 'rgba(40,167,69,0.25)' },
-          { icon: 'tabler-brand-telegram', label: 'Telegram', sub: 'Bot Marketing', color: '#0088cc', bg: 'rgba(0,136,204,0.12)', border: 'rgba(0,136,204,0.25)' },
-          { icon: 'tabler-brand-messenger', label: 'Messenger', sub: 'FB Campaigns', color: '#0084ff', bg: 'rgba(0,132,255,0.12)', border: 'rgba(0,132,255,0.25)' }
+          {
+            icon: 'tabler-mail',
+            label: 'Email',
+            sub: '99.5% Delivery',
+            color: 'var(--mui-palette-primary-main)',
+            bg: 'rgba(var(--mui-palette-primary-mainChannel), 0.12)',
+            border: 'rgba(var(--mui-palette-primary-mainChannel), 0.2)'
+          },
+          {
+            icon: 'tabler-message-2',
+            label: 'SMS',
+            sub: 'Bulk Nepal',
+            color: 'var(--mui-palette-success-main)',
+            bg: 'rgba(var(--mui-palette-success-mainChannel), 0.12)',
+            border: 'rgba(var(--mui-palette-success-mainChannel), 0.2)'
+          },
+          {
+            icon: 'tabler-brand-whatsapp',
+            label: 'WhatsApp',
+            sub: 'Business API',
+            color: '#28a745',
+            bg: 'rgba(40,167,69,0.12)',
+            border: 'rgba(40,167,69,0.25)'
+          },
+          {
+            icon: 'tabler-brand-telegram',
+            label: 'Telegram',
+            sub: 'Bot Marketing',
+            color: '#0088cc',
+            bg: 'rgba(0,136,204,0.12)',
+            border: 'rgba(0,136,204,0.25)'
+          },
+          {
+            icon: 'tabler-brand-messenger',
+            label: 'Messenger',
+            sub: 'FB Campaigns',
+            color: '#0084ff',
+            bg: 'rgba(0,132,255,0.12)',
+            border: 'rgba(0,132,255,0.25)'
+          }
         ].map((ch, i) => (
-          <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: 'rgba(var(--mui-palette-background-paperChannel), 0.9)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: 12, padding: '8px 12px',
-            border: `1px solid ${ch.border}`,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
-          }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: ch.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: 'rgba(var(--mui-palette-background-paperChannel), 0.9)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: 12,
+              padding: '8px 12px',
+              border: `1px solid ${ch.border}`,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+            }}
+          >
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 9,
+                background: ch.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
               <i className={ch.icon} style={{ fontSize: 18, color: ch.color }} />
             </div>
             <div>
-              <Typography variant='body2' style={{ fontWeight: 600, lineHeight: 1.2 }}>{ch.label}</Typography>
-              <Typography variant='caption' color='text.secondary'>{ch.sub}</Typography>
+              <Typography variant='body2' style={{ fontWeight: 600, lineHeight: 1.2 }}>
+                {ch.label}
+              </Typography>
+              <Typography variant='caption' color='text.secondary'>
+                {ch.sub}
+              </Typography>
             </div>
           </div>
         ))}
@@ -146,7 +203,15 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
         style={{ transform: isAboveLgScreen ? transform : 'none' }}
       >
         <div className='block relative'>
-          <img src={dashboardImage} alt='dashboard-image' width={1600} height={828} fetchPriority='high' className={classnames('mli-auto', styles.heroSecDashboard)} style={{ borderRadius: '12px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)', maxWidth: '100%', height: 'auto' }} />
+          <img
+            src={dashboardImage}
+            alt='dashboard-image'
+            width={1600}
+            height={828}
+            fetchPriority='high'
+            className={classnames('mli-auto', styles.heroSecDashboard)}
+            style={{ borderRadius: '12px', boxShadow: '0 12px 40px rgba(0,0,0,0.3)', maxWidth: '100%', height: 'auto' }}
+          />
         </div>
       </div>
     </section>

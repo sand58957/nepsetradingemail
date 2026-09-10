@@ -49,13 +49,10 @@ export interface BlogCategory {
   post_count?: number
 }
 
-export function generateArticleSchema(
-  post: BlogPost,
-  author: BlogAuthor | undefined,
-  baseUrl: string
-) {
+export function generateArticleSchema(post: BlogPost, author: BlogAuthor | undefined, baseUrl: string) {
   // Fallback hero image so `image` is ALWAYS present (required for rich results).
   const fallbackImage = `${baseUrl}/images/front-pages/landing-page/hero-dashboard-dark.png`
+
   const imageUrl = post.featured_image_url
     ? post.featured_image_url.startsWith('http')
       ? post.featured_image_url
@@ -69,6 +66,7 @@ export function generateArticleSchema(
     description: post.meta_description || post.excerpt,
     url: `${baseUrl}/blog/${post.slug}`,
     datePublished: post.published_at,
+
     // Google strongly prefers dateModified to always be present; default to publish date.
     dateModified: post.updated_at || post.published_at,
     image: {
@@ -88,9 +86,7 @@ export function generateArticleSchema(
         url: `${baseUrl}/images/front-pages/landing-page/hero-dashboard-dark.png`
       }
     },
-    wordCount: post.content_html
-      ? post.content_html.replace(/<[^>]*>/g, '').split(/\s+/).length
-      : undefined,
+    wordCount: post.content_html ? post.content_html.replace(/<[^>]*>/g, '').split(/\s+/).length : undefined,
     isAccessibleForFree: true
   }
 
@@ -117,10 +113,7 @@ export function generateArticleSchema(
   }
 
   if (post.primary_keyword) {
-    schema.keywords = [
-      post.primary_keyword,
-      ...(post.secondary_keywords || [])
-    ].join(', ')
+    schema.keywords = [post.primary_keyword, ...(post.secondary_keywords || [])].join(', ')
   }
 
   if (post.category_name) {

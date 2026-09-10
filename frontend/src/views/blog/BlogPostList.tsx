@@ -90,7 +90,7 @@ const BlogPostList = () => {
 
       setPosts(result.data)
       setTotal(result.total)
-    } catch (error) {
+    } catch (_error) {
       setSnackbar({ open: true, message: 'Failed to load blog posts', severity: 'error' })
     } finally {
       setLoading(false)
@@ -144,7 +144,7 @@ const BlogPostList = () => {
       setDeleteDialogOpen(false)
       setPostToDelete(null)
       fetchPosts()
-    } catch (error) {
+    } catch (_error) {
       setSnackbar({ open: true, message: 'Failed to delete post', severity: 'error' })
     } finally {
       setDeleting(false)
@@ -205,7 +205,12 @@ const BlogPostList = () => {
               onChange={handleSearchChange}
               sx={{ minWidth: 200 }}
             />
-            <Button variant='contained' color='primary' onClick={handleNewPost} startIcon={<i className='tabler-plus' />}>
+            <Button
+              variant='contained'
+              color='primary'
+              onClick={handleNewPost}
+              startIcon={<i className='tabler-plus' />}
+            >
               New Post
             </Button>
           </Box>

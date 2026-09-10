@@ -144,7 +144,9 @@ const SubscriberSegments = () => {
             Custom Query
           </Typography>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-            Use SQL-like queries to filter subscribers. Examples: <code>subscribers.email LIKE &apos;%@gmail.com&apos;</code>, <code>subscribers.attribs-&gt;&gt;&apos;city&apos; = &apos;Kathmandu&apos;</code>
+            Use SQL-like queries to filter subscribers. Examples:{' '}
+            <code>subscribers.email LIKE &apos;%@gmail.com&apos;</code>,{' '}
+            <code>subscribers.attribs-&gt;&gt;&apos;city&apos; = &apos;Kathmandu&apos;</code>
           </Typography>
           <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
             <TextField
@@ -153,14 +155,18 @@ const SubscriberSegments = () => {
               placeholder="subscribers.status = 'enabled'"
               value={customQuery}
               onChange={e => setCustomQuery(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleRunCustom() }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleRunCustom()
+              }}
               sx={{ fontFamily: 'monospace', '& input': { fontFamily: 'monospace', fontSize: '0.85rem' } }}
             />
             <Button
               variant='contained'
               onClick={handleRunCustom}
               disabled={!customQuery.trim() || loading}
-              startIcon={loading ? <CircularProgress size={16} color='inherit' /> : <i className='tabler-filter text-[16px]' />}
+              startIcon={
+                loading ? <CircularProgress size={16} color='inherit' /> : <i className='tabler-filter text-[16px]' />
+              }
               sx={{ whiteSpace: 'nowrap', minWidth: { sm: 140 } }}
             >
               {loading ? 'Running...' : 'Run Query'}
@@ -171,7 +177,9 @@ const SubscriberSegments = () => {
 
       {/* Error */}
       {error && (
-        <Alert severity='error' onClose={() => setError('')}>{error}</Alert>
+        <Alert severity='error' onClose={() => setError('')}>
+          {error}
+        </Alert>
       )}
 
       {/* Results */}
@@ -183,10 +191,22 @@ const SubscriberSegments = () => {
                 <Typography variant='subtitle1' fontWeight={600}>
                   {activeSegment}
                 </Typography>
-                <Chip label={`${totalCount} subscriber${totalCount !== 1 ? 's' : ''}`} size='small' color='primary' variant='outlined' />
+                <Chip
+                  label={`${totalCount} subscriber${totalCount !== 1 ? 's' : ''}`}
+                  size='small'
+                  color='primary'
+                  variant='outlined'
+                />
               </Box>
               <Tooltip title='Clear results'>
-                <IconButton size='small' aria-label='Clear results' onClick={() => { setResults(null); setActiveSegment('') }}>
+                <IconButton
+                  size='small'
+                  aria-label='Clear results'
+                  onClick={() => {
+                    setResults(null)
+                    setActiveSegment('')
+                  }}
+                >
                   <i className='tabler-x text-[16px]' />
                 </IconButton>
               </Tooltip>
@@ -202,17 +222,25 @@ const SubscriberSegments = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 600, minWidth: 180 }}>Email</TableCell>
-                      <TableCell sx={{ fontWeight: 600, minWidth: 100, display: { xs: 'none', sm: 'table-cell' } }}>Name</TableCell>
+                      <TableCell sx={{ fontWeight: 600, minWidth: 100, display: { xs: 'none', sm: 'table-cell' } }}>
+                        Name
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 600, minWidth: 80 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 600, minWidth: 50, display: { xs: 'none', md: 'table-cell' } }}>Lists</TableCell>
-                      <TableCell sx={{ fontWeight: 600, minWidth: 90, display: { xs: 'none', md: 'table-cell' } }}>Joined</TableCell>
+                      <TableCell sx={{ fontWeight: 600, minWidth: 50, display: { xs: 'none', md: 'table-cell' } }}>
+                        Lists
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600, minWidth: 90, display: { xs: 'none', md: 'table-cell' } }}>
+                        Joined
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {results.map(sub => (
                       <TableRow key={sub.id} hover>
                         <TableCell>
-                          <Typography variant='body2' noWrap sx={{ maxWidth: 250 }}>{sub.email}</Typography>
+                          <Typography variant='body2' noWrap sx={{ maxWidth: 250 }}>
+                            {sub.email}
+                          </Typography>
                         </TableCell>
                         <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                           <Typography variant='body2' color={sub.name ? 'text.primary' : 'text.disabled'}>
@@ -223,7 +251,9 @@ const SubscriberSegments = () => {
                           <Chip
                             label={sub.status}
                             size='small'
-                            color={sub.status === 'enabled' ? 'success' : sub.status === 'blocklisted' ? 'error' : 'default'}
+                            color={
+                              sub.status === 'enabled' ? 'success' : sub.status === 'blocklisted' ? 'error' : 'default'
+                            }
                             variant='outlined'
                           />
                         </TableCell>

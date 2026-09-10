@@ -29,7 +29,7 @@ const partners = [
   { src: '/images/front-pages/landing-page/partners/paypal_official.webp', alt: 'PayPal', width: 120 },
   { src: '/images/front-pages/landing-page/partners/nmb_official.webp', alt: 'NMB Bank', width: 110 },
   { src: '/images/front-pages/landing-page/partners/civilbank_official.jpg', alt: 'Civil Bank', width: 110 },
-  { src: '/images/front-pages/landing-page/partners/laxmisunrise_official.webp', alt: 'Laxmi Sunrise Bank', width: 130 },
+  { src: '/images/front-pages/landing-page/partners/laxmisunrise_official.webp', alt: 'Laxmi Sunrise Bank', width: 130 }
 ]
 
 const PaymentPartners = () => {
@@ -69,12 +69,7 @@ const PaymentPartners = () => {
     >
       <div className={frontCommonStyles.layoutSpacing}>
         <div className='flex flex-col gap-y-4 items-center justify-center'>
-          <Chip
-            size='small'
-            variant='tonal'
-            color='primary'
-            label='Trusted Payment Partners'
-          />
+          <Chip size='small' variant='tonal' color='primary' label='Trusted Payment Partners' />
           <div className='flex flex-col items-center gap-y-1 justify-center flex-wrap'>
             <div className='flex items-center gap-x-2'>
               <Typography variant='h4' component='h2' style={{ color: '#fff' }}>
@@ -94,11 +89,7 @@ const PaymentPartners = () => {
             </Typography>
           </div>
         </div>
-        <div
-          className={classnames(
-            'flex flex-wrap items-center justify-center gap-5 pbs-[30px]'
-          )}
-        >
+        <div className={classnames('flex flex-wrap items-center justify-center gap-5 pbs-[30px]')}>
           {partners.map((partner, index) => (
             <div
               key={index}

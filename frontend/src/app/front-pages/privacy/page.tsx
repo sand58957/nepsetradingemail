@@ -27,9 +27,9 @@ const PrivacyPolicyPage = () => {
           <Typography variant='body1' paragraph>
             This Privacy Policy explains how <strong>Marketminds Investment Group Pvt Ltd</strong> (operating as
             &quot;Nepal Fillings&quot; and &quot;Nepse Trading&quot;) collects, uses, discloses, and safeguards your
-            information when you use our digital marketing platform at{' '}
-            <strong>nepalfillings.com</strong> and related services including email marketing, SMS marketing, Telegram
-            marketing, WhatsApp marketing, and associated APIs.
+            information when you use our digital marketing platform at <strong>nepalfillings.com</strong> and related
+            services including email marketing, SMS marketing, Telegram marketing, WhatsApp marketing, and associated
+            APIs.
           </Typography>
 
           <Box sx={{ mb: 4 }}>
@@ -203,8 +203,8 @@ const PrivacyPolicyPage = () => {
               7. Data Retention
             </Typography>
             <Typography variant='body1' paragraph>
-              We retain your account data for as long as your account is active. Campaign data and analytics are retained
-              for 24 months. You may request deletion of your data at any time by contacting us.
+              We retain your account data for as long as your account is active. Campaign data and analytics are
+              retained for 24 months. You may request deletion of your data at any time by contacting us.
             </Typography>
           </Box>
 

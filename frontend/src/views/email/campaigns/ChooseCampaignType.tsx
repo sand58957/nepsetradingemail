@@ -22,7 +22,8 @@ const campaignTypes: CampaignTypeOption[] = [
   {
     key: 'regular',
     title: 'Regular',
-    description: 'Create a standard email campaign and send it to your subscriber lists. Best for newsletters, announcements, and promotions.',
+    description:
+      'Create a standard email campaign and send it to your subscriber lists. Best for newsletters, announcements, and promotions.',
     icon: 'tabler-mail',
     enabled: true,
     href: '/campaigns/create?type=regular'
@@ -30,7 +31,8 @@ const campaignTypes: CampaignTypeOption[] = [
   {
     key: 'ab-split',
     title: 'A/B Split',
-    description: 'Test two versions of your email to find what works best. Compare subject lines, content, or send times.',
+    description:
+      'Test two versions of your email to find what works best. Compare subject lines, content, or send times.',
     icon: 'tabler-ab',
     enabled: true,
     href: '/campaigns/create?type=regular'
@@ -38,7 +40,8 @@ const campaignTypes: CampaignTypeOption[] = [
   {
     key: 'rss',
     title: 'RSS',
-    description: 'Automatically send email campaigns based on your RSS feed updates. Great for blog post notifications.',
+    description:
+      'Automatically send email campaigns based on your RSS feed updates. Great for blog post notifications.',
     icon: 'tabler-rss',
     enabled: false,
     href: '#'
@@ -46,7 +49,8 @@ const campaignTypes: CampaignTypeOption[] = [
   {
     key: 'auto-resend',
     title: 'Auto Resend',
-    description: 'Automatically resend campaigns to subscribers who did not open the first email with an updated subject line.',
+    description:
+      'Automatically resend campaigns to subscribers who did not open the first email with an updated subject line.',
     icon: 'tabler-refresh',
     enabled: false,
     href: '#'
@@ -54,7 +58,8 @@ const campaignTypes: CampaignTypeOption[] = [
   {
     key: 'multivariate',
     title: 'Multivariate',
-    description: 'Test multiple variables simultaneously to find the optimal combination of subject, content, and send time.',
+    description:
+      'Test multiple variables simultaneously to find the optimal combination of subject, content, and send time.',
     icon: 'tabler-chart-bar',
     enabled: false,
     href: '#'
@@ -66,7 +71,9 @@ const ChooseCampaignType = () => {
     <div className='flex flex-col gap-6'>
       <div className='flex items-center justify-between'>
         <div>
-          <Typography variant='h4' className='font-bold'>Choose Campaign Type</Typography>
+          <Typography variant='h4' className='font-bold'>
+            Choose Campaign Type
+          </Typography>
           <Typography color='text.secondary' className='mt-1'>
             Select the type of campaign you want to create
           </Typography>
@@ -95,12 +102,7 @@ const ChooseCampaignType = () => {
               }}
             >
               {!ct.enabled && (
-                <Chip
-                  label='Premium'
-                  color='warning'
-                  size='small'
-                  sx={{ position: 'absolute', top: 16, right: 16 }}
-                />
+                <Chip label='Premium' color='warning' size='small' sx={{ position: 'absolute', top: 16, right: 16 }} />
               )}
               <CardContent className='flex flex-col items-center text-center gap-4 p-6' sx={{ height: '100%' }}>
                 <div
@@ -108,12 +110,16 @@ const ChooseCampaignType = () => {
                   style={{
                     width: 72,
                     height: 72,
-                    backgroundColor: ct.enabled ? 'var(--mui-palette-primary-lightOpacity)' : 'var(--mui-palette-action-hover)'
+                    backgroundColor: ct.enabled
+                      ? 'var(--mui-palette-primary-lightOpacity)'
+                      : 'var(--mui-palette-action-hover)'
                   }}
                 >
                   <i
                     className={`${ct.icon} text-[36px]`}
-                    style={{ color: ct.enabled ? 'var(--mui-palette-primary-main)' : 'var(--mui-palette-text-disabled)' }}
+                    style={{
+                      color: ct.enabled ? 'var(--mui-palette-primary-main)' : 'var(--mui-palette-text-disabled)'
+                    }}
                   />
                 </div>
                 <Typography variant='h6' className='font-semibold'>

@@ -59,7 +59,9 @@ const WAContactStats = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={28} />
-        <Typography className='ml-3' color='text.secondary'>Loading statistics...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading statistics...
+        </Typography>
       </div>
     )
   }
@@ -77,7 +79,9 @@ const WAContactStats = () => {
             </CustomAvatar>
             <div>
               <Typography variant='h5'>{stats.total_contacts.toLocaleString()}</Typography>
-              <Typography variant='body2' color='text.secondary'>Total Contacts</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Total Contacts
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -90,7 +94,9 @@ const WAContactStats = () => {
             </CustomAvatar>
             <div>
               <Typography variant='h5'>{stats.opted_in.toLocaleString()}</Typography>
-              <Typography variant='body2' color='text.secondary'>Opted In</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Opted In
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -103,7 +109,9 @@ const WAContactStats = () => {
             </CustomAvatar>
             <div>
               <Typography variant='h5'>{stats.opted_out.toLocaleString()}</Typography>
-              <Typography variant='body2' color='text.secondary'>Opted Out</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Opted Out
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -116,7 +124,9 @@ const WAContactStats = () => {
             </CustomAvatar>
             <div>
               <Typography variant='h5'>{stats.recent_30d.toLocaleString()}</Typography>
-              <Typography variant='body2' color='text.secondary'>Added (30 days)</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Added (30 days)
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -132,7 +142,9 @@ const WAContactStats = () => {
                 <Typography variant='body2'>
                   {stats.opted_in} of {stats.total_contacts} contacts opted in
                 </Typography>
-                <Typography variant='h6' className='font-medium'>{optInRate}%</Typography>
+                <Typography variant='h6' className='font-medium'>
+                  {optInRate}%
+                </Typography>
               </div>
               <LinearProgress
                 variant='determinate'
@@ -204,7 +216,9 @@ const WAContactStats = () => {
                           <Chip label={t.tag} size='small' variant='tonal' color='primary' />
                         </TableCell>
                         <TableCell align='center'>
-                          <Typography variant='body2' className='font-medium'>{t.count}</Typography>
+                          <Typography variant='body2' className='font-medium'>
+                            {t.count}
+                          </Typography>
                         </TableCell>
                         <TableCell sx={{ width: '40%' }}>
                           <LinearProgress

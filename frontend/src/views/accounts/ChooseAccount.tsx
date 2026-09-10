@@ -24,8 +24,9 @@ import ListItemText from '@mui/material/ListItemText'
 
 import { useSession } from 'next-auth/react'
 
-import CustomTextField from '@core/components/mui/TextField'
 import Alert from '@mui/material/Alert'
+
+import CustomTextField from '@core/components/mui/TextField'
 
 import accountsService from '@/services/accounts'
 import type { Account } from '@/services/accounts'
@@ -149,6 +150,7 @@ const ChooseAccount = () => {
 
   const handleMenuClose = () => {
     setMenuAnchor(null)
+
     // Don't clear menuAccount here — it's needed if delete dialog is opening
   }
 
@@ -207,13 +209,16 @@ const ChooseAccount = () => {
   const getInitials = (name: string) => {
     if (!name?.trim()) return '?'
 
-    return name.trim()
-      .split(' ')
-      .filter(w => w.length > 0)
-      .map(w => w[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '?'
+    return (
+      name
+        .trim()
+        .split(' ')
+        .filter(w => w.length > 0)
+        .map(w => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || '?'
+    )
   }
 
   return (
@@ -231,12 +236,21 @@ const ChooseAccount = () => {
         <CardContent sx={{ p: { xs: 4, sm: 6 } }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
             <Typography variant='h4'>Choose account</Typography>
-            <Button variant='contained' color='success' startIcon={<i className='tabler-plus' />} onClick={() => setDialogOpen(true)}>
+            <Button
+              variant='contained'
+              color='success'
+              startIcon={<i className='tabler-plus' />}
+              onClick={() => setDialogOpen(true)}
+            >
               New account
             </Button>
           </Box>
 
-          {error && <Alert severity='error' sx={{ mb: 3 }}>{error}</Alert>}
+          {error && (
+            <Alert severity='error' sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
 
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>

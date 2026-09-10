@@ -247,6 +247,7 @@ const button: Theme['components'] = {
                 color: 'var(--mui-palette-primary-contrastText)',
                 backgroundColor: 'var(--mui-palette-primary-main)'
               },
+
               // Dark mode gradient button
               '[data-mui-color-scheme="dark"] &:not(.Mui-disabled)': {
                 background: 'linear-gradient(135deg, #7367F0 0%, #8B5CF6 50%, #6C63FF 100%)',

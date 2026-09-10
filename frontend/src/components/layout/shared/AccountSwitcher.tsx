@@ -88,14 +88,30 @@ const AccountSwitcher = () => {
           <Typography variant='body2' fontWeight={600} lineHeight={1.2} noWrap sx={{ maxWidth: 120 }}>
             {accountName}
           </Typography>
-          <Chip label={accountPlan} size='small' variant='tonal' color='success' sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }} />
+          <Chip
+            label={accountPlan}
+            size='small'
+            variant='tonal'
+            color='success'
+            sx={{ height: 18, fontSize: '0.65rem', mt: 0.25 }}
+          />
         </Box>
         <i className='tabler-chevron-down' style={{ fontSize: 16, opacity: 0.5 }} />
       </ButtonBase>
 
-      <Popper open={open} transition disablePortal placement='bottom-start' anchorEl={anchorRef.current} className='min-is-[200px] !mbs-3 z-[1]'>
+      <Popper
+        open={open}
+        transition
+        disablePortal
+        placement='bottom-start'
+        anchorEl={anchorRef.current}
+        className='min-is-[200px] !mbs-3 z-[1]'
+      >
         {({ TransitionProps, placement }) => (
-          <Fade {...TransitionProps} style={{ transformOrigin: placement === 'bottom-start' ? 'left top' : 'left bottom' }}>
+          <Fade
+            {...TransitionProps}
+            style={{ transformOrigin: placement === 'bottom-start' ? 'left top' : 'left bottom' }}
+          >
             <Paper className={settings.skin === 'bordered' ? 'border shadow-none' : 'shadow-lg'}>
               <ClickAwayListener onClickAway={e => handleClose(e as MouseEvent | TouchEvent)}>
                 <MenuList>

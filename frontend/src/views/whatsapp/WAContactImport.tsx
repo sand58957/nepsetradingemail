@@ -126,8 +126,11 @@ const WAContactImport = () => {
                   }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <i className={`${selectedFile ? 'tabler-file-check' : 'tabler-cloud-upload'} text-[48px] mb-2`}
-                    style={{ color: selectedFile ? 'var(--mui-palette-success-main)' : 'var(--mui-palette-text-secondary)' }}
+                  <i
+                    className={`${selectedFile ? 'tabler-file-check' : 'tabler-cloud-upload'} text-[48px] mb-2`}
+                    style={{
+                      color: selectedFile ? 'var(--mui-palette-success-main)' : 'var(--mui-palette-text-secondary)'
+                    }}
                   />
                   {selectedFile ? (
                     <>
@@ -163,7 +166,7 @@ const WAContactImport = () => {
                       value={selectedGroupIds}
                       label='Add to Groups'
                       onChange={e => setSelectedGroupIds(e.target.value as number[])}
-                      renderValue={(selected) => (
+                      renderValue={selected => (
                         <div className='flex gap-1 flex-wrap'>
                           {(selected as number[]).map(id => {
                             const group = availableGroups.find(g => g.id === id)
@@ -235,16 +238,16 @@ const WAContactImport = () => {
             <CardHeader title='CSV Format' />
             <CardContent>
               <div className='flex flex-col gap-3'>
-                <Alert severity='info'>
-                  Your CSV file should have headers in the first row.
-                </Alert>
+                <Alert severity='info'>Your CSV file should have headers in the first row.</Alert>
 
                 <Typography variant='subtitle2'>Required Columns:</Typography>
                 <Typography variant='body2' color='text.secondary'>
                   <strong>phone</strong> — Phone number with country code (e.g. 9779812345678)
                 </Typography>
 
-                <Typography variant='subtitle2' className='mt-2'>Optional Columns:</Typography>
+                <Typography variant='subtitle2' className='mt-2'>
+                  Optional Columns:
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
                   <strong>name</strong> — Contact name
                 </Typography>
@@ -255,13 +258,17 @@ const WAContactImport = () => {
                   <strong>tags</strong> — Comma-separated tags
                 </Typography>
 
-                <Typography variant='subtitle2' className='mt-2'>Example:</Typography>
+                <Typography variant='subtitle2' className='mt-2'>
+                  Example:
+                </Typography>
                 <Box
                   className='p-3 rounded'
                   sx={{ backgroundColor: 'action.hover', fontFamily: 'monospace', fontSize: '0.75rem' }}
                 >
-                  phone,name,email,tags<br />
-                  9779812345678,John Doe,john@test.com,&quot;vip,investor&quot;<br />
+                  phone,name,email,tags
+                  <br />
+                  9779812345678,John Doe,john@test.com,&quot;vip,investor&quot;
+                  <br />
                   9779887654321,Jane Doe,jane@test.com,trader
                 </Box>
 
@@ -281,11 +288,7 @@ const WAContactImport = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

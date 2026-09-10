@@ -1,5 +1,6 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
+
+import type { Metadata } from 'next'
 
 import { getApiBase } from '@/utils/apiBase'
 
@@ -8,11 +9,19 @@ const BASE_URL = 'https://nepalfillings.com'
 
 export const metadata: Metadata = {
   title: 'Blog - Nepal Fillings | Digital Marketing Guides for Nepal',
-  description: 'Expert guides on email marketing, SMS, WhatsApp, Telegram, and Messenger marketing for Nepal businesses. Tips, strategies, and case studies.',
-  keywords: ['Nepal digital marketing blog', 'email marketing Nepal', 'SMS marketing Nepal', 'WhatsApp marketing Nepal', 'Telegram marketing Nepal'],
+  description:
+    'Expert guides on email marketing, SMS, WhatsApp, Telegram, and Messenger marketing for Nepal businesses. Tips, strategies, and case studies.',
+  keywords: [
+    'Nepal digital marketing blog',
+    'email marketing Nepal',
+    'SMS marketing Nepal',
+    'WhatsApp marketing Nepal',
+    'Telegram marketing Nepal'
+  ],
   openGraph: {
     title: 'Blog - Nepal Fillings | Digital Marketing Guides',
-    description: 'Expert digital marketing guides for Nepal businesses. Email, SMS, WhatsApp, Telegram, and Messenger strategies.',
+    description:
+      'Expert digital marketing guides for Nepal businesses. Email, SMS, WhatsApp, Telegram, and Messenger strategies.',
     url: `${BASE_URL}/blog`,
     siteName: 'Nepal Fillings',
     type: 'website'
@@ -22,7 +31,7 @@ export const metadata: Metadata = {
     'geo.region': 'NP',
     'geo.placename': 'Kathmandu',
     'geo.position': '27.7172;85.3240',
-    'ICBM': '27.7172, 85.3240'
+    ICBM: '27.7172, 85.3240'
   }
 }
 
@@ -88,11 +97,7 @@ async function getCategories(): Promise<{ id: number; name: string; slug: string
 
 // metadata is exported at the top of the file
 
-export default async function BlogListingPage({
-  searchParams
-}: {
-  searchParams: Promise<{ page?: string }>
-}) {
+export default async function BlogListingPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const params = await searchParams
   const currentPage = Number(params.page) || 1
   const [postsResponse, categories] = await Promise.all([getPublishedPosts(currentPage), getCategories()])
@@ -125,8 +130,8 @@ export default async function BlogListingPage({
         </Link>
         <h1 className='blog-list-title'>Nepal Fillings Blog</h1>
         <p className='blog-list-subtitle'>
-          Expert insights on email marketing, SMS campaigns, WhatsApp business, and digital growth strategies for
-          Nepali businesses.
+          Expert insights on email marketing, SMS campaigns, WhatsApp business, and digital growth strategies for Nepali
+          businesses.
         </p>
       </header>
 
@@ -156,11 +161,7 @@ export default async function BlogListingPage({
               {/* Featured Image */}
               {post.featured_image && (
                 <Link href={`/blog/${post.slug}`}>
-                  <img
-                    src={post.featured_image}
-                    alt={post.title}
-                    className='blog-post-img'
-                  />
+                  <img src={post.featured_image} alt={post.title} className='blog-post-img' />
                 </Link>
               )}
 

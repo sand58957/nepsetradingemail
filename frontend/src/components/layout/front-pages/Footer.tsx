@@ -139,20 +139,10 @@ const Footer = ({ mode }: { mode: Mode }) => {
                 Legal & Contact
               </Typography>
               <div className='flex flex-col gap-4'>
-                <Typography
-                  component={Link}
-                  href='/front-pages/privacy'
-                  color='white'
-                  className='opacity-[0.78]'
-                >
+                <Typography component={Link} href='/front-pages/privacy' color='white' className='opacity-[0.78]'>
                   Privacy Policy
                 </Typography>
-                <Typography
-                  component={Link}
-                  href='/front-pages/terms'
-                  color='white'
-                  className='opacity-[0.78]'
-                >
+                <Typography component={Link} href='/front-pages/terms' color='white' className='opacity-[0.78]'>
                   Terms of Service
                 </Typography>
                 <Typography
@@ -218,10 +208,22 @@ const Footer = ({ mode }: { mode: Mode }) => {
               Terms
             </Typography>
             <div className='flex gap-1.5 items-center'>
-              <IconButton component={Link} size='small' href='https://www.facebook.com/profile.php?id=100063477431390' target='_blank' aria-label='Nepal Fillings on Facebook'>
+              <IconButton
+                component={Link}
+                size='small'
+                href='https://www.facebook.com/profile.php?id=100063477431390'
+                target='_blank'
+                aria-label='Nepal Fillings on Facebook'
+              >
                 <i className='tabler-brand-facebook-filled text-white text-lg' />
               </IconButton>
-              <IconButton component={Link} size='small' href='https://t.me/nepsemarket_alert_bot' target='_blank' aria-label='Nepal Fillings on Telegram'>
+              <IconButton
+                component={Link}
+                size='small'
+                href='https://t.me/nepsemarket_alert_bot'
+                target='_blank'
+                aria-label='Nepal Fillings on Telegram'
+              >
                 <i className='tabler-brand-telegram text-white text-lg' />
               </IconButton>
             </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+
 import { useRouter, useParams } from 'next/navigation'
 
 import Card from '@mui/material/Card'
@@ -69,24 +70,36 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
+    open: false,
+    message: '',
+    severity: 'success'
   })
 
   useEffect(() => {
-    const timer = setTimeout(() => { setDebouncedSearch(searchTerm); setPage(0) }, 300)
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+      setPage(0)
+    }, 300)
+
     return () => clearTimeout(timer)
   }, [searchTerm])
 
   useEffect(() => {
-    const timer = setTimeout(() => { setAddDebouncedSearch(addSearch); setAddPage(0) }, 300)
+    const timer = setTimeout(() => {
+      setAddDebouncedSearch(addSearch)
+      setAddPage(0)
+    }, 300)
+
     return () => clearTimeout(timer)
   }, [addSearch])
 
   useEffect(() => {
     const fetchGroup = async () => {
       setLoadingGroup(true)
+
       try {
         const response = await whatsappService.getGroup(groupId)
+
         setGroup(response.data.group)
         setMemberCount(response.data.member_count)
       } catch {
@@ -95,15 +108,20 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
         setLoadingGroup(false)
       }
     }
+
     fetchGroup()
   }, [groupId])
 
   const fetchMembers = useCallback(async () => {
     setLoadingMembers(true)
+
     try {
       const response = await whatsappService.getGroupMembers(groupId, {
-        page: page + 1, per_page: rowsPerPage, query: debouncedSearch || undefined
+        page: page + 1,
+        per_page: rowsPerPage,
+        query: debouncedSearch || undefined
       })
+
       setMembers(response.data?.results || [])
       setTotalMembers(response.data?.total || 0)
     } catch {
@@ -113,14 +131,20 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
     }
   }, [groupId, page, rowsPerPage, debouncedSearch])
 
-  useEffect(() => { fetchMembers() }, [fetchMembers])
+  useEffect(() => {
+    fetchMembers()
+  }, [fetchMembers])
 
   const fetchAllContacts = useCallback(async () => {
     setLoadingAllContacts(true)
+
     try {
       const response = await whatsappService.getContacts({
-        page: addPage + 1, per_page: 25, query: addDebouncedSearch || undefined
+        page: addPage + 1,
+        per_page: 25,
+        query: addDebouncedSearch || undefined
       })
+
       setAllContacts(response.data?.results || [])
       setAllContactsTotal(response.data?.total || 0)
     } catch {
@@ -130,17 +154,24 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
     }
   }, [addPage, addDebouncedSearch])
 
-  useEffect(() => { if (addDialogOpen) fetchAllContacts() }, [addDialogOpen, fetchAllContacts])
+  useEffect(() => {
+    if (addDialogOpen) fetchAllContacts()
+  }, [addDialogOpen, fetchAllContacts])
 
   const handleAddMembers = async () => {
     if (addSelectedIds.length === 0) return
     setAddingMembers(true)
+
     try {
       const response = await whatsappService.addGroupMembers(groupId, addSelectedIds)
+
       setSnackbar({ open: true, message: `${response.data.added} contacts added to group`, severity: 'success' })
-      setAddDialogOpen(false); setAddSelectedIds([]); setAddSearch('')
+      setAddDialogOpen(false)
+      setAddSelectedIds([])
+      setAddSearch('')
       fetchMembers()
       const groupRes = await whatsappService.getGroup(groupId)
+
       setMemberCount(groupRes.data.member_count)
     } catch {
       setSnackbar({ open: true, message: 'Failed to add members', severity: 'error' })
@@ -151,12 +182,16 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
 
   const handleRemoveMembers = async () => {
     if (selectedIds.length === 0) return
+
     try {
       const response = await whatsappService.removeGroupMembers(groupId, selectedIds)
+
       setSnackbar({ open: true, message: `${response.data.removed} contacts removed from group`, severity: 'success' })
-      setRemoveDialogOpen(false); setSelectedIds([])
+      setRemoveDialogOpen(false)
+      setSelectedIds([])
       fetchMembers()
       const groupRes = await whatsappService.getGroup(groupId)
+
       setMemberCount(groupRes.data.member_count)
     } catch {
       setSnackbar({ open: true, message: 'Failed to remove members', severity: 'error' })
@@ -164,11 +199,27 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
   }
 
   if (loadingGroup) {
-    return <Card><CardContent><Box display='flex' justifyContent='center' p={4}><CircularProgress /></Box></CardContent></Card>
+    return (
+      <Card>
+        <CardContent>
+          <Box display='flex' justifyContent='center' p={4}>
+            <CircularProgress />
+          </Box>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (!group) {
-    return <Card><CardContent><Typography color='text.secondary' align='center' className='py-8'>Group not found</Typography></CardContent></Card>
+    return (
+      <Card>
+        <CardContent>
+          <Typography color='text.secondary' align='center' className='py-8'>
+            Group not found
+          </Typography>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -180,11 +231,19 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
               <Box sx={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: group.color }} />
               <div>
                 <Typography variant='h5'>{group.name}</Typography>
-                {group.description && <Typography variant='body2' color='text.secondary'>{group.description}</Typography>}
+                {group.description && (
+                  <Typography variant='body2' color='text.secondary'>
+                    {group.description}
+                  </Typography>
+                )}
               </div>
               <Chip label={`${memberCount} members`} size='small' variant='tonal' color='primary' />
             </div>
-            <Button variant='outlined' startIcon={<i className='tabler-arrow-left' />} onClick={() => router.push(`/${locale}/whatsapp/groups`)}>
+            <Button
+              variant='outlined'
+              startIcon={<i className='tabler-arrow-left' />}
+              onClick={() => router.push(`/${locale}/whatsapp/groups`)}
+            >
               Back to Groups
             </Button>
           </div>
@@ -197,11 +256,22 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
           action={
             <div className='flex gap-2 flex-wrap'>
               {selectedIds.length > 0 && (
-                <Button variant='outlined' color='error' size='small' startIcon={<i className='tabler-user-minus' />} onClick={() => setRemoveDialogOpen(true)}>
+                <Button
+                  variant='outlined'
+                  color='error'
+                  size='small'
+                  startIcon={<i className='tabler-user-minus' />}
+                  onClick={() => setRemoveDialogOpen(true)}
+                >
                   Remove ({selectedIds.length})
                 </Button>
               )}
-              <Button variant='contained' size='small' startIcon={<i className='tabler-user-plus' />} onClick={() => setAddDialogOpen(true)}>
+              <Button
+                variant='contained'
+                size='small'
+                startIcon={<i className='tabler-user-plus' />}
+                onClick={() => setAddDialogOpen(true)}
+              >
                 Add Members
               </Button>
             </div>
@@ -211,19 +281,37 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
           <Grid container spacing={4} className='mb-4'>
             <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <TextField
-                fullWidth size='small' placeholder='Search members...' value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                slotProps={{ input: { startAdornment: <InputAdornment position='start'><i className='tabler-search text-[18px]' /></InputAdornment> } }}
+                fullWidth
+                size='small'
+                placeholder='Search members...'
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position='start'>
+                        <i className='tabler-search text-[18px]' />
+                      </InputAdornment>
+                    )
+                  }
+                }}
               />
             </Grid>
           </Grid>
         </CardContent>
 
         {loadingMembers ? (
-          <CardContent><Box display='flex' justifyContent='center' p={4}><CircularProgress /></Box></CardContent>
+          <CardContent>
+            <Box display='flex' justifyContent='center' p={4}>
+              <CircularProgress />
+            </Box>
+          </CardContent>
         ) : members.length === 0 ? (
           <CardContent>
             <Typography color='text.secondary' align='center' className='py-8'>
-              {debouncedSearch ? 'No members match your search' : 'No members in this group yet. Click "Add Members" to get started.'}
+              {debouncedSearch
+                ? 'No members match your search'
+                : 'No members in this group yet. Click "Add Members" to get started.'}
             </Typography>
           </CardContent>
         ) : (
@@ -252,19 +340,42 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
                       <TableCell padding='checkbox'>
                         <Checkbox
                           checked={selectedIds.includes(contact.id)}
-                          onChange={e => setSelectedIds(prev => e.target.checked ? [...prev, contact.id] : prev.filter(i => i !== contact.id))}
+                          onChange={e =>
+                            setSelectedIds(prev =>
+                              e.target.checked ? [...prev, contact.id] : prev.filter(i => i !== contact.id)
+                            )
+                          }
                         />
                       </TableCell>
-                      <TableCell><Typography className='font-medium'>{contact.phone}</Typography></TableCell>
-                      <TableCell><Typography>{contact.name || '-'}</Typography></TableCell>
-                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                        <Typography variant='body2' color='text.secondary'>{contact.email || '-'}</Typography>
+                      <TableCell>
+                        <Typography className='font-medium'>{contact.phone}</Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip label={contact.opted_in ? 'Opted In' : 'Opted Out'} color={contact.opted_in ? 'success' : 'default'} size='small' variant='tonal' />
+                        <Typography>{contact.name || '-'}</Typography>
+                      </TableCell>
+                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                        <Typography variant='body2' color='text.secondary'>
+                          {contact.email || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={contact.opted_in ? 'Opted In' : 'Opted Out'}
+                          color={contact.opted_in ? 'success' : 'default'}
+                          size='small'
+                          variant='tonal'
+                        />
                       </TableCell>
                       <TableCell align='center'>
-                        <IconButton size='small' color='error' aria-label='Remove contact from group' onClick={() => { setSelectedIds([contact.id]); setRemoveDialogOpen(true) }}>
+                        <IconButton
+                          size='small'
+                          color='error'
+                          aria-label='Remove contact from group'
+                          onClick={() => {
+                            setSelectedIds([contact.id])
+                            setRemoveDialogOpen(true)
+                          }}
+                        >
                           <i className='tabler-user-minus' />
                         </IconButton>
                       </TableCell>
@@ -274,9 +385,15 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
               </Table>
             </TableContainer>
             <TablePagination
-              component='div' count={totalMembers} rowsPerPage={rowsPerPage} page={page}
+              component='div'
+              count={totalMembers}
+              rowsPerPage={rowsPerPage}
+              page={page}
               onPageChange={(_, newPage) => setPage(newPage)}
-              onRowsPerPageChange={e => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0) }}
+              onRowsPerPageChange={e => {
+                setRowsPerPage(parseInt(e.target.value, 10))
+                setPage(0)
+              }}
               rowsPerPageOptions={[10, 25, 50, 100]}
             />
           </>
@@ -288,12 +405,31 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
         <DialogTitle>Add Members to {group.name}</DialogTitle>
         <DialogContent>
           <TextField
-            fullWidth size='small' placeholder='Search contacts...' value={addSearch} onChange={e => setAddSearch(e.target.value)} className='mt-2 mb-4'
-            slotProps={{ input: { startAdornment: <InputAdornment position='start'><i className='tabler-search text-[18px]' /></InputAdornment> } }}
+            fullWidth
+            size='small'
+            placeholder='Search contacts...'
+            value={addSearch}
+            onChange={e => setAddSearch(e.target.value)}
+            className='mt-2 mb-4'
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <i className='tabler-search text-[18px]' />
+                  </InputAdornment>
+                )
+              }
+            }}
           />
-          {addSelectedIds.length > 0 && <Alert severity='info' className='mb-3'>{addSelectedIds.length} contacts selected</Alert>}
+          {addSelectedIds.length > 0 && (
+            <Alert severity='info' className='mb-3'>
+              {addSelectedIds.length} contacts selected
+            </Alert>
+          )}
           {loadingAllContacts ? (
-            <Box display='flex' justifyContent='center' p={4}><CircularProgress /></Box>
+            <Box display='flex' justifyContent='center' p={4}>
+              <CircularProgress />
+            </Box>
           ) : (
             <>
               <TableContainer>
@@ -303,9 +439,13 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
                       <TableCell padding='checkbox'>
                         <Checkbox
                           checked={allContacts.length > 0 && allContacts.every(c => addSelectedIds.includes(c.id))}
-                          indeterminate={allContacts.some(c => addSelectedIds.includes(c.id)) && !allContacts.every(c => addSelectedIds.includes(c.id))}
+                          indeterminate={
+                            allContacts.some(c => addSelectedIds.includes(c.id)) &&
+                            !allContacts.every(c => addSelectedIds.includes(c.id))
+                          }
                           onChange={e => {
-                            if (e.target.checked) setAddSelectedIds(prev => [...new Set([...prev, ...allContacts.map(c => c.id)])])
+                            if (e.target.checked)
+                              setAddSelectedIds(prev => [...new Set([...prev, ...allContacts.map(c => c.id)])])
                             else setAddSelectedIds(prev => prev.filter(id => !allContacts.some(c => c.id === id)))
                           }}
                         />
@@ -321,30 +461,50 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
                         <TableCell padding='checkbox'>
                           <Checkbox
                             checked={addSelectedIds.includes(contact.id)}
-                            onChange={e => setAddSelectedIds(prev => e.target.checked ? [...prev, contact.id] : prev.filter(id => id !== contact.id))}
+                            onChange={e =>
+                              setAddSelectedIds(prev =>
+                                e.target.checked ? [...prev, contact.id] : prev.filter(id => id !== contact.id)
+                              )
+                            }
                           />
                         </TableCell>
                         <TableCell>{contact.phone}</TableCell>
                         <TableCell>{contact.name || '-'}</TableCell>
                         <TableCell>
-                          <Chip label={contact.opted_in ? 'Opted In' : 'Opted Out'} color={contact.opted_in ? 'success' : 'default'} size='small' variant='tonal' />
+                          <Chip
+                            label={contact.opted_in ? 'Opted In' : 'Opted Out'}
+                            color={contact.opted_in ? 'success' : 'default'}
+                            size='small'
+                            variant='tonal'
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </TableContainer>
-              <TablePagination component='div' count={allContactsTotal} rowsPerPage={25} page={addPage} onPageChange={(_, newPage) => setAddPage(newPage)} rowsPerPageOptions={[25]} />
+              <TablePagination
+                component='div'
+                count={allContactsTotal}
+                rowsPerPage={25}
+                page={addPage}
+                onPageChange={(_, newPage) => setAddPage(newPage)}
+                rowsPerPageOptions={[25]}
+              />
             </>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddDialogOpen(false)}>Cancel</Button>
           <Button
-            variant='contained' onClick={handleAddMembers} disabled={addingMembers || addSelectedIds.length === 0}
+            variant='contained'
+            onClick={handleAddMembers}
+            disabled={addingMembers || addSelectedIds.length === 0}
             startIcon={addingMembers ? <CircularProgress size={18} /> : <i className='tabler-user-plus' />}
           >
-            {addingMembers ? 'Adding...' : `Add ${addSelectedIds.length} Contact${addSelectedIds.length !== 1 ? 's' : ''}`}
+            {addingMembers
+              ? 'Adding...'
+              : `Add ${addSelectedIds.length} Contact${addSelectedIds.length !== 1 ? 's' : ''}`}
           </Button>
         </DialogActions>
       </Dialog>
@@ -352,16 +512,28 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
       <Dialog open={removeDialogOpen} onClose={() => setRemoveDialogOpen(false)}>
         <DialogTitle>Remove Members</DialogTitle>
         <DialogContent>
-          <Typography>Remove {selectedIds.length} contact{selectedIds.length !== 1 ? 's' : ''} from this group? They will not be deleted.</Typography>
+          <Typography>
+            Remove {selectedIds.length} contact{selectedIds.length !== 1 ? 's' : ''} from this group? They will not be
+            deleted.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRemoveDialogOpen(false)}>Cancel</Button>
-          <Button variant='contained' color='error' onClick={handleRemoveMembers}>Remove</Button>
+          <Button variant='contained' color='error' onClick={handleRemoveMembers}>
+            Remove
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>{snackbar.message}</Alert>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
+          {snackbar.message}
+        </Alert>
       </Snackbar>
     </>
   )

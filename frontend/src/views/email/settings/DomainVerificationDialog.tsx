@@ -78,6 +78,9 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
     }
 
     fetchRecords()
+    // Intentionally keyed on the id, not the whole object: a new domainRecord identity with
+    // the same id must not refetch DNS records.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProvider, domainRecord?.id])
 
   const domain = domainRecord?.domain || ''
@@ -325,9 +328,7 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
               {selectedProvider.name}
             </Typography>
           </Box>
-          {hasSendGrid && (
-            <Chip label='SendGrid' size='small' color='success' variant='outlined' />
-          )}
+          {hasSendGrid && <Chip label='SendGrid' size='small' color='success' variant='outlined' />}
           {dnsUrl && (
             <Button
               variant='outlined'
@@ -351,7 +352,9 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
 
         {hasSendGrid && (
           <Alert severity='warning' sx={{ mb: 3 }}>
-            <strong>Important:</strong> For CNAME records, make sure proxy is set to <strong>&quot;DNS only&quot;</strong> (grey cloud icon in Cloudflare). Proxied CNAME records will not work for email authentication.
+            <strong>Important:</strong> For CNAME records, make sure proxy is set to{' '}
+            <strong>&quot;DNS only&quot;</strong> (grey cloud icon in Cloudflare). Proxied CNAME records will not work
+            for email authentication.
           </Alert>
         )}
 
@@ -374,12 +377,7 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
                 <Typography variant='body1' fontWeight={600}>
                   {record.label}
                 </Typography>
-                <Chip
-                  label={record.type}
-                  size='small'
-                  color={isCNAME ? 'info' : 'default'}
-                  variant='outlined'
-                />
+                <Chip label={record.type} size='small' color={isCNAME ? 'info' : 'default'} variant='outlined' />
               </Box>
 
               {/* Status alert */}
@@ -437,9 +435,7 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
         {verificationResults && allPassed && (
           <Alert severity='success' sx={{ mb: 3 }}>
             <Typography fontWeight={600}>All DNS records verified successfully!</Typography>
-            <Typography variant='body2'>
-              Your domain is now authenticated for sending emails via SendGrid.
-            </Typography>
+            <Typography variant='body2'>Your domain is now authenticated for sending emails via SendGrid.</Typography>
           </Alert>
         )}
 
@@ -447,8 +443,8 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
           <Alert severity='warning' sx={{ mb: 3 }}>
             <Typography fontWeight={600}>Some records are missing or incorrect</Typography>
             <Typography variant='body2'>
-              DNS changes can take up to 48 hours to propagate. You can check again later.
-              Make sure CNAME records are set to &quot;DNS only&quot; (not proxied).
+              DNS changes can take up to 48 hours to propagate. You can check again later. Make sure CNAME records are
+              set to &quot;DNS only&quot; (not proxied).
             </Typography>
           </Alert>
         )}
@@ -471,11 +467,7 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
               onClick={handleVerify}
               disabled={verifying}
               startIcon={
-                verifying ? (
-                  <CircularProgress size={18} color='inherit' />
-                ) : (
-                  <i className='tabler-check text-[18px]' />
-                )
+                verifying ? <CircularProgress size={18} color='inherit' /> : <i className='tabler-check text-[18px]' />
               }
             >
               {verifying ? 'Verifying...' : verificationResults ? 'Check Again' : 'Verify Records'}

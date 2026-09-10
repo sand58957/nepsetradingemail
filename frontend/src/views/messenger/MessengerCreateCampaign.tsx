@@ -61,6 +61,7 @@ const MessengerCreateCampaign = () => {
   const [creating, setCreating] = useState(false)
   const [sendingNow, setSendingNow] = useState(false)
   const [confirmSendNow, setConfirmSendNow] = useState(false)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -83,6 +84,7 @@ const MessengerCreateCampaign = () => {
     const fetchGroups = async () => {
       try {
         const response = await messengerService.getGroups()
+
         setAvailableGroups(response.data || [])
       } catch {
         // Silently fail
@@ -216,7 +218,11 @@ const MessengerCreateCampaign = () => {
         await messengerService.sendCampaign(campaignId)
         setSnackbar({ open: true, message: 'Campaign created and sending started!', severity: 'success' })
       } catch {
-        setSnackbar({ open: true, message: 'Campaign created but failed to start sending. Go to campaign detail to retry.', severity: 'error' })
+        setSnackbar({
+          open: true,
+          message: 'Campaign created but failed to start sending. Go to campaign detail to retry.',
+          severity: 'error'
+        })
       }
 
       // Navigate to campaign detail
@@ -370,7 +376,14 @@ const MessengerCreateCampaign = () => {
                     </div>
                     {imageUrl.trim() && (
                       <Box className='mb-2 rounded overflow-hidden' sx={{ maxWidth: 300 }}>
-                        <img src={imageUrl} alt='Preview' style={{ width: '100%', display: 'block' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        <img
+                          src={imageUrl}
+                          alt='Preview'
+                          style={{ width: '100%', display: 'block' }}
+                          onError={e => {
+                            ;(e.target as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
                       </Box>
                     )}
                     <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
@@ -396,14 +409,18 @@ const MessengerCreateCampaign = () => {
                     />
                   )}
                   <Typography variant='body2' color='text.secondary'>
-                    {tags.length > 0 || selectedGroups.length > 0 ? 'Contacts matching selected filters' : 'All opted-in contacts'}
+                    {tags.length > 0 || selectedGroups.length > 0
+                      ? 'Contacts matching selected filters'
+                      : 'All opted-in contacts'}
                   </Typography>
                 </div>
 
                 {/* Group filter */}
                 {availableGroups.length > 0 && (
                   <div>
-                    <Typography variant='body2' className='mb-2'>Filter by Groups</Typography>
+                    <Typography variant='body2' className='mb-2'>
+                      Filter by Groups
+                    </Typography>
                     <div className='flex gap-2 flex-wrap'>
                       {availableGroups.map(group => (
                         <Chip
@@ -414,14 +431,16 @@ const MessengerCreateCampaign = () => {
                           color={selectedGroups.includes(group.id) ? 'primary' : 'default'}
                           onClick={() => {
                             setSelectedGroups(prev =>
-                              prev.includes(group.id)
-                                ? prev.filter(id => id !== group.id)
-                                : [...prev, group.id]
+                              prev.includes(group.id) ? prev.filter(id => id !== group.id) : [...prev, group.id]
                             )
                           }}
-                          sx={selectedGroups.includes(group.id) ? {} : {
-                            borderLeft: `3px solid ${group.color}`,
-                          }}
+                          sx={
+                            selectedGroups.includes(group.id)
+                              ? {}
+                              : {
+                                  borderLeft: `3px solid ${group.color}`
+                                }
+                          }
                         />
                       ))}
                     </div>
@@ -440,9 +459,7 @@ const MessengerCreateCampaign = () => {
                   onInputChange={(_, value) => setTagInput(value)}
                   onChange={(_, value) => setTags(value as string[])}
                   renderTags={(value, getTagProps) =>
-                    value.map((tag, index) => (
-                      <Chip {...getTagProps({ index })} key={tag} label={tag} size='small' />
-                    ))
+                    value.map((tag, index) => <Chip {...getTagProps({ index })} key={tag} label={tag} size='small' />)
                   }
                   renderInput={params => (
                     <TextField
@@ -497,10 +514,7 @@ const MessengerCreateCampaign = () => {
                   >
                     Test Send
                   </Button>
-                  <Button
-                    variant='outlined'
-                    onClick={() => router.push(`/${locale}/messenger/campaigns`)}
-                  >
+                  <Button variant='outlined' onClick={() => router.push(`/${locale}/messenger/campaigns`)}>
                     Cancel
                   </Button>
                 </div>
@@ -559,13 +573,17 @@ const MessengerCreateCampaign = () => {
           />
           {messageText && (
             <Box className='p-3 rounded mt-3' sx={{ backgroundColor: 'action.hover' }}>
-              <Typography variant='caption' color='text.secondary'>Message preview:</Typography>
+              <Typography variant='caption' color='text.secondary'>
+                Message preview:
+              </Typography>
               {imageUrl.trim() && (
                 <Typography variant='caption' color='info.main' className='block mb-1'>
                   [Image: {imageUrl}]
                 </Typography>
               )}
-              <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>{messageText}</Typography>
+              <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>
+                {messageText}
+              </Typography>
             </Box>
           )}
         </DialogContent>
@@ -593,16 +611,23 @@ const MessengerCreateCampaign = () => {
         <DialogContent>
           <div className='flex flex-col gap-3 mt-1'>
             <Typography>
-              This will create the campaign and <strong>immediately start sending</strong> Messenger messages to all targeted contacts.
+              This will create the campaign and <strong>immediately start sending</strong> Messenger messages to all
+              targeted contacts.
             </Typography>
             <Box className='p-3 rounded' sx={{ backgroundColor: 'action.hover' }}>
-              <Typography variant='body2'><strong>Campaign:</strong> {name}</Typography>
-              <Typography variant='body2'><strong>Type:</strong> {imageUrl.trim() ? 'Text with image' : 'Text message'}</Typography>
               <Typography variant='body2'>
-                <strong>Message:</strong> {messageText.length > 100 ? messageText.substring(0, 100) + '...' : messageText}
+                <strong>Campaign:</strong> {name}
               </Typography>
               <Typography variant='body2'>
-                <strong>Audience:</strong> {tags.length > 0 ? `Contacts with tags: ${tags.join(', ')}` : 'All opted-in contacts'}
+                <strong>Type:</strong> {imageUrl.trim() ? 'Text with image' : 'Text message'}
+              </Typography>
+              <Typography variant='body2'>
+                <strong>Message:</strong>{' '}
+                {messageText.length > 100 ? messageText.substring(0, 100) + '...' : messageText}
+              </Typography>
+              <Typography variant='body2'>
+                <strong>Audience:</strong>{' '}
+                {tags.length > 0 ? `Contacts with tags: ${tags.join(', ')}` : 'All opted-in contacts'}
                 {audienceCount !== null && ` (${audienceCount.toLocaleString()} recipients)`}
               </Typography>
             </Box>
@@ -631,11 +656,7 @@ const MessengerCreateCampaign = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

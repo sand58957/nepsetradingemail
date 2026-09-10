@@ -44,7 +44,9 @@ const SubscriberGroups = () => {
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
+    open: false,
+    message: '',
+    severity: 'success'
   })
 
   const isMobile = useMobileBreakpoint()
@@ -102,7 +104,9 @@ const SubscriberGroups = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading groups...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading groups...
+        </Typography>
       </div>
     )
   }
@@ -113,7 +117,9 @@ const SubscriberGroups = () => {
         <CardContent>
           <div className='flex items-center justify-between mb-6'>
             <div className='flex items-center gap-2'>
-              <Typography color='text.secondary'>Showing 1 to {lists.length} of {lists.length} results</Typography>
+              <Typography color='text.secondary'>
+                Showing 1 to {lists.length} of {lists.length} results
+              </Typography>
             </div>
             <Button variant='contained' color='success' onClick={() => setDialogOpen(true)}>
               Create group
@@ -121,7 +127,9 @@ const SubscriberGroups = () => {
           </div>
 
           {lists.length === 0 ? (
-            <Typography color='text.secondary' className='text-center py-8'>No groups found</Typography>
+            <Typography color='text.secondary' className='text-center py-8'>
+              No groups found
+            </Typography>
           ) : (
             <div className='flex flex-col gap-4'>
               {lists.map(list => (
@@ -138,19 +146,36 @@ const SubscriberGroups = () => {
                       <Chip label={`${list.optin} opt-in`} size='small' variant='outlined' />
                     </div>
                     <Typography variant='body2' color='text.secondary'>
-                      Created {new Date(list.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' })}
+                      Created{' '}
+                      {new Date(list.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: '2-digit'
+                      })}
                     </Typography>
                     {list.description && (
-                      <Typography variant='body2' color='text.secondary' className='mt-1'>{list.description}</Typography>
+                      <Typography variant='body2' color='text.secondary' className='mt-1'>
+                        {list.description}
+                      </Typography>
                     )}
                   </div>
                   <div className='flex items-center gap-6'>
                     <div className='text-center'>
-                      <Typography variant='body2' color='text.secondary'>Subscribers</Typography>
+                      <Typography variant='body2' color='text.secondary'>
+                        Subscribers
+                      </Typography>
                       <Typography className='font-bold'>{list.subscriber_count || 0}</Typography>
                     </div>
                     <div>
-                      <IconButton size='small' color='error' aria-label='Delete group' onClick={() => { setDeletingId(list.id); setDeleteDialogOpen(true) }}>
+                      <IconButton
+                        size='small'
+                        color='error'
+                        aria-label='Delete group'
+                        onClick={() => {
+                          setDeletingId(list.id)
+                          setDeleteDialogOpen(true)
+                        }}
+                      >
                         <i className='tabler-trash text-[20px]' />
                       </IconButton>
                     </div>
@@ -168,12 +193,21 @@ const SubscriberGroups = () => {
         <DialogContent>
           <Grid container spacing={4} className='pt-2'>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label='Name' value={newList.name} onChange={e => setNewList({ ...newList, name: e.target.value })} />
+              <TextField
+                fullWidth
+                label='Name'
+                value={newList.name}
+                onChange={e => setNewList({ ...newList, name: e.target.value })}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Type</InputLabel>
-                <Select value={newList.type} label='Type' onChange={e => setNewList({ ...newList, type: e.target.value as any })}>
+                <Select
+                  value={newList.type}
+                  label='Type'
+                  onChange={e => setNewList({ ...newList, type: e.target.value as any })}
+                >
                   <MenuItem value='public'>Public</MenuItem>
                   <MenuItem value='private'>Private</MenuItem>
                   <MenuItem value='temporary'>Temporary</MenuItem>
@@ -183,19 +217,32 @@ const SubscriberGroups = () => {
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Opt-in</InputLabel>
-                <Select value={newList.optin} label='Opt-in' onChange={e => setNewList({ ...newList, optin: e.target.value as any })}>
+                <Select
+                  value={newList.optin}
+                  label='Opt-in'
+                  onChange={e => setNewList({ ...newList, optin: e.target.value as any })}
+                >
                   <MenuItem value='single'>Single</MenuItem>
                   <MenuItem value='double'>Double</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label='Description' multiline rows={2} value={newList.description} onChange={e => setNewList({ ...newList, description: e.target.value })} />
+              <TextField
+                fullWidth
+                label='Description'
+                multiline
+                rows={2}
+                value={newList.description}
+                onChange={e => setNewList({ ...newList, description: e.target.value })}
+              />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)} color='secondary' disabled={submitting}>Cancel</Button>
+          <Button onClick={() => setDialogOpen(false)} color='secondary' disabled={submitting}>
+            Cancel
+          </Button>
           <Button onClick={handleCreate} variant='contained' disabled={submitting}>
             {submitting ? <CircularProgress size={20} /> : 'Create'}
           </Button>
@@ -211,13 +258,24 @@ const SubscriberGroups = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color='secondary'>Cancel</Button>
-          <Button onClick={handleDelete} color='error' variant='contained'>Delete</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)} color='secondary'>
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} color='error' variant='contained'>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>{snackbar.message}</Alert>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
+          {snackbar.message}
+        </Alert>
       </Snackbar>
     </>
   )

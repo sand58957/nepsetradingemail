@@ -1,6 +1,7 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+
+import type { Metadata } from 'next'
 
 import type { BlogAuthor } from '@/utils/blogSchema'
 import { generateAuthorSchema } from '@/utils/blogSchema'
@@ -64,11 +65,7 @@ async function getAuthorPosts(slug: string, page = 1): Promise<PostsResponse> {
   }
 }
 
-export async function generateMetadata({
-  params
-}: {
-  params: Promise<{ slug: string }>
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const author = await getAuthor(slug)
 
@@ -77,7 +74,8 @@ export async function generateMetadata({
   }
 
   const title = `${author.name} - Author at Nepal Fillings Blog`
-  const description = author.bio || `Read articles by ${author.name} on digital marketing strategies for Nepali businesses.`
+  const description =
+    author.bio || `Read articles by ${author.name} on digital marketing strategies for Nepali businesses.`
 
   return {
     title,
@@ -271,9 +269,7 @@ export default async function AuthorPage({
       </header>
 
       {/* Author's Posts */}
-      <h2 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a2e', marginBottom: 24 }}>
-        Articles by {author.name}
-      </h2>
+      <h2 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a2e', marginBottom: 24 }}>Articles by {author.name}</h2>
 
       {posts.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px' }}>

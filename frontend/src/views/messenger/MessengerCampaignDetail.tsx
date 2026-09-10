@@ -118,6 +118,9 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
     }, 5000)
 
     return () => clearInterval(interval)
+    // Keyed on status, not the whole campaign: the interval writes fresh state, and depending
+    // on `campaign` would tear down and rebuild the poll on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaign?.status, id])
 
   // Stats
@@ -219,7 +222,9 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading campaign...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading campaign...
+        </Typography>
       </div>
     )
   }
@@ -228,7 +233,9 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
     return (
       <Card>
         <CardContent className='text-center py-16'>
-          <Typography color='error' className='mb-4'>{error || 'Campaign not found'}</Typography>
+          <Typography color='error' className='mb-4'>
+            {error || 'Campaign not found'}
+          </Typography>
           <Button variant='outlined' onClick={() => router.push(`/${locale}/messenger/campaigns`)}>
             Back to Campaigns
           </Button>
@@ -257,7 +264,8 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
                   </div>
                   {campaign.started_at && (
                     <Typography variant='body2' color='text.secondary'>
-                      Started {new Date(campaign.started_at).toLocaleDateString('en-US', {
+                      Started{' '}
+                      {new Date(campaign.started_at).toLocaleDateString('en-US', {
                         weekday: 'long',
                         month: 'long',
                         day: 'numeric',
@@ -418,7 +426,14 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
                 >
                   {campaign.image_url && (
                     <Box className='mb-2 rounded overflow-hidden' sx={{ maxWidth: 300 }}>
-                      <img src={campaign.image_url} alt='Campaign media' style={{ width: '100%', display: 'block' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                      <img
+                        src={campaign.image_url}
+                        alt='Campaign media'
+                        style={{ width: '100%', display: 'block' }}
+                        onError={e => {
+                          ;(e.target as HTMLImageElement).style.display = 'none'
+                        }}
+                      />
                     </Box>
                   )}
                   <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
@@ -446,11 +461,15 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
                             size='small'
                             variant='tonal'
                             color={
-                              item.status === 'delivered' ? 'success' :
-                              item.status === 'failed' ? 'error' :
-                              item.status === 'sent' || item.status === 'submitted' ? 'info' :
-                              item.status === 'queued' ? 'warning' :
-                              'default'
+                              item.status === 'delivered'
+                                ? 'success'
+                                : item.status === 'failed'
+                                  ? 'error'
+                                  : item.status === 'sent' || item.status === 'submitted'
+                                    ? 'info'
+                                    : item.status === 'queued'
+                                      ? 'warning'
+                                      : 'default'
                             }
                           />
                         </TableCell>
@@ -486,7 +505,9 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
                   </TableRow>
                   <TableRow>
                     <TableCell className='font-medium'>Total Targets</TableCell>
-                    <TableCell>{campaign.total_targets > 0 ? campaign.total_targets.toLocaleString() : 'Not calculated yet'}</TableCell>
+                    <TableCell>
+                      {campaign.total_targets > 0 ? campaign.total_targets.toLocaleString() : 'Not calculated yet'}
+                    </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className='font-medium'>Created</TableCell>
@@ -515,7 +536,11 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
           <Card>
             <CardHeader
               title={`Recipients (${recipients.length})`}
-              subheader={recipients.length === 0 ? 'No messages have been sent for this campaign yet' : 'Individual message delivery status for each contact'}
+              subheader={
+                recipients.length === 0
+                  ? 'No messages have been sent for this campaign yet'
+                  : 'Individual message delivery status for each contact'
+              }
             />
             <CardContent>
               {recipients.length === 0 ? (
@@ -558,11 +583,15 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
                               size='small'
                               variant='tonal'
                               color={
-                                recipient.status === 'delivered' ? 'success' :
-                                recipient.status === 'failed' ? 'error' :
-                                recipient.status === 'sent' || recipient.status === 'submitted' ? 'info' :
-                                recipient.status === 'queued' ? 'warning' :
-                                'default'
+                                recipient.status === 'delivered'
+                                  ? 'success'
+                                  : recipient.status === 'failed'
+                                    ? 'error'
+                                    : recipient.status === 'sent' || recipient.status === 'submitted'
+                                      ? 'info'
+                                      : recipient.status === 'queued'
+                                        ? 'warning'
+                                        : 'default'
                               }
                             />
                           </TableCell>
@@ -635,9 +664,7 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
           <Alert severity='warning' className='mb-3'>
             This will send Messenger messages to all matching opted-in contacts. This action cannot be undone.
           </Alert>
-          <Typography>
-            Are you sure you want to send the campaign &quot;{campaign.name}&quot;?
-          </Typography>
+          <Typography>Are you sure you want to send the campaign &quot;{campaign.name}&quot;?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSendDialogOpen(false)}>Cancel</Button>
@@ -660,11 +687,7 @@ const MessengerCampaignDetail = ({ id }: MessengerCampaignDetailProps) => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

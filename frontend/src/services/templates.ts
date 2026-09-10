@@ -53,7 +53,9 @@ export const templateService = {
     return response.data
   },
 
-  importSendGrid: async (templateIds?: string[]): Promise<{
+  importSendGrid: async (
+    templateIds?: string[]
+  ): Promise<{
     data: { imported: number; skipped: number; errors: string[]; total: number }
   }> => {
     const response = await api.post('/templates/sendgrid/import', templateIds ? { template_ids: templateIds } : {})

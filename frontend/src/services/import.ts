@@ -13,10 +13,7 @@ import type {
 
 export const importService = {
   // CSV Import
-  importCSV: async (
-    file: File,
-    params: Record<string, any>
-  ): Promise<any> => {
+  importCSV: async (file: File, params: Record<string, any>): Promise<any> => {
     const formData = new FormData()
 
     formData.append('file', file)
@@ -102,10 +99,7 @@ export const importService = {
     return response.data
   },
 
-  createWebhook: async (data: {
-    name: string
-    list_ids: number[]
-  }): Promise<{ data: ImportWebhook }> => {
+  createWebhook: async (data: { name: string; list_ids: number[] }): Promise<{ data: ImportWebhook }> => {
     const response = await api.post('/import/webhooks', data)
 
     return response.data
@@ -125,19 +119,13 @@ export const importService = {
   },
 
   // Suppression List
-  getSuppressed: async (params?: {
-    page?: number
-    per_page?: number
-  }): Promise<SuppressionListResponse> => {
+  getSuppressed: async (params?: { page?: number; per_page?: number }): Promise<SuppressionListResponse> => {
     const response = await api.get('/import/suppression', { params })
 
     return response.data
   },
 
-  addSuppressed: async (data: {
-    emails: string[]
-    reason?: string
-  }): Promise<any> => {
+  addSuppressed: async (data: { emails: string[]; reason?: string }): Promise<any> => {
     const response = await api.post('/import/suppression', data)
 
     return response.data

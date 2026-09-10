@@ -16,7 +16,6 @@ import Alert from '@mui/material/Alert'
 import Typography from '@mui/material/Typography'
 
 import { portalService } from '@/services/portal'
-import api from '@/services/api'
 
 interface ListItem2 {
   id: number

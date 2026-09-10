@@ -84,10 +84,7 @@ const UserProfile = () => {
       setLoading(true)
       setError('')
 
-      const [profileRes, statsRes] = await Promise.allSettled([
-        api.get('/profile'),
-        api.get('/dashboard/stats')
-      ])
+      const [profileRes, statsRes] = await Promise.allSettled([api.get('/profile'), api.get('/dashboard/stats')])
 
       if (profileRes.status === 'fulfilled') {
         const userData = profileRes.value.data?.data
@@ -764,21 +761,35 @@ const UserProfile = () => {
                         <Typography>Subscribers</Typography>
                         <Typography className='font-medium'>{stats?.subscribers?.total ?? 0}</Typography>
                       </div>
-                      <LinearProgress variant='determinate' value={Math.min((stats?.subscribers?.total ?? 0) / 10, 100)} color='primary' />
+                      <LinearProgress
+                        variant='determinate'
+                        value={Math.min((stats?.subscribers?.total ?? 0) / 10, 100)}
+                        color='primary'
+                      />
                     </div>
                     <div>
                       <div className='flex justify-between items-center mbe-2'>
                         <Typography>Campaigns Sent</Typography>
-                        <Typography className='font-medium'>{stats?.campaigns?.sent ?? stats?.campaigns?.total ?? 0}</Typography>
+                        <Typography className='font-medium'>
+                          {stats?.campaigns?.sent ?? stats?.campaigns?.total ?? 0}
+                        </Typography>
                       </div>
-                      <LinearProgress variant='determinate' value={Math.min((stats?.campaigns?.total ?? 0) / 5, 100)} color='success' />
+                      <LinearProgress
+                        variant='determinate'
+                        value={Math.min((stats?.campaigns?.total ?? 0) / 5, 100)}
+                        color='success'
+                      />
                     </div>
                     <div>
                       <div className='flex justify-between items-center mbe-2'>
                         <Typography>Mailing Lists</Typography>
                         <Typography className='font-medium'>{stats?.lists?.total ?? 0}</Typography>
                       </div>
-                      <LinearProgress variant='determinate' value={Math.min((stats?.lists?.total ?? 0) / 5, 100)} color='info' />
+                      <LinearProgress
+                        variant='determinate'
+                        value={Math.min((stats?.lists?.total ?? 0) / 5, 100)}
+                        color='info'
+                      />
                     </div>
                     <div>
                       <div className='flex justify-between items-center mbe-2'>

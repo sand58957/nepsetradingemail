@@ -63,6 +63,7 @@ const WATemplateList = () => {
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
+
   const [newTemplate, setNewTemplate] = useState({
     name: '',
     category: 'MARKETING',
@@ -107,9 +108,10 @@ const WATemplateList = () => {
 
       setSnackbar({
         open: true,
-        message: response.data.total === 0
-          ? 'No templates found in Gupshup. Create templates first, then sync.'
-          : `Synced ${response.data.synced} templates (${response.data.total} total from Gupshup)`,
+        message:
+          response.data.total === 0
+            ? 'No templates found in Gupshup. Create templates first, then sync.'
+            : `Synced ${response.data.synced} templates (${response.data.total} total from Gupshup)`,
         severity: response.data.total === 0 ? 'info' : 'success'
       })
       fetchTemplates()
@@ -131,7 +133,11 @@ const WATemplateList = () => {
     const nameRegex = /^[a-z0-9_]+$/
 
     if (!nameRegex.test(newTemplate.name)) {
-      setSnackbar({ open: true, message: 'Template name must be lowercase with underscores only (e.g. welcome_message)', severity: 'error' })
+      setSnackbar({
+        open: true,
+        message: 'Template name must be lowercase with underscores only (e.g. welcome_message)',
+        severity: 'error'
+      })
 
       return
     }
@@ -245,8 +251,13 @@ const WATemplateList = () => {
           <Grid size={{ xs: 12 }}>
             <Card>
               <CardContent className='text-center py-12'>
-                <i className='tabler-template text-[48px] mb-4' style={{ color: 'var(--mui-palette-text-secondary)' }} />
-                <Typography variant='h6' className='mb-2'>No Templates Found</Typography>
+                <i
+                  className='tabler-template text-[48px] mb-4'
+                  style={{ color: 'var(--mui-palette-text-secondary)' }}
+                />
+                <Typography variant='h6' className='mb-2'>
+                  No Templates Found
+                </Typography>
                 <Typography color='text.secondary' className='mb-4'>
                   You need to create message templates before sending WhatsApp campaigns.
                   <br />
@@ -297,11 +308,7 @@ const WATemplateList = () => {
                         size='small'
                         variant='outlined'
                       />
-                      <Chip
-                        label={template.language}
-                        size='small'
-                        variant='outlined'
-                      />
+                      <Chip label={template.language} size='small' variant='outlined' />
                       {template.gupshup_id && (
                         <Typography variant='caption' color='text.secondary'>
                           ID: {template.gupshup_id}
@@ -335,18 +342,19 @@ const WATemplateList = () => {
                   )}
 
                   {/* Body */}
-                  <Typography variant='caption' color='text.secondary'>Body</Typography>
-                  <Box
-                    className='p-3 rounded mb-2'
-                    sx={{ backgroundColor: 'action.hover', whiteSpace: 'pre-wrap' }}
-                  >
+                  <Typography variant='caption' color='text.secondary'>
+                    Body
+                  </Typography>
+                  <Box className='p-3 rounded mb-2' sx={{ backgroundColor: 'action.hover', whiteSpace: 'pre-wrap' }}>
                     <Typography variant='body2'>{template.body_text || 'No body text'}</Typography>
                   </Box>
 
                   {/* Footer */}
                   {template.footer_text && (
                     <>
-                      <Typography variant='caption' color='text.secondary'>Footer</Typography>
+                      <Typography variant='caption' color='text.secondary'>
+                        Footer
+                      </Typography>
                       <Typography variant='body2' color='text.secondary' className='mb-2'>
                         {template.footer_text}
                       </Typography>
@@ -357,7 +365,9 @@ const WATemplateList = () => {
                   {template.buttons && template.buttons.length > 0 && (
                     <>
                       <Divider className='my-2' />
-                      <Typography variant='caption' color='text.secondary'>Buttons</Typography>
+                      <Typography variant='caption' color='text.secondary'>
+                        Buttons
+                      </Typography>
                       <div className='flex gap-1 mt-1 flex-wrap'>
                         {template.buttons.map((btn: any, i: number) => (
                           <Chip
@@ -391,15 +401,23 @@ const WATemplateList = () => {
         <DialogContent>
           <div className='flex flex-col gap-4 mt-2'>
             <Alert severity='info'>
-              Templates are submitted to Meta for approval. This usually takes a few minutes.
-              Only approved templates can be used in campaigns.
+              Templates are submitted to Meta for approval. This usually takes a few minutes. Only approved templates
+              can be used in campaigns.
             </Alert>
             <TextField
               fullWidth
               label='Template Name *'
               placeholder='e.g. welcome_message'
               value={newTemplate.name}
-              onChange={e => setNewTemplate({ ...newTemplate, name: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') })}
+              onChange={e =>
+                setNewTemplate({
+                  ...newTemplate,
+                  name: e.target.value
+                    .toLowerCase()
+                    .replace(/\s+/g, '_')
+                    .replace(/[^a-z0-9_]/g, '')
+                })
+              }
               helperText='Lowercase letters, numbers, and underscores only'
             />
             <FormControl fullWidth>
@@ -473,12 +491,7 @@ const WATemplateList = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteId(null)}>Cancel</Button>
-          <Button
-            variant='contained'
-            color='error'
-            onClick={handleDelete}
-            disabled={deleting}
-          >
+          <Button variant='contained' color='error' onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
@@ -491,11 +504,7 @@ const WATemplateList = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

@@ -124,7 +124,7 @@ const SMSContactImport = () => {
       // Parse preview
       const reader = new FileReader()
 
-      reader.onload = (event) => {
+      reader.onload = event => {
         const text = event.target?.result as string
 
         if (text) {
@@ -224,8 +224,11 @@ const SMSContactImport = () => {
                   }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <i className={`${selectedFile ? 'tabler-file-check' : 'tabler-cloud-upload'} text-[48px] mb-2`}
-                    style={{ color: selectedFile ? 'var(--mui-palette-success-main)' : 'var(--mui-palette-text-secondary)' }}
+                  <i
+                    className={`${selectedFile ? 'tabler-file-check' : 'tabler-cloud-upload'} text-[48px] mb-2`}
+                    style={{
+                      color: selectedFile ? 'var(--mui-palette-success-main)' : 'var(--mui-palette-text-secondary)'
+                    }}
                   />
                   {selectedFile ? (
                     <>
@@ -255,10 +258,7 @@ const SMSContactImport = () => {
                 {/* Column Mapping */}
                 {showPreview && csvHeaders.length > 0 && (
                   <Card variant='outlined'>
-                    <CardHeader
-                      title='Column Mapping'
-                      subheader='Map your CSV columns to contact fields'
-                    />
+                    <CardHeader title='Column Mapping' subheader='Map your CSV columns to contact fields' />
                     <CardContent>
                       <Grid container spacing={3}>
                         {csvHeaders.map(header => (
@@ -268,10 +268,12 @@ const SMSContactImport = () => {
                               <Select
                                 value={columnMapping[header] || ''}
                                 label={header}
-                                onChange={e => setColumnMapping(prev => ({
-                                  ...prev,
-                                  [header]: e.target.value
-                                }))}
+                                onChange={e =>
+                                  setColumnMapping(prev => ({
+                                    ...prev,
+                                    [header]: e.target.value
+                                  }))
+                                }
                               >
                                 {targetFields.map(f => (
                                   <MenuItem key={f.value} value={f.value}>
@@ -290,10 +292,7 @@ const SMSContactImport = () => {
                 {/* Preview Table */}
                 {showPreview && previewData.length > 0 && (
                   <Card variant='outlined'>
-                    <CardHeader
-                      title='Preview'
-                      subheader={`Showing first ${previewData.length} rows`}
-                    />
+                    <CardHeader title='Preview' subheader={`Showing first ${previewData.length} rows`} />
                     <TableContainer>
                       <Table size='small'>
                         <TableHead>
@@ -301,10 +300,14 @@ const SMSContactImport = () => {
                             {csvHeaders.map(h => (
                               <TableCell key={h}>
                                 <div className='flex flex-col'>
-                                  <Typography variant='caption' color='text.secondary'>{h}</Typography>
+                                  <Typography variant='caption' color='text.secondary'>
+                                    {h}
+                                  </Typography>
                                   {columnMapping[h] && (
                                     <Chip
-                                      label={targetFields.find(f => f.value === columnMapping[h])?.label || columnMapping[h]}
+                                      label={
+                                        targetFields.find(f => f.value === columnMapping[h])?.label || columnMapping[h]
+                                      }
                                       size='small'
                                       color='primary'
                                       variant='outlined'
@@ -340,7 +343,7 @@ const SMSContactImport = () => {
                       value={selectedGroupIds}
                       label='Add to Groups'
                       onChange={e => setSelectedGroupIds(e.target.value as number[])}
-                      renderValue={(selected) => (
+                      renderValue={selected => (
                         <div className='flex gap-1 flex-wrap'>
                           {(selected as number[]).map(id => {
                             const group = availableGroups.find(g => g.id === id)
@@ -416,16 +419,16 @@ const SMSContactImport = () => {
             <CardHeader title='CSV Format' />
             <CardContent>
               <div className='flex flex-col gap-3'>
-                <Alert severity='info'>
-                  Your CSV file should have headers in the first row.
-                </Alert>
+                <Alert severity='info'>Your CSV file should have headers in the first row.</Alert>
 
                 <Typography variant='subtitle2'>Required Columns:</Typography>
                 <Typography variant='body2' color='text.secondary'>
                   <strong>phone</strong> -- Phone number with country code (e.g. 9779812345678)
                 </Typography>
 
-                <Typography variant='subtitle2' className='mt-2'>Optional Columns:</Typography>
+                <Typography variant='subtitle2' className='mt-2'>
+                  Optional Columns:
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
                   <strong>name</strong> -- Contact name
                 </Typography>
@@ -436,13 +439,17 @@ const SMSContactImport = () => {
                   <strong>tags</strong> -- Comma-separated tags
                 </Typography>
 
-                <Typography variant='subtitle2' className='mt-2'>Example:</Typography>
+                <Typography variant='subtitle2' className='mt-2'>
+                  Example:
+                </Typography>
                 <Box
                   className='p-3 rounded'
                   sx={{ backgroundColor: 'action.hover', fontFamily: 'monospace', fontSize: '0.75rem' }}
                 >
-                  phone,name,email,tags<br />
-                  9779812345678,John Doe,john@test.com,&quot;vip,investor&quot;<br />
+                  phone,name,email,tags
+                  <br />
+                  9779812345678,John Doe,john@test.com,&quot;vip,investor&quot;
+                  <br />
                   9779887654321,Jane Doe,jane@test.com,trader
                 </Box>
 
@@ -462,11 +469,7 @@ const SMSContactImport = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

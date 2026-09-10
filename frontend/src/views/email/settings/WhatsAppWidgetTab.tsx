@@ -139,9 +139,7 @@ const WhatsAppWidgetTab = () => {
               helperText='Include country code (e.g., 977 for Nepal). Example: 9779812345678'
               slotProps={{
                 input: {
-                  startAdornment: (
-                    <i className='tabler-brand-whatsapp text-xl text-green-500 mr-2' />
-                  )
+                  startAdornment: <i className='tabler-brand-whatsapp text-xl text-green-500 mr-2' />
                 }
               }}
             />
@@ -217,7 +215,12 @@ const WhatsAppWidgetTab = () => {
         </Card>
 
         <div className='flex justify-end'>
-          <Button variant='contained' onClick={handleSave} disabled={saving} startIcon={saving ? <CircularProgress size={18} /> : <i className='tabler-device-floppy' />}>
+          <Button
+            variant='contained'
+            onClick={handleSave}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={18} /> : <i className='tabler-device-floppy' />}
+          >
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>

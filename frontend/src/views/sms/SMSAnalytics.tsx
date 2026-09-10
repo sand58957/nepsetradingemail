@@ -84,14 +84,18 @@ const SMSAnalytics = () => {
 
     fetchStats()
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   if (loading) {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading analytics...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading analytics...
+        </Typography>
       </div>
     )
   }
@@ -113,18 +117,13 @@ const SMSAnalytics = () => {
   const creditBalance = stats?.credit_balance || 0
 
   // Donut chart data
-  const donutSeries = totalSent > 0
-    ? [totalDelivered, totalFailed, totalSent - totalDelivered - totalFailed]
-    : [0, 0, 0]
+  const donutSeries =
+    totalSent > 0 ? [totalDelivered, totalFailed, totalSent - totalDelivered - totalFailed] : [0, 0, 0]
 
   const donutOptions: ApexOptions = {
     chart: { parentHeightOffset: 0 },
     labels: ['Delivered', 'Failed', 'Pending'],
-    colors: [
-      theme.palette.success.main,
-      theme.palette.error.main,
-      theme.palette.grey[400]
-    ],
+    colors: [theme.palette.success.main, theme.palette.error.main, theme.palette.grey[400]],
     legend: {
       position: 'bottom'
     },
@@ -214,7 +213,9 @@ const SMSAnalytics = () => {
             </CustomAvatar>
             <div>
               <Typography variant='h5'>{totalSent.toLocaleString()}</Typography>
-              <Typography variant='body2' color='text.secondary'>Total Sent</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Total Sent
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -229,7 +230,9 @@ const SMSAnalytics = () => {
               <Typography variant='h5'>
                 {totalSent > 0 ? `${((totalDelivered / totalSent) * 100).toFixed(1)}%` : '0%'}
               </Typography>
-              <Typography variant='body2' color='text.secondary'>Delivery Rate</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Delivery Rate
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -244,7 +247,9 @@ const SMSAnalytics = () => {
               <Typography variant='h5'>
                 {totalSent > 0 ? `${((totalFailed / totalSent) * 100).toFixed(1)}%` : '0%'}
               </Typography>
-              <Typography variant='body2' color='text.secondary'>Fail Rate</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Fail Rate
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -257,7 +262,9 @@ const SMSAnalytics = () => {
             </CustomAvatar>
             <div>
               <Typography variant='h5'>{totalCredits.toLocaleString()}</Typography>
-              <Typography variant='body2' color='text.secondary'>Credits Used</Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Credits Used
+              </Typography>
             </div>
           </CardContent>
         </Card>
@@ -274,7 +281,9 @@ const SMSAnalytics = () => {
               </CustomAvatar>
               <div>
                 <Typography variant='h4'>{creditBalance.toLocaleString()}</Typography>
-                <Typography variant='body2' color='text.secondary'>Available credits</Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  Available credits
+                </Typography>
               </div>
             </div>
           </CardContent>
@@ -287,13 +296,7 @@ const SMSAnalytics = () => {
           <CardHeader title='Message Distribution' subheader='Breakdown of SMS delivery status' />
           <CardContent>
             {totalSent > 0 ? (
-              <AppReactApexCharts
-                type='donut'
-                height={300}
-                width='100%'
-                series={donutSeries}
-                options={donutOptions}
-              />
+              <AppReactApexCharts type='donut' height={300} width='100%' series={donutSeries} options={donutOptions} />
             ) : (
               <Box display='flex' justifyContent='center' alignItems='center' p={8}>
                 <Typography color='text.secondary'>No message data yet</Typography>
@@ -309,13 +312,7 @@ const SMSAnalytics = () => {
           <CardHeader title='Campaign Performance' subheader='Sent, Delivered, and Failed for recent campaigns' />
           <CardContent>
             {recentCampaigns.length > 0 ? (
-              <AppReactApexCharts
-                type='bar'
-                height={300}
-                width='100%'
-                series={barSeries}
-                options={barOptions}
-              />
+              <AppReactApexCharts type='bar' height={300} width='100%' series={barSeries} options={barOptions} />
             ) : (
               <Box display='flex' justifyContent='center' alignItems='center' p={8}>
                 <Typography color='text.secondary'>No campaign data yet</Typography>
@@ -335,7 +332,12 @@ const SMSAnalytics = () => {
                 {[
                   { label: 'Delivered', value: totalDelivered, total: totalSent, color: 'success' as const },
                   { label: 'Failed', value: totalFailed, total: totalSent, color: 'error' as const },
-                  { label: 'Pending', value: totalSent - totalDelivered - totalFailed, total: totalSent, color: 'warning' as const }
+                  {
+                    label: 'Pending',
+                    value: totalSent - totalDelivered - totalFailed,
+                    total: totalSent,
+                    color: 'warning' as const
+                  }
                 ].map(item => (
                   <div key={item.label}>
                     <div className='flex items-center justify-between mb-1'>
@@ -344,11 +346,7 @@ const SMSAnalytics = () => {
                         {item.value.toLocaleString()} ({((item.value / item.total) * 100).toFixed(1)}%)
                       </Typography>
                     </div>
-                    <LinearProgress
-                      variant='determinate'
-                      value={(item.value / item.total) * 100}
-                      color={item.color}
-                    />
+                    <LinearProgress variant='determinate' value={(item.value / item.total) * 100} color={item.color} />
                   </div>
                 ))}
               </div>
@@ -369,10 +367,18 @@ const SMSAnalytics = () => {
                     <TableCell>Campaign</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell align='right'>Sent</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Delivered</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Failed</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>Credits</TableCell>
-                    <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>Delivery %</TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      Delivered
+                    </TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      Failed
+                    </TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                      Credits
+                    </TableCell>
+                    <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                      Delivery %
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -409,8 +415,7 @@ const SMSAnalytics = () => {
                       <TableCell align='right' sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         {campaign.sent_count > 0
                           ? `${((campaign.delivered_count / campaign.sent_count) * 100).toFixed(1)}%`
-                          : '-'
-                        }
+                          : '-'}
                       </TableCell>
                     </TableRow>
                   ))}

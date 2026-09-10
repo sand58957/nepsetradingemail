@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import { useRouter, useParams } from 'next/navigation'
 
 import Card from '@mui/material/Card'
@@ -47,6 +48,7 @@ const AutomationList = () => {
     try {
       setLoading(true)
       const res = await automationService.getAll({ page: 1, per_page: 50 })
+
       setAutomations(res.data || [])
     } catch (err) {
       console.error('Failed to fetch automations:', err)
@@ -73,6 +75,7 @@ const AutomationList = () => {
 
   const handleDelete = async () => {
     if (!deleteId) return
+
     try {
       await automationService.delete(deleteId)
       setDeleteId(null)
@@ -162,7 +165,9 @@ const AutomationList = () => {
                         {automation.steps?.length || 0} step{(automation.steps?.length || 0) !== 1 ? 's' : ''}
                       </TableCell>
                       <TableCell>
-                        <Tooltip title={automation.is_active ? 'Active — click to deactivate' : 'Inactive — click to activate'}>
+                        <Tooltip
+                          title={automation.is_active ? 'Active — click to deactivate' : 'Inactive — click to activate'}
+                        >
                           <Switch
                             checked={automation.is_active}
                             size='small'
@@ -177,7 +182,9 @@ const AutomationList = () => {
                       <TableCell>
                         <Typography variant='body2'>
                           {new Date(automation.created_at).toLocaleDateString('en-US', {
-                            year: 'numeric', month: 'short', day: 'numeric'
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
                           })}
                         </Typography>
                       </TableCell>

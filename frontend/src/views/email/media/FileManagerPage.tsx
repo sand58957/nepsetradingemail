@@ -243,11 +243,7 @@ const FileManagerPage = () => {
 
       <Grid container spacing={{ xs: 4, sm: 6 }}>
         {/* Sidebar — hidden on mobile, shown in drawer */}
-        {!isMobile && (
-          <Grid size={{ xs: 12, md: 3 }}>
-            {sidebarContent}
-          </Grid>
-        )}
+        {!isMobile && <Grid size={{ xs: 12, md: 3 }}>{sidebarContent}</Grid>}
 
         {/* Content */}
         <Grid size={{ xs: 12, md: 9 }}>

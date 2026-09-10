@@ -74,12 +74,7 @@ const LinkTrackingTab = ({ data, onSaveSuccess, onSaveError }: Props) => {
     }
   }
 
-  const renderField = (
-    field: keyof LinkTrackingConfig,
-    label: string,
-    utmParam: string,
-    placeholder: string
-  ) => (
+  const renderField = (field: keyof LinkTrackingConfig, label: string, utmParam: string, placeholder: string) => (
     <Grid size={{ xs: 12 }}>
       <div className='flex flex-col gap-2'>
         <div className='flex items-center justify-between'>

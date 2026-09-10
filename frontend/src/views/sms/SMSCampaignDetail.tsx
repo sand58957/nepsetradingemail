@@ -121,6 +121,9 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
     }, 5000)
 
     return () => clearInterval(interval)
+    // Keyed on status, not the whole campaign: the interval writes fresh state, and depending
+    // on `campaign` would tear down and rebuild the poll on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaign?.status, id])
 
   // Stats
@@ -222,7 +225,9 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading campaign...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading campaign...
+        </Typography>
       </div>
     )
   }
@@ -231,7 +236,9 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
     return (
       <Card>
         <CardContent className='text-center py-16'>
-          <Typography color='error' className='mb-4'>{error || 'Campaign not found'}</Typography>
+          <Typography color='error' className='mb-4'>
+            {error || 'Campaign not found'}
+          </Typography>
           <Button variant='outlined' onClick={() => router.push(`/${locale}/sms/campaigns`)}>
             Back to Campaigns
           </Button>
@@ -260,7 +267,8 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
                   </div>
                   {campaign.started_at && (
                     <Typography variant='body2' color='text.secondary'>
-                      Started {new Date(campaign.started_at).toLocaleDateString('en-US', {
+                      Started{' '}
+                      {new Date(campaign.started_at).toLocaleDateString('en-US', {
                         weekday: 'long',
                         month: 'long',
                         day: 'numeric',
@@ -466,10 +474,13 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
                             size='small'
                             variant='tonal'
                             color={
-                              item.network === 'NTC' ? 'primary' :
-                              item.network === 'Ncell' ? 'success' :
-                              item.network === 'Smart' ? 'info' :
-                              'default'
+                              item.network === 'NTC'
+                                ? 'primary'
+                                : item.network === 'Ncell'
+                                  ? 'success'
+                                  : item.network === 'Smart'
+                                    ? 'info'
+                                    : 'default'
                             }
                           />
                         </TableCell>
@@ -504,11 +515,15 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
                             size='small'
                             variant='tonal'
                             color={
-                              item.status === 'delivered' ? 'success' :
-                              item.status === 'failed' ? 'error' :
-                              item.status === 'sent' || item.status === 'submitted' ? 'info' :
-                              item.status === 'queued' ? 'warning' :
-                              'default'
+                              item.status === 'delivered'
+                                ? 'success'
+                                : item.status === 'failed'
+                                  ? 'error'
+                                  : item.status === 'sent' || item.status === 'submitted'
+                                    ? 'info'
+                                    : item.status === 'queued'
+                                      ? 'warning'
+                                      : 'default'
                             }
                           />
                         </TableCell>
@@ -544,7 +559,9 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
                   </TableRow>
                   <TableRow>
                     <TableCell className='font-medium'>Total Targets</TableCell>
-                    <TableCell>{campaign.total_targets > 0 ? campaign.total_targets.toLocaleString() : 'Not calculated yet'}</TableCell>
+                    <TableCell>
+                      {campaign.total_targets > 0 ? campaign.total_targets.toLocaleString() : 'Not calculated yet'}
+                    </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className='font-medium'>Credits Used</TableCell>
@@ -577,7 +594,11 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
           <Card>
             <CardHeader
               title={`Recipients (${recipients.length})`}
-              subheader={recipients.length === 0 ? 'No messages have been sent for this campaign yet' : 'Individual message delivery status for each contact'}
+              subheader={
+                recipients.length === 0
+                  ? 'No messages have been sent for this campaign yet'
+                  : 'Individual message delivery status for each contact'
+              }
             />
             <CardContent>
               {recipients.length === 0 ? (
@@ -598,7 +619,9 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
                         <TableCell>Phone</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Network</TableCell>
-                        <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Credits</TableCell>
+                        <TableCell align='right' sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                          Credits
+                        </TableCell>
                         <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Submitted</TableCell>
                         <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Delivered</TableCell>
                         <TableCell>Error</TableCell>
@@ -621,11 +644,15 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
                               size='small'
                               variant='tonal'
                               color={
-                                recipient.status === 'delivered' ? 'success' :
-                                recipient.status === 'failed' ? 'error' :
-                                recipient.status === 'sent' || recipient.status === 'submitted' ? 'info' :
-                                recipient.status === 'queued' ? 'warning' :
-                                'default'
+                                recipient.status === 'delivered'
+                                  ? 'success'
+                                  : recipient.status === 'failed'
+                                    ? 'error'
+                                    : recipient.status === 'sent' || recipient.status === 'submitted'
+                                      ? 'info'
+                                      : recipient.status === 'queued'
+                                        ? 'warning'
+                                        : 'default'
                               }
                             />
                           </TableCell>
@@ -696,11 +723,10 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
         <DialogTitle>Send Campaign</DialogTitle>
         <DialogContent>
           <Alert severity='warning' className='mb-3'>
-            This will send SMS messages to all matching opted-in contacts. Credits will be deducted. This action cannot be undone.
+            This will send SMS messages to all matching opted-in contacts. Credits will be deducted. This action cannot
+            be undone.
           </Alert>
-          <Typography>
-            Are you sure you want to send the campaign &quot;{campaign.name}&quot;?
-          </Typography>
+          <Typography>Are you sure you want to send the campaign &quot;{campaign.name}&quot;?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSendDialogOpen(false)}>Cancel</Button>
@@ -723,11 +749,7 @@ const SMSCampaignDetail = ({ id }: SMSCampaignDetailProps) => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

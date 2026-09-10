@@ -8,7 +8,9 @@ const SubscriberHistory = () => {
   return (
     <Card>
       <CardContent>
-        <Typography variant='h6' className='mb-4'>Import History</Typography>
+        <Typography variant='h6' className='mb-4'>
+          Import History
+        </Typography>
         <Typography color='text.secondary' className='text-center py-8'>
           No import history available on this instance. Use the Listmonk admin panel to import subscribers via CSV.
         </Typography>

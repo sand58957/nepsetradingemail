@@ -50,7 +50,7 @@ import Divider from '@mui/material/Divider'
 import messengerService from '@/services/messenger'
 
 // Type Imports
-import type { MessengerContact, MessengerContactGroup, MessengerSettings } from '@/types/messenger'
+import type { MessengerContact, MessengerContactGroup } from '@/types/messenger'
 
 const MessengerContactList = () => {
   const router = useRouter()
@@ -477,11 +477,23 @@ const MessengerContactList = () => {
                     <StepContent>
                       <Typography variant='body2' color='text.secondary'>
                         Open the Messenger app on your phone or go to{' '}
-                        <a href='https://www.messenger.com' target='_blank' rel='noopener noreferrer' className='text-primary' style={{ color: '#0084FF' }}>
+                        <a
+                          href='https://www.messenger.com'
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='text-primary'
+                          style={{ color: '#0084FF' }}
+                        >
                           messenger.com
-                        </a>
-                        {' '}on desktop. You can also use the chat feature within the{' '}
-                        <a href='https://www.facebook.com' target='_blank' rel='noopener noreferrer' className='text-primary' style={{ color: '#0084FF' }}>
+                        </a>{' '}
+                        on desktop. You can also use the chat feature within the{' '}
+                        <a
+                          href='https://www.facebook.com'
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='text-primary'
+                          style={{ color: '#0084FF' }}
+                        >
                           Facebook app
                         </a>
                         .
@@ -495,7 +507,10 @@ const MessengerContactList = () => {
                     <StepContent>
                       <Typography variant='body2' color='text.secondary'>
                         {pageName ? (
-                          <>Search for <strong>{pageName}</strong> on Facebook, or scan the QR code shown here. You can also click the &ldquo;Message&rdquo; button on the page.</>
+                          <>
+                            Search for <strong>{pageName}</strong> on Facebook, or scan the QR code shown here. You can
+                            also click the &ldquo;Message&rdquo; button on the page.
+                          </>
                         ) : (
                           <>Search for our Facebook Page on Messenger, or scan the QR code shown here.</>
                         )}
@@ -522,16 +537,23 @@ const MessengerContactList = () => {
                         {optInKeyword ? (
                           <>Send the following keyword to subscribe to marketing messages:</>
                         ) : (
-                          <>Send any message to start a conversation. You&apos;ll be automatically added as a subscriber.</>
+                          <>
+                            Send any message to start a conversation. You&apos;ll be automatically added as a
+                            subscriber.
+                          </>
                         )}
                       </Typography>
                       {optInKeyword && (
                         <>
-                          <Box className='mt-2 p-2 rounded' sx={{ bgcolor: 'action.hover', fontFamily: 'monospace', fontSize: 14 }}>
+                          <Box
+                            className='mt-2 p-2 rounded'
+                            sx={{ bgcolor: 'action.hover', fontFamily: 'monospace', fontSize: 14 }}
+                          >
                             {optInKeyword}
                           </Box>
                           <Typography variant='caption' color='text.secondary' className='mt-1 block'>
-                            The keyword must match exactly (case-insensitive). Without the correct keyword, you won&apos;t be subscribed to marketing messages.
+                            The keyword must match exactly (case-insensitive). Without the correct keyword, you
+                            won&apos;t be subscribed to marketing messages.
                           </Typography>
                         </>
                       )}
@@ -543,7 +565,8 @@ const MessengerContactList = () => {
                     </StepLabel>
                     <StepContent>
                       <Typography variant='body2' color='text.secondary'>
-                        You&apos;ll receive a confirmation message from the page. Your PSID (Page-Scoped User ID) is automatically captured and you&apos;re added to the contact list.
+                        You&apos;ll receive a confirmation message from the page. Your PSID (Page-Scoped User ID) is
+                        automatically captured and you&apos;re added to the contact list.
                       </Typography>
                     </StepContent>
                   </Step>
@@ -553,7 +576,8 @@ const MessengerContactList = () => {
                     </StepLabel>
                     <StepContent>
                       <Typography variant='body2' color='text.secondary'>
-                        You&apos;ll now receive campaign messages via Messenger. To unsubscribe, send <strong>STOP</strong> or block the page on Messenger.
+                        You&apos;ll now receive campaign messages via Messenger. To unsubscribe, send{' '}
+                        <strong>STOP</strong> or block the page on Messenger.
                       </Typography>
                     </StepContent>
                   </Step>
@@ -563,16 +587,32 @@ const MessengerContactList = () => {
 
                 <Alert severity='info' variant='outlined'>
                   <Typography variant='caption'>
-                    <strong>Note:</strong> Facebook requires users to message your page first before you can send them marketing messages. This is called the{' '}
-                    <a href='https://developers.facebook.com/docs/messenger-platform/policy/policy-overview/' target='_blank' rel='noopener noreferrer' style={{ color: '#0084FF' }}>
+                    <strong>Note:</strong> Facebook requires users to message your page first before you can send them
+                    marketing messages. This is called the{' '}
+                    <a
+                      href='https://developers.facebook.com/docs/messenger-platform/policy/policy-overview/'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      style={{ color: '#0084FF' }}
+                    >
                       24-hour messaging window policy
                     </a>
                     . After 24 hours of inactivity, you can only send messages using{' '}
-                    <a href='https://developers.facebook.com/docs/messenger-platform/send-messages/message-tags/' target='_blank' rel='noopener noreferrer' style={{ color: '#0084FF' }}>
+                    <a
+                      href='https://developers.facebook.com/docs/messenger-platform/send-messages/message-tags/'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      style={{ color: '#0084FF' }}
+                    >
                       Message Tags
-                    </a>
-                    {' '}or{' '}
-                    <a href='https://developers.facebook.com/docs/messenger-platform/send-messages/one-time-notification/' target='_blank' rel='noopener noreferrer' style={{ color: '#0084FF' }}>
+                    </a>{' '}
+                    or{' '}
+                    <a
+                      href='https://developers.facebook.com/docs/messenger-platform/send-messages/one-time-notification/'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      style={{ color: '#0084FF' }}
+                    >
                       One-Time Notifications
                     </a>
                     .
@@ -607,8 +647,14 @@ const MessengerContactList = () => {
                         {pageName ? pageName : 'Scan to subscribe via Messenger'}
                       </Typography>
                       {pageId && (
-                        <Typography variant='caption' color='text.secondary' align='center' sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                          m.me/{pageId}{optInKeyword ? `?ref=${optInKeyword}` : ''}
+                        <Typography
+                          variant='caption'
+                          color='text.secondary'
+                          align='center'
+                          sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}
+                        >
+                          m.me/{pageId}
+                          {optInKeyword ? `?ref=${optInKeyword}` : ''}
                         </Typography>
                       )}
                       <Box className='flex gap-2 flex-wrap justify-center'>
@@ -646,7 +692,8 @@ const MessengerContactList = () => {
                         <i className='tabler-qrcode' />
                       </Box>
                       <Typography variant='body2' color='text.secondary' align='center'>
-                        Generate a QR code that links to your Messenger page. When scanned, it opens a direct conversation where customers can send the opt-in keyword to subscribe.
+                        Generate a QR code that links to your Messenger page. When scanned, it opens a direct
+                        conversation where customers can send the opt-in keyword to subscribe.
                       </Typography>
                       <Button
                         variant='contained'
@@ -663,7 +710,9 @@ const MessengerContactList = () => {
                         </Typography>
                       )}
                       <Divider sx={{ width: '100%' }}>
-                        <Typography variant='caption' color='text.secondary'>or</Typography>
+                        <Typography variant='caption' color='text.secondary'>
+                          or
+                        </Typography>
                       </Divider>
                       <Button
                         variant='outlined'
@@ -775,7 +824,10 @@ const MessengerContactList = () => {
                 <Select
                   value={optedInFilter}
                   label='Opt-in Status'
-                  onChange={e => { setOptedInFilter(e.target.value); setPage(0) }}
+                  onChange={e => {
+                    setOptedInFilter(e.target.value)
+                    setPage(0)
+                  }}
                 >
                   <MenuItem value=''>All</MenuItem>
                   <MenuItem value='true'>Opted In</MenuItem>
@@ -789,7 +841,10 @@ const MessengerContactList = () => {
                 <Select
                   value={tagFilter}
                   label='Tag'
-                  onChange={e => { setTagFilter(e.target.value); setPage(0) }}
+                  onChange={e => {
+                    setTagFilter(e.target.value)
+                    setPage(0)
+                  }}
                 >
                   <MenuItem value=''>All Tags</MenuItem>
                   {availableTags.map(t => (
@@ -813,7 +868,9 @@ const MessengerContactList = () => {
         ) : contacts.length === 0 ? (
           <CardContent>
             <Typography color='text.secondary' align='center' className='py-8'>
-              {globalFilter || optedInFilter || tagFilter ? 'No contacts match your search' : 'No contacts yet. Add or import contacts to get started.'}
+              {globalFilter || optedInFilter || tagFilter
+                ? 'No contacts match your search'
+                : 'No contacts yet. Add or import contacts to get started.'}
             </Typography>
           </CardContent>
         ) : (
@@ -875,12 +932,15 @@ const MessengerContactList = () => {
                       </TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         <div className='flex gap-1 flex-wrap'>
-                          {contact.tags && contact.tags.length > 0
-                            ? contact.tags.slice(0, 3).map((tag, i) => (
-                              <Chip key={i} label={tag} size='small' variant='outlined' />
-                            ))
-                            : <Typography variant='body2' color='text.secondary'>-</Typography>
-                          }
+                          {contact.tags && contact.tags.length > 0 ? (
+                            contact.tags
+                              .slice(0, 3)
+                              .map((tag, i) => <Chip key={i} label={tag} size='small' variant='outlined' />)
+                          ) : (
+                            <Typography variant='body2' color='text.secondary'>
+                              -
+                            </Typography>
+                          )}
                           {contact.tags && contact.tags.length > 3 && (
                             <Chip label={`+${contact.tags.length - 3}`} size='small' variant='outlined' />
                           )}
@@ -899,7 +959,7 @@ const MessengerContactList = () => {
                         <IconButton
                           size='small'
                           aria-label='Contact actions'
-                          onClick={(e) => {
+                          onClick={e => {
                             setAnchorEl(e.currentTarget)
                             setMenuContactId(contact.id)
                             setMenuContact(contact)
@@ -930,26 +990,26 @@ const MessengerContactList = () => {
       </Card>
 
       {/* Action Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-      >
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
 
-          if (menuContact) {
-            openEditDialog(menuContact)
-          }
-        }}>
+            if (menuContact) {
+              openEditDialog(menuContact)
+            }
+          }}
+        >
           <i className='tabler-edit text-[18px] mr-2' />
           Edit
         </MenuItem>
-        <MenuItem onClick={() => {
-          setAnchorEl(null)
-          setDeletingId(menuContactId)
-          setDeleteDialogOpen(true)
-        }}>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null)
+            setDeletingId(menuContactId)
+            setDeleteDialogOpen(true)
+          }}
+        >
           <i className='tabler-trash text-[18px] mr-2' />
           Delete
         </MenuItem>
@@ -963,7 +1023,9 @@ const MessengerContactList = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button variant='contained' color='error' onClick={handleDelete}>Delete</Button>
+          <Button variant='contained' color='error' onClick={handleDelete}>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -971,7 +1033,9 @@ const MessengerContactList = () => {
       <Dialog open={bulkDeleteDialogOpen} onClose={() => setBulkDeleteDialogOpen(false)}>
         <DialogTitle>Delete {selectedIds.length} Contacts</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to delete {selectedIds.length} selected contacts? This action cannot be undone.</Typography>
+          <Typography>
+            Are you sure you want to delete {selectedIds.length} selected contacts? This action cannot be undone.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBulkDeleteDialogOpen(false)}>Cancel</Button>
@@ -1023,7 +1087,7 @@ const MessengerContactList = () => {
                   value={selectedGroupIds}
                   label='Groups'
                   onChange={e => setSelectedGroupIds(e.target.value as number[])}
-                  renderValue={(selected) => (
+                  renderValue={selected => (
                     <div className='flex gap-1 flex-wrap'>
                       {(selected as number[]).map(id => {
                         const group = availableGroups.find(g => g.id === id)
@@ -1090,7 +1154,7 @@ const MessengerContactList = () => {
                     value={editGroupIds}
                     label='Groups'
                     onChange={e => setEditGroupIds(e.target.value as number[])}
-                    renderValue={(selected) => (
+                    renderValue={selected => (
                       <div className='flex gap-1 flex-wrap'>
                         {(selected as number[]).map(id => {
                           const group = availableGroups.find(g => g.id === id)
@@ -1136,11 +1200,7 @@ const MessengerContactList = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

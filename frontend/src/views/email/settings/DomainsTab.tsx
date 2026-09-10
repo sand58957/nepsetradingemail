@@ -56,8 +56,10 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
   const [newFromName, setNewFromName] = useState('')
   const [saving, setSaving] = useState(false)
   const [verifyDomain, setVerifyDomain] = useState<DomainRecord | null>(null)
+
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; domain: DomainRecord | null }>({
-    open: false, domain: null
+    open: false,
+    domain: null
   })
 
   const isMobile = useMobileBreakpoint()
@@ -81,6 +83,8 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
 
   useEffect(() => {
     fetchDomains()
+    // fetchDomains is redefined every render; depending on it would loop. Fetch once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const isValidDomain = (d: string) => /^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(d)
@@ -102,6 +106,7 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
 
     if (!domainName || !isValidDomain(domainName)) {
       onSaveError('Please enter a valid domain or email (e.g. yourdomain.com or info@yourdomain.com)')
+
       return
     }
 
@@ -131,6 +136,7 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
 
     if (!isValidDomain(domainName)) {
       onSaveError('Please enter a valid domain name (e.g. www.yourdomain.com)')
+
       return
     }
 
@@ -202,7 +208,12 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
               variant='contained'
               color='success'
               startIcon={<i className='tabler-plus' />}
-              onClick={() => { setNewDomain(''); setNewFromEmail(''); setNewFromName(''); setAddSendingOpen(true) }}
+              onClick={() => {
+                setNewDomain('')
+                setNewFromEmail('')
+                setNewFromName('')
+                setAddSendingOpen(true)
+              }}
               disabled={saving}
             >
               Add domain
@@ -210,7 +221,8 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
           </Box>
 
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-            Manage your sending domains. Each domain gets automatic DKIM authentication via SendGrid and auto-verification.{' '}
+            Manage your sending domains. Each domain gets automatic DKIM authentication via SendGrid and
+            auto-verification.{' '}
             <Link href='#' underline='hover' color='primary'>
               Learn more
             </Link>
@@ -218,8 +230,8 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
           </Typography>
 
           <Alert severity='info' sx={{ mb: 3 }} icon={<i className='tabler-brand-sendgrid text-[20px]' />}>
-            Domains are authenticated via <strong>SendGrid</strong> for optimal email deliverability.
-            CNAME records are used for DKIM signing (not TXT records).
+            Domains are authenticated via <strong>SendGrid</strong> for optimal email deliverability. CNAME records are
+            used for DKIM signing (not TXT records).
           </Alert>
 
           <TableContainer>
@@ -261,7 +273,11 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
                         <div className='flex items-center justify-end gap-1'>
                           {domain.status !== 'verified' && (
                             <Tooltip title='Setup DNS records'>
-                              <IconButton size='small' aria-label='Setup DNS records' onClick={() => setVerifyDomain(domain)}>
+                              <IconButton
+                                size='small'
+                                aria-label='Setup DNS records'
+                                onClick={() => setVerifyDomain(domain)}
+                              >
                                 <i className='tabler-settings text-[18px]' />
                               </IconButton>
                             </Tooltip>
@@ -274,7 +290,11 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
                             </Tooltip>
                           )}
                           <Tooltip title='Remove'>
-                            <IconButton size='small' aria-label='Remove domain' onClick={() => setDeleteConfirm({ open: true, domain })}>
+                            <IconButton
+                              size='small'
+                              aria-label='Remove domain'
+                              onClick={() => setDeleteConfirm({ open: true, domain })}
+                            >
                               <i className='tabler-trash text-[18px]' />
                             </IconButton>
                           </Tooltip>
@@ -285,7 +305,9 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4}>
-                      <Typography color='text.secondary'>No sending domains. Add one to start sending emails.</Typography>
+                      <Typography color='text.secondary'>
+                        No sending domains. Add one to start sending emails.
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 )}
@@ -330,7 +352,10 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
               variant='contained'
               color='success'
               startIcon={<i className='tabler-plus' />}
-              onClick={() => { setNewDomain(''); setAddSiteOpen(true) }}
+              onClick={() => {
+                setNewDomain('')
+                setAddSiteOpen(true)
+              }}
               disabled={saving}
             >
               Add domain
@@ -395,13 +420,21 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
                         <div className='flex items-center justify-end gap-1'>
                           {domain.status !== 'verified' && (
                             <Tooltip title='Verify DNS records'>
-                              <IconButton size='small' aria-label='Verify DNS records' onClick={() => setVerifyDomain(domain)}>
+                              <IconButton
+                                size='small'
+                                aria-label='Verify DNS records'
+                                onClick={() => setVerifyDomain(domain)}
+                              >
                                 <i className='tabler-settings text-[18px]' />
                               </IconButton>
                             </Tooltip>
                           )}
                           <Tooltip title='Remove'>
-                            <IconButton size='small' aria-label='Remove domain' onClick={() => setDeleteConfirm({ open: true, domain })}>
+                            <IconButton
+                              size='small'
+                              aria-label='Remove domain'
+                              onClick={() => setDeleteConfirm({ open: true, domain })}
+                            >
                               <i className='tabler-trash text-[18px]' />
                             </IconButton>
                           </Tooltip>
@@ -423,12 +456,18 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
       </Card>
 
       {/* Add Sending Domain Dialog */}
-      <Dialog open={addSendingOpen} onClose={() => setAddSendingOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={addSendingOpen}
+        onClose={() => setAddSendingOpen(false)}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Add sending domain</DialogTitle>
         <DialogContent>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-            Enter the domain or email address you want to authenticate for sending emails.
-            DKIM will be set up automatically via SendGrid, and you will need to add DNS records to verify ownership.
+            Enter the domain or email address you want to authenticate for sending emails. DKIM will be set up
+            automatically via SendGrid, and you will need to add DNS records to verify ownership.
           </Typography>
           <div className='flex flex-col gap-4 mt-2'>
             <TextField
@@ -497,7 +536,11 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
       </Dialog>
 
       {/* Delete Domain Confirmation */}
-      <Dialog open={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false, domain: null })} fullScreen={isMobile}>
+      <Dialog
+        open={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, domain: null })}
+        fullScreen={isMobile}
+      >
         <DialogTitle>Remove Domain</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -519,12 +562,8 @@ const DomainsTab = ({ onSaveSuccess, onSaveError }: Props) => {
         onClose={() => setVerifyDomain(null)}
         domainRecord={verifyDomain}
         onVerificationComplete={(domainId, status) => {
-          setSendingDomains(prev =>
-            prev.map(d => (d.id === domainId ? { ...d, status } : d))
-          )
-          setSiteDomains(prev =>
-            prev.map(d => (d.id === domainId ? { ...d, status } : d))
-          )
+          setSendingDomains(prev => prev.map(d => (d.id === domainId ? { ...d, status } : d)))
+          setSiteDomains(prev => prev.map(d => (d.id === domainId ? { ...d, status } : d)))
 
           if (status === 'verified') {
             onSaveSuccess('Domain verified successfully!')

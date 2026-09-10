@@ -20,10 +20,14 @@ import { blogService } from '@/services/blog'
 import type { BlogSettings } from '@/types/blog'
 
 const BlogSettingsPage = () => {
-  const [settings, setSettings] = useState<BlogSettings | null>(null)
+  const [, setSettings] = useState<BlogSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' })
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
 
   // Form fields
   const [blogTitle, setBlogTitle] = useState('')
@@ -35,23 +39,29 @@ const BlogSettingsPage = () => {
   const [sitemapEnabled, setSitemapEnabled] = useState(true)
 
   useEffect(() => {
-    blogService.getSettings().then(res => {
-      const s = res.data
-      setSettings(s)
-      setBlogTitle(s.blog_title)
-      setBlogDescription(s.blog_description)
-      setPostsPerPage(s.posts_per_page)
-      setRobotsTxt(s.robots_txt)
-      setCustomHeadTags(s.custom_head_tags)
-      setDefaultOgImage(s.default_og_image)
-      setSitemapEnabled(s.sitemap_enabled)
-    }).catch(() => {
-      setSnackbar({ open: true, message: 'Failed to load settings', severity: 'error' })
-    }).finally(() => setLoading(false))
+    blogService
+      .getSettings()
+      .then(res => {
+        const s = res.data
+
+        setSettings(s)
+        setBlogTitle(s.blog_title)
+        setBlogDescription(s.blog_description)
+        setPostsPerPage(s.posts_per_page)
+        setRobotsTxt(s.robots_txt)
+        setCustomHeadTags(s.custom_head_tags)
+        setDefaultOgImage(s.default_og_image)
+        setSitemapEnabled(s.sitemap_enabled)
+      })
+      .catch(() => {
+        setSnackbar({ open: true, message: 'Failed to load settings', severity: 'error' })
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const handleSave = async () => {
     setSaving(true)
+
     try {
       await blogService.updateSettings({
         blog_title: blogTitle,
@@ -70,25 +80,55 @@ const BlogSettingsPage = () => {
     }
   }
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><CircularProgress /></div>
+  if (loading)
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+        <CircularProgress />
+      </div>
+    )
 
   return (
     <>
-      <Typography variant='h5' sx={{ mb: 4 }}>Blog Settings</Typography>
+      <Typography variant='h5' sx={{ mb: 4 }}>
+        Blog Settings
+      </Typography>
 
       <Grid container spacing={4}>
         <Grid size={{ xs: 12, md: 8 }}>
           <Card sx={{ mb: 3 }}>
             <CardHeader title='General Settings' />
             <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <TextField label='Blog Title' fullWidth value={blogTitle} onChange={e => setBlogTitle(e.target.value)}
-                helperText='Displayed in blog header and page title' />
-              <TextField label='Blog Description' fullWidth multiline rows={3} value={blogDescription} onChange={e => setBlogDescription(e.target.value)}
-                helperText='Used in meta description for blog homepage' />
-              <TextField label='Posts Per Page' type='number' value={postsPerPage} onChange={e => setPostsPerPage(Number(e.target.value))}
-                inputProps={{ min: 1, max: 50 }} sx={{ maxWidth: 200 }} />
-              <TextField label='Default OG Image URL' fullWidth value={defaultOgImage} onChange={e => setDefaultOgImage(e.target.value)}
-                helperText='Default social sharing image when a post has no featured image' />
+              <TextField
+                label='Blog Title'
+                fullWidth
+                value={blogTitle}
+                onChange={e => setBlogTitle(e.target.value)}
+                helperText='Displayed in blog header and page title'
+              />
+              <TextField
+                label='Blog Description'
+                fullWidth
+                multiline
+                rows={3}
+                value={blogDescription}
+                onChange={e => setBlogDescription(e.target.value)}
+                helperText='Used in meta description for blog homepage'
+              />
+              <TextField
+                label='Posts Per Page'
+                type='number'
+                value={postsPerPage}
+                onChange={e => setPostsPerPage(Number(e.target.value))}
+                inputProps={{ min: 1, max: 50 }}
+                sx={{ maxWidth: 200 }}
+              />
+              <TextField
+                label='Default OG Image URL'
+                fullWidth
+                value={defaultOgImage}
+                onChange={e => setDefaultOgImage(e.target.value)}
+                helperText='Default social sharing image when a post has no featured image'
+              />
             </CardContent>
           </Card>
 
@@ -134,11 +174,15 @@ const BlogSettingsPage = () => {
             <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Typography variant='body2'>
                 <i className='tabler-sitemap' style={{ marginRight: 8 }} />
-                <a href='/api/public/blog/sitemap.xml' target='_blank' rel='noopener noreferrer'>View Sitemap</a>
+                <a href='/api/public/blog/sitemap.xml' target='_blank' rel='noopener noreferrer'>
+                  View Sitemap
+                </a>
               </Typography>
               <Typography variant='body2'>
                 <i className='tabler-robot' style={{ marginRight: 8 }} />
-                <a href='/api/public/blog/robots.txt' target='_blank' rel='noopener noreferrer'>View robots.txt</a>
+                <a href='/api/public/blog/robots.txt' target='_blank' rel='noopener noreferrer'>
+                  View robots.txt
+                </a>
               </Typography>
             </CardContent>
           </Card>
@@ -149,8 +193,14 @@ const BlogSettingsPage = () => {
         </Grid>
       </Grid>
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
-        <Alert severity={snackbar.severity} variant='filled'>{snackbar.message}</Alert>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+      >
+        <Alert severity={snackbar.severity} variant='filled'>
+          {snackbar.message}
+        </Alert>
       </Snackbar>
     </>
   )

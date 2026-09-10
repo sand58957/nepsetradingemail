@@ -63,8 +63,6 @@ const TelegramSettings = () => {
         }
       } catch (err: any) {
         if (err?.response?.status === 401) return
-
-
       } finally {
         setLoading(false)
       }
@@ -124,7 +122,9 @@ const TelegramSettings = () => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading settings...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading settings...
+        </Typography>
       </div>
     )
   }
@@ -154,7 +154,12 @@ const TelegramSettings = () => {
                     <Chip label='Disconnected' color='error' variant='tonal' icon={<i className='tabler-x' />} />
                   )}
                   {botUsername && (
-                    <Chip label={`@${botUsername}`} color='info' variant='tonal' icon={<i className='tabler-robot' />} />
+                    <Chip
+                      label={`@${botUsername}`}
+                      color='info'
+                      variant='tonal'
+                      icon={<i className='tabler-robot' />}
+                    />
                   )}
                 </div>
               </div>
@@ -180,7 +185,11 @@ const TelegramSettings = () => {
                     input: {
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <IconButton onClick={() => setShowToken(!showToken)} edge='end' aria-label={showToken ? 'Hide token' : 'Show token'}>
+                          <IconButton
+                            onClick={() => setShowToken(!showToken)}
+                            edge='end'
+                            aria-label={showToken ? 'Hide token' : 'Show token'}
+                          >
                             <i className={showToken ? 'tabler-eye-off' : 'tabler-eye'} />
                           </IconButton>
                         </InputAdornment>
@@ -245,48 +254,75 @@ const TelegramSettings = () => {
                   You need a Telegram Bot to use this feature.
                 </Alert>
 
-                <Typography variant='subtitle2' color='primary'>Step 1: Open BotFather</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 1: Open BotFather
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
                   Open Telegram and go to{' '}
-                  <a href='https://t.me/BotFather' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
+                  <a
+                    href='https://t.me/BotFather'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    style={{ color: 'var(--mui-palette-primary-main)' }}
+                  >
                     t.me/BotFather
-                  </a>
-                  {' '}or search for <strong>@BotFather</strong> in Telegram. This is the official bot for creating and managing Telegram bots.
+                  </a>{' '}
+                  or search for <strong>@BotFather</strong> in Telegram. This is the official bot for creating and
+                  managing Telegram bots.
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 2: Create a New Bot</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 2: Create a New Bot
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  Send <strong>/newbot</strong> to @BotFather &rarr; Enter a <strong>display name</strong> for your bot (e.g. &ldquo;NEPSE Trading Bot&rdquo;) &rarr; Enter a <strong>username</strong> ending in &ldquo;bot&rdquo; (e.g. &ldquo;nepse_trading_bot&rdquo;).
+                  Send <strong>/newbot</strong> to @BotFather &rarr; Enter a <strong>display name</strong> for your bot
+                  (e.g. &ldquo;NEPSE Trading Bot&rdquo;) &rarr; Enter a <strong>username</strong> ending in
+                  &ldquo;bot&rdquo; (e.g. &ldquo;nepse_trading_bot&rdquo;).
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 3: Copy the Bot Token</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 3: Copy the Bot Token
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  BotFather will reply with your <strong>bot token</strong> (looks like <code>123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11</code>). Copy this token and paste it in the <strong>Bot Token</strong> field on the left.
+                  BotFather will reply with your <strong>bot token</strong> (looks like{' '}
+                  <code>123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11</code>). Copy this token and paste it in the{' '}
+                  <strong>Bot Token</strong> field on the left.
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 4: Set Subscription Code (Optional)</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 4: Set Subscription Code (Optional)
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  Enter a <strong>Subscription Code</strong> to require users to send <code>/start CODE</code> to subscribe. Leave empty to allow anyone to subscribe with just <code>/start</code>.
+                  Enter a <strong>Subscription Code</strong> to require users to send <code>/start CODE</code> to
+                  subscribe. Leave empty to allow anyone to subscribe with just <code>/start</code>.
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 5: Save &amp; Test</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 5: Save &amp; Test
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click <strong>&ldquo;Test Connection&rdquo;</strong>. If successful, your bot username will appear. Then share your bot link: <strong>t.me/your_bot_username</strong>
+                  Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click{' '}
+                  <strong>&ldquo;Test Connection&rdquo;</strong>. If successful, your bot username will appear. Then
+                  share your bot link: <strong>t.me/your_bot_username</strong>
                 </Typography>
 
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>Step 6: Customize Your Bot (Optional)</Typography>
+                <Typography variant='subtitle2' color='primary'>
+                  Step 6: Customize Your Bot (Optional)
+                </Typography>
                 <Typography variant='body2' color='text.secondary'>
-                  Back in @BotFather: Send <strong>/setdescription</strong> to add a bot description &rarr; Send <strong>/setuserpic</strong> to set a profile photo &rarr; Send <strong>/setcommands</strong> to add menu commands.
+                  Back in @BotFather: Send <strong>/setdescription</strong> to add a bot description &rarr; Send{' '}
+                  <strong>/setuserpic</strong> to set a profile photo &rarr; Send <strong>/setcommands</strong> to add
+                  menu commands.
                 </Typography>
 
                 <Divider />
@@ -298,7 +334,12 @@ const TelegramSettings = () => {
                 <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
                   <Typography variant='caption'>
                     <strong>Telegram Bot API Docs:</strong>{' '}
-                    <a href='https://core.telegram.org/bots/api' target='_blank' rel='noopener noreferrer' style={{ color: 'var(--mui-palette-primary-main)' }}>
+                    <a
+                      href='https://core.telegram.org/bots/api'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      style={{ color: 'var(--mui-palette-primary-main)' }}
+                    >
                       core.telegram.org/bots/api
                     </a>
                   </Typography>
@@ -316,11 +357,7 @@ const TelegramSettings = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

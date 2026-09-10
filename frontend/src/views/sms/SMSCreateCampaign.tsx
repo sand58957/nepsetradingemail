@@ -25,10 +25,6 @@ import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
-import LinearProgress from '@mui/material/LinearProgress'
-
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Checkbox from '@mui/material/Checkbox'
 
 // Service Imports
 import smsService from '@/services/sms'
@@ -90,6 +86,7 @@ const SMSCreateCampaign = () => {
   const [creating, setCreating] = useState(false)
   const [sendingNow, setSendingNow] = useState(false)
   const [confirmSendNow, setConfirmSendNow] = useState(false)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -115,6 +112,7 @@ const SMSCreateCampaign = () => {
     const fetchGroups = async () => {
       try {
         const response = await smsService.getGroups()
+
         setAvailableGroups(response.data || [])
       } catch {
         // Silently fail
@@ -253,7 +251,11 @@ const SMSCreateCampaign = () => {
         await smsService.sendCampaign(campaignId)
         setSnackbar({ open: true, message: 'Campaign created and sending started!', severity: 'success' })
       } catch {
-        setSnackbar({ open: true, message: 'Campaign created but failed to start sending. Go to campaign detail to retry.', severity: 'error' })
+        setSnackbar({
+          open: true,
+          message: 'Campaign created but failed to start sending. Go to campaign detail to retry.',
+          severity: 'error'
+        })
       }
 
       // Navigate to campaign detail
@@ -383,12 +385,9 @@ const SMSCreateCampaign = () => {
                         <span>
                           {smsInfo.isUnicode
                             ? 'Unicode detected: 70 chars per credit instead of 160'
-                            : 'English text: 160 chars per credit'
-                          }
+                            : 'English text: 160 chars per credit'}
                         </span>
-                        <span style={{ color: 'var(--mui-palette-text-secondary)' }}>
-                          Press Enter for new line
-                        </span>
+                        <span style={{ color: 'var(--mui-palette-text-secondary)' }}>Press Enter for new line</span>
                       </span>
                     }
                   />
@@ -396,11 +395,13 @@ const SMSCreateCampaign = () => {
                   {/* Character Counter */}
                   <Box className='flex items-center justify-between mt-2 px-1'>
                     <Typography variant='body2' sx={{ color: getCounterColor() }}>
-                      {smsInfo.length}/{smsInfo.charLimit} characters ({smsInfo.segments} {smsInfo.segments === 1 ? 'credit' : 'credits'})
+                      {smsInfo.length}/{smsInfo.charLimit} characters ({smsInfo.segments}{' '}
+                      {smsInfo.segments === 1 ? 'credit' : 'credits'})
                     </Typography>
                     {audienceCount !== null && smsInfo.segments > 0 && (
                       <Typography variant='body2' color='text.secondary'>
-                        Estimated total: {estimatedCredits.toLocaleString()} credits for {audienceCount.toLocaleString()} recipients
+                        Estimated total: {estimatedCredits.toLocaleString()} credits for{' '}
+                        {audienceCount.toLocaleString()} recipients
                       </Typography>
                     )}
                   </Box>
@@ -408,14 +409,16 @@ const SMSCreateCampaign = () => {
                   {/* Unicode Warning */}
                   {smsInfo.isUnicode && messageText.length > 0 && (
                     <Alert severity='warning' className='mt-3' icon={<i className='tabler-alert-triangle' />}>
-                      Unicode detected: Your message contains Nepali or special characters. Each credit covers only 70 characters instead of 160. This will use more credits per message.
+                      Unicode detected: Your message contains Nepali or special characters. Each credit covers only 70
+                      characters instead of 160. This will use more credits per message.
                     </Alert>
                   )}
 
                   {/* Multi-segment warning */}
                   {smsInfo.segments > 1 && (
                     <Alert severity='info' className='mt-2' icon={<i className='tabler-info-circle' />}>
-                      Your message will be split into {smsInfo.segments} segments, using {smsInfo.segments} credits per recipient.
+                      Your message will be split into {smsInfo.segments} segments, using {smsInfo.segments} credits per
+                      recipient.
                     </Alert>
                   )}
                 </div>
@@ -432,7 +435,10 @@ const SMSCreateCampaign = () => {
                     }}
                   >
                     <div className='flex items-center gap-2 mb-2'>
-                      <i className='tabler-message' style={{ fontSize: 20, color: 'var(--mui-palette-primary-main)' }} />
+                      <i
+                        className='tabler-message'
+                        style={{ fontSize: 20, color: 'var(--mui-palette-primary-main)' }}
+                      />
                       <Typography variant='subtitle2'>Message Preview</Typography>
                     </div>
                     <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
@@ -458,14 +464,18 @@ const SMSCreateCampaign = () => {
                     />
                   )}
                   <Typography variant='body2' color='text.secondary'>
-                    {tags.length > 0 || selectedGroups.length > 0 ? 'Contacts matching selected filters' : 'All opted-in contacts'}
+                    {tags.length > 0 || selectedGroups.length > 0
+                      ? 'Contacts matching selected filters'
+                      : 'All opted-in contacts'}
                   </Typography>
                 </div>
 
                 {/* Group filter */}
                 {availableGroups.length > 0 && (
                   <div>
-                    <Typography variant='body2' className='mb-2'>Filter by Groups</Typography>
+                    <Typography variant='body2' className='mb-2'>
+                      Filter by Groups
+                    </Typography>
                     <div className='flex gap-2 flex-wrap'>
                       {availableGroups.map(group => (
                         <Chip
@@ -476,14 +486,16 @@ const SMSCreateCampaign = () => {
                           color={selectedGroups.includes(group.id) ? 'primary' : 'default'}
                           onClick={() => {
                             setSelectedGroups(prev =>
-                              prev.includes(group.id)
-                                ? prev.filter(id => id !== group.id)
-                                : [...prev, group.id]
+                              prev.includes(group.id) ? prev.filter(id => id !== group.id) : [...prev, group.id]
                             )
                           }}
-                          sx={selectedGroups.includes(group.id) ? {} : {
-                            borderLeft: `3px solid ${group.color}`,
-                          }}
+                          sx={
+                            selectedGroups.includes(group.id)
+                              ? {}
+                              : {
+                                  borderLeft: `3px solid ${group.color}`
+                                }
+                          }
                         />
                       ))}
                     </div>
@@ -502,9 +514,7 @@ const SMSCreateCampaign = () => {
                   onInputChange={(_, value) => setTagInput(value)}
                   onChange={(_, value) => setTags(value as string[])}
                   renderTags={(value, getTagProps) =>
-                    value.map((tag, index) => (
-                      <Chip {...getTagProps({ index })} key={tag} label={tag} size='small' />
-                    ))
+                    value.map((tag, index) => <Chip {...getTagProps({ index })} key={tag} label={tag} size='small' />)
                   }
                   renderInput={params => (
                     <TextField
@@ -559,10 +569,7 @@ const SMSCreateCampaign = () => {
                   >
                     Test Send
                   </Button>
-                  <Button
-                    variant='outlined'
-                    onClick={() => router.push(`/${locale}/sms/campaigns`)}
-                  >
+                  <Button variant='outlined' onClick={() => router.push(`/${locale}/sms/campaigns`)}>
                     Cancel
                   </Button>
                 </div>
@@ -583,11 +590,15 @@ const SMSCreateCampaign = () => {
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='2' size='small' color='primary' />
-                  <Typography variant='body2'>Watch the character counter -- English uses 160 chars/credit, Nepali uses 70 chars/credit</Typography>
+                  <Typography variant='body2'>
+                    Watch the character counter -- English uses 160 chars/credit, Nepali uses 70 chars/credit
+                  </Typography>
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='3' size='small' color='primary' />
-                  <Typography variant='body2'>Optionally filter your audience by tags to target specific groups</Typography>
+                  <Typography variant='body2'>
+                    Optionally filter your audience by tags to target specific groups
+                  </Typography>
                 </div>
                 <div className='flex gap-2'>
                   <Chip label='4' size='small' color='primary' />
@@ -607,21 +618,28 @@ const SMSCreateCampaign = () => {
             <CardContent>
               <div className='flex flex-col gap-3'>
                 <Box className='p-3 rounded' sx={{ backgroundColor: 'action.hover' }}>
-                  <Typography variant='subtitle2' className='mb-1'>English (GSM-7)</Typography>
+                  <Typography variant='subtitle2' className='mb-1'>
+                    English (GSM-7)
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    1 credit = 160 characters<br />
+                    1 credit = 160 characters
+                    <br />
                     Long messages: 153 chars per additional segment
                   </Typography>
                 </Box>
                 <Box className='p-3 rounded' sx={{ backgroundColor: 'warning.lighter' }}>
-                  <Typography variant='subtitle2' className='mb-1'>Nepali / Unicode (UCS-2)</Typography>
+                  <Typography variant='subtitle2' className='mb-1'>
+                    Nepali / Unicode (UCS-2)
+                  </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    1 credit = 70 characters<br />
+                    1 credit = 70 characters
+                    <br />
                     Long messages: 67 chars per additional segment
                   </Typography>
                 </Box>
                 <Typography variant='caption' color='text.secondary'>
-                  Messages exceeding the single-segment limit are automatically split into multiple segments, each consuming one credit.
+                  Messages exceeding the single-segment limit are automatically split into multiple segments, each
+                  consuming one credit.
                 </Typography>
               </div>
             </CardContent>
@@ -647,8 +665,12 @@ const SMSCreateCampaign = () => {
           />
           {messageText && (
             <Box className='p-3 rounded mt-3' sx={{ backgroundColor: 'action.hover' }}>
-              <Typography variant='caption' color='text.secondary'>Message preview:</Typography>
-              <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>{messageText}</Typography>
+              <Typography variant='caption' color='text.secondary'>
+                Message preview:
+              </Typography>
+              <Typography variant='body2' sx={{ whiteSpace: 'pre-wrap' }}>
+                {messageText}
+              </Typography>
               <Typography variant='caption' color='text.secondary' className='mt-1 block'>
                 {smsInfo.segments} credit(s) per message
               </Typography>
@@ -679,23 +701,30 @@ const SMSCreateCampaign = () => {
         <DialogContent>
           <div className='flex flex-col gap-3 mt-1'>
             <Typography>
-              This will create the campaign and <strong>immediately start sending</strong> SMS messages to all targeted contacts.
+              This will create the campaign and <strong>immediately start sending</strong> SMS messages to all targeted
+              contacts.
             </Typography>
             <Box className='p-3 rounded' sx={{ backgroundColor: 'action.hover' }}>
-              <Typography variant='body2'><strong>Campaign:</strong> {name}</Typography>
               <Typography variant='body2'>
-                <strong>Message:</strong> {messageText.length > 100 ? messageText.substring(0, 100) + '...' : messageText}
+                <strong>Campaign:</strong> {name}
               </Typography>
               <Typography variant='body2'>
-                <strong>Audience:</strong> {tags.length > 0 ? `Contacts with tags: ${tags.join(', ')}` : 'All opted-in contacts'}
+                <strong>Message:</strong>{' '}
+                {messageText.length > 100 ? messageText.substring(0, 100) + '...' : messageText}
+              </Typography>
+              <Typography variant='body2'>
+                <strong>Audience:</strong>{' '}
+                {tags.length > 0 ? `Contacts with tags: ${tags.join(', ')}` : 'All opted-in contacts'}
                 {audienceCount !== null && ` (${audienceCount.toLocaleString()} recipients)`}
               </Typography>
               <Typography variant='body2'>
-                <strong>Estimated credits:</strong> {estimatedCredits.toLocaleString()} ({smsInfo.segments} per recipient)
+                <strong>Estimated credits:</strong> {estimatedCredits.toLocaleString()} ({smsInfo.segments} per
+                recipient)
               </Typography>
             </Box>
             <Alert severity='warning'>
-              SMS messages will be sent immediately and credits will be deducted. Make sure your message and audience are correct.
+              SMS messages will be sent immediately and credits will be deducted. Make sure your message and audience
+              are correct.
             </Alert>
           </div>
         </DialogContent>
@@ -719,11 +748,7 @@ const SMSCreateCampaign = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

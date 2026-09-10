@@ -108,41 +108,21 @@ const SettingsPage = () => {
             }
           }}
         >
-          <Tab
-            label='Company Profile'
-            icon={<i className='tabler-building text-[20px]' />}
-            iconPosition='start'
-          />
-          <Tab
-            label='Default Settings'
-            icon={<i className='tabler-palette text-[20px]' />}
-            iconPosition='start'
-          />
-          <Tab
-            label='Domains'
-            icon={<i className='tabler-world text-[20px]' />}
-            iconPosition='start'
-          />
+          <Tab label='Company Profile' icon={<i className='tabler-building text-[20px]' />} iconPosition='start' />
+          <Tab label='Default Settings' icon={<i className='tabler-palette text-[20px]' />} iconPosition='start' />
+          <Tab label='Domains' icon={<i className='tabler-world text-[20px]' />} iconPosition='start' />
           <Tab
             label='E-commerce Integration'
             icon={<i className='tabler-shopping-cart text-[20px]' />}
             iconPosition='start'
           />
-          <Tab
-            label='Setup Guide'
-            icon={<i className='tabler-help text-[20px]' />}
-            iconPosition='start'
-          />
+          <Tab label='Setup Guide' icon={<i className='tabler-help text-[20px]' />} iconPosition='start' />
           <Tab
             label='WhatsApp Settings'
             icon={<i className='tabler-brand-whatsapp text-[20px]' />}
             iconPosition='start'
           />
-          <Tab
-            label='SMS Settings'
-            icon={<i className='tabler-message text-[20px]' />}
-            iconPosition='start'
-          />
+          <Tab label='SMS Settings' icon={<i className='tabler-message text-[20px]' />} iconPosition='start' />
           <Tab
             label='Messenger Settings'
             icon={<i className='tabler-brand-facebook text-[20px]' />}
@@ -161,7 +141,9 @@ const SettingsPage = () => {
         <Card>
           <CardContent className='flex flex-col items-center gap-4 py-8'>
             <Typography color='text.secondary'>Failed to load account settings.</Typography>
-            <Button variant='outlined' onClick={fetchSettings}>Retry</Button>
+            <Button variant='outlined' onClick={fetchSettings}>
+              Retry
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -181,34 +163,15 @@ const SettingsPage = () => {
           onSaveError={handleSaveError}
         />
       )}
-      {activeTab === 2 && (
-        <DomainsTab
-          onSaveSuccess={handleSaveSuccess}
-          onSaveError={handleSaveError}
-        />
-      )}
+      {activeTab === 2 && <DomainsTab onSaveSuccess={handleSaveSuccess} onSaveError={handleSaveError} />}
       {activeTab === 3 && settings && (
-        <EcommerceTab
-          data={settings.ecommerce}
-          onSaveSuccess={handleSaveSuccess}
-          onSaveError={handleSaveError}
-        />
+        <EcommerceTab data={settings.ecommerce} onSaveSuccess={handleSaveSuccess} onSaveError={handleSaveError} />
       )}
-      {activeTab === 4 && (
-        <SetupGuideTab />
-      )}
-      {activeTab === 5 && (
-        <WASettings />
-      )}
-      {activeTab === 6 && (
-        <SMSSettingsView />
-      )}
-      {activeTab === 7 && (
-        <MessengerSettings />
-      )}
-      {activeTab === 8 && (
-        <WhatsAppWidgetTab />
-      )}
+      {activeTab === 4 && <SetupGuideTab />}
+      {activeTab === 5 && <WASettings />}
+      {activeTab === 6 && <SMSSettingsView />}
+      {activeTab === 7 && <MessengerSettings />}
+      {activeTab === 8 && <WhatsAppWidgetTab />}
 
       {/* Snackbar */}
       <Snackbar

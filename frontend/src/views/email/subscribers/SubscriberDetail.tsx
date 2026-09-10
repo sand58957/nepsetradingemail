@@ -99,6 +99,7 @@ const SubscriberDetail = ({ id }: SubscriberDetailProps) => {
     // Basic email validation
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setSnackbar({ open: true, message: 'Please enter a valid email address', severity: 'error' })
+
       return
     }
 
@@ -212,12 +213,7 @@ const SubscriberDetail = ({ id }: SubscriberDetailProps) => {
               action={
                 editing ? (
                   <div className='flex gap-2'>
-                    <Button
-                      variant='outlined'
-                      color='secondary'
-                      onClick={handleCancelEdit}
-                      disabled={saving}
-                    >
+                    <Button variant='outlined' color='secondary' onClick={handleCancelEdit} disabled={saving}>
                       Cancel
                     </Button>
                     <Button
@@ -311,7 +307,10 @@ const SubscriberDetail = ({ id }: SubscriberDetailProps) => {
               {subscriber.lists && subscriber.lists.length > 0 ? (
                 <div className='flex flex-col gap-3'>
                   {subscriber.lists.map(list => (
-                    <div key={list.id} className='flex items-center justify-between flex-wrap gap-3 p-3 rounded-lg border'>
+                    <div
+                      key={list.id}
+                      className='flex items-center justify-between flex-wrap gap-3 p-3 rounded-lg border'
+                    >
                       <div className='flex items-center gap-3'>
                         <CustomAvatar color='primary' skin='light' variant='rounded' size={36}>
                           <i className='tabler-list text-[20px]' />
@@ -351,11 +350,7 @@ const SubscriberDetail = ({ id }: SubscriberDetailProps) => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

@@ -177,10 +177,7 @@ const Register = ({ mode }: { mode: SystemMode }) => {
             : undefined
         }
       >
-        <Link
-          href='/'
-          className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'
-        >
+        <Link href='/' className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'>
           <Logo />
         </Link>
         <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
@@ -224,7 +221,12 @@ const Register = ({ mode }: { mode: SystemMode }) => {
                 input: {
                   endAdornment: (
                     <InputAdornment position='end'>
-                      <IconButton edge='end' aria-label={isPasswordShown ? 'Hide password' : 'Show password'} onClick={handleClickShowPassword} onMouseDown={e => e.preventDefault()}>
+                      <IconButton
+                        edge='end'
+                        aria-label={isPasswordShown ? 'Hide password' : 'Show password'}
+                        onClick={handleClickShowPassword}
+                        onMouseDown={e => e.preventDefault()}
+                      >
                         <i className={isPasswordShown ? 'tabler-eye-off' : 'tabler-eye'} />
                       </IconButton>
                     </InputAdornment>

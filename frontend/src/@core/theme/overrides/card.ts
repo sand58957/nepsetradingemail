@@ -17,6 +17,7 @@ const card = (skin: Skin): Theme['components'] => {
           ...(ownerState.variant !== 'outlined' && {
             boxShadow: 'var(--mui-customShadows-md)'
           }),
+
           // Premium dark mode card styling
           '[data-mui-color-scheme="dark"] &': {
             backgroundImage:

@@ -108,7 +108,11 @@ const FileManagerSidebar = ({
         <CardContent sx={{ p: { xs: 0, sm: 0 }, '&:last-child': { pb: { xs: 1, sm: 1 } } }}>
           {/* Import from section */}
           <div className='px-3 sm:px-4 pt-3 sm:pt-4 pb-1 sm:pb-2'>
-            <Typography variant='subtitle2' sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }} className='font-semibold mb-1'>
+            <Typography
+              variant='subtitle2'
+              sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+              className='font-semibold mb-1'
+            >
               Import from
             </Typography>
           </div>
@@ -125,14 +129,20 @@ const FileManagerSidebar = ({
               <ListItemIcon sx={{ minWidth: { xs: 40, sm: 36 } }}>
                 <i className='tabler-upload text-[20px]' />
               </ListItemIcon>
-              <ListItemText primary='My device' primaryTypographyProps={{ fontSize: { xs: '0.9rem', sm: '0.875rem' } }} />
+              <ListItemText
+                primary='My device'
+                primaryTypographyProps={{ fontSize: { xs: '0.9rem', sm: '0.875rem' } }}
+              />
             </ListItemButton>
 
             <ListItemButton disabled sx={{ py: { xs: 1, sm: 0.75 } }}>
               <ListItemIcon sx={{ minWidth: { xs: 40, sm: 36 } }}>
                 <i className='tabler-brand-google-drive text-[20px]' />
               </ListItemIcon>
-              <ListItemText primary='Google Drive' primaryTypographyProps={{ fontSize: { xs: '0.9rem', sm: '0.875rem' } }} />
+              <ListItemText
+                primary='Google Drive'
+                primaryTypographyProps={{ fontSize: { xs: '0.9rem', sm: '0.875rem' } }}
+              />
               <Chip label='Soon' size='small' variant='outlined' sx={{ height: 20, fontSize: '0.7rem' }} />
             </ListItemButton>
 
@@ -148,7 +158,10 @@ const FileManagerSidebar = ({
               <ListItemIcon sx={{ minWidth: { xs: 40, sm: 36 } }}>
                 <i className='tabler-icons text-[20px]' />
               </ListItemIcon>
-              <ListItemText primary='Flaticon' primaryTypographyProps={{ fontSize: { xs: '0.9rem', sm: '0.875rem' } }} />
+              <ListItemText
+                primary='Flaticon'
+                primaryTypographyProps={{ fontSize: { xs: '0.9rem', sm: '0.875rem' } }}
+              />
               <Chip label='Soon' size='small' variant='outlined' sx={{ height: 20, fontSize: '0.7rem' }} />
             </ListItemButton>
           </List>
@@ -158,7 +171,11 @@ const FileManagerSidebar = ({
           {/* Folders section */}
           <div className='px-3 sm:px-4 pb-1 sm:pb-2'>
             <Box className='flex items-center justify-between mb-1'>
-              <Typography variant='subtitle2' sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }} className='font-semibold'>
+              <Typography
+                variant='subtitle2'
+                sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+                className='font-semibold'
+              >
                 Folders
               </Typography>
               <Button

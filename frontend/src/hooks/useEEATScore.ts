@@ -130,7 +130,10 @@ export function useEEATScore(input: EEATInput): EEATScoreResult {
       category: 'trust'
     })
 
-    const score = Math.min(100, checks.reduce((sum, c) => sum + c.points, 0))
+    const score = Math.min(
+      100,
+      checks.reduce((sum, c) => sum + c.points, 0)
+    )
 
     const breakdown = {
       experience: checks.filter(c => c.category === 'experience').reduce((s, c) => s + c.points, 0),
@@ -141,17 +144,35 @@ export function useEEATScore(input: EEATInput): EEATScoreResult {
 
     let grade: string
     let gradeColor: string
-    if (score >= 80) { grade = 'Excellent'; gradeColor = '#4caf50' }
-    else if (score >= 60) { grade = 'Good'; gradeColor = '#8bc34a' }
-    else if (score >= 40) { grade = 'Fair'; gradeColor = '#ff9800' }
-    else if (score >= 20) { grade = 'Needs Work'; gradeColor = '#f44336' }
-    else { grade = 'Poor'; gradeColor = '#9e9e9e' }
+
+    if (score >= 80) {
+      grade = 'Excellent'
+      gradeColor = '#4caf50'
+    } else if (score >= 60) {
+      grade = 'Good'
+      gradeColor = '#8bc34a'
+    } else if (score >= 40) {
+      grade = 'Fair'
+      gradeColor = '#ff9800'
+    } else if (score >= 20) {
+      grade = 'Needs Work'
+      gradeColor = '#f44336'
+    } else {
+      grade = 'Poor'
+      gradeColor = '#9e9e9e'
+    }
 
     return { score, checks, grade, gradeColor, breakdown }
   }, [
-    input.authorHasBio, input.authorHasCredentials, input.authorHasExpertise,
-    input.authorExpertiseMatchesTopic, input.authorHasSocialLinks,
-    input.hasCitations, input.citationCount, input.hasEntityTags, input.entityTagCount,
-    input.wordCount, input.hasDataOrStats, input.hasFAQs, input.hasQuickAnswer
+    input.authorHasBio,
+    input.authorHasCredentials,
+    input.authorExpertiseMatchesTopic,
+    input.authorHasSocialLinks,
+    input.citationCount,
+    input.entityTagCount,
+    input.wordCount,
+    input.hasDataOrStats,
+    input.hasFAQs,
+    input.hasQuickAnswer
   ])
 }

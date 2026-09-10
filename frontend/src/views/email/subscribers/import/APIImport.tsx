@@ -182,7 +182,11 @@ const APIImport = ({ onImportComplete }: APIImportProps) => {
                   POST /api/import/json
                 </Paper>
                 <Tooltip title={copied ? 'Copied!' : 'Copy'}>
-                  <IconButton size='small' aria-label={copied ? 'Copied' : 'Copy endpoint'} onClick={handleCopyEndpoint}>
+                  <IconButton
+                    size='small'
+                    aria-label={copied ? 'Copied' : 'Copy endpoint'}
+                    onClick={handleCopyEndpoint}
+                  >
                     <i className={copied ? 'tabler-check' : 'tabler-copy'} />
                   </IconButton>
                 </Tooltip>
@@ -270,9 +274,7 @@ const APIImport = ({ onImportComplete }: APIImportProps) => {
             renderTags={(value, getTagProps) =>
               value.map((opt, index) => <Chip label={opt.name} size='small' {...getTagProps({ index })} key={opt.id} />)
             }
-            renderInput={params => (
-              <TextField {...params} label='Assign to Lists' placeholder='Select lists...' />
-            )}
+            renderInput={params => <TextField {...params} label='Assign to Lists' placeholder='Select lists...' />}
           />
 
           <FormControlLabel

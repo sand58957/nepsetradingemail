@@ -33,12 +33,7 @@ import Autocomplete from '@mui/material/Autocomplete'
 
 // Third-party Imports
 import classnames from 'classnames'
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable
-} from '@tanstack/react-table'
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import type { ColumnDef } from '@tanstack/react-table'
 
 // Type Imports
@@ -308,9 +303,7 @@ const SubscriberListTable = () => {
         cell: ({ row }) => (
           <div className='flex gap-1 flex-wrap'>
             {row.original.lists && row.original.lists.length > 0 ? (
-              row.original.lists.map(list => (
-                <Chip key={list.id} label={list.name} size='small' variant='outlined' />
-              ))
+              row.original.lists.map(list => <Chip key={list.id} label={list.name} size='small' variant='outlined' />)
             ) : (
               <Typography variant='body2' color='text.secondary'>
                 None
@@ -359,7 +352,7 @@ const SubscriberListTable = () => {
         )
       })
     ],
-    []
+    [locale]
   )
 
   const table = useReactTable({
@@ -393,7 +386,11 @@ const SubscriberListTable = () => {
                   Delete All
                 </Button>
               )}
-              <Button variant='contained' startIcon={<i className='tabler-plus' />} onClick={() => setAddDialogOpen(true)}>
+              <Button
+                variant='contained'
+                startIcon={<i className='tabler-plus' />}
+                onClick={() => setAddDialogOpen(true)}
+              >
                 Add Subscriber
               </Button>
             </div>
@@ -511,7 +508,16 @@ const SubscriberListTable = () => {
       </Card>
 
       {/* Add Subscriber Dialog */}
-      <Dialog open={addDialogOpen} onClose={() => { setAddDialogOpen(false); setNewSubscriber({ name: '', email: '', status: 'enabled', lists: [] }) }} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={addDialogOpen}
+        onClose={() => {
+          setAddDialogOpen(false)
+          setNewSubscriber({ name: '', email: '', status: 'enabled', lists: [] })
+        }}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Add New Subscriber</DialogTitle>
         <DialogContent>
           <Grid container spacing={4} className='pt-2'>
@@ -567,7 +573,14 @@ const SubscriberListTable = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setAddDialogOpen(false); setNewSubscriber({ name: '', email: '', status: 'enabled', lists: [] }) }} color='secondary' disabled={submitting}>
+          <Button
+            onClick={() => {
+              setAddDialogOpen(false)
+              setNewSubscriber({ name: '', email: '', status: 'enabled', lists: [] })
+            }}
+            color='secondary'
+            disabled={submitting}
+          >
             Cancel
           </Button>
           <Button onClick={handleAddSubscriber} variant='contained' disabled={submitting}>
@@ -577,7 +590,13 @@ const SubscriberListTable = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth='xs' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth='xs'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Delete Subscriber</DialogTitle>
         <DialogContent>
           <Typography>
@@ -596,7 +615,16 @@ const SubscriberListTable = () => {
       </Dialog>
 
       {/* Delete All Confirmation Dialog */}
-      <Dialog open={deleteAllDialogOpen} onClose={() => { setDeleteAllDialogOpen(false); setDeleteAllConfirmText('') }} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={deleteAllDialogOpen}
+        onClose={() => {
+          setDeleteAllDialogOpen(false)
+          setDeleteAllConfirmText('')
+        }}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle sx={{ color: 'error.main' }}>
           <i className='tabler-alert-triangle mr-2' />
           Delete All Subscribers
@@ -617,7 +645,14 @@ const SubscriberListTable = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setDeleteAllDialogOpen(false); setDeleteAllConfirmText('') }} color='secondary' disabled={submitting}>
+          <Button
+            onClick={() => {
+              setDeleteAllDialogOpen(false)
+              setDeleteAllConfirmText('')
+            }}
+            color='secondary'
+            disabled={submitting}
+          >
             Cancel
           </Button>
           <Button
@@ -638,11 +673,7 @@ const SubscriberListTable = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

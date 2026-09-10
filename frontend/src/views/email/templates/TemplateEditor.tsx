@@ -97,7 +97,9 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
   const [testEmail, setTestEmail] = useState('')
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
+    open: false,
+    message: '',
+    severity: 'success'
   })
 
   // Fetch existing template data
@@ -132,11 +134,13 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
   const handleSave = async () => {
     if (!name.trim()) {
       setSnackbar({ open: true, message: 'Template name is required', severity: 'error' })
+
       return
     }
 
     if (!body.trim()) {
       setSnackbar({ open: true, message: 'Template body is required', severity: 'error' })
+
       return
     }
 
@@ -184,6 +188,7 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
       // For new templates, just show raw HTML in preview
       setPreviewHtml(body)
       setPreviewOpen(true)
+
       return
     }
 
@@ -217,7 +222,9 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading template...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading template...
+        </Typography>
       </div>
     )
   }
@@ -292,7 +299,9 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
                 <Button
                   variant='contained'
                   fullWidth
-                  startIcon={saving ? <CircularProgress size={16} color='inherit' /> : <i className='tabler-device-floppy' />}
+                  startIcon={
+                    saving ? <CircularProgress size={16} color='inherit' /> : <i className='tabler-device-floppy' />
+                  }
                   onClick={handleSave}
                   disabled={saving}
                 >
@@ -317,14 +326,7 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
           <Card>
             <CardHeader
               title='Template Body'
-              action={
-                <Chip
-                  label={contentType.toUpperCase()}
-                  color='primary'
-                  size='small'
-                  variant='tonal'
-                />
-              }
+              action={<Chip label={contentType.toUpperCase()} color='primary' size='small' variant='tonal' />}
             />
             <CardContent>
               <TextField
@@ -369,9 +371,7 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
       <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth='md' fullWidth fullScreen={isMobile}>
         <DialogTitle>Template Preview</DialogTitle>
         <DialogContent>
-          <div
-            style={{ border: '1px solid #e5e7eb', borderRadius: 4, overflow: 'auto', minHeight: 300 }}
-          >
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: 4, overflow: 'auto', minHeight: 300 }}>
             <iframe
               srcDoc={previewHtml}
               title='Template Preview'
@@ -386,7 +386,13 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
       </Dialog>
 
       {/* Send Test Email Dialog */}
-      <Dialog open={testEmailOpen} onClose={() => setTestEmailOpen(false)} maxWidth='sm' fullWidth fullScreen={isMobile}>
+      <Dialog
+        open={testEmailOpen}
+        onClose={() => setTestEmailOpen(false)}
+        maxWidth='sm'
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Send Test Email</DialogTitle>
         <DialogContent>
           <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
@@ -408,14 +414,20 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTestEmailOpen(false)} color='secondary'>Cancel</Button>
+          <Button onClick={() => setTestEmailOpen(false)} color='secondary'>
+            Cancel
+          </Button>
           {!isNewTemplate && (
             <Button
               variant='contained'
               disabled={!testEmail.trim()}
               onClick={() => {
                 setTestEmailOpen(false)
-                setSnackbar({ open: true, message: 'Test email functionality requires campaign context', severity: 'info' as any })
+                setSnackbar({
+                  open: true,
+                  message: 'Test email functionality requires campaign context',
+                  severity: 'info' as any
+                })
               }}
             >
               Send Test
@@ -430,11 +442,7 @@ const TemplateEditor = ({ id }: TemplateEditorProps) => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

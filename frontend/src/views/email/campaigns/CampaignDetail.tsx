@@ -63,7 +63,9 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
   const [error, setError] = useState<string | null>(null)
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
+    open: false,
+    message: '',
+    severity: 'success'
   })
 
   useEffect(() => {
@@ -112,7 +114,7 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
     }
 
     // Model a typical email open curve: fast initial opens, then tapering off
-    const weights = [0.15, 0.30, 0.45, 0.58, 0.68, 0.76, 0.82, 0.87, 0.91, 0.94, 0.97, 1.0]
+    const weights = [0.15, 0.3, 0.45, 0.58, 0.68, 0.76, 0.82, 0.87, 0.91, 0.94, 0.97, 1.0]
     const data = weights.map(w => Math.round(campaign.views * w))
 
     return [{ name: 'Opens', data }]
@@ -146,7 +148,9 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
     return (
       <div className='flex justify-center items-center py-16'>
         <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>Loading campaign...</Typography>
+        <Typography className='ml-3' color='text.secondary'>
+          Loading campaign...
+        </Typography>
       </div>
     )
   }
@@ -155,7 +159,9 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
     return (
       <Card>
         <CardContent className='text-center py-16'>
-          <Typography color='error' className='mb-4'>{error || 'Campaign not found'}</Typography>
+          <Typography color='error' className='mb-4'>
+            {error || 'Campaign not found'}
+          </Typography>
           <Button variant='outlined' onClick={() => router.push(`/${locale}/campaigns/list`)}>
             Back to Campaigns
           </Button>
@@ -239,7 +245,8 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
                   </Typography>
                   {campaign.started_at && (
                     <Typography variant='body2' color='text.secondary'>
-                      Sent on {new Date(campaign.started_at).toLocaleDateString('en-US', {
+                      Sent on{' '}
+                      {new Date(campaign.started_at).toLocaleDateString('en-US', {
                         weekday: 'long',
                         month: 'long',
                         day: 'numeric',
@@ -367,12 +374,15 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
                     <TableCell className='font-medium'>Lists</TableCell>
                     <TableCell>
                       <div className='flex gap-1 flex-wrap'>
-                        {campaign.lists && campaign.lists.length > 0
-                          ? campaign.lists.map(list => (
+                        {campaign.lists && campaign.lists.length > 0 ? (
+                          campaign.lists.map(list => (
                             <Chip key={list.id} label={list.name} size='small' variant='outlined' />
                           ))
-                          : <Typography variant='body2' color='text.secondary'>No lists</Typography>
-                        }
+                        ) : (
+                          <Typography variant='body2' color='text.secondary'>
+                            No lists
+                          </Typography>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -442,11 +452,7 @@ const CampaignDetail = ({ id }: CampaignDetailProps) => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant='filled'
-        >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
           {snackbar.message}
         </Alert>
       </Snackbar>

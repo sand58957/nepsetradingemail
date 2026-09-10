@@ -87,9 +87,7 @@ const CampaignArchiveList = () => {
             <Grid size={{ xs: 12, sm: 6 }} key={campaign.id}>
               <Card>
                 <CardActionArea
-                  onClick={() =>
-                    router.push(getLocalizedUrl(`/portal/archive/${campaign.id}`, locale as Locale))
-                  }
+                  onClick={() => router.push(getLocalizedUrl(`/portal/archive/${campaign.id}`, locale as Locale))}
                 >
                   <CardContent>
                     <Typography variant='h6' className='mb-1' noWrap>
