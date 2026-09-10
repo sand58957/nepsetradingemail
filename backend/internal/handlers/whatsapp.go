@@ -37,18 +37,18 @@ func NewWhatsAppHandler(db *sqlx.DB) *WhatsAppHandler {
 // ============================================================
 
 type WASettings struct {
-	ID            int        `json:"id" db:"id"`
-	AccountID     int        `json:"account_id" db:"account_id"`
-	GupshupAppID  string     `json:"gupshup_app_id" db:"gupshup_app_id"`
-	GupshupAPIKey string     `json:"gupshup_api_key" db:"gupshup_api_key"`
-	SourcePhone   string     `json:"source_phone" db:"source_phone"`
-	AppName       string     `json:"app_name" db:"app_name"`
-	WabaID        string     `json:"waba_id" db:"waba_id"`
-	WebhookSecret string     `json:"webhook_secret" db:"webhook_secret"`
-	SendRate      int        `json:"send_rate" db:"send_rate"`
-	IsActive      bool       `json:"is_active" db:"is_active"`
-	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at" db:"updated_at"`
+	ID            int       `json:"id" db:"id"`
+	AccountID     int       `json:"account_id" db:"account_id"`
+	GupshupAppID  string    `json:"gupshup_app_id" db:"gupshup_app_id"`
+	GupshupAPIKey string    `json:"gupshup_api_key" db:"gupshup_api_key"`
+	SourcePhone   string    `json:"source_phone" db:"source_phone"`
+	AppName       string    `json:"app_name" db:"app_name"`
+	WabaID        string    `json:"waba_id" db:"waba_id"`
+	WebhookSecret string    `json:"webhook_secret" db:"webhook_secret"`
+	SendRate      int       `json:"send_rate" db:"send_rate"`
+	IsActive      bool      `json:"is_active" db:"is_active"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type WAContact struct {
@@ -108,20 +108,20 @@ type WACampaign struct {
 }
 
 type WACampaignMessage struct {
-	ID            int        `json:"id" db:"id"`
-	CampaignID    int        `json:"campaign_id" db:"campaign_id"`
-	ContactID     int        `json:"contact_id" db:"contact_id"`
-	GupshupMsgID  string     `json:"gupshup_msg_id" db:"gupshup_msg_id"`
-	WAMsgID       string     `json:"wa_msg_id" db:"wa_msg_id"`
-	Status        string     `json:"status" db:"status"`
-	ErrorReason   string     `json:"error_reason" db:"error_reason"`
-	SubmittedAt   *time.Time `json:"submitted_at" db:"submitted_at"`
-	EnqueuedAt    *time.Time `json:"enqueued_at" db:"enqueued_at"`
-	SentAt        *time.Time `json:"sent_at" db:"sent_at"`
-	DeliveredAt   *time.Time `json:"delivered_at" db:"delivered_at"`
-	ReadAt        *time.Time `json:"read_at" db:"read_at"`
-	FailedAt      *time.Time `json:"failed_at" db:"failed_at"`
-	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
+	ID           int        `json:"id" db:"id"`
+	CampaignID   int        `json:"campaign_id" db:"campaign_id"`
+	ContactID    int        `json:"contact_id" db:"contact_id"`
+	GupshupMsgID string     `json:"gupshup_msg_id" db:"gupshup_msg_id"`
+	WAMsgID      string     `json:"wa_msg_id" db:"wa_msg_id"`
+	Status       string     `json:"status" db:"status"`
+	ErrorReason  string     `json:"error_reason" db:"error_reason"`
+	SubmittedAt  *time.Time `json:"submitted_at" db:"submitted_at"`
+	EnqueuedAt   *time.Time `json:"enqueued_at" db:"enqueued_at"`
+	SentAt       *time.Time `json:"sent_at" db:"sent_at"`
+	DeliveredAt  *time.Time `json:"delivered_at" db:"delivered_at"`
+	ReadAt       *time.Time `json:"read_at" db:"read_at"`
+	FailedAt     *time.Time `json:"failed_at" db:"failed_at"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 }
 
 // helper to build a Gupshup client from account settings
@@ -752,12 +752,12 @@ func (h *WhatsAppHandler) GetContactStats(c echo.Context) error {
 	h.db.Get(&withAttrs, "SELECT COUNT(*) FROM wa_contacts WHERE account_id = $1 AND attributes != '{}'::jsonb", accountID)
 
 	return response.Success(c, map[string]interface{}{
-		"total_contacts":   stats.TotalContacts,
-		"opted_in":         stats.OptedIn,
-		"opted_out":        stats.OptedOut,
-		"tags":             tagStats,
-		"recent_30d":       recentCount,
-		"with_attributes":  withAttrs,
+		"total_contacts":  stats.TotalContacts,
+		"opted_in":        stats.OptedIn,
+		"opted_out":       stats.OptedOut,
+		"tags":            tagStats,
+		"recent_30d":      recentCount,
+		"with_attributes": withAttrs,
 	})
 }
 
@@ -1100,17 +1100,17 @@ func (h *WhatsAppHandler) GetCampaign(c echo.Context) error {
 
 	// Fetch individual recipient messages with contact details
 	type RecipientRow struct {
-		ID           int        `json:"id" db:"id"`
-		ContactID    int        `json:"contact_id" db:"contact_id"`
-		Phone        string     `json:"phone" db:"phone"`
-		ContactName  string     `json:"contact_name" db:"contact_name"`
-		Status       string     `json:"status" db:"status"`
-		ErrorReason  string     `json:"error_reason" db:"error_reason"`
-		SubmittedAt  *time.Time `json:"submitted_at" db:"submitted_at"`
-		DeliveredAt  *time.Time `json:"delivered_at" db:"delivered_at"`
-		ReadAt       *time.Time `json:"read_at" db:"read_at"`
-		FailedAt     *time.Time `json:"failed_at" db:"failed_at"`
-		CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+		ID          int        `json:"id" db:"id"`
+		ContactID   int        `json:"contact_id" db:"contact_id"`
+		Phone       string     `json:"phone" db:"phone"`
+		ContactName string     `json:"contact_name" db:"contact_name"`
+		Status      string     `json:"status" db:"status"`
+		ErrorReason string     `json:"error_reason" db:"error_reason"`
+		SubmittedAt *time.Time `json:"submitted_at" db:"submitted_at"`
+		DeliveredAt *time.Time `json:"delivered_at" db:"delivered_at"`
+		ReadAt      *time.Time `json:"read_at" db:"read_at"`
+		FailedAt    *time.Time `json:"failed_at" db:"failed_at"`
+		CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 	}
 	var recipients []RecipientRow
 	h.db.Select(&recipients, `
@@ -1529,8 +1529,8 @@ func (h *WhatsAppHandler) GetOverview(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 
 	var stats struct {
-		TotalContacts int `json:"total_contacts" db:"total_contacts"`
-		OptedIn       int `json:"opted_in" db:"opted_in"`
+		TotalContacts  int `json:"total_contacts" db:"total_contacts"`
+		OptedIn        int `json:"opted_in" db:"opted_in"`
 		TotalCampaigns int `json:"total_campaigns" db:"total_campaigns"`
 	}
 
@@ -1598,8 +1598,8 @@ func (h *WhatsAppHandler) GetCampaignAnalytics(c echo.Context) error {
 
 	// Recent failed messages with reason
 	var failedMessages []struct {
-		Phone       string `json:"phone" db:"phone"`
-		ErrorReason string `json:"error_reason" db:"error_reason"`
+		Phone       string     `json:"phone" db:"phone"`
+		ErrorReason string     `json:"error_reason" db:"error_reason"`
 		FailedAt    *time.Time `json:"failed_at" db:"failed_at"`
 	}
 	h.db.Select(&failedMessages, `
@@ -1618,8 +1618,8 @@ func (h *WhatsAppHandler) GetCampaignAnalytics(c echo.Context) error {
 	}
 	if failedMessages == nil {
 		failedMessages = []struct {
-			Phone       string `json:"phone" db:"phone"`
-			ErrorReason string `json:"error_reason" db:"error_reason"`
+			Phone       string     `json:"phone" db:"phone"`
+			ErrorReason string     `json:"error_reason" db:"error_reason"`
 			FailedAt    *time.Time `json:"failed_at" db:"failed_at"`
 		}{}
 	}
@@ -1655,10 +1655,10 @@ func (h *WhatsAppHandler) WebhookReceive(c echo.Context) error {
 		Version   int    `json:"version"`
 		Type      string `json:"type"`
 		Payload   struct {
-			ID          string `json:"id"`
-			GsID        string `json:"gsId"`
-			Type        string `json:"type"`
-			Destination string `json:"destination"`
+			ID          string          `json:"id"`
+			GsID        string          `json:"gsId"`
+			Type        string          `json:"type"`
+			Destination string          `json:"destination"`
 			Payload     json.RawMessage `json:"payload"`
 		} `json:"payload"`
 	}

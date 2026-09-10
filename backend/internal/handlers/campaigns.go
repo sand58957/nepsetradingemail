@@ -215,14 +215,14 @@ func (h *CampaignHandler) Test(c echo.Context) error {
 
 	var campaignResult struct {
 		Data struct {
-			Name        string        `json:"name"`
-			Subject     string        `json:"subject"`
-			FromEmail   string        `json:"from_email"`
-			Messenger   string        `json:"messenger"`
-			Body        string        `json:"body"`
-			ContentType string        `json:"content_type"`
-			AltBody     string        `json:"alt_body"`
-			TemplateID  int           `json:"template_id"`
+			Name        string `json:"name"`
+			Subject     string `json:"subject"`
+			FromEmail   string `json:"from_email"`
+			Messenger   string `json:"messenger"`
+			Body        string `json:"body"`
+			ContentType string `json:"content_type"`
+			AltBody     string `json:"alt_body"`
+			TemplateID  int    `json:"template_id"`
 			Lists       []struct {
 				ID int `json:"id"`
 			} `json:"lists"`

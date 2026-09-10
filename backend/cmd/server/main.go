@@ -27,9 +27,9 @@ import (
 func runMigrations(db *sqlx.DB) error {
 	// Try multiple possible migration paths
 	migrationDirs := []string{
-		"/migrations",                            // Docker container path
-		"internal/database/migrations",           // Local dev (from backend/)
-		"../internal/database/migrations",        // Local dev (from cmd/server/)
+		"/migrations",                     // Docker container path
+		"internal/database/migrations",    // Local dev (from backend/)
+		"../internal/database/migrations", // Local dev (from cmd/server/)
 	}
 
 	for _, dir := range migrationDirs {

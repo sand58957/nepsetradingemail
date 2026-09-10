@@ -7,25 +7,25 @@ import (
 )
 
 type Config struct {
-	Port             int
-	DatabaseURL      string
-	RedisURL         string
-	ListmonkAPIURL   string
-	ListmonkUser     string
-	ListmonkPassword string
-	JWTSecret        string
-	JWTExpiry        int // in hours
-	RefreshExpiry    int // in hours
-	FrontendURL      string
-	SendGridAPIKey   string
-	TelegramBotToken   string
-	BunnyCDNStorageURL string
-	BunnyCDNStorageZone string
-	BunnyCDNStorageKey string
-	BunnyCDNPullURL    string
-	GoogleClientID     string
-	GoogleClientSecret string
-	AakashOTPToken       string
+	Port                  int
+	DatabaseURL           string
+	RedisURL              string
+	ListmonkAPIURL        string
+	ListmonkUser          string
+	ListmonkPassword      string
+	JWTSecret             string
+	JWTExpiry             int // in hours
+	RefreshExpiry         int // in hours
+	FrontendURL           string
+	SendGridAPIKey        string
+	TelegramBotToken      string
+	BunnyCDNStorageURL    string
+	BunnyCDNStorageZone   string
+	BunnyCDNStorageKey    string
+	BunnyCDNPullURL       string
+	GoogleClientID        string
+	GoogleClientSecret    string
+	AakashOTPToken        string
 	GupshupOTPKey         string
 	GupshupOTPAppName     string
 	GupshupOTPSourcePhone string
@@ -57,21 +57,21 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:             port,
-		DatabaseURL:      getEnv("DATABASE_URL", "postgres://listmonk:listmonk@localhost:5432/listmonk?sslmode=disable"),
-		RedisURL:         getEnv("REDIS_URL", "redis://localhost:6379/0"),
-		ListmonkAPIURL:   getEnv("LISTMONK_API_URL", "http://localhost:9000/api"),
-		ListmonkUser:     getEnv("LISTMONK_ADMIN_USER", "admin"),
-		ListmonkPassword: getEnv("LISTMONK_ADMIN_PASSWORD", "admin"),
-		JWTSecret:        getEnv("JWT_SECRET", ""),
-		JWTExpiry:        jwtExpiry,
-		RefreshExpiry:    refreshExpiry,
-		FrontendURL:      getEnv("FRONTEND_URL", "https://nepalfillings.com"),
-		SendGridAPIKey:   getEnv("SENDGRID_API_KEY", ""),
-		TelegramBotToken:    getEnv("TELEGRAM_BOT_TOKEN", ""),
-		BunnyCDNStorageURL:  getEnv("BUNNY_CDN_STORAGE_URL", "https://sg.storage.bunnycdn.com"),
-		BunnyCDNStorageZone: getEnv("BUNNY_CDN_STORAGE_ZONE", "nepalfilling"),
-		BunnyCDNStorageKey:  getEnv("BUNNY_CDN_STORAGE_KEY", ""),
+		Port:                  port,
+		DatabaseURL:           getEnv("DATABASE_URL", "postgres://listmonk:listmonk@localhost:5432/listmonk?sslmode=disable"),
+		RedisURL:              getEnv("REDIS_URL", "redis://localhost:6379/0"),
+		ListmonkAPIURL:        getEnv("LISTMONK_API_URL", "http://localhost:9000/api"),
+		ListmonkUser:          getEnv("LISTMONK_ADMIN_USER", "admin"),
+		ListmonkPassword:      getEnv("LISTMONK_ADMIN_PASSWORD", "admin"),
+		JWTSecret:             getEnv("JWT_SECRET", ""),
+		JWTExpiry:             jwtExpiry,
+		RefreshExpiry:         refreshExpiry,
+		FrontendURL:           getEnv("FRONTEND_URL", "https://nepalfillings.com"),
+		SendGridAPIKey:        getEnv("SENDGRID_API_KEY", ""),
+		TelegramBotToken:      getEnv("TELEGRAM_BOT_TOKEN", ""),
+		BunnyCDNStorageURL:    getEnv("BUNNY_CDN_STORAGE_URL", "https://sg.storage.bunnycdn.com"),
+		BunnyCDNStorageZone:   getEnv("BUNNY_CDN_STORAGE_ZONE", "nepalfilling"),
+		BunnyCDNStorageKey:    getEnv("BUNNY_CDN_STORAGE_KEY", ""),
 		BunnyCDNPullURL:       getEnv("BUNNY_CDN_PULL_URL", "https://my-pull-zone-name-nepalfilling.b-cdn.net"),
 		GoogleClientID:        getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret:    getEnv("GOOGLE_CLIENT_SECRET", ""),
@@ -94,7 +94,40 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
 	}
 
+	// The defaults above exist so a developer can `go run ./cmd/server` against
+	// docker-compose.local.yml without a .env. They are unsafe in production, so
+	// refuse to boot rather than silently connecting with admin/admin or to a
+	// localhost database that isn't there.
+	if cfg.IsProduction() {
+		for _, required := range []struct{ name, value string }{
+			{"DATABASE_URL", os.Getenv("DATABASE_URL")},
+			{"REDIS_URL", os.Getenv("REDIS_URL")},
+			{"LISTMONK_API_URL", os.Getenv("LISTMONK_API_URL")},
+			{"LISTMONK_ADMIN_PASSWORD", os.Getenv("LISTMONK_ADMIN_PASSWORD")},
+		} {
+			if required.value == "" {
+				return nil, fmt.Errorf("%s environment variable is required when APP_ENV=%s", required.name, cfg.AppEnv)
+			}
+		}
+
+		if cfg.ListmonkPassword == "admin" {
+			return nil, fmt.Errorf("LISTMONK_ADMIN_PASSWORD must not be the default \"admin\" when APP_ENV=%s", cfg.AppEnv)
+		}
+	}
+
 	return cfg, nil
+}
+
+// IsProduction reports whether the app is running with production defaults.
+// APP_ENV itself defaults to "production", so anything that isn't an explicit
+// development/test/local value is treated as production.
+func (c *Config) IsProduction() bool {
+	switch c.AppEnv {
+	case "development", "dev", "test", "local":
+		return false
+	default:
+		return true
+	}
 }
 
 func getEnv(key, fallback string) string {

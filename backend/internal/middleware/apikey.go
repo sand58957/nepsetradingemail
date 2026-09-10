@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
@@ -64,13 +66,13 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 
 			// Look up key by prefix
 			var keyRecord struct {
-				ID         int    `db:"id"`
-				AccountID  int    `db:"account_id"`
-				Channel    string `db:"channel"`
-				KeyHash    string `db:"key_hash"`
-				IsTest     bool   `db:"is_test"`
-				IsActive   bool   `db:"is_active"`
-				RateLimit  int    `db:"rate_limit"`
+				ID         int     `db:"id"`
+				AccountID  int     `db:"account_id"`
+				Channel    string  `db:"channel"`
+				KeyHash    string  `db:"key_hash"`
+				IsTest     bool    `db:"is_test"`
+				IsActive   bool    `db:"is_active"`
+				RateLimit  int     `db:"rate_limit"`
 				WebhookURL *string `db:"webhook_url"`
 			}
 
@@ -84,10 +86,11 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 				return response.Error(c, http.StatusUnauthorized, "Invalid or inactive API key")
 			}
 
-			// Verify hash
+			// Verify hash. Compared in constant time so response latency can't leak
+			// how much of the stored hash a guessed key matched.
 			hash := sha256.Sum256([]byte(apiKey))
-			hashStr := fmt.Sprintf("%x", hash)
-			if hashStr != keyRecord.KeyHash {
+			hashStr := hex.EncodeToString(hash[:])
+			if subtle.ConstantTimeCompare([]byte(hashStr), []byte(keyRecord.KeyHash)) != 1 {
 				log.Printf("apikey.auth_fail reason=hash_mismatch ip=%s path=%s prefix=%s account=%d key=%s", ip, path, prefix, keyRecord.AccountID, redactKey(apiKey))
 				return response.Error(c, http.StatusUnauthorized, "Invalid API key")
 			}

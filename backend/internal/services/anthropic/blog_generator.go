@@ -9,25 +9,25 @@ import (
 
 // GeneratedPost is the structured output from Claude for a blog post.
 type GeneratedPost struct {
-	Title             string            `json:"title"`
-	ContentHTML       string            `json:"content_html"`
-	Excerpt           string            `json:"excerpt"`
-	MetaTitle         string            `json:"meta_title"`
-	MetaDescription   string            `json:"meta_description"`
-	PrimaryKeyword    string            `json:"primary_keyword"`
-	SecondaryKeywords []string          `json:"secondary_keywords"`
-	QuickAnswer       string            `json:"quick_answer"`
-	EntityTags        []EntityTag       `json:"entity_tags"`
-	SourceCitations   []SourceCitation  `json:"source_citations"`
-	TableOfContents   []TOCItem         `json:"table_of_contents"`
-	KeyPoints         []string          `json:"key_points"`
-	FAQs              []FAQ             `json:"faqs"`
-	FeaturedImageAlt  string            `json:"featured_image_alt"`
-	SchemaType        string            `json:"schema_type"`
-	WordCount         int               `json:"word_count"`
-	ReadingTimeMin    int               `json:"reading_time_min"`
-	SEOScore          int               `json:"seo_score"`
-	ReadabilityScore  int               `json:"readability_score"`
+	Title             string           `json:"title"`
+	ContentHTML       string           `json:"content_html"`
+	Excerpt           string           `json:"excerpt"`
+	MetaTitle         string           `json:"meta_title"`
+	MetaDescription   string           `json:"meta_description"`
+	PrimaryKeyword    string           `json:"primary_keyword"`
+	SecondaryKeywords []string         `json:"secondary_keywords"`
+	QuickAnswer       string           `json:"quick_answer"`
+	EntityTags        []EntityTag      `json:"entity_tags"`
+	SourceCitations   []SourceCitation `json:"source_citations"`
+	TableOfContents   []TOCItem        `json:"table_of_contents"`
+	KeyPoints         []string         `json:"key_points"`
+	FAQs              []FAQ            `json:"faqs"`
+	FeaturedImageAlt  string           `json:"featured_image_alt"`
+	SchemaType        string           `json:"schema_type"`
+	WordCount         int              `json:"word_count"`
+	ReadingTimeMin    int              `json:"reading_time_min"`
+	SEOScore          int              `json:"seo_score"`
+	ReadabilityScore  int              `json:"readability_score"`
 }
 
 // FAQ is a question-answer pair.

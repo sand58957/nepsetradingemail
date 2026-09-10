@@ -40,13 +40,13 @@ func NewTelegramHandler(db *sqlx.DB, cfg *config.Config) *TelegramHandler {
 // ============================================================
 
 type TelegramSettings struct {
-	ID            int       `json:"id" db:"id"`
-	AccountID     int       `json:"account_id" db:"account_id"`
-	BotToken      string    `json:"bot_token" db:"bot_token"`
-	BotUsername   string    `json:"bot_username" db:"bot_username"`
-	WebhookSecret string    `json:"webhook_secret" db:"webhook_secret"`
-	SendRate      int       `json:"send_rate" db:"send_rate"`
-	IsActive      bool      `json:"is_active" db:"is_active"`
+	ID               int       `json:"id" db:"id"`
+	AccountID        int       `json:"account_id" db:"account_id"`
+	BotToken         string    `json:"bot_token" db:"bot_token"`
+	BotUsername      string    `json:"bot_username" db:"bot_username"`
+	WebhookSecret    string    `json:"webhook_secret" db:"webhook_secret"`
+	SendRate         int       `json:"send_rate" db:"send_rate"`
+	IsActive         bool      `json:"is_active" db:"is_active"`
 	QRCodeURL        string    `json:"qr_code_url" db:"qr_code_url"`
 	SubscriptionCode string    `json:"subscription_code" db:"subscription_code"`
 	CreatedAt        time.Time `json:"created_at" db:"created_at"`
@@ -993,17 +993,17 @@ func (h *TelegramHandler) GetCampaign(c echo.Context) error {
 	}
 
 	type RecipientRow struct {
-		ID            int        `json:"id" db:"id"`
-		ContactID     int        `json:"contact_id" db:"contact_id"`
-		ChatID        int64      `json:"chat_id" db:"chat_id"`
-		ContactName   string     `json:"contact_name" db:"contact_name"`
-		Username      string     `json:"username" db:"username"`
-		Status        string     `json:"status" db:"status"`
-		ErrorReason   string     `json:"error_reason" db:"error_reason"`
-		SubmittedAt   *time.Time `json:"submitted_at" db:"submitted_at"`
-		DeliveredAt   *time.Time `json:"delivered_at" db:"delivered_at"`
-		FailedAt      *time.Time `json:"failed_at" db:"failed_at"`
-		CreatedAt     time.Time  `json:"created_at" db:"created_at"`
+		ID          int        `json:"id" db:"id"`
+		ContactID   int        `json:"contact_id" db:"contact_id"`
+		ChatID      int64      `json:"chat_id" db:"chat_id"`
+		ContactName string     `json:"contact_name" db:"contact_name"`
+		Username    string     `json:"username" db:"username"`
+		Status      string     `json:"status" db:"status"`
+		ErrorReason string     `json:"error_reason" db:"error_reason"`
+		SubmittedAt *time.Time `json:"submitted_at" db:"submitted_at"`
+		DeliveredAt *time.Time `json:"delivered_at" db:"delivered_at"`
+		FailedAt    *time.Time `json:"failed_at" db:"failed_at"`
+		CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 	}
 	var recipients []RecipientRow
 	h.db.Select(&recipients, `

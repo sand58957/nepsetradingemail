@@ -24,10 +24,10 @@ const (
 
 // seededTopic mirrors the JSON shape we ask Gemini to return.
 type seededTopic struct {
-	Topic              string   `json:"topic"`
-	PrimaryKeyword     string   `json:"primary_keyword"`
-	SecondaryKeywords  []string `json:"secondary_keywords"`
-	Priority           int      `json:"priority"`
+	Topic             string   `json:"topic"`
+	PrimaryKeyword    string   `json:"primary_keyword"`
+	SecondaryKeywords []string `json:"secondary_keywords"`
+	Priority          int      `json:"priority"`
 }
 
 // seedTopicsIfNeeded inserts new topic ideas into blog_autopublish_queue

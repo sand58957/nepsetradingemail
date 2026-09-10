@@ -151,8 +151,8 @@ func (h *PublicSMSHandler) SendBulk(c echo.Context) error {
 			To      string `json:"to"`
 			Message string `json:"message"`
 		} `json:"recipients"`
-		Message  string  `json:"message"`  // shared message if recipients don't have individual ones
-		SenderID string  `json:"sender_id"`
+		Message  string `json:"message"` // shared message if recipients don't have individual ones
+		SenderID string `json:"sender_id"`
 	}
 
 	if err := c.Bind(&req); err != nil {
@@ -269,17 +269,17 @@ func (h *PublicSMSHandler) GetMessage(c echo.Context) error {
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var msg struct {
-		ID              int        `json:"id" db:"id"`
-		To              string     `json:"to" db:"to"`
-		From            *string    `json:"from" db:"from"`
-		Status          string     `json:"status" db:"status"`
-		ProviderMsgID   *string    `json:"provider_message_id" db:"provider_message_id"`
-		CreditsCharged  float64    `json:"credits_charged" db:"credits_charged"`
-		ErrorMessage    *string    `json:"error_message" db:"error_message"`
-		Reference       *string    `json:"reference" db:"reference"`
-		CreatedAt       time.Time  `json:"created_at" db:"created_at"`
-		SentAt          *time.Time `json:"sent_at" db:"sent_at"`
-		DeliveredAt     *time.Time `json:"delivered_at" db:"delivered_at"`
+		ID             int        `json:"id" db:"id"`
+		To             string     `json:"to" db:"to"`
+		From           *string    `json:"from" db:"from"`
+		Status         string     `json:"status" db:"status"`
+		ProviderMsgID  *string    `json:"provider_message_id" db:"provider_message_id"`
+		CreditsCharged float64    `json:"credits_charged" db:"credits_charged"`
+		ErrorMessage   *string    `json:"error_message" db:"error_message"`
+		Reference      *string    `json:"reference" db:"reference"`
+		CreatedAt      time.Time  `json:"created_at" db:"created_at"`
+		SentAt         *time.Time `json:"sent_at" db:"sent_at"`
+		DeliveredAt    *time.Time `json:"delivered_at" db:"delivered_at"`
 	}
 
 	err := h.db.Get(&msg, `SELECT id, "to", "from", status, provider_message_id, credits_charged, error_message, reference, created_at, sent_at, delivered_at FROM api_messages WHERE id = $1 AND account_id = $2 AND channel = 'sms'`, id, accountID)
@@ -346,9 +346,9 @@ func (h *PublicSMSHandler) GetBalance(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data": map[string]interface{}{
-			"channel":          "sms",
-			"balance":          balance,
-			"credit_per_sms":   1,
+			"channel":        "sms",
+			"balance":        balance,
+			"credit_per_sms": 1,
 		},
 	})
 }

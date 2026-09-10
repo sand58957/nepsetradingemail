@@ -40,9 +40,9 @@ type DomainAuthRequest struct {
 
 // DNSRecord represents a single DNS record from SendGrid.
 type DNSRecord struct {
-	Host string `json:"host"`
-	Type string `json:"type"`
-	Data string `json:"data"`
+	Host  string `json:"host"`
+	Type  string `json:"type"`
+	Data  string `json:"data"`
 	Valid bool   `json:"valid"`
 }
 

@@ -469,13 +469,13 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 			ID        string `json:"id"`
 			Time      int64  `json:"time"`
 			Messaging []struct {
-				Sender    struct {
+				Sender struct {
 					ID string `json:"id"`
 				} `json:"sender"`
 				Recipient struct {
 					ID string `json:"id"`
 				} `json:"recipient"`
-				Timestamp int64               `json:"timestamp"`
+				Timestamp int64 `json:"timestamp"`
 				Message   *struct {
 					MID  string `json:"mid"`
 					Text string `json:"text"`
@@ -492,13 +492,13 @@ func (h *MessengerHandler) WebhookReceive(c echo.Context) error {
 					Payload string `json:"payload"`
 				} `json:"postback"`
 				Optin *struct {
-					Ref                    string `json:"ref"`
-					Type                   string `json:"type"`
-					NotificationMessagesToken      string `json:"notification_messages_token"`
-					NotificationMessagesFrequency  string `json:"notification_messages_frequency"`
-					NotificationMessagesTimezone   string `json:"notification_messages_timezone"`
-					TokenExpiryTimestamp   int64  `json:"token_expiry_timestamp"`
-					NotificationMessagesStatus     string `json:"notification_messages_status"`
+					Ref                           string `json:"ref"`
+					Type                          string `json:"type"`
+					NotificationMessagesToken     string `json:"notification_messages_token"`
+					NotificationMessagesFrequency string `json:"notification_messages_frequency"`
+					NotificationMessagesTimezone  string `json:"notification_messages_timezone"`
+					TokenExpiryTimestamp          int64  `json:"token_expiry_timestamp"`
+					NotificationMessagesStatus    string `json:"notification_messages_status"`
 				} `json:"optin"`
 			} `json:"messaging"`
 		} `json:"entry"`

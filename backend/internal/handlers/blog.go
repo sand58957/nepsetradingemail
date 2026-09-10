@@ -94,40 +94,40 @@ type BlogTag struct {
 }
 
 type BlogPost struct {
-	ID               int              `json:"id" db:"id"`
-	AccountID        int              `json:"account_id" db:"account_id"`
-	AuthorID         *int             `json:"author_id" db:"author_id"`
-	CategoryID       *int             `json:"category_id" db:"category_id"`
-	Title            string           `json:"title" db:"title"`
-	Slug             string           `json:"slug" db:"slug"`
-	Content          json.RawMessage  `json:"content" db:"content"`
-	ContentHTML      string           `json:"content_html" db:"content_html"`
-	Excerpt          string           `json:"excerpt" db:"excerpt"`
-	FeaturedImageURL string           `json:"featured_image_url" db:"featured_image_url"`
-	FeaturedImageAlt string           `json:"featured_image_alt" db:"featured_image_alt"`
-	Status           string           `json:"status" db:"status"`
-	MetaTitle        string           `json:"meta_title" db:"meta_title"`
-	MetaDescription  string           `json:"meta_description" db:"meta_description"`
-	CanonicalURL     string           `json:"canonical_url" db:"canonical_url"`
-	PrimaryKeyword   string           `json:"primary_keyword" db:"primary_keyword"`
+	ID                int             `json:"id" db:"id"`
+	AccountID         int             `json:"account_id" db:"account_id"`
+	AuthorID          *int            `json:"author_id" db:"author_id"`
+	CategoryID        *int            `json:"category_id" db:"category_id"`
+	Title             string          `json:"title" db:"title"`
+	Slug              string          `json:"slug" db:"slug"`
+	Content           json.RawMessage `json:"content" db:"content"`
+	ContentHTML       string          `json:"content_html" db:"content_html"`
+	Excerpt           string          `json:"excerpt" db:"excerpt"`
+	FeaturedImageURL  string          `json:"featured_image_url" db:"featured_image_url"`
+	FeaturedImageAlt  string          `json:"featured_image_alt" db:"featured_image_alt"`
+	Status            string          `json:"status" db:"status"`
+	MetaTitle         string          `json:"meta_title" db:"meta_title"`
+	MetaDescription   string          `json:"meta_description" db:"meta_description"`
+	CanonicalURL      string          `json:"canonical_url" db:"canonical_url"`
+	PrimaryKeyword    string          `json:"primary_keyword" db:"primary_keyword"`
 	SecondaryKeywords pq.StringArray  `json:"secondary_keywords" db:"secondary_keywords"`
-	QuickAnswer      string           `json:"quick_answer" db:"quick_answer"`
-	SchemaType       string           `json:"schema_type" db:"schema_type"`
-	SchemaJSON       json.RawMessage  `json:"schema_json" db:"schema_json"`
-	EntityTags       json.RawMessage  `json:"entity_tags" db:"entity_tags"`
-	SourceCitations  json.RawMessage  `json:"source_citations" db:"source_citations"`
-	TableOfContents  json.RawMessage  `json:"table_of_contents" db:"table_of_contents"`
-	KeyPoints        json.RawMessage  `json:"key_points" db:"key_points"`
-	SEOScore         int              `json:"seo_score" db:"seo_score"`
-	ReadabilityScore int              `json:"readability_score" db:"readability_score"`
-	WordCount        int              `json:"word_count" db:"word_count"`
-	ReadingTimeMin   int              `json:"reading_time_min" db:"reading_time_min"`
-	PublishedAt      *time.Time       `json:"published_at" db:"published_at"`
-	ScheduledAt      *time.Time       `json:"scheduled_at" db:"scheduled_at"`
-	ViewCount        int              `json:"view_count" db:"view_count"`
-	CreatedBy        *int             `json:"created_by" db:"created_by"`
-	CreatedAt        time.Time        `json:"created_at" db:"created_at"`
-	UpdatedAt        time.Time        `json:"updated_at" db:"updated_at"`
+	QuickAnswer       string          `json:"quick_answer" db:"quick_answer"`
+	SchemaType        string          `json:"schema_type" db:"schema_type"`
+	SchemaJSON        json.RawMessage `json:"schema_json" db:"schema_json"`
+	EntityTags        json.RawMessage `json:"entity_tags" db:"entity_tags"`
+	SourceCitations   json.RawMessage `json:"source_citations" db:"source_citations"`
+	TableOfContents   json.RawMessage `json:"table_of_contents" db:"table_of_contents"`
+	KeyPoints         json.RawMessage `json:"key_points" db:"key_points"`
+	SEOScore          int             `json:"seo_score" db:"seo_score"`
+	ReadabilityScore  int             `json:"readability_score" db:"readability_score"`
+	WordCount         int             `json:"word_count" db:"word_count"`
+	ReadingTimeMin    int             `json:"reading_time_min" db:"reading_time_min"`
+	PublishedAt       *time.Time      `json:"published_at" db:"published_at"`
+	ScheduledAt       *time.Time      `json:"scheduled_at" db:"scheduled_at"`
+	ViewCount         int             `json:"view_count" db:"view_count"`
+	CreatedBy         *int            `json:"created_by" db:"created_by"`
+	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at" db:"updated_at"`
 	// Joined fields
 	AuthorName   string `json:"author_name,omitempty" db:"author_name"`
 	CategoryName string `json:"category_name,omitempty" db:"category_name"`
@@ -612,31 +612,31 @@ func (h *BlogHandler) CreatePost(c echo.Context) error {
 	userID := mw.GetUserID(c)
 
 	var req struct {
-		Title            string          `json:"title"`
-		Content          json.RawMessage `json:"content"`
-		ContentHTML      string          `json:"content_html"`
-		Excerpt          string          `json:"excerpt"`
-		FeaturedImageURL string          `json:"featured_image_url"`
-		FeaturedImageAlt string          `json:"featured_image_alt"`
-		AuthorID         *int            `json:"author_id"`
-		CategoryID       *int            `json:"category_id"`
-		Status           string          `json:"status"`
-		MetaTitle        string          `json:"meta_title"`
-		MetaDescription  string          `json:"meta_description"`
-		CanonicalURL     string          `json:"canonical_url"`
-		PrimaryKeyword   string          `json:"primary_keyword"`
-		SecondaryKeywords []string       `json:"secondary_keywords"`
-		QuickAnswer      string          `json:"quick_answer"`
-		SchemaType       string          `json:"schema_type"`
-		EntityTags       json.RawMessage `json:"entity_tags"`
-		SourceCitations  json.RawMessage `json:"source_citations"`
-		TableOfContents  json.RawMessage `json:"table_of_contents"`
-		KeyPoints        json.RawMessage `json:"key_points"`
-		SEOScore         int             `json:"seo_score"`
-		ReadabilityScore int             `json:"readability_score"`
-		WordCount        int             `json:"word_count"`
-		ReadingTimeMin   int             `json:"reading_time_min"`
-		TagIDs           []int           `json:"tag_ids"`
+		Title             string          `json:"title"`
+		Content           json.RawMessage `json:"content"`
+		ContentHTML       string          `json:"content_html"`
+		Excerpt           string          `json:"excerpt"`
+		FeaturedImageURL  string          `json:"featured_image_url"`
+		FeaturedImageAlt  string          `json:"featured_image_alt"`
+		AuthorID          *int            `json:"author_id"`
+		CategoryID        *int            `json:"category_id"`
+		Status            string          `json:"status"`
+		MetaTitle         string          `json:"meta_title"`
+		MetaDescription   string          `json:"meta_description"`
+		CanonicalURL      string          `json:"canonical_url"`
+		PrimaryKeyword    string          `json:"primary_keyword"`
+		SecondaryKeywords []string        `json:"secondary_keywords"`
+		QuickAnswer       string          `json:"quick_answer"`
+		SchemaType        string          `json:"schema_type"`
+		EntityTags        json.RawMessage `json:"entity_tags"`
+		SourceCitations   json.RawMessage `json:"source_citations"`
+		TableOfContents   json.RawMessage `json:"table_of_contents"`
+		KeyPoints         json.RawMessage `json:"key_points"`
+		SEOScore          int             `json:"seo_score"`
+		ReadabilityScore  int             `json:"readability_score"`
+		WordCount         int             `json:"word_count"`
+		ReadingTimeMin    int             `json:"reading_time_min"`
+		TagIDs            []int           `json:"tag_ids"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -721,32 +721,32 @@ func (h *BlogHandler) UpdatePost(c echo.Context) error {
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var req struct {
-		Title            string          `json:"title"`
-		Slug             string          `json:"slug"`
-		Content          json.RawMessage `json:"content"`
-		ContentHTML      string          `json:"content_html"`
-		Excerpt          string          `json:"excerpt"`
-		FeaturedImageURL string          `json:"featured_image_url"`
-		FeaturedImageAlt string          `json:"featured_image_alt"`
-		AuthorID         *int            `json:"author_id"`
-		CategoryID       *int            `json:"category_id"`
-		Status           string          `json:"status"`
-		MetaTitle        string          `json:"meta_title"`
-		MetaDescription  string          `json:"meta_description"`
-		CanonicalURL     string          `json:"canonical_url"`
-		PrimaryKeyword   string          `json:"primary_keyword"`
-		SecondaryKeywords []string       `json:"secondary_keywords"`
-		QuickAnswer      string          `json:"quick_answer"`
-		SchemaType       string          `json:"schema_type"`
-		EntityTags       json.RawMessage `json:"entity_tags"`
-		SourceCitations  json.RawMessage `json:"source_citations"`
-		TableOfContents  json.RawMessage `json:"table_of_contents"`
-		KeyPoints        json.RawMessage `json:"key_points"`
-		SEOScore         int             `json:"seo_score"`
-		ReadabilityScore int             `json:"readability_score"`
-		WordCount        int             `json:"word_count"`
-		ReadingTimeMin   int             `json:"reading_time_min"`
-		TagIDs           []int           `json:"tag_ids"`
+		Title             string          `json:"title"`
+		Slug              string          `json:"slug"`
+		Content           json.RawMessage `json:"content"`
+		ContentHTML       string          `json:"content_html"`
+		Excerpt           string          `json:"excerpt"`
+		FeaturedImageURL  string          `json:"featured_image_url"`
+		FeaturedImageAlt  string          `json:"featured_image_alt"`
+		AuthorID          *int            `json:"author_id"`
+		CategoryID        *int            `json:"category_id"`
+		Status            string          `json:"status"`
+		MetaTitle         string          `json:"meta_title"`
+		MetaDescription   string          `json:"meta_description"`
+		CanonicalURL      string          `json:"canonical_url"`
+		PrimaryKeyword    string          `json:"primary_keyword"`
+		SecondaryKeywords []string        `json:"secondary_keywords"`
+		QuickAnswer       string          `json:"quick_answer"`
+		SchemaType        string          `json:"schema_type"`
+		EntityTags        json.RawMessage `json:"entity_tags"`
+		SourceCitations   json.RawMessage `json:"source_citations"`
+		TableOfContents   json.RawMessage `json:"table_of_contents"`
+		KeyPoints         json.RawMessage `json:"key_points"`
+		SEOScore          int             `json:"seo_score"`
+		ReadabilityScore  int             `json:"readability_score"`
+		WordCount         int             `json:"word_count"`
+		ReadingTimeMin    int             `json:"reading_time_min"`
+		TagIDs            []int           `json:"tag_ids"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -1024,13 +1024,13 @@ func (h *BlogHandler) GetDashboardStats(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 
 	type Stats struct {
-		TotalPosts     int `json:"total_posts" db:"total_posts"`
-		PublishedPosts int `json:"published_posts" db:"published_posts"`
-		DraftPosts     int `json:"draft_posts" db:"draft_posts"`
-		TotalViews     int `json:"total_views" db:"total_views"`
-		TotalAuthors   int `json:"total_authors" db:"total_authors"`
+		TotalPosts      int `json:"total_posts" db:"total_posts"`
+		PublishedPosts  int `json:"published_posts" db:"published_posts"`
+		DraftPosts      int `json:"draft_posts" db:"draft_posts"`
+		TotalViews      int `json:"total_views" db:"total_views"`
+		TotalAuthors    int `json:"total_authors" db:"total_authors"`
 		TotalCategories int `json:"total_categories" db:"total_categories"`
-		AvgSEOScore    int `json:"avg_seo_score" db:"avg_seo_score"`
+		AvgSEOScore     int `json:"avg_seo_score" db:"avg_seo_score"`
 	}
 
 	var stats Stats
@@ -1276,19 +1276,19 @@ type sitemapImage struct {
 }
 
 type sitemapURL struct {
-	XMLName    xml.Name      `xml:"url"`
-	Loc        string        `xml:"loc"`
-	LastMod    string        `xml:"lastmod,omitempty"`
-	ChangeFreq string        `xml:"changefreq,omitempty"`
-	Priority   string        `xml:"priority,omitempty"`
+	XMLName    xml.Name       `xml:"url"`
+	Loc        string         `xml:"loc"`
+	LastMod    string         `xml:"lastmod,omitempty"`
+	ChangeFreq string         `xml:"changefreq,omitempty"`
+	Priority   string         `xml:"priority,omitempty"`
 	Images     []sitemapImage `xml:"image:image,omitempty"`
 }
 
 type sitemapURLSet struct {
-	XMLName   xml.Name     `xml:"urlset"`
-	Xmlns     string       `xml:"xmlns,attr"`
-	XmlnsImg  string       `xml:"xmlns:image,attr"`
-	URLs      []sitemapURL `xml:"url"`
+	XMLName  xml.Name     `xml:"urlset"`
+	Xmlns    string       `xml:"xmlns,attr"`
+	XmlnsImg string       `xml:"xmlns:image,attr"`
+	URLs     []sitemapURL `xml:"url"`
 }
 
 func (h *BlogHandler) PublicGetSitemap(c echo.Context) error {

@@ -186,11 +186,11 @@ func (h *TemplateHandler) SetDefault(c echo.Context) error {
 // ============================================================
 
 type sendGridTemplate struct {
-	ID         string                `json:"id"`
-	Name       string                `json:"name"`
-	Generation string                `json:"generation"`
-	UpdatedAt  string                `json:"updated_at"`
-	Versions   []sendGridVersion     `json:"versions"`
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	Generation string            `json:"generation"`
+	UpdatedAt  string            `json:"updated_at"`
+	Versions   []sendGridVersion `json:"versions"`
 }
 
 type sendGridVersion struct {

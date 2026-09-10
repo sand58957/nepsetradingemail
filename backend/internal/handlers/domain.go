@@ -61,9 +61,9 @@ type VerifyDomainResponse struct {
 
 // DomainHandler manages per-account domains with DKIM key generation, SendGrid, and DNS verification.
 type DomainHandler struct {
-	db          *sqlx.DB
-	dkimKeyDir  string
-	envAPIKey   string
+	db         *sqlx.DB
+	dkimKeyDir string
+	envAPIKey  string
 }
 
 // NewDomainHandler creates a new DomainHandler. The SendGrid client is built

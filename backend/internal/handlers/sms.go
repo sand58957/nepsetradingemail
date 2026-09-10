@@ -870,10 +870,10 @@ func (h *SMSHandler) GetCampaign(c echo.Context) error {
 	}
 
 	return response.Success(c, map[string]interface{}{
-		"campaign":           campaign,
-		"status_breakdown":   statusBreakdown,
-		"network_breakdown":  networkBreakdown,
-		"recipients":         recipients,
+		"campaign":          campaign,
+		"status_breakdown":  statusBreakdown,
+		"network_breakdown": networkBreakdown,
+		"recipients":        recipients,
 	})
 }
 

@@ -19,25 +19,25 @@ func NewAnalyticsHandler(lm *listmonk.Client) *AnalyticsHandler {
 }
 
 type AnalyticsOverview struct {
-	Subscribers  SubscriberAnalytics  `json:"subscribers"`
-	Campaigns    CampaignAnalytics    `json:"campaigns"`
-	Lists        ListAnalytics        `json:"lists"`
-	Performance  PerformanceAnalytics `json:"performance"`
+	Subscribers SubscriberAnalytics  `json:"subscribers"`
+	Campaigns   CampaignAnalytics    `json:"campaigns"`
+	Lists       ListAnalytics        `json:"lists"`
+	Performance PerformanceAnalytics `json:"performance"`
 }
 
 type SubscriberAnalytics struct {
-	Total       int `json:"total"`
-	Active      int `json:"active"`
-	Blocklisted int `json:"blocklisted"`
+	Total        int `json:"total"`
+	Active       int `json:"active"`
+	Blocklisted  int `json:"blocklisted"`
 	Unsubscribed int `json:"unsubscribed"`
 }
 
 type CampaignAnalytics struct {
-	Total    int               `json:"total"`
-	Sent     int               `json:"sent"`
-	Running  int               `json:"running"`
-	Draft    int               `json:"draft"`
-	Details  json.RawMessage   `json:"details,omitempty"`
+	Total   int             `json:"total"`
+	Sent    int             `json:"sent"`
+	Running int             `json:"running"`
+	Draft   int             `json:"draft"`
+	Details json.RawMessage `json:"details,omitempty"`
 }
 
 type ListAnalytics struct {
@@ -241,9 +241,9 @@ func (h *AnalyticsHandler) GetOverview(c echo.Context) error {
 			var result struct {
 				Data struct {
 					Results []struct {
-						Views  int `json:"views"`
-						Clicks int `json:"clicks"`
-						Sent   int `json:"sent"`
+						Views   int `json:"views"`
+						Clicks  int `json:"clicks"`
+						Sent    int `json:"sent"`
 						Bounces int `json:"bounces"`
 					} `json:"results"`
 				} `json:"data"`

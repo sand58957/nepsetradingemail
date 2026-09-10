@@ -23,13 +23,13 @@ func NewAccountSettingsHandler(db *sqlx.DB, lm *listmonk.Client) *AccountSetting
 }
 
 var validSettingsKeys = map[string]bool{
-	"company_profile":  true,
-	"brand_defaults":   true,
-	"domains":          true,
-	"ecommerce":        true,
-	"link_tracking":    true,
-	"whatsapp_widget":  true,
-	"plan_limits":      true,
+	"company_profile": true,
+	"brand_defaults":  true,
+	"domains":         true,
+	"ecommerce":       true,
+	"link_tracking":   true,
+	"whatsapp_widget": true,
+	"plan_limits":     true,
 }
 
 // GetAll returns all account settings as a map keyed by setting key.

@@ -176,4 +176,3 @@ func verifySendGridKey(apiKey string) (bool, string) {
 		return false, fmt.Sprintf("SendGrid returned %d: %s", resp.StatusCode, string(body))
 	}
 }
-

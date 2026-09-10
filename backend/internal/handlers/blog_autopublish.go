@@ -75,15 +75,15 @@ type AutoPublishQueueItem struct {
 }
 
 type AutoPublishLog struct {
-	ID        int       `json:"id" db:"id"`
-	AccountID int       `json:"account_id" db:"account_id"`
-	QueueID   *int      `json:"queue_id" db:"queue_id"`
-	PostID    *int      `json:"post_id" db:"post_id"`
-	Action    string    `json:"action" db:"action"`
-	Status    string    `json:"status" db:"status"`
-	Message   string    `json:"message" db:"message"`
-	TokensUsed int     `json:"tokens_used" db:"tokens_used"`
-	DurationMs int     `json:"duration_ms" db:"duration_ms"`
+	ID         int       `json:"id" db:"id"`
+	AccountID  int       `json:"account_id" db:"account_id"`
+	QueueID    *int      `json:"queue_id" db:"queue_id"`
+	PostID     *int      `json:"post_id" db:"post_id"`
+	Action     string    `json:"action" db:"action"`
+	Status     string    `json:"status" db:"status"`
+	Message    string    `json:"message" db:"message"`
+	TokensUsed int       `json:"tokens_used" db:"tokens_used"`
+	DurationMs int       `json:"duration_ms" db:"duration_ms"`
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -100,15 +100,15 @@ func (h *BlogAutoPublishHandler) GetSettings(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			// Return defaults
 			return response.Success(c, AutoPublishSettings{
-				AccountID:     accountID,
-				PostsPerDay:   1,
-				PreferredHour: 9,
+				AccountID:       accountID,
+				PostsPerDay:     1,
+				PreferredHour:   9,
 				TargetWordCount: 2000,
 				TargetSEOScore:  95,
 				ContentTone:     "professional",
 				TargetAudience:  "Nepal business owners and digital marketers",
-				SiteContext:      "nepalfillings.com is a Nepal-based digital marketing platform",
-				AnthropicModel:   "claude-sonnet-4-20250514",
+				SiteContext:     "nepalfillings.com is a Nepal-based digital marketing platform",
+				AnthropicModel:  "claude-sonnet-4-20250514",
 			})
 		}
 		return response.InternalError(c, "Failed to fetch settings")
@@ -379,10 +379,10 @@ func (h *BlogAutoPublishHandler) GenerateNow(c echo.Context) error {
 	}
 
 	return response.Success(c, map[string]interface{}{
-		"post_id":    postID,
-		"tokens":     tokens,
+		"post_id":     postID,
+		"tokens":      tokens,
 		"duration_ms": duration,
-		"message":    "Blog post generated and published successfully",
+		"message":     "Blog post generated and published successfully",
 	})
 }
 

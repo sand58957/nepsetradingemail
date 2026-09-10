@@ -47,10 +47,10 @@ type SuppressionEntry struct {
 
 // CSV Import parameters sent to Listmonk
 type CSVImportParams struct {
-	Mode        string `json:"mode"`         // subscribe or blocklist
-	Delimiter   string `json:"delim"`        // comma, tab, semicolon
-	ListIDs     []int  `json:"lists"`        // list IDs to subscribe to
-	Overwrite   bool   `json:"overwrite"`    // overwrite existing subscribers
+	Mode      string `json:"mode"`      // subscribe or blocklist
+	Delimiter string `json:"delim"`     // comma, tab, semicolon
+	ListIDs   []int  `json:"lists"`     // list IDs to subscribe to
+	Overwrite bool   `json:"overwrite"` // overwrite existing subscribers
 }
 
 // API Import request types

@@ -55,8 +55,8 @@ type Usage struct {
 
 // Response is the unified API response.
 type Response struct {
-	Text       string
-	Usage      Usage
+	Text        string
+	Usage       Usage
 	TotalTokens int
 }
 
@@ -65,9 +65,9 @@ type Response struct {
 // ============================================================
 
 type geminiRequest struct {
-	Contents         []geminiContent       `json:"contents"`
-	SystemInstruction *geminiContent       `json:"systemInstruction,omitempty"`
-	GenerationConfig *geminiGenerationConfig `json:"generationConfig,omitempty"`
+	Contents          []geminiContent         `json:"contents"`
+	SystemInstruction *geminiContent          `json:"systemInstruction,omitempty"`
+	GenerationConfig  *geminiGenerationConfig `json:"generationConfig,omitempty"`
 }
 
 type geminiContent struct {

@@ -228,15 +228,15 @@ func (c *Client) CreateTemplate(appID string, req CreateTemplateRequest) (*Creat
 	templateType := vertical
 
 	formData := url.Values{
-		"elementName":                  {req.ElementName},
-		"languageCode":                 {req.Language},
-		"category":                     {req.Category},
-		"templateType":                 {templateType},
-		"vertical":                     {vertical},
-		"content":                      {req.Content},
-		"example":                      {req.Example},
-		"enableSample":                 {"true"},
-		"allowTemplateCategoryChange":  {"true"},
+		"elementName":                 {req.ElementName},
+		"languageCode":                {req.Language},
+		"category":                    {req.Category},
+		"templateType":                {templateType},
+		"vertical":                    {vertical},
+		"content":                     {req.Content},
+		"example":                     {req.Example},
+		"enableSample":                {"true"},
+		"allowTemplateCategoryChange": {"true"},
 	}
 
 	// For AUTHENTICATION category, add OTP button automatically

@@ -136,10 +136,10 @@ func (h *PublicMessengerHandler) Send(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data": map[string]interface{}{
-			"message_id":  msgID,
-			"external_id": fbResp.MessageID,
-			"recipient":   req.To,
-			"status":      "sent",
+			"message_id":   msgID,
+			"external_id":  fbResp.MessageID,
+			"recipient":    req.To,
+			"status":       "sent",
 			"credits_used": creditCost,
 		},
 	})
@@ -270,12 +270,12 @@ func (h *PublicMessengerHandler) ListMessages(c echo.Context) error {
 	offset := (page - 1) * perPage
 
 	var messages []struct {
-		ID         int        `json:"id" db:"id"`
-		Recipient  string     `json:"recipient" db:"recipient"`
-		Content    string     `json:"content" db:"content"`
-		Status     string     `json:"status" db:"status"`
-		ExternalID *string    `json:"external_id" db:"external_id"`
-		CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+		ID         int       `json:"id" db:"id"`
+		Recipient  string    `json:"recipient" db:"recipient"`
+		Content    string    `json:"content" db:"content"`
+		Status     string    `json:"status" db:"status"`
+		ExternalID *string   `json:"external_id" db:"external_id"`
+		CreatedAt  time.Time `json:"created_at" db:"created_at"`
 	}
 
 	h.db.Select(&messages, `
@@ -288,12 +288,12 @@ func (h *PublicMessengerHandler) ListMessages(c echo.Context) error {
 
 	if messages == nil {
 		messages = make([]struct {
-			ID         int        `json:"id" db:"id"`
-			Recipient  string     `json:"recipient" db:"recipient"`
-			Content    string     `json:"content" db:"content"`
-			Status     string     `json:"status" db:"status"`
-			ExternalID *string    `json:"external_id" db:"external_id"`
-			CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+			ID         int       `json:"id" db:"id"`
+			Recipient  string    `json:"recipient" db:"recipient"`
+			Content    string    `json:"content" db:"content"`
+			Status     string    `json:"status" db:"status"`
+			ExternalID *string   `json:"external_id" db:"external_id"`
+			CreatedAt  time.Time `json:"created_at" db:"created_at"`
 		}, 0)
 	}
 
@@ -321,12 +321,12 @@ func (h *PublicMessengerHandler) GetMessage(c echo.Context) error {
 	msgID, _ := strconv.Atoi(c.Param("id"))
 
 	var msg struct {
-		ID         int        `json:"id" db:"id"`
-		Recipient  string     `json:"recipient" db:"recipient"`
-		Content    string     `json:"content" db:"content"`
-		Status     string     `json:"status" db:"status"`
-		ExternalID *string    `json:"external_id" db:"external_id"`
-		CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+		ID         int       `json:"id" db:"id"`
+		Recipient  string    `json:"recipient" db:"recipient"`
+		Content    string    `json:"content" db:"content"`
+		Status     string    `json:"status" db:"status"`
+		ExternalID *string   `json:"external_id" db:"external_id"`
+		CreatedAt  time.Time `json:"created_at" db:"created_at"`
 	}
 
 	err := h.db.Get(&msg, `
@@ -378,7 +378,12 @@ func (h *PublicMessengerHandler) GetStatus(c echo.Context) error {
 		"data": map[string]interface{}{
 			"channel":    "messenger",
 			"configured": configured,
-			"page_id":    func() string { if settings != nil { return settings.PageID }; return "" }(),
+			"page_id": func() string {
+				if settings != nil {
+					return settings.PageID
+				}
+				return ""
+			}(),
 		},
 	})
 }
