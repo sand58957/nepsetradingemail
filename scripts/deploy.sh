@@ -6,12 +6,12 @@
 #   bash scripts/deploy.sh backend         # one service
 #   bash scripts/deploy.sh --no-pull       # deploy what is already checked out
 #
-# Why the nginx reload matters: nginx resolves the `backend` and `frontend`
-# hostnames once, when it starts, and caches those container IPs. Recreating a
-# container gives it a NEW IP, so nginx keeps proxying to an address nothing is
-# listening on and every /api/ route returns 502 until nginx is reloaded. That
-# is silent -- `docker ps` shows the container healthy while the site is down --
-# so the reload is part of the deploy, not an afterthought.
+# About the nginx reload: nginx now resolves upstreams per request (default.conf
+# uses Docker's resolver with variable proxy_pass), so a recreated container's
+# new IP is picked up on its own and the old 502-until-reload failure cannot
+# happen. The reload is kept as a safety net -- it also applies any nginx config
+# change pulled in this deploy -- and it is cheap. The nginx -t gate before it
+# means a bad config fails the deploy instead of taking the site down.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
