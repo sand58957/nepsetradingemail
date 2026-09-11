@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 // MUI Imports
 import { deepmerge } from '@mui/utils'
@@ -43,18 +43,28 @@ const CustomThemeProvider = (props: Props) => {
   const { settings } = useSettings()
   const isDark = useMedia('(prefers-color-scheme: dark)', systemMode === 'dark')
 
-  // Vars
-  const isServer = typeof window === 'undefined'
+  // react-use's useMedia reads matchMedia on the client's *first* render, while
+  // the server rendered from the colorPref cookie. When a visitor's OS theme
+  // disagrees with that cookie the two renders produce different themes, and
+  // React reports a hydration mismatch (error #418) on every page.
+  //
+  // Branching on `typeof window` is the pattern React's own error text warns
+  // about, because the first client render must reproduce the server output
+  // exactly. So resolve the real preference only after mount.
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   let currentMode: SystemMode
 
-  if (isServer) {
+  if (!mounted) {
     currentMode = systemMode
+  } else if (settings.mode === 'system') {
+    currentMode = isDark ? 'dark' : 'light'
   } else {
-    if (settings.mode === 'system') {
-      currentMode = isDark ? 'dark' : 'light'
-    } else {
-      currentMode = settings.mode as SystemMode
-    }
+    currentMode = settings.mode as SystemMode
   }
 
   // Merge the primary color scheme override with the core theme
