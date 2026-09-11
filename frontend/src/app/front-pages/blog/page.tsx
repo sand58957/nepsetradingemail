@@ -40,7 +40,8 @@ interface BlogPost {
   title: string
   slug: string
   excerpt: string
-  featured_image?: string
+  featured_image_url?: string
+  featured_image_alt?: string
   published_at: string
   reading_time?: number
   category?: {
@@ -159,9 +160,13 @@ export default async function BlogListingPage({ searchParams }: { searchParams: 
           {posts.map(post => (
             <article key={post.id} className='blog-post-card'>
               {/* Featured Image */}
-              {post.featured_image && (
+              {post.featured_image_url && (
                 <Link href={`/blog/${post.slug}`}>
-                  <img src={post.featured_image} alt={post.title} className='blog-post-img' />
+                  <img
+                    src={post.featured_image_url}
+                    alt={post.featured_image_alt || post.title}
+                    className='blog-post-img'
+                  />
                 </Link>
               )}
 
