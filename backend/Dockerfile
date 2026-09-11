@@ -1,4 +1,8 @@
-FROM golang:1.25-alpine AS builder
+# Must match the go directive in go.mod: the official images set
+# GOTOOLCHAIN=local, so a builder older than go.mod's requirement fails rather
+# than fetching the newer toolchain. Until a dependency changed go.sum this was
+# hidden by the cached "go mod download" layer.
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
