@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"os"
 	"path/filepath"
@@ -121,6 +122,36 @@ func (h *TitleBankHandler) loadPillar(id int) (*composer.Pillar, error) {
 	}
 	p.SecondaryKeywords, p.Subtopics = sec, sub
 	return &p, nil
+}
+
+// flyerPillarFor decides which pillar's flyer illustrates a post. Each pillar
+// ships exactly one flyer, so using the post's own pillar gave all hundred
+// posts inside that pillar the same picture. Choosing across every pillar that
+// has a flyer spreads the artwork instead, and hashing the title rather than
+// picking at random keeps it stable: a post always gets the same flyer, so
+// republishing it does not churn the site's images.
+func (h *TitleBankHandler) flyerPillarFor(title string) (*composer.Pillar, error) {
+	var ids []int
+	if err := h.db.Select(&ids, `SELECT id FROM blog_pillars
+		WHERE COALESCE(flyer_url, '') <> '' ORDER BY pillar_number`); err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("no pillar has a flyer")
+	}
+	return h.loadPillar(ids[flyerIndexFor(title, len(ids))])
+}
+
+// flyerIndexFor spreads titles over the available flyers. Hashing the title
+// rather than drawing at random makes the choice reproducible, so a post keeps
+// the same flyer across republishes.
+func flyerIndexFor(title string, n int) int {
+	if n <= 0 {
+		return 0
+	}
+	sum := fnv.New32a()
+	_, _ = sum.Write([]byte(title))
+	return int(sum.Sum32() % uint32(n))
 }
 
 func (h *TitleBankHandler) loadCategory(id *int) *composer.Category {
