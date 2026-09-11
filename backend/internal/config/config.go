@@ -36,6 +36,10 @@ type Config struct {
 	R2SecretAccessKey     string
 	R2Bucket              string
 	R2PublicBaseURL       string
+
+	// BlogCoverDir is where the publisher writes generated post covers. nginx
+	// serves the same directory at /blog-covers/.
+	BlogCoverDir string
 }
 
 func Load() (*Config, error) {
@@ -84,6 +88,8 @@ func Load() (*Config, error) {
 		R2SecretAccessKey:     getEnv("R2_SECRET_ACCESS_KEY", ""),
 		R2Bucket:              getEnv("R2_BUCKET", "nepalfillings-images"),
 		R2PublicBaseURL:       getEnv("R2_PUBLIC_BASE_URL", "https://cdn.nepalfillings.com"),
+
+		BlogCoverDir: getEnv("BLOG_COVER_DIR", "/app/blog-covers"),
 	}
 
 	if cfg.JWTSecret == "" {

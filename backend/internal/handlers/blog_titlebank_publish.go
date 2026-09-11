@@ -10,6 +10,7 @@ import (
 	"github.com/lib/pq"
 
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/composer"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/cover"
 )
 
 // validationError marks a failure that should not be retried blindly.
@@ -123,6 +124,24 @@ func (h *TitleBankHandler) PublishNext(ctx context.Context, accountID int) (post
 		return 0, err
 	}
 	art.CanonicalURL = strings.TrimRight(s.SiteBaseURL, "/") + composer.PostURL(art.Slug)
+
+	// Give the post its own cover. One flyer exists per pillar, so without this
+	// every one of a pillar's hundred posts shares a single image -- and the
+	// pillar name is printed on the flyer artwork, so the flyers cannot simply
+	// be shuffled between pillars either. The cover is drawn locally from the
+	// post's own title and slug; nothing is fetched. A failure here is not
+	// worth losing a post over, so it falls back to the pillar flyer.
+	if name, cerr := cover.Render(cover.Input{
+		Title:       art.Title,
+		PillarTitle: p.Title,
+		PillarSlug:  composer.Slugify(p.Title),
+		Slug:        art.Slug,
+	}, h.cfg.BlogCoverDir); cerr != nil {
+		log.Printf("title bank: cover render failed for %s, using pillar flyer: %v", art.Slug, cerr)
+	} else {
+		art.FeaturedImageURL = strings.TrimRight(s.SiteBaseURL, "/") + "/blog-covers/" + name
+		art.FeaturedImageAlt = cover.AltText(cover.Input{Title: art.Title, PillarTitle: p.Title})
+	}
 
 	if err = validateArticle(art, t, author, cat); err != nil {
 		return 0, err

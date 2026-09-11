@@ -19,6 +19,7 @@ services:
       - ./certbot/conf:/etc/letsencrypt:ro
       # Self-hosted blog featured images (replaces external Unsplash URLs)
       - ./uploads/blog-images:/usr/share/nginx/blog-images:ro
+      - ./uploads/blog-covers:/usr/share/nginx/blog-covers:ro
     depends_on:
       frontend:
         condition: service_healthy
@@ -114,6 +115,9 @@ services:
     volumes:
       - /opt/dkim-keys:/opt/dkim-keys
       - ./flyers:/app/flyers:ro
+      # Generated per-post covers. nginx serves this same directory at
+      # /blog-covers/, so the backend needs write access to it.
+      - ./uploads/blog-covers:/app/blog-covers
     depends_on:
       db:
         condition: service_healthy
