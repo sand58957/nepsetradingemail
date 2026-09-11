@@ -154,6 +154,13 @@ func main() {
 	autoPublishHandler := handlers.NewBlogAutoPublishHandler(db, cfg)
 	go autoPublishHandler.StartAutoPublish(autoPublishCtx, 30*time.Minute)
 
+	// Title-bank publisher: publishes the internal 5,000-title database on the
+	// interval configured in blog_title_bank_settings. Checks every minute so an
+	// admin can change the interval without a restart; publishing itself stays
+	// disabled until an admin enables it.
+	titleBankHandler := handlers.NewTitleBankHandler(db, cfg)
+	go titleBankHandler.StartTitleBankPublisher(autoPublishCtx, 20, time.Minute)
+
 	// Start server in a goroutine
 	go func() {
 		addr := fmt.Sprintf(":%d", cfg.Port)

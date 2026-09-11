@@ -23,6 +23,7 @@ func (s *Server) RegisterRoutes() {
 	automationHandler := handlers.NewAutomationHandler(s.DB)
 	formHandler := handlers.NewFormHandler(s.DB, s.LM)
 	importHandler := handlers.NewImportHandler(s.DB, s.LM)
+	titleBankHandler := handlers.NewTitleBankHandler(s.DB, s.Config)
 	analyticsHandler := handlers.NewAnalyticsHandler(s.LM)
 	accountSettingsHandler := handlers.NewAccountSettingsHandler(s.DB, s.LM)
 	mediaFolderHandler := handlers.NewMediaFolderHandler(s.DB, s.LM)
@@ -118,6 +119,15 @@ func (s *Server) RegisterRoutes() {
 	subscribers.GET("/export", subscriberHandler.Export)
 
 	// Import management
+	// Title-bank auto publishing (admin-gated inside each handler).
+	titleBank := staff.Group("/blog/titlebank")
+	titleBank.GET("/stats", titleBankHandler.GetStats)
+	titleBank.PUT("/settings", titleBankHandler.UpdateSettings)
+	titleBank.POST("/publish-now", titleBankHandler.PublishNow)
+	titleBank.GET("/titles", titleBankHandler.ListTitles)
+	titleBank.GET("/history", titleBankHandler.History)
+	titleBank.POST("/titles/:id/status", titleBankHandler.SetTitleStatus)
+
 	imports := staff.Group("/import")
 	imports.POST("/csv", importHandler.ImportCSV)
 	imports.GET("/status", importHandler.GetImportStatus)

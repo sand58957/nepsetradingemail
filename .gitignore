@@ -84,3 +84,6 @@ coverage/
 dist/
 backend/main
 backend/nepse-backend
+
+# Local flyer source assets (41MB) — synced to the VPS, not tracked
+Flyier/
