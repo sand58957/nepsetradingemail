@@ -41,11 +41,11 @@ func buildArticleSchema(a composer.Article, author composer.Author, baseURL stri
 			"publisher": map[string]interface{}{
 				"@type": "Organization", "name": "Nepal Fillings", "url": base,
 			},
-			"image":         a.FeaturedImageURL,
-			"wordCount":     a.WordCount,
-			"keywords":      strings.Join(a.SecondaryKeywords, ", "),
-			"about":         a.EntityTags,
-			"inLanguage":    "en",
+			"image":          a.FeaturedImageURL,
+			"wordCount":      a.WordCount,
+			"keywords":       strings.Join(a.SecondaryKeywords, ", "),
+			"about":          a.EntityTags,
+			"inLanguage":     "en",
 			"articleSection": a.BreadcrumbTitle,
 		},
 		{
