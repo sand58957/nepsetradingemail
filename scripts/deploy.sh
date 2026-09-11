@@ -30,6 +30,12 @@ done
 say() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 fail() { printf '\033[31mFAILED: %s\033[0m\n' "$*" >&2; exit 1; }
 
+# This script rebuilds and restarts the production stack, so refuse to run
+# anywhere but the deploy host. Without this guard, running it on a laptop
+# points docker compose at whatever local stack shares the project name.
+docker ps --format '{{.Names}}' 2>/dev/null | grep -qx nepse_nginx \
+  || fail "nepse_nginx is not running here -- this is not the deploy host. Run this on the VPS from /root/nepsetradingemail."
+
 if [ "$PULL" -eq 1 ]; then
   say "Pulling origin/main"
   git pull --ff-only origin main

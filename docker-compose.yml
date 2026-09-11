@@ -1,3 +1,10 @@
+# Pin the Compose project name. Without this key the project name comes from the
+# directory basename, so a checkout in a directory called "nepal_filling" adopts
+# the unrelated nepalfilling stack's namespace -- and "docker compose down" there
+# deletes that project's containers. The VPS already runs under this exact name,
+# so this changes nothing in production.
+name: nepsetradingemail
+
 services:
   nginx:
     image: nginx:alpine
