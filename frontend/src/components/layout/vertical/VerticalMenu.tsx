@@ -400,9 +400,6 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
             <MenuItem href={`/${locale}/admin/credits`} icon={<i className='tabler-credit-card' />}>
               API Credit Management
             </MenuItem>
-            <MenuItem href={`/${locale}/blog/autopublish`} icon={<i className='tabler-robot' />}>
-              Auto-Publish Cron
-            </MenuItem>
             <MenuItem href={`/${locale}/admin/settings`} icon={<i className='tabler-server-cog' />}>
               System Settings
             </MenuItem>

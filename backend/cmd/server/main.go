@@ -148,18 +148,15 @@ func main() {
 	go domainHandler.StartAutoVerification(autoVerifyCtx, 5*time.Minute)
 
 	// Start blog auto-publish background job (checks every 30 minutes)
-	autoPublishCtx, autoPublishCancel := context.WithCancel(context.Background())
-	defer autoPublishCancel()
-
-	autoPublishHandler := handlers.NewBlogAutoPublishHandler(db, cfg)
-	go autoPublishHandler.StartAutoPublish(autoPublishCtx, 30*time.Minute)
+	publisherCtx, publisherCancel := context.WithCancel(context.Background())
+	defer publisherCancel()
 
 	// Title-bank publisher: publishes the internal 5,000-title database on the
 	// interval configured in blog_title_bank_settings. Checks every minute so an
 	// admin can change the interval without a restart; publishing itself stays
 	// disabled until an admin enables it.
 	titleBankHandler := handlers.NewTitleBankHandler(db, cfg)
-	go titleBankHandler.StartTitleBankPublisher(autoPublishCtx, 20, time.Minute)
+	go titleBankHandler.StartTitleBankPublisher(publisherCtx, 20, time.Minute)
 
 	// Start server in a goroutine
 	go func() {

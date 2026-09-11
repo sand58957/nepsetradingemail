@@ -29,8 +29,6 @@ type Config struct {
 	GupshupOTPKey         string
 	GupshupOTPAppName     string
 	GupshupOTPSourcePhone string
-	AnthropicAPIKey       string
-	GeminiAPIKey          string
 	GlitchTipDSN          string
 	AppEnv                string
 	R2AccountID           string
@@ -79,8 +77,6 @@ func Load() (*Config, error) {
 		GupshupOTPKey:         getEnv("GUPSHUP_OTP_KEY", ""),
 		GupshupOTPAppName:     getEnv("GUPSHUP_OTP_APP_NAME", ""),
 		GupshupOTPSourcePhone: getEnv("GUPSHUP_OTP_SOURCE_PHONE", ""),
-		AnthropicAPIKey:       getEnv("ANTHROPIC_API_KEY", ""),
-		GeminiAPIKey:          getEnv("GEMINI_API_KEY", ""),
 		GlitchTipDSN:          getEnv("GLITCHTIP_DSN", ""),
 		AppEnv:                getEnv("APP_ENV", "production"),
 		R2AccountID:           getEnv("R2_ACCOUNT_ID", ""),
