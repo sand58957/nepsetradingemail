@@ -23,8 +23,10 @@ func imageFor(in Input, subject string) (string, string, string, string, string)
 	}
 
 	// Alt text describes the image itself, then ties it to the article subject.
+	// Use the pillar title as written: lower1 only lowercases the first word, which
+	// turned "Digital Marketing Strategy Foundations" into "digital Marketing...".
 	alt := fmt.Sprintf("Nepal Fillings illustrated cover for %s, the pillar covering %s",
-		lower1(p.Title), lower1(subject))
+		p.Title, lower1(subject))
 	if len(alt) > 125 {
 		alt = trimTo(alt, 125)
 	}

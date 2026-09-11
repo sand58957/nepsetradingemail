@@ -33,15 +33,21 @@ func trimTo(s string, n int) string {
 	return strings.TrimRight(cut, " ,.;:—-") + "…"
 }
 
+// metaTitle returns the bare title. The site layout already appends
+// " | Nepal Fillings Blog", so adding branding here double-brands the tag, and
+// truncating here puts an ellipsis in the middle of the rendered <title>.
+// Only an unusually long title is shortened, and on a word boundary with no
+// ellipsis, so the suffix still lands inside a sensible SERP width.
 func metaTitle(title string) string {
-	const suffix = " | Nepal Fillings"
-	if len(title)+len(suffix) <= 60 {
-		return title + suffix
-	}
-	if len(title) <= 60 {
+	const maxBeforeSuffix = 68
+	if len(title) <= maxBeforeSuffix {
 		return title
 	}
-	return trimTo(title, 60)
+	cut := title[:maxBeforeSuffix]
+	if i := strings.LastIndex(cut, " "); i > maxBeforeSuffix/2 {
+		cut = cut[:i]
+	}
+	return strings.TrimRight(cut, " ,.;:-")
 }
 
 func metaDescription(quick, subject string, p Pillar) string {
