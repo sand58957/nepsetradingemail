@@ -100,9 +100,13 @@ services:
       - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY:-}
       - R2_BUCKET=${R2_BUCKET:-nepalfillings-images}
       - R2_PUBLIC_BASE_URL=${R2_PUBLIC_BASE_URL:-https://cdn.nepalfillings.com}
+      # Local flyer assets for the title-bank publisher: one 1200x630 PNG per
+      # content pillar, read from disk and pushed to R2 on first use.
+      - BLOG_FLYER_DIR=/app/flyers
       - DKIM_KEYS_DIR=/opt/dkim-keys
     volumes:
       - /opt/dkim-keys:/opt/dkim-keys
+      - ./flyers:/app/flyers:ro
     depends_on:
       db:
         condition: service_healthy
