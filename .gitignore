@@ -87,3 +87,8 @@ backend/nepse-backend
 
 # Local flyer source assets (41MB) — synced to the VPS, not tracked
 Flyier/
+
+# Runtime upload and generated-image directories. The publisher writes one
+# cover PNG per post here (5,000 titles in the bank), and nginx serves them
+# from the same path; they are generated output, not source.
+uploads/
