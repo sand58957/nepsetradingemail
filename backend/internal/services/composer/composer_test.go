@@ -110,3 +110,22 @@ func TestDumpSample(t *testing.T) {
 	t.Logf("words=%d seo=%d read=%d faqs=%d toc=%d links=%d slug=%s",
 		a.WordCount, a.SEOScore, a.ReadabilityScore, len(a.FAQs), len(a.TOC), len(a.InternalLinks), a.Slug)
 }
+
+// A title the composer is willing to emit must never be marked down by the
+// scorer. These two rules lived as separate magic numbers (68 and 62) and
+// silently drifted: every post with a 63-68 character meta title scored 91
+// instead of 100, for following the composer's own policy.
+func TestScorerAcceptsEveryMetaTitleTheComposerEmits(t *testing.T) {
+	longTitle := "Competitive Positioning at Scale: What Changes Once You Outgrow the Basics"
+	for _, contentType := range []string{"Advanced guide", "Beginner guide", "How-to", "Comparison"} {
+		a := Compose(sampleInput(contentType, "broadcast strategy", longTitle))
+		if len(a.MetaTitle) > maxMetaTitle {
+			t.Errorf("%s: emitted a %d character meta title, over the %d limit",
+				contentType, len(a.MetaTitle), maxMetaTitle)
+		}
+		if a.SEOScore != 100 {
+			t.Errorf("%s: meta title of %d characters is within policy but scored %d, want 100",
+				contentType, len(a.MetaTitle), a.SEOScore)
+		}
+	}
+}

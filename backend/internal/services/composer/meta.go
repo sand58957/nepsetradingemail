@@ -33,18 +33,23 @@ func trimTo(s string, n int) string {
 	return strings.TrimRight(cut, " ,.;:—-") + "…"
 }
 
+// maxMetaTitle is the longest meta title the composer emits, and the same bound
+// scoreSEO checks. Keep it one constant: while the two were separate literals
+// (68 here, 62 in the scorer) every post with a 63-68 character meta title was
+// marked down for following this file's own rule.
+const maxMetaTitle = 68
+
 // metaTitle returns the bare title. The site layout already appends
 // " | Nepal Fillings Blog", so adding branding here double-brands the tag, and
 // truncating here puts an ellipsis in the middle of the rendered <title>.
 // Only an unusually long title is shortened, and on a word boundary with no
 // ellipsis, so the suffix still lands inside a sensible SERP width.
 func metaTitle(title string) string {
-	const maxBeforeSuffix = 68
-	if len(title) <= maxBeforeSuffix {
+	if len(title) <= maxMetaTitle {
 		return title
 	}
-	cut := title[:maxBeforeSuffix]
-	if i := strings.LastIndex(cut, " "); i > maxBeforeSuffix/2 {
+	cut := title[:maxMetaTitle]
+	if i := strings.LastIndex(cut, " "); i > maxMetaTitle/2 {
 		cut = cut[:i]
 	}
 	return strings.TrimRight(cut, " ,.;:-")
@@ -156,7 +161,7 @@ func joinNatural(xs []string) string {
 func scoreSEO(a Article) int {
 	score := 0
 	checks := []bool{
-		a.MetaTitle != "" && len(a.MetaTitle) <= 62,
+		a.MetaTitle != "" && len(a.MetaTitle) <= maxMetaTitle,
 		a.MetaDescription != "" && len(a.MetaDescription) >= 80 && len(a.MetaDescription) <= 160,
 		a.CanonicalURL != "", a.PrimaryKeyword != "", len(a.SecondaryKeywords) >= 3,
 		len(a.FAQs) >= 4, len(a.TOC) >= 3, a.QuickAnswer != "",
