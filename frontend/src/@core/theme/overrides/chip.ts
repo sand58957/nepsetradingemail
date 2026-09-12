@@ -68,7 +68,12 @@ const chip: Theme['components'] = {
               // the dark surface -- below the 4.5:1 this text size needs. The
               // lighter brand step gives 5.25:1. Only the dark scheme needs it; on
               // the light surface the darker brand is the readable one.
-              '[data-mui-color-scheme="dark"] &': {
+              //
+              // The attribute is `data-dark`, which is what this app sets on <html>
+              // at runtime. `data-mui-color-scheme` appears in the server-rendered
+              // markup but is not what ends up on the live element, so selecting on
+              // it silently matched nothing.
+              ':where([data-dark]) &': {
                 color: 'var(--mui-palette-primary-light)'
               },
               '&.Mui-focusVisible': {
