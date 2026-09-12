@@ -86,7 +86,7 @@ const faqJsonLd = {
       name: 'Is Nepal Fillings suitable for small businesses in Nepal?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Absolutely! Nepal Fillings uses credit-based pricing with no monthly subscriptions, making it affordable for businesses of all sizes.'
+        text: 'Yes. You can start free with up to 500 subscribers, and paid plans are priced by the size of your subscriber list, so the cost grows only as your audience does.'
       }
     }
   ]
