@@ -152,6 +152,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const headings = post.content_html ? extractHeadings(post.content_html) : []
   const processedContent = post.content_html ? injectHeadingIds(post.content_html) : ''
 
+  // Does the article body already end with its own FAQ section? The composer
+  // writes one for auto-published posts; most older posts have none. This decides
+  // whether the FAQ block further down renders, so the questions appear exactly
+  // once on the page and never zero times.
+  const contentHasFaqSection = /<h[1-3][^>]*>\s*frequently\s+asked\s+questions\s*<\/h[1-3]>/i.test(
+    processedContent
+  )
+
   // Generate schemas
   const articleSchema = generateArticleSchema(post as any, author as any, BASE_URL)
   const breadcrumbSchema = generateBreadcrumbSchema(
@@ -275,14 +283,51 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           {/* Article Content */}
           <div className='blog-content' dangerouslySetInnerHTML={{ __html: processedContent }} />
 
-          {/* The article body already ends with its own FAQ section: the composer
-              writes the same questions as h2/h3 with visible answers. Rendering the
-              structured faqs here as well put every question and answer on the page
-              twice, and emitted FAQ markup twice (this block's microdata plus the
-              FAQPage JSON-LD in the head). The in-article version is kept because
-              plain headings with visible answers are what answer engines extract;
-              a <details> accordion hides the answer until it is clicked. The
-              FAQPage JSON-LD above remains the structured representation. */}
+          {/* FAQ section — rendered only when the article body does not already
+              carry one. Auto-published posts have the questions written into the
+              body as headings with visible answers, so rendering these again put
+              every question on the page twice. But most older posts have no FAQ in
+              their body at all: for those, this block is the ONLY visible FAQ, and
+              dropping it unconditionally left 680 posts emitting FAQPage JSON-LD
+              whose questions appeared nowhere on the page — which breaks Google's
+              rule that structured data must reflect visible content. The microdata
+              that used to sit on this block is gone; the FAQPage JSON-LD in the head
+              is the single structured representation. */}
+          {faqs.length > 0 && !contentHasFaqSection && (
+            <section className='blog-faq-section'>
+              <div className='blog-faq-header'>
+                <svg
+                  width='24'
+                  height='24'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeWidth='2'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  aria-hidden='true'
+                >
+                  <circle cx='12' cy='12' r='10' />
+                  <path d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3' />
+                  <line x1='12' y1='17' x2='12.01' y2='17' />
+                </svg>
+                <h2>Frequently Asked Questions</h2>
+              </div>
+              <div className='blog-faq-list'>
+                {faqs.map((faq: BlogFAQ, index: number) => (
+                  <details key={index} className='blog-faq-item' open={index === 0}>
+                    <summary className='blog-faq-q'>
+                      <span className='blog-faq-num'>{String(index + 1).padStart(2, '0')}</span>
+                      {faq.question}
+                    </summary>
+                    <div className='blog-faq-answer'>
+                      <p>{faq.answer}</p>
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
