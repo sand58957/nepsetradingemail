@@ -100,9 +100,14 @@
   --mui-mainColorChannels-shadow: var(--mui-mainColorChannels-darkShadow);
 
   /* Premium gradient variables */
-  --gradient-primary-btn: linear-gradient(135deg, #7367F0 0%, #8B5CF6 50%, #6C63FF 100%);
-  --gradient-primary-hover: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 50%, #7C3AED 100%);
-  --gradient-card-border: linear-gradient(135deg, rgba(115, 103, 240, 0.3) 0%, rgba(115, 103, 240, 0.05) 50%, rgba(115, 103, 240, 0.3) 100%);
+  --gradient-primary-btn: linear-gradient(135deg, #7367f0 0%, #8b5cf6 50%, #6c63ff 100%);
+  --gradient-primary-hover: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #7c3aed 100%);
+  --gradient-card-border: linear-gradient(
+    135deg,
+    rgba(115, 103, 240, 0.3) 0%,
+    rgba(115, 103, 240, 0.05) 50%,
+    rgba(115, 103, 240, 0.3) 100%
+  );
   --gradient-sidebar: linear-gradient(180deg, #0f0f1a 0%, #161626 50%, #1a1a2e 100%);
   --gradient-table-header: linear-gradient(135deg, rgba(115, 103, 240, 0.08) 0%, rgba(115, 103, 240, 0.03) 100%);
   --glow-primary: 0 0 20px rgba(115, 103, 240, 0.15), 0 0 40px rgba(115, 103, 240, 0.05);
@@ -112,63 +117,69 @@
 /* ========== DARK MODE PREMIUM STYLES ========== */
 
 /* Card gradient border + glow */
-[data-mui-color-scheme="dark"] .MuiCard-root {
+[data-mui-color-scheme='dark'] .MuiCard-root {
   border: 1px solid rgba(115, 103, 240, 0.12);
   box-shadow: var(--glow-card);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
-[data-mui-color-scheme="dark"] .MuiCard-root:hover {
+[data-mui-color-scheme='dark'] .MuiCard-root:hover {
   border-color: rgba(115, 103, 240, 0.25);
-  box-shadow: var(--glow-card), 0 0 20px rgba(115, 103, 240, 0.08);
+  box-shadow:
+    var(--glow-card),
+    0 0 20px rgba(115, 103, 240, 0.08);
 }
 
 /* Primary contained button gradient */
-[data-mui-color-scheme="dark"] .MuiButton-containedPrimary:not(.Mui-disabled) {
+[data-mui-color-scheme='dark'] .MuiButton-containedPrimary:not(.Mui-disabled) {
   background: var(--gradient-primary-btn) !important;
   box-shadow: 0 4px 15px rgba(115, 103, 240, 0.35);
   border: none;
   transition: all 0.3s ease;
 }
 
-[data-mui-color-scheme="dark"] .MuiButton-containedPrimary:not(.Mui-disabled):hover {
+[data-mui-color-scheme='dark'] .MuiButton-containedPrimary:not(.Mui-disabled):hover {
   background: var(--gradient-primary-hover) !important;
   box-shadow: 0 6px 20px rgba(115, 103, 240, 0.45);
   transform: translateY(-1px);
 }
 
 /* Table header gradient */
-[data-mui-color-scheme="dark"] thead,
-[data-mui-color-scheme="dark"] .MuiTableHead-root {
+[data-mui-color-scheme='dark'] thead,
+[data-mui-color-scheme='dark'] .MuiTableHead-root {
   background: var(--gradient-table-header);
 }
 
 /* Table row hover */
-[data-mui-color-scheme="dark"] tbody tr:hover,
-[data-mui-color-scheme="dark"] .MuiTableBody-root .MuiTableRow-root:hover {
+[data-mui-color-scheme='dark'] tbody tr:hover,
+[data-mui-color-scheme='dark'] .MuiTableBody-root .MuiTableRow-root:hover {
   background-color: rgba(115, 103, 240, 0.04);
 }
 
 /* Input focus glow ring */
-[data-mui-color-scheme="dark"] .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: #7367F0;
+[data-mui-color-scheme='dark'] .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #7367f0;
   box-shadow: 0 0 0 3px rgba(115, 103, 240, 0.15);
 }
 
 /* Chip subtle border */
-[data-mui-color-scheme="dark"] .MuiChip-root {
+[data-mui-color-scheme='dark'] .MuiChip-root {
   border-color: rgba(115, 103, 240, 0.15);
 }
 
 /* Softer dividers */
-[data-mui-color-scheme="dark"] .MuiDivider-root {
+[data-mui-color-scheme='dark'] .MuiDivider-root {
   border-color: rgba(115, 103, 240, 0.08);
 }
 
 /* Dialog premium styling */
-[data-mui-color-scheme="dark"] .MuiDialog-paper {
+[data-mui-color-scheme='dark'] .MuiDialog-paper {
   border: 1px solid rgba(115, 103, 240, 0.12);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(115, 103, 240, 0.08);
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.5),
+    0 0 24px rgba(115, 103, 240, 0.08);
 }
 
 @layer base {
@@ -288,4 +299,59 @@ code {
   color: var(--mui-palette-info-main);
   background-color: rgb(var(--mui-palette-info-mainChannel) / 0.08);
   border: 0;
+}
+
+/* ==========================================================================
+   Accessibility corrections
+   ========================================================================== */
+
+/*
+ * Visible keyboard focus.
+ *
+ * Every interactive control on the marketing pages was focusing invisibly:
+ * 30 tested — CTAs, FAQ headers, carousel arrows — all reported
+ * `outline: none 0px` with the focused state byte-identical to rest. Two
+ * causes in the emitted CSS: an always-on `customShadows-*-sm` box-shadow that
+ * outranks MUI's focus shadow by source order, and every focus rule guarded by
+ * `:not(:has(span.MuiTouchRipple-root))` — a condition a mounted MUI button can
+ * never satisfy, because the ripple span is always there. That is a WCAG 2.4.7
+ * failure and it makes the site unusable by keyboard.
+ *
+ * An outline is used rather than a shadow so it cannot be cancelled by the
+ * component's own shadow, and `:focus-visible` keeps it off mouse clicks.
+ */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role='button']:focus-visible,
+[role='tab']:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--mui-palette-primary-light, #8f85f3);
+  outline-offset: 2px;
+}
+
+/* The floating chat button sits above everything; give the ring room. */
+.MuiFab-root:focus-visible {
+  outline: 2px solid var(--mui-palette-primary-light, #8f85f3);
+  outline-offset: 3px;
+}
+
+/*
+ * Touch targets. 45 of 60 controls measured under 44x44 on a 375px viewport —
+ * seven CTAs at 38px tall, header icon buttons at 38x38, and 19 footer links at
+ * 22px with 16px between them. The carousel arrows were already 44x44, so the
+ * standard was understood, just not applied.
+ */
+@media (max-width: 899px) {
+  .MuiButton-root {
+    min-block-size: 44px;
+  }
+
+  header .MuiIconButton-root {
+    inline-size: 44px;
+    block-size: 44px;
+  }
 }

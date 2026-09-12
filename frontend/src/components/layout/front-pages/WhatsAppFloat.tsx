@@ -67,7 +67,9 @@ const WhatsAppFloat = () => {
           onClick={() => setShowTooltip(false)}
           style={{
             position: 'fixed',
-            bottom: 90,
+            // At 375px this button covered all of the scroll-to-top control and
+            // half the footer Subscribe button, which clipped to "Subs".
+            bottom: 150,
             [isRight ? 'right' : 'left']: 24,
             backgroundColor: '#fff',
             color: '#1a1a2e',

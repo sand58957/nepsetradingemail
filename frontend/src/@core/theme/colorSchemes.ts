@@ -151,7 +151,7 @@ const colorSchemes = (skin: Skin): Theme['colorSchemes'] => {
           bodyBg: '#F8F7FA',
           chatBg: '#F3F2F5',
           greyLightBg: '#FAFAFA',
-          inputBorder: `rgb(var(--mui-mainColorChannels-light) / 0.22)`,
+          inputBorder: `rgb(var(--mui-mainColorChannels-light) / 0.38)`,
           tableHeaderBg: '#FFFFFF',
           tooltipText: '#FFFFFF',
           trackBg: '#F1F0F2'
@@ -303,7 +303,7 @@ const colorSchemes = (skin: Skin): Theme['colorSchemes'] => {
           bodyBg: '#0f0f1a',
           chatBg: '#12121f',
           greyLightBg: '#1e1e35',
-          inputBorder: `rgb(var(--mui-mainColorChannels-dark) / 0.22)`,
+          inputBorder: `rgb(var(--mui-mainColorChannels-dark) / 0.38)`,
           tableHeaderBg: '#1a1a30',
           tooltipText: '#161626',
           trackBg: '#252542'

@@ -237,6 +237,11 @@ const button: Theme['components'] = {
           {
             props: { variant: 'contained', color: 'primary' },
             style: {
+              // White on the brand #7367F0 measures 4.26:1 -- just under the
+              // 4.5:1 body text needs, and this is the fill behind every primary
+              // CTA on the site. A shade darker in the same hue reaches 4.57:1
+              // without shifting the brand perceptibly.
+              backgroundColor: '#6E63E6',
               '&:not(.Mui-disabled)': {
                 boxShadow: 'var(--mui-customShadows-primary-sm)'
               },

@@ -13,7 +13,9 @@
     background: linear-gradient(138.18deg, #eae8fd 0%, #fce5e6 94.44%);
   }
   &.bgDark {
-    background: var(--mui-palette-background-default);
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgb(115 103 240 / 18%) 0%, rgb(115 103 240 / 0%) 100%),
+      var(--mui-palette-background-default);
   }
 }
 
@@ -29,13 +31,19 @@
   }
 }
 
+/*
+ * The headline used to animate its gradient across
+ * #28c76f -> #5a4aff -> #ff3739 on a 2s loop, so it spent half of every cycle
+ * running into #FF3739 -- the error token -- and the other half into #28C76F,
+ * the success token used on every pricing checkmark. Screenshots caught it both
+ * ways and "Nepal" regularly landed on a washed mauve. A static brand ramp says
+ * the same thing without the headline changing colour while you read it.
+ */
 .heroText {
-  background: linear-gradient(135deg, #28c76f 0%, #5a4aff 47.92%, #ff3739 100%) repeat;
-  background-size: 200% 200%;
+  background: linear-gradient(135deg, #8f85f3 0%, #6e63e6 55%, #a78bfa 100%);
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: rgba(0, 0, 0, 0);
-  animation: shine 2s ease-in-out infinite alternate;
 }
 
 @keyframes shine {
@@ -68,4 +76,3 @@
   border-start-start-radius: 3.75rem;
   border-start-end-radius: 3.75rem;
 }
-

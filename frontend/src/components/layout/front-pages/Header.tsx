@@ -21,7 +21,6 @@ import type { Mode } from '@core/types'
 import Logo from '@components/layout/shared/Logo'
 import ModeDropdown from '@components/layout/shared/ModeDropdown'
 import FrontMenu from './FrontMenu'
-import CustomIconButton from '@core/components/mui/IconButton'
 
 // Util Imports
 import { frontLayoutClasses } from '@layouts/utils/layoutClasses'
@@ -64,16 +63,26 @@ const Header = ({ mode }: { mode: Mode }) => {
           <FrontMenu mode={mode} variant='drawer' isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} />
           <div className='flex items-center gap-2 sm:gap-4'>
             <ModeDropdown />
-            <CustomIconButton
+            {/* Mobile used to carry an icon-only Login here and no signup at all,
+                so a phone visitor scrolled roughly 4,400px of features, testimonials
+                and partners with nothing to sign up with. Signing up is the goal, so
+                it gets the words; Login is one tap away in the drawer. */}
+            <Button
               component={Link}
               variant='contained'
-              href='/en/login'
+              href='/en/register'
               color='primary'
-              aria-label='Login'
               className='lg:hidden'
+              sx={{
+                borderRadius: '50px',
+                fontWeight: 600,
+                textTransform: 'none',
+                px: 2.5,
+                whiteSpace: 'nowrap'
+              }}
             >
-              <i className='tabler-login text-xl' />
-            </CustomIconButton>
+              Sign up free
+            </Button>
             <div className='hidden lg:flex items-center gap-3'>
               <Button
                 component={Link}
@@ -117,7 +126,7 @@ const Header = ({ mode }: { mode: Mode }) => {
                   transition: 'all 0.3s ease'
                 }}
               >
-                Get Started Free
+                Get started free
               </Button>
             </div>
           </div>

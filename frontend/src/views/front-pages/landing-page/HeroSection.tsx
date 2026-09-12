@@ -31,13 +31,10 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
   // Vars
   const dashboardImageLight = '/images/front-pages/landing-page/hero-dashboard-light.webp'
   const dashboardImageDark = '/images/front-pages/landing-page/hero-dashboard-dark.webp'
-  const heroSectionBgLight = '/images/front-pages/landing-page/hero-bg-light.webp'
-  const heroSectionBgDark = '/images/front-pages/landing-page/hero-bg-dark.webp'
 
   // Hooks
   const { mode: muiMode } = useColorScheme()
   const dashboardImage = useImageVariant(mode, dashboardImageLight, dashboardImageDark)
-  const heroSectionBg = useImageVariant(mode, heroSectionBgLight, heroSectionBgDark)
 
   const _mode = (muiMode === 'system' ? mode : muiMode) || mode
   const isAboveLgScreen = useMediaQuery((theme: Theme) => theme.breakpoints.up('lg'))
@@ -63,11 +60,12 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
 
   return (
     <section id='home' className='overflow-hidden pbs-[75px] -mbs-[75px] relative'>
-      <img
-        src={heroSectionBg}
-        alt=''
+      {/* The decorative wash that used to be an <img> here is now painted in CSS.
+          hero-bg-dark.webp was 265 KB, preloaded at high priority, and the mobile
+          LCP element -- for a gradient that never exceeds 20% opacity over a colour
+          the theme already paints. */}
+      <div
         aria-hidden='true'
-        fetchPriority='high'
         className={classnames('bs-[95%] sm:bs-[85%] md:bs-[80%]', styles.heroSectionBg, {
           [styles.bgLight]: _mode === 'light',
           [styles.bgDark]: _mode === 'dark'
@@ -81,13 +79,16 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
           >
             All in One Digital Marketing Platform in Nepal
           </Typography>
-          <Typography className='font-medium mbe-2' color='text.primary'>
-            Reach your audience through Email, SMS, Telegram, WhatsApp &amp; Messenger — all from one powerful
-            dashboard.
-          </Typography>
-          <Typography variant='body2' color='text.secondary' className='md:max-is-[550px] mli-auto'>
-            Built for Nepali businesses, NEPSE traders &amp; digital marketers. Manage subscribers, automate campaigns,
-            track analytics and grow your reach with credit-based pricing — no monthly subscriptions.
+          {/* One subhead, not three. The H1 was followed by a lede and then a
+              third, smaller paragraph that restated it -- the five channels were
+              named four times in the first two screens, and the line identifying
+              the audience was the smallest text on the page. The old third tier
+              also claimed "no monthly subscriptions" directly above a Pay
+              monthly / Pay yearly switch and "billed yearly", so it has gone
+              rather than being restated. */}
+          <Typography className='font-medium mbe-2 text-lg md:max-is-[600px] mli-auto' color='text.primary'>
+            Reach your audience through Email, SMS, Telegram, WhatsApp &amp; Messenger — all from one dashboard. Built
+            for Nepali businesses, NEPSE traders and agencies. Free for your first 500 subscribers.
           </Typography>
           {/* The hand-drawn "5 Channels" arrow that used to sit here pointed at the
               Start Free Trial button, not at the five channel badges it was labelling —
@@ -97,7 +98,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
               makes the point without an arrow. */}
           <div className='flex flex-wrap mbs-6 items-baseline justify-center relative gap-4'>
             <Button component={Link} size='large' href='/en/register' variant='contained' color='primary'>
-              Start Free Trial
+              Get started free
             </Button>
             <Button component={Link} size='large' href='/#pricing-plans' variant='outlined' color='primary'>
               View Pricing

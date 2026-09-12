@@ -138,6 +138,32 @@ const FrontMenu = (props: Props) => {
             <i className='tabler-x' />
           </IconButton>
           {items}
+          {/* Login lives here on mobile: the header bar gives its one button to
+              signing up, which is what a first-time visitor is there to do. */}
+          <Box
+            component={Link}
+            href='/en/login'
+            onClick={() => setIsDrawerOpen(false)}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.75,
+              px: 2,
+              py: 1.25,
+              mbs: 2,
+              borderRadius: '50px',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              color: 'primary.main',
+              border: '1px solid',
+              borderColor: 'primary.main',
+              justifyContent: 'center'
+            }}
+          >
+            <i className='tabler-login text-[1.1rem]' />
+            Login
+          </Box>
         </div>
       </Drawer>
     )

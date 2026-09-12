@@ -27,7 +27,8 @@ type StatData = {
 const statData: StatData[] = [
   {
     title: 'Marketing Channels',
-    value: '5+',
+    // The page states an exact five channels everywhere else.
+    value: '5',
     svg: <LaptopCharging color='var(--mui-palette-primary-main)' />,
     color: 'var(--mui-palette-primary-darkerOpacity)',
     isHover: false

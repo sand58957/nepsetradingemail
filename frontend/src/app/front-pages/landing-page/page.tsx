@@ -25,12 +25,11 @@ const jsonLd = {
     highPrice: '186500',
     offerCount: '4'
   },
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.8',
-    reviewCount: '150',
-    bestRating: '5'
-  },
+  // An aggregateRating of 4.8 from 150 reviews was declared here against a page
+  // that shows nine testimonials and no review system. A rating a business
+  // publishes about its own product is self-serving and earns no rich result
+  // either way, so the markup carried the risk of an unverifiable claim without
+  // the benefit. Reinstate it only if it can be tied to real, countable reviews.
   provider: {
     '@type': 'Organization',
     name: 'Marketminds Investment Group Pvt Ltd',

@@ -119,7 +119,8 @@ const plans: PlanDef[] = [
         sub: annual ? `NPR ${(price * 12).toLocaleString()} billed yearly` : '/month'
       }
     },
-    buttonText: 'Upgrade plan',
+    // Nobody arriving from search has a plan to upgrade from.
+    buttonText: 'Start with Advanced',
     buttonVariant: 'contained',
     highlight: true,
     features: [
@@ -151,7 +152,8 @@ const plans: PlanDef[] = [
         sub: annual ? `NPR ${(price * 12).toLocaleString()} billed yearly` : '/month'
       }
     },
-    buttonText: 'Upgrade plan',
+    // Nobody arriving from search has a plan to upgrade from.
+    buttonText: 'Start with Growing Business',
     buttonVariant: 'tonal',
     highlight: false,
     features: [
@@ -345,7 +347,11 @@ const PricingPlan = () => {
                         top: 12,
                         right: 12,
                         fontWeight: 600,
-                        fontSize: '0.7rem'
+                        fontSize: '0.7rem',
+                        // White on the success green measured 2.21:1 at 11.2px --
+                        // well under the 4.5:1 needed. A near-black label on the
+                        // same green is 8.60:1 and keeps the badge's colour.
+                        color: plan.highlight ? undefined : 'rgb(var(--mui-mainColorChannels-dark))'
                       }}
                     />
                   )}

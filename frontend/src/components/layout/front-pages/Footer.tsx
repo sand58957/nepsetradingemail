@@ -95,19 +95,19 @@ const Footer = ({ mode }: { mode: Mode }) => {
                 Platform
               </Typography>
               <div className='flex flex-col gap-4'>
-                <Typography component={Link} href='/' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/' color='white' className='opacity-[0.78] plb-1'>
                   Home
                 </Typography>
-                <Typography component={Link} href='/#pricing-plans' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#pricing-plans' color='white' className='opacity-[0.78] plb-1'>
                   Pricing
                 </Typography>
-                <Typography component={Link} href='/#features' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#features' color='white' className='opacity-[0.78] plb-1'>
                   Features
                 </Typography>
-                <Typography component={Link} href='/#faq' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#faq' color='white' className='opacity-[0.78] plb-1'>
                   FAQ
                 </Typography>
-                <Typography component={Link} href='/#contact-us' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#contact-us' color='white' className='opacity-[0.78] plb-1'>
                   Contact Us
                 </Typography>
               </div>
@@ -116,21 +116,29 @@ const Footer = ({ mode }: { mode: Mode }) => {
               <Typography color='white' className='font-medium mbe-6 opacity-[0.92]'>
                 Channels
               </Typography>
+              {/* These were five consecutive links to /en/login -- the only
+                  per-channel links on the site, every one of them a login wall
+                  for a visitor who has not signed up yet, and the footer offered
+                  no route to registering at all. They now point at the section
+                  that actually describes the channels. */}
               <div className='flex flex-col gap-4'>
-                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#features' color='white' className='opacity-[0.78] plb-1'>
                   Email Marketing
                 </Typography>
-                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#features' color='white' className='opacity-[0.78] plb-1'>
                   SMS Marketing
                 </Typography>
-                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#features' color='white' className='opacity-[0.78] plb-1'>
                   Telegram Marketing
                 </Typography>
-                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#features' color='white' className='opacity-[0.78] plb-1'>
                   WhatsApp Marketing
                 </Typography>
-                <Typography component={Link} href='/en/login' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/#features' color='white' className='opacity-[0.78] plb-1'>
                   Messenger Marketing
+                </Typography>
+                <Typography component={Link} href='/en/register' color='white' className='font-medium plb-1'>
+                  Get started free
                 </Typography>
               </div>
             </Grid>
@@ -139,10 +147,10 @@ const Footer = ({ mode }: { mode: Mode }) => {
                 Legal & Contact
               </Typography>
               <div className='flex flex-col gap-4'>
-                <Typography component={Link} href='/front-pages/privacy' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/front-pages/privacy' color='white' className='opacity-[0.78] plb-1'>
                   Privacy Policy
                 </Typography>
-                <Typography component={Link} href='/front-pages/terms' color='white' className='opacity-[0.78]'>
+                <Typography component={Link} href='/front-pages/terms' color='white' className='opacity-[0.78] plb-1'>
                   Terms of Service
                 </Typography>
                 <Typography

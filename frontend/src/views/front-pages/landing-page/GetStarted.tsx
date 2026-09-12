@@ -52,7 +52,7 @@ const GetStarted = ({ mode }: { mode: SystemMode }) => {
             </Typography>
           </div>
           <Button component={Link} href='/en/register' variant='contained'>
-            Create Free Account
+            Get started free
           </Button>
         </div>
         <div className='z-1 flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center'>
