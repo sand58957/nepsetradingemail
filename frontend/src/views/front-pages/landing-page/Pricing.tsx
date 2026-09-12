@@ -348,10 +348,14 @@ const PricingPlan = () => {
                         right: 12,
                         fontWeight: 600,
                         fontSize: '0.7rem',
-                        // White on the success green measured 2.21:1 at 11.2px --
-                        // well under the 4.5:1 needed. A near-black label on the
-                        // same green is 8.60:1 and keeps the badge's colour.
-                        color: plan.highlight ? undefined : 'rgb(var(--mui-mainColorChannels-dark))'
+                        // The default light label on the success green measured
+                        // 2.21:1 at 11.2px, well under the 4.5:1 needed. A literal
+                        // near-black is used rather than a theme channel: the
+                        // first attempt reached for --mui-mainColorChannels-dark,
+                        // which is the dark THEME's main channel (a light colour)
+                        // and made it worse at 1.68:1. On this green, #0F0F1A is
+                        // 8.60:1.
+                        color: plan.highlight ? undefined : '#0F0F1A'
                       }}
                     />
                   )}
