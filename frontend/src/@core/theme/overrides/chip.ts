@@ -64,6 +64,13 @@ const chip: Theme['components'] = {
             style: {
               backgroundColor: 'var(--mui-palette-primary-lightOpacity)',
               color: 'var(--mui-palette-primary-main)',
+              // The brand purple on a 16% tint of itself composites to 3.79:1 over
+              // the dark surface -- below the 4.5:1 this text size needs. The
+              // lighter brand step gives 5.25:1. Only the dark scheme needs it; on
+              // the light surface the darker brand is the readable one.
+              '[data-mui-color-scheme="dark"] &': {
+                color: 'var(--mui-palette-primary-light)'
+              },
               '&.Mui-focusVisible': {
                 backgroundColor: 'var(--mui-palette-primary-mainOpacity)'
               },
