@@ -86,7 +86,17 @@ export function generateArticleSchema(post: BlogPost, author: BlogAuthor | undef
         url: `${baseUrl}/images/front-pages/landing-page/hero-dashboard-dark.png`
       }
     },
-    wordCount: post.content_html ? post.content_html.replace(/<[^>]*>/g, '').split(/\s+/).length : undefined,
+    wordCount: post.content_html
+      ? post.content_html
+          .replace(/<[^>]*>/g, ' ')
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean).length
+      : undefined,
+
+    // Answer engines and AI crawlers use inLanguage to decide whether a source
+    // matches the asker's language. It was absent, so every post was unlabelled.
+    inLanguage: 'en',
     isAccessibleForFree: true
   }
 
