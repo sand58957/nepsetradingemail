@@ -1150,11 +1150,12 @@ func (h *BlogHandler) PublicListPosts(c echo.Context) error {
 	}
 
 	payload := response.PaginatedResponse{
-		Success: true,
-		Data:    posts,
-		Total:   total,
-		Page:    page,
-		PerPage: perPage,
+		Success:    true,
+		Data:       posts,
+		Total:      total,
+		Page:       page,
+		PerPage:    perPage,
+		TotalPages: response.TotalPages(total, perPage),
 	}
 	if h.cache != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)

@@ -104,7 +104,11 @@ export default async function BlogListingPage({ searchParams }: { searchParams: 
   const [postsResponse, categories] = await Promise.all([getPublishedPosts(currentPage), getCategories()])
 
   const posts = postsResponse.data || []
-  const totalPages = postsResponse.total_pages || 0
+  // Fall back to computing this: when the API omitted total_pages it was 0,
+  // the pagination block below never rendered, and every post past the first
+  // page became reachable only through the sitemap.
+  const totalPages =
+    postsResponse.total_pages || Math.ceil((postsResponse.total || 0) / (postsResponse.per_page || 12))
 
   const blogListSchema = {
     '@context': 'https://schema.org',

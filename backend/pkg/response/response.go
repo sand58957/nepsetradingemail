@@ -18,6 +18,19 @@ type PaginatedResponse struct {
 	Total   int         `json:"total"`
 	Page    int         `json:"page"`
 	PerPage int         `json:"per_page"`
+	// TotalPages was missing, so clients computing "is there a next page?" from
+	// it always saw zero. The blog index used it to decide whether to render
+	// pagination links, so every post past the first page was reachable only
+	// through the sitemap.
+	TotalPages int `json:"total_pages"`
+}
+
+// TotalPages returns how many pages cover total items at perPage each.
+func TotalPages(total, perPage int) int {
+	if perPage <= 0 || total <= 0 {
+		return 0
+	}
+	return (total + perPage - 1) / perPage
 }
 
 type ErrorResponse struct {
@@ -50,11 +63,12 @@ func Created(c echo.Context, data interface{}) error {
 
 func Paginated(c echo.Context, data interface{}, total, page, perPage int) error {
 	return c.JSON(http.StatusOK, PaginatedResponse{
-		Success: true,
-		Data:    data,
-		Total:   total,
-		Page:    page,
-		PerPage: perPage,
+		Success:    true,
+		Data:       data,
+		Total:      total,
+		Page:       page,
+		PerPage:    perPage,
+		TotalPages: TotalPages(total, perPage),
 	})
 }
 
