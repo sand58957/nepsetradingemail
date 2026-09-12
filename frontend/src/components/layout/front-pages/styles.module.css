@@ -22,6 +22,18 @@
     inline-size: calc(100% - 48px);
     padding-block: 0.5rem;
     padding-inline: 1.5rem;
+
+    /*
+     * On a 375px screen the pill was 277px wide -- 48px of outer inset plus 48px
+     * of inner padding -- while the hamburger, logo, theme toggle and signup
+     * button need about 290px together, so the signup button hung 28px outside
+     * it and clipped. There is 98px of unused width beside the pill; take some
+     * of it back rather than shrinking the controls further.
+     */
+    @media (max-width: 599px) {
+      inline-size: calc(100% - 20px);
+      padding-inline: 0.75rem;
+    }
     margin-inline: auto;
     margin-block-start: 0.75rem;
     pointer-events: auto;
@@ -34,7 +46,9 @@
     &.headerScrolled {
       background-color: rgb(var(--mui-palette-background-paperChannel) / 0.85);
       border-color: rgb(var(--mui-palette-dividerChannel) / 0.12);
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+      box-shadow:
+        0 4px 30px rgba(0, 0, 0, 0.08),
+        0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     @media (min-width: 600px) {
