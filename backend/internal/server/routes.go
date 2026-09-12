@@ -512,6 +512,7 @@ func (s *Server) RegisterRoutes() {
 	publicBlog := api.Group("/public/blog")
 	publicBlog.GET("/posts", blogHandler.PublicListPosts)
 	publicBlog.GET("/posts/:slug", blogHandler.PublicGetPost)
+	publicBlog.GET("/categories", blogHandler.PublicListCategories)
 	publicBlog.GET("/categories/:slug", blogHandler.PublicListByCategory)
 	publicBlog.GET("/authors/:slug", blogHandler.PublicListByAuthor)
 	publicBlog.GET("/tags/:slug", blogHandler.PublicListByTag)

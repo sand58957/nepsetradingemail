@@ -121,10 +121,16 @@ CREATE TABLE IF NOT EXISTS telegram_contact_group_members (
 CREATE INDEX IF NOT EXISTS idx_tg_group_members_group ON telegram_contact_group_members(group_id);
 CREATE INDEX IF NOT EXISTS idx_tg_group_members_contact ON telegram_contact_group_members(contact_id);
 
--- Add telegram to api_keys channel check
+-- Channel check constraints. This file is the only migration that defines them,
+-- and migrations are re-run on every boot, so the list here must name every
+-- channel the application supports -- not just the ones that existed when
+-- Telegram was added. Messenger was added to the live database by hand and was
+-- missing here: the statement below therefore failed on every boot (a messenger
+-- row violated the narrower list), which is the only reason it never succeeded
+-- in dropping Messenger support. Removing that last messenger API key would
+-- have let this apply and silently broken the channel.
 ALTER TABLE api_keys DROP CONSTRAINT IF EXISTS api_keys_channel_check;
-ALTER TABLE api_keys ADD CONSTRAINT api_keys_channel_check CHECK (channel IN ('sms', 'whatsapp', 'email', 'telegram'));
+ALTER TABLE api_keys ADD CONSTRAINT api_keys_channel_check CHECK (channel IN ('sms', 'whatsapp', 'email', 'telegram', 'messenger'));
 
--- Add telegram to api_credits channel check
 ALTER TABLE api_credits DROP CONSTRAINT IF EXISTS api_credits_channel_check;
-ALTER TABLE api_credits ADD CONSTRAINT api_credits_channel_check CHECK (channel IN ('sms', 'whatsapp', 'email', 'telegram'));
+ALTER TABLE api_credits ADD CONSTRAINT api_credits_channel_check CHECK (channel IN ('sms', 'whatsapp', 'email', 'telegram', 'messenger'));

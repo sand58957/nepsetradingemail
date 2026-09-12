@@ -1265,6 +1265,42 @@ func (h *BlogHandler) PublicListByTag(c echo.Context) error {
 	return h.PublicListPosts(c)
 }
 
+// PublicListCategories lists blog categories for the public site: the index
+// page's category list and the category URLs in the sitemap. There was no such
+// route, so both callers got a 401 and silently fell back to an empty list --
+// the blog showed no categories and the sitemap carried none.
+//
+// Only categories holding a published post are returned, grouped by slug. The
+// table has several rows sharing a slug from earlier seeding and many with no
+// posts at all; listing those raw would repeat a category on the page and put
+// duplicate URLs in the sitemap. Category pages are addressed by slug
+// (PublicListByCategory filters on it), so grouping here matches what those
+// pages actually show.
+func (h *BlogHandler) PublicListCategories(c echo.Context) error {
+	type publicCategory struct {
+		ID        int    `db:"id" json:"id"`
+		Name      string `db:"name" json:"name"`
+		Slug      string `db:"slug" json:"slug"`
+		PostCount int    `db:"post_count" json:"post_count"`
+	}
+	var categories []publicCategory
+	err := h.db.Select(&categories, `
+		SELECT MIN(c.id) AS id, MIN(c.name) AS name, c.slug,
+		       COUNT(p.id) AS post_count
+		FROM blog_categories c
+		JOIN blog_posts p ON p.category_id = c.id AND p.status = 'published'
+		GROUP BY c.slug
+		ORDER BY COUNT(p.id) DESC, c.slug ASC`)
+	if err != nil {
+		log.Printf("Error listing public blog categories: %v", err)
+		return response.InternalError(c, "Failed to list categories")
+	}
+	if categories == nil {
+		categories = []publicCategory{}
+	}
+	return response.Success(c, categories)
+}
+
 // ============================================================
 // Sitemap XML
 // ============================================================
