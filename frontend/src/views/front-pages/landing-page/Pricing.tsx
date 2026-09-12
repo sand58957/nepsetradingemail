@@ -355,7 +355,10 @@ const PricingPlan = () => {
                         // which is the dark THEME's main channel (a light colour)
                         // and made it worse at 1.68:1. On this green, #0F0F1A is
                         // 8.60:1.
-                        color: plan.highlight ? undefined : '#0F0F1A'
+                        // The primary-coloured "Best value" chip is white on the
+                        // brand at 4.26:1; the same shade darker used for buttons
+                        // takes it to 4.57.
+                        ...(plan.highlight ? { backgroundColor: '#6E63E6' } : { color: '#0F0F1A' })
                       }}
                     />
                   )}

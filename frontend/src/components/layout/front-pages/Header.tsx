@@ -116,10 +116,12 @@ const Header = ({ mode }: { mode: Mode }) => {
                   fontWeight: 600,
                   textTransform: 'none',
                   px: 3,
-                  background: 'linear-gradient(135deg, var(--mui-palette-primary-main) 0%, #7c3aed 100%)',
+                  // Starts on the darkened brand: the raw #7367F0 end of this gradient
+                  // put white text at 4.26:1.
+                  background: 'linear-gradient(135deg, #6E63E6 0%, #7c3aed 100%)',
                   boxShadow: '0 4px 15px rgba(var(--mui-palette-primary-mainChannel) / 0.4)',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #7c3aed 0%, var(--mui-palette-primary-main) 100%)',
+                    background: 'linear-gradient(135deg, #7c3aed 0%, #6E63E6 100%)',
                     transform: 'translateY(-2px)',
                     boxShadow: '0 6px 20px rgba(var(--mui-palette-primary-mainChannel) / 0.5)'
                   },
