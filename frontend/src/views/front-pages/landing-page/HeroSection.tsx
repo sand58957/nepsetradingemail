@@ -89,19 +89,13 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
             Built for Nepali businesses, NEPSE traders &amp; digital marketers. Manage subscribers, automate campaigns,
             track analytics and grow your reach with credit-based pricing — no monthly subscriptions.
           </Typography>
+          {/* The hand-drawn "5 Channels" arrow that used to sit here pointed at the
+              Start Free Trial button, not at the five channel badges it was labelling —
+              the stock template's annotation with the caption swapped and the geometry
+              left untouched. It was also hidden below md, so it never reached the
+              visitors who make up most of this audience. The badge row below already
+              makes the point without an arrow. */}
           <div className='flex flex-wrap mbs-6 items-baseline justify-center relative gap-4'>
-            <div className='flex gap-2 absolute inline-start-[0%] block-start-[41%] max-md:hidden'>
-              <Typography className='font-medium'>5 Channels</Typography>
-              <img
-                src='/images/front-pages/landing-page/join-community-arrow.webp'
-                alt=''
-                aria-hidden='true'
-                height='42'
-                width='60'
-                loading='lazy'
-                decoding='async'
-              />
-            </div>
             <Button component={Link} size='large' href='/en/register' variant='contained' color='primary'>
               Start Free Trial
             </Button>

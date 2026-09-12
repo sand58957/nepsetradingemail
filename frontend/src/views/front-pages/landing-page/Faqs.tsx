@@ -44,25 +44,25 @@ const FaqsData: FaqsDataTypes[] = [
     id: 'panel3',
     question: 'How much does Nepal Fillings cost? Are there free trials?',
     answer:
-      'Nepal Fillings offers three pricing plans: Basic at NPR 5,000/month (Email + Telegram), Premium at NPR 7,000/month (adds WhatsApp + Messenger), and Elite at NPR 10,000/month (adds SMS + API access). Annual plans save up to 20%. We also offer a free demo so you can explore the platform before committing. Contact our team to schedule a personalized walkthrough of the features.'
+      'Start free with up to 500 subscribers — no card required. Paid plans are priced by how many subscribers you have, so the cost grows only as your audience does, and paying yearly saves up to 15%. Use the slider in the pricing section above to see the exact price for your list size, or contact us if you need more than 200,000 subscribers.'
   },
   {
     id: 'panel4',
     question: 'Can I send bulk SMS to customers across Nepal?',
     answer:
-      'Yes! With the Elite plan, you can send bulk SMS to any mobile number in Nepal — including NTC, Ncell, and Smart Cell networks. SMS marketing is perfect for time-sensitive promotions, payment reminders, OTP verification, and reaching customers in areas with limited internet access. Our platform provides delivery reports, scheduling, and contact segmentation for targeted campaigns.'
+      'Yes — you can send bulk SMS to any mobile number in Nepal, including NTC, Ncell and Smart Cell networks. SMS suits time-sensitive promotions, payment reminders, OTP verification and reaching customers where internet access is limited. Every campaign comes with delivery reports, scheduling and contact segmentation.'
   },
   {
     id: 'panel5',
     question: 'Is Nepal Fillings suitable for small businesses in Nepal?',
     answer:
-      'Absolutely! Nepal Fillings is designed for businesses of all sizes in Nepal — from local shops and restaurants to large enterprises and educational institutions. Our Basic plan starts at just NPR 5,000/month, making professional digital marketing accessible and affordable. Many small businesses in Kathmandu, Pokhara, Chitwan, and across Nepal use our platform to grow their customer base through email and Telegram marketing.'
+      'Yes — from local shops and restaurants to schools and large enterprises. You can start free with up to 500 subscribers and move to a paid plan only when your list outgrows it, so there is nothing to commit up front. Businesses in Kathmandu, Pokhara, Chitwan and across Nepal use the platform to grow through email and Telegram marketing.'
   },
   {
     id: 'panel6',
     question: 'How do I integrate Nepal Fillings with my existing website or app?',
     answer:
-      'Nepal Fillings provides a powerful REST API that lets you integrate email, SMS, Telegram, and other messaging channels directly into your website, mobile app, or CRM system. Our API documentation includes code examples in Python, JavaScript, PHP, and Go. The Elite plan includes full API access with dedicated support to help you set up automated workflows like order confirmations, welcome emails, and payment notifications.'
+      'A REST API lets you send email, SMS, Telegram and other channels straight from your website, mobile app or CRM. The documentation includes examples in Python, JavaScript, PHP and Go, and support can help you wire up automated flows such as order confirmations, welcome emails and payment notifications.'
   },
   {
     id: 'panel7',

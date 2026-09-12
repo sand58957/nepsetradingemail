@@ -39,6 +39,22 @@ const WhatsAppFloat = () => {
   if (!config || !config.enabled) return null
 
   const phone = config.phone.replace(/[^0-9]/g, '')
+
+  // A placeholder number ships a dead chat on every screen of the site, and this
+  // button follows the visitor the whole way down. 9779800000000 was live: the
+  // seeded default, never replaced. Refuse anything too short or padded with a
+  // run of identical digits rather than linking to a WhatsApp account that does
+  // not exist.
+  const looksLikePlaceholder = phone.length < 10 || /(\d)\1{4,}/.test(phone)
+
+  if (looksLikePlaceholder) {
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn(`WhatsAppFloat: refusing to render, "${config.phone}" looks like a placeholder.`)
+    }
+
+    return null
+  }
   const encodedMsg = encodeURIComponent(config.message)
   const whatsappUrl = `https://wa.me/${phone}?text=${encodedMsg}`
   const isRight = config.position !== 'left'

@@ -17,9 +17,13 @@ const jsonLd = {
   offers: {
     '@type': 'AggregateOffer',
     priceCurrency: 'NPR',
-    lowPrice: '4000',
-    highPrice: '8000',
-    offerCount: '3'
+    // Was 4000-8000 across 3 offers, which matched neither the pricing table nor
+    // the FAQ and hid the free tier from the search snippet. The table lists four
+    // tiers: Free, Growing Business and Advanced (both priced by subscriber count,
+    // topping out at 200,000) and Enterprise, which is quoted on request.
+    lowPrice: '0',
+    highPrice: '186500',
+    offerCount: '4'
   },
   aggregateRating: {
     '@type': 'AggregateRating',
