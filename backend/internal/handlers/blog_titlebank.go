@@ -26,6 +26,9 @@ import (
 type TitleBankHandler struct {
 	db  *sqlx.DB
 	cfg *config.Config
+	// tickEvery is how often the publisher checks whether a post is due. due()
+	// needs it to tolerate a tick landing a moment before the mark.
+	tickEvery time.Duration
 }
 
 func NewTitleBankHandler(db *sqlx.DB, cfg *config.Config) *TitleBankHandler {

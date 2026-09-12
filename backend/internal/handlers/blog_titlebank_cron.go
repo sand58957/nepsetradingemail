@@ -16,6 +16,7 @@ var titleBankRunning atomic.Bool
 // interval has elapsed. Ticking more often than the publish interval lets an admin
 // change the interval (or press "publish now") without restarting the process.
 func (h *TitleBankHandler) StartTitleBankPublisher(ctx context.Context, accountID int, checkEvery time.Duration) {
+	h.tickEvery = checkEvery
 	log.Printf("INFO: titlebank: publisher started (checking every %s)", checkEvery)
 
 	// Any row left mid-flight by a crash goes back into the pool.
@@ -74,12 +75,31 @@ func (h *TitleBankHandler) tick(ctx context.Context, accountID int) {
 // due reports whether the configured interval has elapsed. A start_at in the
 // future holds publishing until that moment.
 func (h *TitleBankHandler) due(s *TitleBankSettings) bool {
-	now := time.Now()
+	return isDue(time.Now(), s, h.tickEvery)
+}
+
+// isDue is the scheduling rule, split out from the clock so it can be tested.
+//
+// The grace period matters more than it looks. last_published_at records when
+// the previous post *finished*, a second or two after the tick that produced
+// it, so the next slot falls just after a tick boundary rather than on one.
+// Comparing strictly, that tick misses by those couple of seconds, the run
+// waits for the following one, and every gap comes out a whole tick long -- a
+// 30 minute setting published every 31 minutes. Treating a tick that lands
+// within half a tick of the mark as due keeps it at exactly one publish per
+// interval, however long generation takes, and can never fire more than half a
+// tick early.
+func isDue(now time.Time, s *TitleBankSettings, tickEvery time.Duration) bool {
 	if s.StartAt != nil && now.Before(*s.StartAt) {
 		return false
 	}
 	if s.LastPublishedAt == nil {
 		return true
 	}
-	return now.Sub(*s.LastPublishedAt) >= time.Duration(s.IntervalMinutes)*time.Minute
+	grace := tickEvery / 2
+	if grace <= 0 {
+		grace = 30 * time.Second
+	}
+	interval := time.Duration(s.IntervalMinutes) * time.Minute
+	return now.Sub(*s.LastPublishedAt) >= interval-grace
 }
