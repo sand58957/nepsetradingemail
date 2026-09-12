@@ -77,11 +77,15 @@ const Header = ({ mode }: { mode: Mode }) => {
                 borderRadius: '50px',
                 fontWeight: 600,
                 textTransform: 'none',
-                px: 2.5,
+                // "Sign up free" measured 106px and overflowed the header bar by
+                // 65px at 375px, clipping to "Sign up fre". The hamburger, logo and
+                // theme toggle leave roughly 95px here.
+                px: 2,
+                minInlineSize: 0,
                 whiteSpace: 'nowrap'
               }}
             >
-              Sign up free
+              Sign up
             </Button>
             <div className='hidden lg:flex items-center gap-3'>
               <Button
