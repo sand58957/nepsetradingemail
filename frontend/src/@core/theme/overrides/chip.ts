@@ -73,7 +73,7 @@ const chip: Theme['components'] = {
               // at runtime. `data-mui-color-scheme` appears in the server-rendered
               // markup but is not what ends up on the live element, so selecting on
               // it silently matched nothing.
-              ':where([data-dark]) &': {
+              '[data-dark] &': {
                 color: 'var(--mui-palette-primary-light)'
               },
               '&.Mui-focusVisible': {
