@@ -355,3 +355,15 @@ textarea:focus-visible,
     block-size: 44px;
   }
 }
+
+/*
+ * Tonal primary chips — the section labels ("Pricing Plans", "FAQ", "Marketing
+ * Channels", "Testimonials", "Contact Us") — render the brand purple as text on
+ * a 16% tint of itself. Composited over the dark page that is 3.79:1, under the
+ * 4.5:1 this size of text needs. The lighter brand shade the palette already
+ * defines reaches 5.25:1. Dark scheme only: on the light surface the darker
+ * brand is the readable one.
+ */
+[data-mui-color-scheme='dark'] .MuiChip-tonalPrimary {
+  color: var(--mui-palette-primary-light, #8f85f3);
+}
