@@ -25,46 +25,18 @@ import { useIntersection } from '@/hooks/useIntersection'
 
 type Props = {
   mode: Mode
+
+  /**
+   * Which presentation to render. The caller decides, rather than this component
+   * measuring the viewport: useMediaQuery cannot run on the server, so it
+   * returned false during SSR and every phone received the desktop navigation in
+   * its HTML — six links laid out across a 375px screen, on top of the logo,
+   * until hydration swapped them for the hamburger. The header now renders both
+   * and lets CSS pick, so the first paint is already correct.
+   */
+  variant: 'inline' | 'drawer'
   isDrawerOpen: boolean
   setIsDrawerOpen: (open: boolean) => void
-}
-
-type WrapperProps = {
-  children: React.ReactNode
-  isBelowLgScreen: boolean
-  className?: string
-  isDrawerOpen: boolean
-  setIsDrawerOpen: (open: boolean) => void
-}
-
-const Wrapper = (props: WrapperProps) => {
-  // Props
-  const { children, isBelowLgScreen, className, isDrawerOpen, setIsDrawerOpen } = props
-
-  if (isBelowLgScreen) {
-    return (
-      <Drawer
-        variant='temporary'
-        anchor='left'
-        open={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        ModalProps={{
-          keepMounted: true
-        }}
-        sx={{ '& .MuiDrawer-paper': { width: ['100%', 300] } }}
-        className={classnames('p-5', className)}
-      >
-        <div className='p-4 flex flex-col gap-x-3'>
-          <IconButton onClick={() => setIsDrawerOpen(false)} className='absolute inline-end-4 block-start-2'>
-            <i className='tabler-x' />
-          </IconButton>
-          {children}
-        </div>
-      </Drawer>
-    )
-  }
-
-  return <div className={classnames('flex items-center flex-wrap gap-x-1 gap-y-3', className)}>{children}</div>
 }
 
 const menuItems = [
@@ -78,7 +50,7 @@ const menuItems = [
 
 const FrontMenu = (props: Props) => {
   // Props
-  const { isDrawerOpen, setIsDrawerOpen } = props
+  const { variant, isDrawerOpen, setIsDrawerOpen } = props
 
   // Hooks
   const pathname = usePathname()
@@ -110,8 +82,8 @@ const FrontMenu = (props: Props) => {
     )
   }
 
-  return (
-    <Wrapper isBelowLgScreen={isBelowLgScreen} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen}>
+  const items = (
+    <>
       {menuItems.map(item => (
         <Box
           key={item.label}
@@ -141,8 +113,37 @@ const FrontMenu = (props: Props) => {
           {item.label}
         </Box>
       ))}
-    </Wrapper>
+    </>
   )
+
+  if (variant === 'drawer') {
+    return (
+      <Drawer
+        variant='temporary'
+        anchor='left'
+        open={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        // Not keepMounted: the inline nav above is already in the DOM at every
+        // width, so mounting these links again would duplicate the whole menu.
+        ModalProps={{ keepMounted: false }}
+        sx={{ '& .MuiDrawer-paper': { width: ['100%', 300] } }}
+        className='p-5'
+      >
+        <div className='p-4 flex flex-col gap-x-3'>
+          <IconButton
+            onClick={() => setIsDrawerOpen(false)}
+            aria-label='Close navigation menu'
+            className='absolute inline-end-4 block-start-2'
+          >
+            <i className='tabler-x' />
+          </IconButton>
+          {items}
+        </div>
+      </Drawer>
+    )
+  }
+
+  return <div className='flex items-center flex-wrap gap-x-1 gap-y-3'>{items}</div>
 }
 
 export default FrontMenu

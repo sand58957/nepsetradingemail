@@ -172,12 +172,14 @@ const plans: PlanDef[] = [
   {
     title: 'Free',
     tagline: 'Get started free with up to 500 subscribers.',
-    badge: 'Save up to 15%',
+    // A free plan cannot save you a percentage off itself.
+    badge: 'No card required',
     getPrice: () => ({
       display: 'NPR 0',
       sub: 'Maximum 500 subscribers'
     }),
-    buttonText: 'Current plan',
+    // "Current plan" told a signed-out visitor they were already on it.
+    buttonText: 'Get started free',
     buttonVariant: 'outlined',
     highlight: false,
     features: [
@@ -310,9 +312,15 @@ const PricingPlan = () => {
           </InputLabel>
         </div>
 
-        {/* Plan Cards */}
+        {/* Plan Cards — shown cheapest first.
+            `plans` is authored most-expensive first so each entry's "All in <tier>,
+            plus" line refers to the one after it. Rendered in that order the cards
+            read Enterprise → Free: the first thing a visitor meets is "Let's chat",
+            the free tier is last, and every feature list points at the card to its
+            right. Reversing here fixes the reading order without disturbing how the
+            tiers reference each other. */}
         <Grid container spacing={3}>
-          {plans.map((plan, index) => {
+          {[...plans].reverse().map((plan, index) => {
             const pricing = plan.getPrice(subscriberCount, isAnnual)
 
             return (

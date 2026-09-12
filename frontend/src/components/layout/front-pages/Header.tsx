@@ -9,9 +9,7 @@ import Link from 'next/link'
 // MUI Imports
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
-import useMediaQuery from '@mui/material/useMediaQuery'
 import useScrollTrigger from '@mui/material/useScrollTrigger'
-import type { Theme } from '@mui/material/styles'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -35,9 +33,6 @@ const Header = ({ mode }: { mode: Mode }) => {
   // States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
-  // Hooks
-  const isBelowLgScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('lg'))
-
   // Detect window scroll
   const trigger = useScrollTrigger({
     threshold: 0,
@@ -48,84 +43,83 @@ const Header = ({ mode }: { mode: Mode }) => {
     <header className={classnames(frontLayoutClasses.header, styles.header)}>
       <div className={classnames(frontLayoutClasses.navbar, styles.navbar, { [styles.headerScrolled]: trigger })}>
         <div className={classnames(frontLayoutClasses.navbarContent, styles.navbarContent)}>
-          {isBelowLgScreen ? (
-            <div className='flex items-center gap-2 sm:gap-4'>
-              <IconButton onClick={() => setIsDrawerOpen(true)} className='-mis-2' aria-label='Open navigation menu'>
-                <i className='tabler-menu-2 text-textPrimary' />
-              </IconButton>
-              <Link href='/'>
-                <Logo />
-              </Link>
-              <FrontMenu mode={mode} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} />
-            </div>
-          ) : (
-            <div className='flex items-center gap-10'>
-              <Link href='/'>
-                <Logo />
-              </Link>
-              <FrontMenu mode={mode} isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} />
-            </div>
-          )}
+          {/* Both layouts are rendered and CSS chooses between them. Branching on
+              useMediaQuery instead put the desktop navigation into the HTML sent
+              to phones -- six links across a 375px screen, overlapping the logo --
+              until hydration replaced it. */}
+          <div className='flex items-center gap-2 sm:gap-4 lg:hidden'>
+            <IconButton onClick={() => setIsDrawerOpen(true)} className='-mis-2' aria-label='Open navigation menu'>
+              <i className='tabler-menu-2 text-textPrimary' />
+            </IconButton>
+            <Link href='/'>
+              <Logo />
+            </Link>
+          </div>
+          <div className='hidden lg:flex items-center gap-10'>
+            <Link href='/'>
+              <Logo />
+            </Link>
+            <FrontMenu mode={mode} variant='inline' isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} />
+          </div>
+          <FrontMenu mode={mode} variant='drawer' isDrawerOpen={isDrawerOpen} setIsDrawerOpen={setIsDrawerOpen} />
           <div className='flex items-center gap-2 sm:gap-4'>
             <ModeDropdown />
-            {isBelowLgScreen ? (
-              <CustomIconButton
+            <CustomIconButton
+              component={Link}
+              variant='contained'
+              href='/en/login'
+              color='primary'
+              aria-label='Login'
+              className='lg:hidden'
+            >
+              <i className='tabler-login text-xl' />
+            </CustomIconButton>
+            <div className='hidden lg:flex items-center gap-3'>
+              <Button
                 component={Link}
-                variant='contained'
+                variant='outlined'
                 href='/en/login'
                 color='primary'
-                aria-label='Login'
-              >
-                <i className='tabler-login text-xl' />
-              </CustomIconButton>
-            ) : (
-              <div className='flex items-center gap-3'>
-                <Button
-                  component={Link}
-                  variant='outlined'
-                  href='/en/login'
-                  color='primary'
-                  startIcon={<i className='tabler-login text-lg' />}
-                  sx={{
-                    borderRadius: '50px',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    px: 3,
+                startIcon={<i className='tabler-login text-lg' />}
+                sx={{
+                  borderRadius: '50px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  px: 3,
+                  borderWidth: 2,
+                  '&:hover': {
                     borderWidth: 2,
-                    '&:hover': {
-                      borderWidth: 2,
-                      transform: 'translateY(-1px)',
-                      boxShadow: '0 4px 12px rgba(var(--mui-palette-primary-mainChannel) / 0.3)'
-                    },
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  Login
-                </Button>
-                <Button
-                  component={Link}
-                  variant='contained'
-                  href='/en/register'
-                  startIcon={<i className='tabler-rocket text-lg' />}
-                  sx={{
-                    borderRadius: '50px',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    px: 3,
-                    background: 'linear-gradient(135deg, var(--mui-palette-primary-main) 0%, #7c3aed 100%)',
-                    boxShadow: '0 4px 15px rgba(var(--mui-palette-primary-mainChannel) / 0.4)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #7c3aed 0%, var(--mui-palette-primary-main) 100%)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 6px 20px rgba(var(--mui-palette-primary-mainChannel) / 0.5)'
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  Get Started Free
-                </Button>
-              </div>
-            )}
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(var(--mui-palette-primary-mainChannel) / 0.3)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Login
+              </Button>
+              <Button
+                component={Link}
+                variant='contained'
+                href='/en/register'
+                startIcon={<i className='tabler-rocket text-lg' />}
+                sx={{
+                  borderRadius: '50px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  px: 3,
+                  background: 'linear-gradient(135deg, var(--mui-palette-primary-main) 0%, #7c3aed 100%)',
+                  boxShadow: '0 4px 15px rgba(var(--mui-palette-primary-mainChannel) / 0.4)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #7c3aed 0%, var(--mui-palette-primary-main) 100%)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 20px rgba(var(--mui-palette-primary-mainChannel) / 0.5)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                Get Started Free
+              </Button>
+            </div>
           </div>
         </div>
       </div>
