@@ -267,8 +267,22 @@ func (h *WhatsAppHandler) GetSettings(c echo.Context) error {
 		// picks it up on first use, so report what is actually available rather than
 		// "not configured" — otherwise a working number reads as missing until the
 		// account happens to send something.
-		if ready, findErr := client.FirstConnectedSession(c.Request().Context()); findErr == nil {
-			sessionID = ready.ID
+		//
+		// Prefer a ready session, but fall back to whatever else is there: a tenant
+		// seeing "Waiting for QR scan" knows an administrator is part-way through
+		// linking, where a flat "no number linked" suggests nobody has started.
+		if all, listErr := client.ListSessions(c.Request().Context()); listErr == nil {
+			for _, s := range all {
+				if s.Connected() {
+					sessionID = s.ID
+
+					break
+				}
+
+				if sessionID == "" {
+					sessionID = s.ID
+				}
+			}
 		}
 	}
 

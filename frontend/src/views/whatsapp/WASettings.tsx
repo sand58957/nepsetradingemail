@@ -41,7 +41,13 @@ const STATUS_LABEL: Record<string, { label: string; color: 'success' | 'warning'
   ready: { label: 'Connected', color: 'success' },
   disconnected: { label: 'Disconnected', color: 'error' },
   action_required: { label: 'Action needed on the phone', color: 'error' },
-  failed: { label: 'Failed', color: 'error' }
+  failed: { label: 'Failed', color: 'error' },
+
+  // Not gateway statuses — these two come from the account's own connection
+  // state, which is what a non-super-admin sees. Without them the chip printed
+  // the raw string.
+  not_linked: { label: 'No number linked', color: 'error' },
+  unreachable: { label: 'Gateway unreachable', color: 'error' }
 }
 
 /** The one status in which the gateway will accept a send. */
