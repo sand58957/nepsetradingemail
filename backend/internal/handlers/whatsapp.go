@@ -1529,23 +1529,59 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WA
 		return
 	}
 
+	// This runs detached from the HTTP request that started it, so it needs its
+	// own context rather than one that is cancelled the moment the caller's
+	// response is written.
+	sendCtx := context.Background()
+
+	// A campaign must not start against a session that cannot send. Without this
+	// the loop walks the entire contact list marking every recipient failed: one
+	// run against a logged-out session burned through 15,783 contacts in three
+	// minutes before it was stopped by hand.
+	session, sErr := client.GetSession(sendCtx, sessionID)
+	if sErr != nil || !session.Connected() {
+		state := "unreachable"
+		if session != nil {
+			state = session.Status
+		}
+
+		log.Printf("[whatsapp] Campaign %d: refusing to start, session is %s", campaignID, state)
+		h.db.Exec(`UPDATE wa_campaigns SET status='failed', updated_at=NOW() WHERE id=$1`, campaignID)
+
+		return
+	}
+
 	sendRate := settings.SendRate
 	if sendRate <= 0 {
 		sendRate = 10
+	}
+
+	// Clamp the rate. This value was configured when the transport was Meta's
+	// official API, where 100 messages a second was plausible; account 20 still
+	// held 100. The gateway that replaced it throttles far below that and answers
+	// 429, and an unofficial client sending that fast is the surest way to get
+	// the number restricted. Its own guidance is a few messages per minute.
+	const maxSendRate = 2
+	if sendRate > maxSendRate {
+		log.Printf("[whatsapp] Campaign %d: send rate %d/s clamped to %d/s for the WhatsApp gateway",
+			campaignID, sendRate, maxSendRate)
+		sendRate = maxSendRate
 	}
 
 	// Rate limiter: send N messages per second
 	ticker := time.NewTicker(time.Second / time.Duration(sendRate))
 	defer ticker.Stop()
 
-	// This runs detached from the HTTP request that started it, so it needs its
-	// own context rather than one that is cancelled the moment the caller's
-	// response is written.
-	sendCtx := context.Background()
-
 	var mu sync.Mutex
 	sentCount := 0
 	failedCount := 0
+
+	// If the transport starts refusing everything — the session dropped, or the
+	// gateway is rate-limiting — stop rather than marking the rest of the list
+	// failed. Those recipients have not been contacted and should stay eligible
+	// for a retry.
+	consecutiveFailures := 0
+	const maxConsecutiveFailures = 20
 
 	for _, contact := range contacts {
 		<-ticker.C
@@ -1612,9 +1648,24 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WA
 			`, err.Error(), msgID)
 			mu.Lock()
 			failedCount++
+			consecutiveFailures++
+			stop := consecutiveFailures >= maxConsecutiveFailures
 			mu.Unlock()
+
+			if stop {
+				log.Printf("[whatsapp] Campaign %d: %d sends failed in a row, stopping with %d recipients untouched",
+					campaignID, consecutiveFailures, len(contacts)-(sentCount+failedCount))
+				h.db.Exec(`UPDATE wa_campaigns SET status='failed', updated_at=NOW() WHERE id=$1`, campaignID)
+
+				return
+			}
+
 			continue
 		}
+
+		mu.Lock()
+		consecutiveFailures = 0
+		mu.Unlock()
 
 		// Update message with Gupshup message ID
 		h.db.Exec(`
