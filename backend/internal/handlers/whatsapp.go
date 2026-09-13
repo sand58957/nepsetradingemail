@@ -1469,12 +1469,48 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 		return response.BadRequest(c, "Template must be approved before sending")
 	}
 
-	// Count target contacts (opted-in only)
-	var targetCount int
-	h.db.Get(&targetCount, "SELECT COUNT(*) FROM wa_contacts WHERE account_id = $1 AND opted_in = true", accountID)
+	// How large a phase to send now. Sending is deliberately incremental: the
+	// transport is an unofficial WhatsApp client on a single number, and the
+	// surest way to get it restricted is a large run at strangers. The caller
+	// picks a size, a modest default applies, and the hard cap is there so one
+	// request cannot turn into an all-night blast.
+	var req struct {
+		BatchSize int `json:"batch_size"`
+	}
+	_ = c.Bind(&req)
 
-	if targetCount == 0 {
-		return response.BadRequest(c, "No opted-in contacts to send to")
+	const (
+		defaultBatch = 50
+		maxBatch     = 500
+	)
+
+	batchSize := req.BatchSize
+	if batchSize <= 0 {
+		batchSize = defaultBatch
+	}
+
+	if batchSize > maxBatch {
+		batchSize = maxBatch
+	}
+
+	// Contacts this campaign has not reached yet.
+	var remainingCount int
+	h.db.Get(&remainingCount, `
+		SELECT COUNT(*) FROM wa_contacts c
+		WHERE c.account_id = $1 AND c.opted_in = true
+		  AND NOT EXISTS (
+			SELECT 1 FROM wa_campaign_messages m
+			WHERE m.campaign_id = $2 AND m.contact_id = c.id
+		  )
+	`, accountID, campaign.ID)
+
+	if remainingCount == 0 {
+		return response.BadRequest(c, "Every opted-in contact has already been sent this campaign")
+	}
+
+	targetCount := batchSize
+	if remainingCount < targetCount {
+		targetCount = remainingCount
 	}
 
 	// Update campaign status
@@ -1485,16 +1521,19 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 	`, targetCount, now, campaign.ID)
 
 	// Launch sending in background goroutine
-	go h.executeCampaignSend(campaign.ID, accountID, tmpl)
+	go h.executeCampaignSend(campaign.ID, accountID, batchSize, tmpl)
 
 	return response.Success(c, map[string]interface{}{
-		"status":        "sending",
-		"total_targets": targetCount,
+		"status":          "sending",
+		"sending_now":     targetCount,
+		"remaining_after": remainingCount - targetCount,
+		"total_remaining": remainingCount,
+		"message":         fmt.Sprintf("Sending to %d contacts. %d will remain — run the campaign again to continue.", targetCount, remainingCount-targetCount),
 	})
 }
 
 // executeCampaignSend runs in background and sends messages to all contacts.
-func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WATemplate) {
+func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize int, tmpl WATemplate) {
 	client, sessionID, settings, err := h.getClient(accountID)
 	if err != nil {
 		log.Printf("[whatsapp] Campaign %d: failed to get client: %v", campaignID, err)
@@ -1523,7 +1562,20 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WA
 
 	// Get all opted-in contacts
 	var contacts []WAContact
-	if err := h.db.Select(&contacts, "SELECT * FROM wa_contacts WHERE account_id = $1 AND opted_in = true", accountID); err != nil {
+	// Only contacts this campaign has not already reached, capped at one phase.
+	// Sending is deliberately resumable: an unofficial gateway should not be fed
+	// thirty thousand cold numbers in one run, and re-running a campaign must
+	// continue where it stopped rather than message everyone a second time.
+	if err := h.db.Select(&contacts, `
+		SELECT c.* FROM wa_contacts c
+		WHERE c.account_id = $1 AND c.opted_in = true
+		  AND NOT EXISTS (
+			SELECT 1 FROM wa_campaign_messages m
+			WHERE m.campaign_id = $2 AND m.contact_id = c.id
+		  )
+		ORDER BY c.id
+		LIMIT $3
+	`, accountID, campaignID, batchSize); err != nil {
 		log.Printf("[whatsapp] Campaign %d: failed to fetch contacts: %v", campaignID, err)
 		h.db.Exec("UPDATE wa_campaigns SET status = 'failed', updated_at = NOW() WHERE id = $1", campaignID)
 		return
@@ -1684,18 +1736,36 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WA
 		}
 	}
 
-	// Final update
+	// How many opted-in contacts this campaign still has not reached.
+	var remaining int
+	h.db.Get(&remaining, `
+		SELECT COUNT(*) FROM wa_contacts c
+		WHERE c.account_id = $1 AND c.opted_in = true
+		  AND NOT EXISTS (
+			SELECT 1 FROM wa_campaign_messages m
+			WHERE m.campaign_id = $2 AND m.contact_id = c.id
+		  )
+	`, accountID, campaignID)
+
+	// A phase that leaves people unreached parks the campaign rather than
+	// declaring it sent, so the next run picks up exactly where this one ended.
+	finalStatus := "sent"
+	if remaining > 0 {
+		finalStatus = "paused"
+	}
+
 	h.db.Exec(`
 		UPDATE wa_campaigns SET
-			status = 'sent',
-			sent_count = $1,
-			failed_count = $2,
-			completed_at = NOW(),
+			status = $4,
+			sent_count = COALESCE(sent_count, 0) + $1,
+			failed_count = COALESCE(failed_count, 0) + $2,
+			completed_at = CASE WHEN $4 = 'sent' THEN NOW() ELSE completed_at END,
 			updated_at = NOW()
 		WHERE id = $3
-	`, sentCount, failedCount, campaignID)
+	`, sentCount, failedCount, campaignID, finalStatus)
 
-	log.Printf("[whatsapp] Campaign %d: completed. Sent: %d, Failed: %d", campaignID, sentCount, failedCount)
+	log.Printf("[whatsapp] Campaign %d: phase finished — sent %d, failed %d, %d still to reach (status %s)",
+		campaignID, sentCount, failedCount, remaining, finalStatus)
 }
 
 func (h *WhatsAppHandler) PauseCampaign(c echo.Context) error {
