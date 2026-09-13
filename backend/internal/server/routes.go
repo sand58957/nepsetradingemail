@@ -221,6 +221,19 @@ func (s *Server) RegisterRoutes() {
 	wa.PUT("/settings", waHandler.UpdateSettings)
 	wa.POST("/settings/test", waHandler.TestConnection)
 
+	// Each account links and sends from its own WhatsApp number. None of these
+	// take a session id: the handler resolves it from wa_settings for the
+	// authenticated account, so one tenant cannot address another's session even
+	// by guessing an id. Creating, linking and unlinking additionally require
+	// being an owner or admin of the account.
+	wa.GET("/session", waHandler.GetMySession)
+	wa.POST("/session", waHandler.CreateMySession)
+	wa.POST("/session/start", waHandler.StartMySession)
+	wa.GET("/session/qr", waHandler.GetMyQR)
+	wa.POST("/session/logout", waHandler.LogoutMySession)
+	wa.DELETE("/session", waHandler.DeleteMySession)
+	wa.POST("/session/test", waHandler.TestMySession)
+
 	// WhatsApp Contacts
 	waContacts := wa.Group("/contacts")
 	waContacts.GET("", waHandler.ListContacts)

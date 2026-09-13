@@ -3,9 +3,6 @@
 // React Imports
 import { useState, useEffect, useCallback, useRef } from 'react'
 
-// Next Imports
-import { useSession } from 'next-auth/react'
-
 // MUI Imports
 import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
@@ -41,40 +38,24 @@ const STATUS_LABEL: Record<string, { label: string; color: 'success' | 'warning'
   ready: { label: 'Connected', color: 'success' },
   disconnected: { label: 'Disconnected', color: 'error' },
   action_required: { label: 'Action needed on the phone', color: 'error' },
-  failed: { label: 'Failed', color: 'error' },
-
-  // Not gateway statuses — these two come from the account's own connection
-  // state, which is what a non-super-admin sees. Without them the chip printed
-  // the raw string.
-  not_linked: { label: 'No number linked', color: 'error' },
-  unreachable: { label: 'Gateway unreachable', color: 'error' }
+  failed: { label: 'Failed', color: 'error' }
 }
 
 /** The one status in which the gateway will accept a send. */
 const READY = 'ready'
 
-const describe = (status: string) => STATUS_LABEL[status] ?? { label: status || 'Unknown', color: 'default' as const }
+const describe = (status: string) =>
+  STATUS_LABEL[status] ?? { label: status || 'No number linked', color: 'default' as const }
 
 const WASettings = () => {
-  const { data: session } = useSession()
-  const isSuperAdmin = (session as { role?: string } | null)?.role === 'superadmin'
-
-  const [sessions, setSessions] = useState<OpenWASession[]>([])
-
-  // The gateway session endpoints are super-admin only. Everyone else reads the
-  // account's connection state from their own settings endpoint — without this the
-  // status chip had nothing to render and every ordinary user saw "Unknown".
-  const [connection, setConnection] = useState<{
-    connected: boolean
-    status: string
-    linked_phone: string
-    detail?: string
-  } | null>(null)
-  const [active, setActive] = useState<OpenWASession | null>(null)
+  // This page is about one thing: the number THIS account sends from. There is no
+  // account switcher and no session picker, because an account only ever has its
+  // own session and the server resolves it from the request — the client never
+  // names one.
+  const [session, setSession] = useState<OpenWASession | null>(null)
   const [qr, setQr] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [newName, setNewName] = useState('nepalfillings-main')
   const [testPhone, setTestPhone] = useState('')
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: Severity }>({
     open: false,
@@ -87,45 +68,25 @@ const WASettings = () => {
   const errorText = (err: unknown, fallback: string) =>
     (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback
 
-  const loadConnection = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
-      const res = await whatsappService.getSettings()
+      const res = await whatsappService.mySession()
 
-      setConnection(res.data.connection ?? null)
-    } catch {
-      // Non-fatal: the chip falls back to whatever the session list gave us.
-    }
-  }, [])
-
-  const loadSessions = useCallback(async () => {
-    // Every account can read its own connection state; only a super admin can
-    // list the gateway's sessions. Ask for both, and do not let the second
-    // failing hide the first.
-    await loadConnection()
-
-    try {
-      const res = await whatsappService.listSessions()
-      const list = res.data || []
-
-      setSessions(list)
-      setActive(prev => list.find(s => s.id === prev?.id) ?? list[0] ?? null)
-    } catch {
-      // Expected for anyone who is not a super admin — the connection state above
-      // is what they see, so this is not worth an error toast.
-      setSessions([])
+      setSession(res.data.linked ? res.data.session : null)
+    } catch (err) {
+      notify(errorText(err, 'Could not check your WhatsApp connection'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [loadConnection])
+  }, [])
 
   useEffect(() => {
-    loadSessions()
-  }, [loadSessions])
+    load()
+  }, [load])
 
-  // While a session is waiting to be linked, both the status and the QR code
-  // change on their own — the code rotates every few seconds and the status
-  // flips the moment someone scans. Poll so the operator is never looking at a
-  // code that has already expired.
+  // While a session waits to be linked, both the code and the status change on
+  // their own — the code rotates every few seconds and the status flips the
+  // moment someone scans. Poll so nobody is looking at an expired code.
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -136,7 +97,7 @@ const WASettings = () => {
       }
     }
 
-    if (!active || active.status !== 'qr_ready') {
+    if (session?.status !== 'qr_ready') {
       setQr('')
       stop()
 
@@ -145,32 +106,29 @@ const WASettings = () => {
 
     let cancelled = false
 
-    // A miss or two is expected while the engine rotates the code, so the first
-    // few are ignored. A persistent one is not: when the session had dropped out
-    // of qr_ready the gateway refused every request, and because this loop
-    // swallowed the error and never gave up it asked 304 times in one hour and
-    // showed the operator nothing at all. After a few failures in a row, say what
-    // the gateway said and stop.
+    // A miss or two is expected while the engine rotates the code. A persistent
+    // one is not: silently retrying a request the gateway keeps refusing asked
+    // 304 times in one hour and showed nothing. Give up and say why.
     let consecutiveFailures = 0
     const maxConsecutiveFailures = 3
 
     const tick = async () => {
       try {
-        const [qrRes, sessionRes] = await Promise.all([
-          whatsappService.getSessionQR(active.id),
-          whatsappService.getSession(active.id)
-        ])
+        const [qrRes, sessionRes] = await Promise.all([whatsappService.myQR(), whatsappService.mySession()])
 
         if (cancelled) return
 
         consecutiveFailures = 0
         setQr(qrRes.data?.qrCode || '')
 
-        // Scanned: swap the code for the connected state straight away.
-        if (sessionRes.data?.status !== 'qr_ready') {
-          setActive(sessionRes.data)
-          setSessions(prev => prev.map(s => (s.id === sessionRes.data.id ? sessionRes.data : s)))
-          notify(`Linked ${sessionRes.data.phone || 'number'} successfully`, 'success')
+        const fresh = sessionRes.data.linked ? sessionRes.data.session : null
+
+        if (fresh && fresh.status !== 'qr_ready') {
+          setSession(fresh)
+
+          if (fresh.status === READY) {
+            notify(`Linked ${fresh.phone || 'your number'} successfully`, 'success')
+          }
         }
       } catch (err) {
         if (cancelled) return
@@ -180,11 +138,8 @@ const WASettings = () => {
         if (consecutiveFailures >= maxConsecutiveFailures) {
           stop()
           setQr('')
-          notify(
-            errorText(err, 'The QR code could not be fetched. Start the session and try again.'),
-            'error'
-          )
-          loadSessions()
+          notify(errorText(err, 'The QR code could not be fetched. Start the session and try again.'), 'error')
+          load()
         }
       }
     }
@@ -196,16 +151,14 @@ const WASettings = () => {
       cancelled = true
       stop()
     }
-    // loadSessions is a useCallback with no dependencies, so listing it here
-    // satisfies the exhaustive-deps rule without making the poll restart.
-  }, [active, loadSessions])
+  }, [session, load])
 
   const run = async (fn: () => Promise<void>, done: string) => {
     setBusy(true)
 
     try {
       await fn()
-      await loadSessions()
+      await load()
       notify(done)
     } catch (err) {
       notify(errorText(err, 'That did not work'), 'error')
@@ -214,25 +167,23 @@ const WASettings = () => {
     }
   }
 
-  const handleCreate = () =>
+  const handleConnect = () =>
     run(async () => {
-      const created = await whatsappService.createSession(newName.trim())
-
-      await whatsappService.startSession(created.data.id)
-      setActive(created.data)
-    }, 'Session created — scan the QR code to link a number')
+      await whatsappService.createMySession()
+    }, 'Scan the QR code with the phone that owns your number')
 
   const handleStart = () =>
-    active && run(() => whatsappService.startSession(active.id).then(() => undefined), 'Starting')
+    run(async () => {
+      await whatsappService.startMySession()
+    }, 'Starting')
 
-  const handleLogout = () => active && run(() => whatsappService.logoutSession(active.id), 'Number unlinked')
+  const handleLogout = () => run(() => whatsappService.logoutMySession(), 'Number unlinked')
 
-  const handleDelete = () => active && run(() => whatsappService.deleteSession(active.id), 'Session deleted')
+  const handleDelete = () => run(() => whatsappService.deleteMySession(), 'Session deleted')
 
   const handleTest = () =>
-    active &&
     run(
-      () => whatsappService.sendSessionTest(active.id, testPhone.trim(), 'Test message from Nepal Fillings.'),
+      () => whatsappService.testMySession(testPhone.trim(), 'Test message from Nepal Fillings.'),
       `Test message sent to ${testPhone.trim()}`
     )
 
@@ -244,10 +195,7 @@ const WASettings = () => {
     )
   }
 
-  // Prefer the live session a super admin is looking at; otherwise fall back to
-  // the account's own connection state.
-  const status = describe(active?.status || connection?.status || '')
-  const linkedPhone = active?.phone || connection?.linked_phone || ''
+  const status = describe(session?.status || '')
 
   return (
     <Grid container spacing={6}>
@@ -255,176 +203,127 @@ const WASettings = () => {
         <Card>
           <CardContent className='flex flex-wrap items-center justify-between gap-4'>
             <div>
-              <Typography variant='h5'>WhatsApp Connection</Typography>
+              <Typography variant='h5'>Your WhatsApp number</Typography>
               <Typography color='text.secondary'>
-                Messages are sent through a WhatsApp account linked to this server by QR code.
+                Campaigns and messages from this account are sent from the number you link here.
               </Typography>
             </div>
             <div className='flex items-center gap-2'>
               <Chip label={status.label} color={status.color} variant='tonal' />
-              {linkedPhone && <Chip label={linkedPhone} variant='tonal' />}
+              {session?.phone && <Chip label={session.phone} variant='tonal' />}
             </div>
           </CardContent>
         </Card>
       </Grid>
 
-      {!isSuperAdmin && (
-        <Grid size={{ xs: 12 }}>
-          {/* Say what the account's WhatsApp is actually doing. This used to be a
-              fixed notice next to a permanent "Unknown" chip, which told a tenant
-              nothing about whether their messages could go out. */}
-          <Alert severity={connection?.connected ? 'success' : 'warning'}>
-            <AlertTitle>
-              {connection?.connected ? `Connected — sending as ${linkedPhone || 'the linked number'}` : 'Not connected'}
-            </AlertTitle>
-            {connection?.connected
-              ? 'Your campaigns and messages will go out through this number.'
-              : connection?.detail ||
-                'No WhatsApp number is linked right now, so messages cannot be sent.'}{' '}
-            Linking a number means scanning a QR code with the handset that owns it, so an administrator does it for
-            you.
-          </Alert>
-        </Grid>
-      )}
-
-      {isSuperAdmin && (
-        <>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Card>
-              <CardHeader
-                title='Link a number'
-                subheader='Scan the code below with the phone that will send your messages'
-              />
-              <CardContent className='flex flex-col gap-4'>
-                {!active && (
-                  <>
-                    <TextField
-                      fullWidth
-                      label='Session name'
-                      value={newName}
-                      onChange={e => setNewName(e.target.value)}
-                      helperText='A label for this connection, for example nepalfillings-main'
-                    />
-                    <Button variant='contained' onClick={handleCreate} disabled={busy || !newName.trim()}>
-                      Create session
-                    </Button>
-                  </>
-                )}
-
-                {active?.status === 'qr_ready' && (
-                  <>
-                    {qr ? (
-                      <Box className='flex flex-col items-center gap-3'>
-                        {/* The gateway returns a ready-to-render data URI. */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={qr}
-                          alt='WhatsApp linking QR code'
-                          width={260}
-                          height={260}
-                          style={{ background: '#fff', padding: 12, borderRadius: 12 }}
-                        />
-                        <Typography variant='body2' color='text.secondary' className='text-center'>
-                          On the phone: WhatsApp → Settings → Linked devices → Link a device.
-                          <br />
-                          The code refreshes automatically until it is scanned.
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <Box className='flex justify-center' sx={{ py: 6 }}>
-                        <CircularProgress />
-                      </Box>
-                    )}
-                  </>
-                )}
-
-                {active && active.status !== 'qr_ready' && active.status !== READY && (
-                  <>
-                    <Alert severity='warning'>
-                      This session is {status.label.toLowerCase()}. Start it to get a QR code.
-                      {active.lastError ? ` Last error: ${active.lastError}` : ''}
-                    </Alert>
-                    <Button variant='contained' onClick={handleStart} disabled={busy}>
-                      Start session
-                    </Button>
-                  </>
-                )}
-
-                {active?.status === READY && (
-                  <Alert severity='success'>
-                    <AlertTitle>Linked</AlertTitle>
-                    Sending as {active.phone || 'the linked number'}
-                    {active.pushName ? ` (${active.pushName})` : ''}.
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Card>
-              <CardHeader title='Session' subheader='Check delivery and manage the link' />
-              <CardContent className='flex flex-col gap-4'>
-                <TextField
-                  fullWidth
-                  label='Send a test message to'
-                  placeholder='+977 98XXXXXXXX'
-                  value={testPhone}
-                  onChange={e => setTestPhone(e.target.value)}
-                  helperText='Confirms the linked number can actually deliver, without touching a campaign'
-                />
-                <Button
-                  variant='tonal'
-                  onClick={handleTest}
-                  disabled={busy || !testPhone.trim() || active?.status !== READY}
-                >
-                  Send test message
+      <Grid size={{ xs: 12, md: 6 }}>
+        <Card>
+          <CardHeader
+            title='Link a number'
+            subheader='Scan the code with the phone that will send your messages'
+          />
+          <CardContent className='flex flex-col gap-4'>
+            {!session && (
+              <>
+                <Alert severity='info'>
+                  This account has no WhatsApp number yet. Connecting one takes about a minute and needs the phone in
+                  your hand.
+                </Alert>
+                <Button variant='contained' onClick={handleConnect} disabled={busy}>
+                  Connect a WhatsApp number
                 </Button>
+              </>
+            )}
 
-                <Divider />
+            {session?.status === 'qr_ready' &&
+              (qr ? (
+                <Box className='flex flex-col items-center gap-3'>
+                  {/* The gateway returns a ready-to-render data URI. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={qr}
+                    alt='WhatsApp linking QR code'
+                    width={260}
+                    height={260}
+                    style={{ background: '#fff', padding: 12, borderRadius: 12 }}
+                  />
+                  <Typography variant='body2' color='text.secondary' className='text-center'>
+                    On the phone: WhatsApp → Settings → Linked devices → Link a device.
+                    <br />
+                    The code refreshes automatically until it is scanned.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box className='flex justify-center' sx={{ py: 6 }}>
+                  <CircularProgress />
+                </Box>
+              ))}
 
-                <div className='flex flex-wrap gap-3'>
-                  <Button color='warning' variant='tonal' onClick={handleLogout} disabled={busy || !active}>
-                    Unlink number
-                  </Button>
-                  <Button color='error' variant='tonal' onClick={handleDelete} disabled={busy || !active}>
-                    Delete session
-                  </Button>
-                </div>
+            {session && session.status !== 'qr_ready' && session.status !== READY && (
+              <>
+                <Alert severity='warning'>
+                  This connection is {status.label.toLowerCase()}. Start it to get a QR code.
+                  {session.lastError ? ` Last error: ${session.lastError}` : ''}
+                </Alert>
+                <Button variant='contained' onClick={handleStart} disabled={busy}>
+                  Start
+                </Button>
+              </>
+            )}
 
-                {sessions.length > 1 && (
-                  <>
-                    <Divider />
-                    <Typography variant='body2' color='text.secondary'>
-                      Other sessions on this gateway
-                    </Typography>
-                    <div className='flex flex-wrap gap-2'>
-                      {sessions.map(s => (
-                        <Chip
-                          key={s.id}
-                          label={`${s.name} · ${describe(s.status).label}`}
-                          color={s.id === active?.id ? 'primary' : 'default'}
-                          variant='tonal'
-                          onClick={() => setActive(s)}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+            {session?.status === READY && (
+              <Alert severity='success'>
+                <AlertTitle>Linked</AlertTitle>
+                Sending as {session.phone || 'your linked number'}
+                {session.pushName ? ` (${session.pushName})` : ''}.
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
 
-          <Grid size={{ xs: 12 }}>
-            <Alert severity='warning'>
-              <AlertTitle>Use a number you can afford to lose</AlertTitle>
-              This gateway drives WhatsApp through an unofficial client rather than Meta&apos;s Business API, so the
-              linked account can be restricted without warning — most often when messages go to people who never opted
-              in. Do not link a primary business line, and keep SMS or email available for anything critical.
-            </Alert>
-          </Grid>
-        </>
-      )}
+      <Grid size={{ xs: 12, md: 6 }}>
+        <Card>
+          <CardHeader title='Check and manage' subheader='Confirm delivery, or unlink the number' />
+          <CardContent className='flex flex-col gap-4'>
+            <TextField
+              fullWidth
+              label='Send a test message to'
+              placeholder='+977 98XXXXXXXX'
+              value={testPhone}
+              onChange={e => setTestPhone(e.target.value)}
+              helperText='Confirms your number can actually deliver, without touching a campaign'
+            />
+            <Button
+              variant='tonal'
+              onClick={handleTest}
+              disabled={busy || !testPhone.trim() || session?.status !== READY}
+            >
+              Send test message
+            </Button>
+
+            <Divider />
+
+            <div className='flex flex-wrap gap-3'>
+              <Button color='warning' variant='tonal' onClick={handleLogout} disabled={busy || !session}>
+                Unlink number
+              </Button>
+              <Button color='error' variant='tonal' onClick={handleDelete} disabled={busy || !session}>
+                Delete connection
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid size={{ xs: 12 }}>
+        <Alert severity='warning'>
+          <AlertTitle>Use a number you can afford to lose</AlertTitle>
+          This sends through an unofficial WhatsApp client rather than Meta&apos;s Business API, so the linked account
+          can be restricted without warning — most often when messages go to people who never opted in. Do not link a
+          primary business line, and keep SMS or email available for anything critical.
+        </Alert>
+      </Grid>
 
       <Snackbar
         open={snackbar.open}

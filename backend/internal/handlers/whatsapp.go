@@ -199,32 +199,16 @@ func (h *WhatsAppHandler) getClient(accountID int) (*openwa.Client, string, *WAS
 
 	client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
 
-	// An account starts with no session assigned: linking happens on the gateway,
-	// by a super admin scanning a QR, and nothing in that flow knows which tenants
-	// should use the result. So adopt the first ready session and remember it.
-	// Without this the row stayed empty forever and every send was refused with
-	// "no session is linked" while a perfectly good linked number sat idle.
+	// An account sends only from the number it linked itself.
+	//
+	// This used to adopt whatever session on the gateway happened to be ready,
+	// because there was one shared number and no way to tell which tenant it
+	// belonged to. With per-account numbers that behaviour is a cross-tenant leak:
+	// an account with no number of its own would send from another account's
+	// phone, and the replies would land in that account's inbox.
 	if settings.OpenWASessionID == "" {
-		ready, err := client.FirstConnectedSession(context.Background())
-		if err != nil {
-			return nil, "", nil, fmt.Errorf("no WhatsApp number is linked — link one in WhatsApp settings")
-		}
-
-		phone := ""
-		if ready.Phone != nil {
-			phone = *ready.Phone
-		}
-
-		if _, dbErr := h.db.Exec(
-			`UPDATE wa_settings SET openwa_session_id = $1, linked_phone = $2, session_status = $3,
-			 updated_at = NOW() WHERE account_id = $4`,
-			ready.ID, phone, ready.Status, accountID); dbErr != nil {
-			log.Printf("[whatsapp] adopting session %s for account %d: %v", ready.ID, accountID, dbErr)
-		}
-
-		settings.OpenWASessionID = ready.ID
-		settings.LinkedPhone = phone
-		settings.SessionStatus = ready.Status
+		return nil, "", nil, fmt.Errorf(
+			"no WhatsApp number is linked for this account — link one in WhatsApp settings")
 	}
 
 	return client, settings.OpenWASessionID, settings, nil
@@ -262,29 +246,10 @@ func (h *WhatsAppHandler) GetSettings(c echo.Context) error {
 	client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
 	sessionID := settings.OpenWASessionID
 
-	if sessionID == "" {
-		// Not adopted yet. The platform links one number centrally and each account
-		// picks it up on first use, so report what is actually available rather than
-		// "not configured" — otherwise a working number reads as missing until the
-		// account happens to send something.
-		//
-		// Prefer a ready session, but fall back to whatever else is there: a tenant
-		// seeing "Waiting for QR scan" knows an administrator is part-way through
-		// linking, where a flat "no number linked" suggests nobody has started.
-		if all, listErr := client.ListSessions(c.Request().Context()); listErr == nil {
-			for _, s := range all {
-				if s.Connected() {
-					sessionID = s.ID
-
-					break
-				}
-
-				if sessionID == "" {
-					sessionID = s.ID
-				}
-			}
-		}
-	}
+	// Deliberately no fallback to another session. An account reports on the number
+	// it linked itself and nothing else: showing it a session belonging to a
+	// different tenant told it that it could send when it could not, and named a
+	// phone number that was not its own.
 
 	if sessionID != "" {
 		session, sErr := client.GetSession(c.Request().Context(), sessionID)

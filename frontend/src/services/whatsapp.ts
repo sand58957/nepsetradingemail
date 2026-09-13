@@ -57,10 +57,54 @@ export const whatsappService = {
     return response.data
   },
 
+  // ==================== This account's own WhatsApp number ====================
+  // Each account links and sends from its own number. None of these take a
+  // session id: the server resolves it from the account making the request, so
+  // one account cannot address another's session even by guessing an id.
+  // Creating, linking and unlinking need to be an owner or admin of the account.
+
+  /** This account's connection, or `linked: false` if it has never linked one. */
+  mySession: async (): Promise<{ data: { linked: boolean; session: OpenWASession | null } }> => {
+    const response = await api.get('/whatsapp/session')
+
+    return response.data
+  },
+
+  /** Creates this account's session and starts it so a QR is produced. Safe to
+   *  call again — an account that already has one gets it restarted, not a second. */
+  createMySession: async (): Promise<{ data: OpenWASession }> => {
+    const response = await api.post('/whatsapp/session')
+
+    return response.data
+  },
+
+  startMySession: async (): Promise<{ data: OpenWASession }> => {
+    const response = await api.post('/whatsapp/session/start')
+
+    return response.data
+  },
+
+  myQR: async (): Promise<{ data: { qrCode: string; status: string } }> => {
+    const response = await api.get('/whatsapp/session/qr')
+
+    return response.data
+  },
+
+  logoutMySession: async (): Promise<void> => {
+    await api.post('/whatsapp/session/logout')
+  },
+
+  deleteMySession: async (): Promise<void> => {
+    await api.delete('/whatsapp/session')
+  },
+
+  testMySession: async (phone: string, message: string): Promise<void> => {
+    await api.post('/whatsapp/session/test', { phone, message })
+  },
+
   // ==================== Gateway sessions (super admin) ====================
-  // Linking a number means scanning a QR with the handset that owns it, and a
-  // linked session can send as that account, so these live behind super admin
-  // rather than per-tenant settings.
+  // A platform-wide view of every tenant's session, for support. Ordinary
+  // accounts use the endpoints above.
 
   listSessions: async (): Promise<{ data: OpenWASession[] }> => {
     const response = await api.get('/system/whatsapp/sessions')
