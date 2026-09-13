@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/csv"
@@ -509,6 +511,51 @@ func (h *WhatsAppHandler) DeleteContact(c echo.Context) error {
 	return response.SuccessWithMessage(c, "Contact deleted", nil)
 }
 
+// sniffDelimiter picks the separator from a CSV's first line. Spreadsheets
+// export semicolon- or tab-separated files in many locales; parsed with the
+// wrong separator the whole header arrives as a single cell, so a file that
+// plainly has a phone column is rejected for not having one.
+func sniffDelimiter(firstLine []byte) rune {
+	if bytes.Count(firstLine, []byte(",")) > 0 {
+		return ','
+	}
+
+	if bytes.Count(firstLine, []byte(";")) > 0 {
+		return ';'
+	}
+
+	if bytes.Count(firstLine, []byte("\t")) > 0 {
+		return '\t'
+	}
+
+	return ','
+}
+
+// normaliseCSVHeader lowercases and trims each column, strips a UTF-8
+// byte-order mark and any surrounding quotes, and returns both a lookup and the
+// cleaned names so a failure can report what was actually read. The BOM matters:
+// it is invisible in every editor and makes the first column compare unequal to
+// its own name, which is the most common reason a valid export is refused.
+func normaliseCSVHeader(header []string) (map[string]int, []string) {
+	colMap := make(map[string]int, len(header))
+	names := make([]string, 0, len(header))
+
+	for i, col := range header {
+		key := strings.TrimPrefix(col, "\ufeff")
+		key = strings.TrimSpace(strings.ToLower(key))
+		key = strings.Trim(key, `"'`)
+		key = strings.TrimSpace(key)
+
+		if _, seen := colMap[key]; !seen {
+			colMap[key] = i
+		}
+
+		names = append(names, key)
+	}
+
+	return colMap, names
+}
+
 func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 
@@ -523,28 +570,56 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 	}
 	defer src.Close()
 
-	reader := csv.NewReader(src)
+	// Peek at the first line to pick a delimiter before parsing. Spreadsheets
+	// export semicolon- or tab-separated files in plenty of locales, and with the
+	// wrong delimiter the entire header arrives as one cell, so the phone column
+	// is "missing" even though it is right there.
+	buffered := bufio.NewReader(src)
+
+	firstLine, _ := buffered.Peek(4096)
+	delimiter := sniffDelimiter(firstLine)
+
+	reader := csv.NewReader(buffered)
 	reader.TrimLeadingSpace = true
+	reader.Comma = delimiter
+	// Exports are not always rectangular; tolerate ragged rows and skip the bad
+	// ones per-record rather than failing the whole file.
+	reader.FieldsPerRecord = -1
 
 	// Read header
 	header, err := reader.Read()
 	if err != nil {
-		return response.BadRequest(c, "Failed to read CSV header")
+		return response.BadRequest(c, "Could not read the first row of the CSV. Check the file is a plain CSV with a header row.")
 	}
 
-	// Map header columns
-	colMap := map[string]int{}
-	for i, col := range header {
-		colMap[strings.ToLower(strings.TrimSpace(col))] = i
+	// Map header columns. A UTF-8 byte-order mark on the first cell is invisible
+	// but makes "phone" compare unequal to "phone", which is the single most
+	// common reason a valid-looking export is rejected here.
+	colMap, normalised := normaliseCSVHeader(header)
+
+	// Accept the names people actually export rather than insisting on one.
+	pick := func(names ...string) (int, bool) {
+		for _, n := range names {
+			if idx, ok := colMap[n]; ok {
+				return idx, true
+			}
+		}
+
+		return 0, false
 	}
 
-	phoneIdx, hasPhone := colMap["phone"]
+	phoneIdx, hasPhone := pick("phone", "phone_number", "phonenumber", "mobile", "mobile_number", "number", "msisdn", "contact", "contact_number", "whatsapp")
 	if !hasPhone {
-		return response.BadRequest(c, "CSV must have a 'phone' column")
+		// Say what was actually found: "must have a phone column" is unactionable
+		// when the uploader is looking at a file that plainly has one.
+		return response.BadRequest(c, fmt.Sprintf(
+			"No phone column found. The first row was read as: %s. Rename one column to 'phone'.",
+			strings.Join(normalised, ", ")))
 	}
-	nameIdx, hasName := colMap["name"]
-	emailIdx, hasEmail := colMap["email"]
-	tagsIdx, hasTags := colMap["tags"]
+
+	nameIdx, hasName := pick("name", "full_name", "fullname", "contact_name")
+	emailIdx, hasEmail := pick("email", "email_address")
+	tagsIdx, hasTags := pick("tags", "tag")
 
 	// Parse group_ids from form data
 	var groupIDs []int
