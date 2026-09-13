@@ -73,6 +73,12 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
   const [sendDialogOpen, setSendDialogOpen] = useState(false)
   const [sending, setSending] = useState(false)
 
+  // Campaigns go out in phases. The transport is a single WhatsApp number on an
+  // unofficial gateway, and a large run at people who have not messaged first is
+  // what gets a number restricted — so the size of each phase is a deliberate
+  // choice, starting small.
+  const [batchSize, setBatchSize] = useState(25)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -151,11 +157,13 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
     setSending(true)
 
     try {
-      const response = await whatsappService.sendCampaign(Number(id))
+      const response = await whatsappService.sendCampaign(Number(id), batchSize)
 
       setSnackbar({
         open: true,
-        message: `Campaign is now sending to ${response.data.total_targets} contacts`,
+        message:
+          response.data.message ||
+          `Sending to ${response.data.sending_now} contacts; ${response.data.remaining_after} remain`,
         severity: 'success'
       })
       setSendDialogOpen(false)
@@ -600,9 +608,23 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
         <DialogTitle>Send Campaign</DialogTitle>
         <DialogContent>
           <Alert severity='warning' className='mb-3'>
-            This will send WhatsApp messages to all matching opted-in contacts. This action cannot be undone.
+            Messages are sent through a single WhatsApp number on an unofficial gateway. Sending to a large number of
+            people who have never messaged you is the most common reason such a number gets restricted — send a small
+            phase first and check the number is still connected before widening.
           </Alert>
-          <Typography>Are you sure you want to send the campaign &quot;{campaign.name}&quot;?</Typography>
+          <Typography className='mb-4'>
+            Send the next phase of &quot;{campaign.name}&quot;. Contacts already reached by this campaign are skipped,
+            so you can run it again to continue.
+          </Typography>
+          <TextField
+            fullWidth
+            type='number'
+            label='Contacts in this phase'
+            value={batchSize}
+            onChange={e => setBatchSize(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
+            helperText='Start around 25. Maximum 500 per phase; sending is capped at 2 messages per second.'
+            inputProps={{ min: 1, max: 500 }}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSendDialogOpen(false)}>Cancel</Button>

@@ -254,8 +254,15 @@ export const whatsappService = {
     await api.delete(`/whatsapp/campaigns/${id}`)
   },
 
-  sendCampaign: async (id: number): Promise<{ data: { status: string; total_targets: number } }> => {
-    const response = await api.post(`/whatsapp/campaigns/${id}/send`)
+  /** Sends one phase. Contacts already reached by this campaign are skipped, so
+   *  calling it again continues rather than starting over. */
+  sendCampaign: async (
+    id: number,
+    batchSize?: number
+  ): Promise<{
+    data: { status: string; sending_now: number; remaining_after: number; total_remaining: number; message: string }
+  }> => {
+    const response = await api.post(`/whatsapp/campaigns/${id}/send`, { batch_size: batchSize })
 
     return response.data
   },
