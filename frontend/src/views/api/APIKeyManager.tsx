@@ -354,143 +354,68 @@ const APIKeyManager = () => {
               </Typography>
               <Divider sx={{ mb: 3 }} />
 
+              {/* This list is the API-key surface at /api/v1 and nothing else.
+                  It used to carry the dashboard's own routes under the same
+                  prefix — settings, contacts, groups, campaigns — which do not
+                  exist there. Readers called them and got 404s: one caller worked
+                  through fifty guessed URLs trying to find what was real. Telegram
+                  was listed with twenty endpoints and has no public API at all. */}
               {[
                 {
-                  title: 'SMS API (Aakash SMS)',
-                  base: '/api/v1/sms',
-                  endpoints: [
-                    { method: 'GET', path: '/settings', desc: 'Get SMS settings (sender ID, send rate)' },
-                    { method: 'PUT', path: '/settings', desc: 'Update SMS settings (auth token, sender ID)' },
-                    { method: 'POST', path: '/settings/test', desc: 'Test Aakash SMS connection' },
-                    { method: 'POST', path: '/send', desc: 'Send single SMS message' },
-                    { method: 'POST', path: '/send/bulk', desc: 'Send bulk SMS (max 100 recipients)' },
-                    { method: 'GET', path: '/contacts', desc: 'List all SMS contacts (paginated)' },
-                    { method: 'POST', path: '/contacts', desc: 'Add a new SMS contact' },
-                    { method: 'PUT', path: '/contacts/:id', desc: 'Update contact details & groups' },
-                    { method: 'DELETE', path: '/contacts/:id', desc: 'Delete a contact' },
-                    { method: 'POST', path: '/contacts/import', desc: 'Import contacts from CSV' },
-                    { method: 'GET', path: '/contacts/export', desc: 'Export contacts to CSV' },
-                    { method: 'GET', path: '/contacts/tags', desc: 'List all contact tags with counts' },
-                    { method: 'GET', path: '/groups', desc: 'List contact groups with member counts' },
-                    { method: 'POST', path: '/groups', desc: 'Create a new contact group' },
-                    { method: 'PUT', path: '/groups/:id', desc: 'Update group name/description' },
-                    { method: 'DELETE', path: '/groups/:id', desc: 'Delete a group (cascade members)' },
-                    { method: 'POST', path: '/groups/:id/members', desc: 'Add contacts to group' },
-                    { method: 'DELETE', path: '/groups/:id/members', desc: 'Remove contacts from group' },
-                    { method: 'GET', path: '/campaigns', desc: 'List all SMS campaigns' },
-                    { method: 'POST', path: '/campaigns', desc: 'Create a new campaign' },
-                    { method: 'POST', path: '/campaigns/:id/send', desc: 'Send/schedule a campaign' },
-                    { method: 'GET', path: '/campaigns/:id', desc: 'Get campaign details & stats' },
-                    { method: 'GET', path: '/messages', desc: 'List sent messages with status' },
-                    { method: 'GET', path: '/messages/:id', desc: 'Get single message status' },
-                    { method: 'GET', path: '/balance', desc: 'Check SMS credit balance' },
-                    { method: 'GET', path: '/overview', desc: 'Dashboard overview stats' }
-                  ]
-                },
-                {
-                  title: 'WhatsApp API',
+                  title: 'WhatsApp',
                   base: '/api/v1/whatsapp',
                   endpoints: [
-                    { method: 'GET', path: '/settings', desc: 'Get WhatsApp settings (app ID, phone, WABA ID)' },
-                    { method: 'PUT', path: '/settings', desc: 'Update WhatsApp settings (API key, app name)' },
-                    { method: 'POST', path: '/settings/test', desc: 'Check whether a WhatsApp number is linked' },
-                    { method: 'POST', path: '/send', desc: 'Send WhatsApp message (text or template)' },
-                    { method: 'POST', path: '/send/bulk', desc: 'Send bulk WhatsApp messages (max 100)' },
-                    { method: 'GET', path: '/contacts', desc: 'List all WhatsApp contacts (paginated)' },
-                    { method: 'POST', path: '/contacts', desc: 'Add a new WhatsApp contact' },
-                    { method: 'PUT', path: '/contacts/:id', desc: 'Update contact details & groups' },
-                    { method: 'DELETE', path: '/contacts/:id', desc: 'Delete a contact' },
-                    { method: 'POST', path: '/contacts/import', desc: 'Import contacts from CSV' },
-                    { method: 'GET', path: '/contacts/export', desc: 'Export contacts to CSV' },
-                    { method: 'GET', path: '/contacts/tags', desc: 'List all contact tags with counts' },
-                    { method: 'GET', path: '/groups', desc: 'List contact groups with member counts' },
-                    { method: 'POST', path: '/groups', desc: 'Create a new contact group' },
-                    { method: 'PUT', path: '/groups/:id', desc: 'Update group name/description' },
-                    { method: 'DELETE', path: '/groups/:id', desc: 'Delete a group (cascade members)' },
-                    { method: 'POST', path: '/groups/:id/members', desc: 'Add contacts to group' },
-                    { method: 'DELETE', path: '/groups/:id/members', desc: 'Remove contacts from group' },
-                    { method: 'GET', path: '/campaigns', desc: 'List all WhatsApp campaigns' },
-                    { method: 'POST', path: '/campaigns', desc: 'Create a new campaign' },
-                    { method: 'POST', path: '/campaigns/:id/send', desc: 'Send/schedule a campaign' },
-                    { method: 'GET', path: '/campaigns/:id', desc: 'Get campaign details & stats' },
-                    { method: 'GET', path: '/templates', desc: 'List approved WhatsApp templates' },
-                    { method: 'POST', path: '/templates/sync', desc: 'List stored message templates' },
-                    { method: 'GET', path: '/messages', desc: 'List sent messages with delivery status' },
-                    { method: 'GET', path: '/messages/:id', desc: 'Get single message status' },
-                    { method: 'GET', path: '/balance', desc: 'Check WhatsApp credit balance' },
-                    { method: 'GET', path: '/overview', desc: 'Dashboard overview stats' }
+                    { method: 'POST', path: '/send', desc: 'Send one message. type: "text" with message, or type: "template" with template_name.' },
+                    { method: 'POST', path: '/send/bulk', desc: 'Send to many recipients (max 100 per call)' },
+                    { method: 'GET', path: '/messages', desc: 'List messages you have sent, with status' },
+                    { method: 'GET', path: '/messages/:id', desc: 'Status of one message' },
+                    { method: 'GET', path: '/balance', desc: 'WhatsApp credit balance' },
+                    { method: 'GET', path: '/status', desc: 'Whether a number is linked and ready to send' },
+                    { method: 'GET', path: '/templates', desc: 'Your approved templates, for use with type: "template"' }
                   ]
                 },
                 {
-                  title: 'Email API (Listmonk)',
+                  title: 'SMS',
+                  base: '/api/v1/sms',
+                  endpoints: [
+                    { method: 'POST', path: '/send', desc: 'Send one SMS' },
+                    { method: 'POST', path: '/send/bulk', desc: 'Send to many recipients (max 100 per call)' },
+                    { method: 'GET', path: '/messages', desc: 'List messages you have sent, with status' },
+                    { method: 'GET', path: '/messages/:id', desc: 'Status of one message' },
+                    { method: 'GET', path: '/balance', desc: 'SMS credit balance' },
+                    { method: 'GET', path: '/status', desc: 'Whether the channel is configured' }
+                  ]
+                },
+                {
+                  title: 'Email',
                   base: '/api/v1/email',
                   endpoints: [
-                    { method: 'POST', path: '/send', desc: 'Send single email' },
-                    { method: 'POST', path: '/send/bulk', desc: 'Send bulk emails (max 100)' },
-                    { method: 'GET', path: '/messages', desc: 'List sent messages' },
-                    { method: 'GET', path: '/messages/:id', desc: 'Get message status' },
-                    { method: 'GET', path: '/balance', desc: 'Check email credit balance' },
-                    { method: 'GET', path: '/domains', desc: 'List verified domains' }
+                    { method: 'POST', path: '/send', desc: 'Send one email' },
+                    { method: 'POST', path: '/send/bulk', desc: 'Send to many recipients (max 100 per call)' },
+                    { method: 'GET', path: '/messages', desc: 'List messages you have sent, with status' },
+                    { method: 'GET', path: '/messages/:id', desc: 'Status of one message' },
+                    { method: 'GET', path: '/balance', desc: 'Email credit balance' },
+                    { method: 'GET', path: '/status', desc: 'Whether the channel is configured' },
+                    { method: 'GET', path: '/domains', desc: 'Your verified sending domains' }
                   ]
                 },
                 {
-                  title: 'Telegram Bot API',
-                  base: '/api/v1/telegram',
-                  endpoints: [
-                    { method: 'GET', path: '/settings', desc: 'Get bot settings (token, username, webhook)' },
-                    { method: 'PUT', path: '/settings', desc: 'Update bot settings (token, send rate)' },
-                    { method: 'POST', path: '/settings/test', desc: 'Test bot connection' },
-                    { method: 'GET', path: '/contacts', desc: 'List all subscribers (paginated)' },
-                    { method: 'POST', path: '/contacts', desc: 'Add a new contact manually' },
-                    { method: 'PUT', path: '/contacts/:id', desc: 'Update contact details & groups' },
-                    { method: 'DELETE', path: '/contacts/:id', desc: 'Delete a contact' },
-                    { method: 'POST', path: '/contacts/import', desc: 'Import contacts from CSV' },
-                    { method: 'GET', path: '/contacts/export', desc: 'Export contacts to CSV' },
-                    { method: 'GET', path: '/contacts/stats', desc: 'Get subscriber statistics' },
-                    { method: 'GET', path: '/groups', desc: 'List contact groups' },
-                    { method: 'POST', path: '/groups', desc: 'Create a new group' },
-                    { method: 'PUT', path: '/groups/:id', desc: 'Update group details' },
-                    { method: 'DELETE', path: '/groups/:id', desc: 'Delete a group' },
-                    { method: 'POST', path: '/groups/:id/members', desc: 'Add members to group' },
-                    { method: 'DELETE', path: '/groups/:id/members', desc: 'Remove members from group' },
-                    { method: 'GET', path: '/campaigns', desc: 'List campaigns' },
-                    { method: 'POST', path: '/campaigns', desc: 'Create a new campaign' },
-                    { method: 'POST', path: '/campaigns/:id/send', desc: 'Send a campaign' },
-                    { method: 'GET', path: '/overview', desc: 'Dashboard overview stats' }
-                  ]
-                },
-                {
-                  title: 'Messenger API (Facebook Page)',
+                  title: 'Messenger',
                   base: '/api/v1/messenger',
                   endpoints: [
-                    { method: 'GET', path: '/settings', desc: 'Get Messenger settings (page ID, app ID, webhook)' },
-                    {
-                      method: 'PUT',
-                      path: '/settings',
-                      desc: 'Update settings (page token, app secret, opt-in keyword)'
-                    },
-                    { method: 'POST', path: '/settings/test', desc: 'Test Facebook Page connection' },
-                    { method: 'POST', path: '/settings/generate-keyword', desc: 'Generate random opt-in keyword' },
-                    { method: 'POST', path: '/settings/qr', desc: 'Upload QR code image' },
-                    { method: 'DELETE', path: '/settings/qr', desc: 'Remove QR code image' },
-                    { method: 'GET', path: '/contacts', desc: 'List all Messenger contacts (paginated)' },
-                    { method: 'POST', path: '/contacts', desc: 'Add contact manually by PSID' },
-                    { method: 'PUT', path: '/contacts/:id', desc: 'Update contact details & groups' },
-                    { method: 'DELETE', path: '/contacts/:id', desc: 'Delete a contact' },
-                    { method: 'POST', path: '/contacts/import', desc: 'Import contacts from CSV' },
-                    { method: 'GET', path: '/contacts/export', desc: 'Export contacts to CSV' },
-                    { method: 'GET', path: '/contacts/tags', desc: 'List all contact tags with counts' },
-                    { method: 'GET', path: '/groups', desc: 'List contact groups with member counts' },
-                    { method: 'POST', path: '/groups', desc: 'Create a new contact group' },
-                    { method: 'PUT', path: '/groups/:id', desc: 'Update group name/description' },
-                    { method: 'DELETE', path: '/groups/:id', desc: 'Delete a group (cascade members)' },
-                    { method: 'POST', path: '/groups/:id/members', desc: 'Add contacts to group' },
-                    { method: 'DELETE', path: '/groups/:id/members', desc: 'Remove contacts from group' },
-                    { method: 'GET', path: '/campaigns', desc: 'List all Messenger campaigns' },
-                    { method: 'POST', path: '/campaigns', desc: 'Create a new campaign (text + image)' },
-                    { method: 'POST', path: '/campaigns/:id/send', desc: 'Send/schedule a campaign' },
-                    { method: 'GET', path: '/campaigns/:id', desc: 'Get campaign details & delivery stats' },
-                    { method: 'GET', path: '/overview', desc: 'Dashboard overview stats' }
+                    { method: 'POST', path: '/send', desc: 'Send one message' },
+                    { method: 'POST', path: '/send/bulk', desc: 'Send to many recipients (max 100 per call)' },
+                    { method: 'GET', path: '/messages', desc: 'List messages you have sent, with status' },
+                    { method: 'GET', path: '/messages/:id', desc: 'Status of one message' },
+                    { method: 'GET', path: '/balance', desc: 'Messenger credit balance' },
+                    { method: 'GET', path: '/status', desc: 'Whether the channel is configured' }
+                  ]
+                },
+                {
+                  title: 'Account',
+                  base: '/api/v1',
+                  endpoints: [
+                    { method: 'GET', path: '/me', desc: 'The account this key belongs to, and its channel' }
                   ]
                 }
               ].map(section => (
@@ -621,58 +546,8 @@ const APIKeyManager = () => {
                 </Table>
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                Send Telegram Message Example
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/telegram/campaigns \\
-  -H "Authorization: Bearer nf_telegram_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Market Alert",
-    "message_text": "NEPSE is up 2.5% today! 📈",
-    "message_type": "text",
-    "target_filter": {
-      "opted_in": true
-    }
-  }'`}
-              </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                List Subscribers Example
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl https://nepalfillings.com/api/v1/telegram/contacts \\
-  -H "Authorization: Bearer nf_telegram_your_key"
 
-# Response:
-{
-  "results": [
-    {
-      "chat_id": 5835919308,
-      "username": "tarkaraj",
-      "name": "Tarka Raj",
-      "opted_in": true,
-      "opted_in_at": "2025-12-15T10:30:00Z"
-    }
-  ],
-  "total": 2,
-  "page": 1,
-  "per_page": 50
-}`}
-              </Box>
-
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Add Contact to Group Example
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/telegram/groups/1/members \\
-  -H "Authorization: Bearer nf_telegram_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "contact_ids": [1, 2, 3]
-  }'`}
-              </Box>
 
               {/* ============== SMS Integration ============== */}
               <Divider sx={{ my: 3 }} />
@@ -791,47 +666,12 @@ const APIKeyManager = () => {
 }`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Create SMS Campaign
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/sms/campaigns \\
-  -H "Authorization: Bearer nf_sms_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Weekly Market Update",
-    "message": "NEPSE closed at 2,450 (+1.5%). Top gainers: NABIL, SCB, HBL.",
-    "target_filter": {
-      "tags": ["premium"],
-      "groups": [1, 2]
-    }
-  }'`}
-              </Box>
 
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Manage SMS Contacts
+                Check SMS Balance
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# Add a contact
-curl -X POST https://nepalfillings.com/api/v1/sms/contacts \\
-  -H "Authorization: Bearer nf_sms_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "phone": "9812345678",
-    "name": "Ram Bahadur",
-    "tags": ["investor", "premium"]
-  }'
-
-# List contacts
-curl https://nepalfillings.com/api/v1/sms/contacts?page=1 \\
-  -H "Authorization: Bearer nf_sms_your_key"
-
-# Import from CSV
-curl -X POST https://nepalfillings.com/api/v1/sms/contacts/import \\
-  -H "Authorization: Bearer nf_sms_your_key" \\
-  -F "file=@contacts.csv"
-
-# Check balance
+                {`# Check balance
 curl https://nepalfillings.com/api/v1/sms/balance \\
   -H "Authorization: Bearer nf_sms_your_key"
 
@@ -974,37 +814,14 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
   }'`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Create WhatsApp Campaign
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/whatsapp/campaigns \\
-  -H "Authorization: Bearer nf_whatsapp_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "IPO Alert Campaign",
-    "template_id": "ipo_alert",
-    "params": {
-      "1": "Global IME Bank",
-      "2": "2026-03-20",
-      "3": "Rs. 100"
-    },
-    "target_filter": {
-      "tags": ["ipo-interested"],
-      "groups": [1]
-    }
-  }'`}
-              </Box>
 
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Sync & List Templates
+                List Templates
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# List stored templates
-curl -X POST https://nepalfillings.com/api/v1/whatsapp/templates/sync \\
-  -H "Authorization: Bearer nf_whatsapp_your_key"
-
-# List approved templates
+                {`# List the templates you can send with type: "template".
+# Templates are created in the dashboard under WhatsApp > Templates;
+# there is no endpoint to create or sync them with an API key.
 curl https://nepalfillings.com/api/v1/whatsapp/templates \\
   -H "Authorization: Bearer nf_whatsapp_your_key"
 
@@ -1024,25 +841,10 @@ curl https://nepalfillings.com/api/v1/whatsapp/templates \\
               </Box>
 
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Manage WhatsApp Contacts
+                Check WhatsApp Balance
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# Add a contact
-curl -X POST https://nepalfillings.com/api/v1/whatsapp/contacts \\
-  -H "Authorization: Bearer nf_whatsapp_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "phone": "9779812345678",
-    "name": "Sita Sharma",
-    "tags": ["investor", "premium"],
-    "opted_in": true
-  }'
-
-# List contacts
-curl https://nepalfillings.com/api/v1/whatsapp/contacts?page=1 \\
-  -H "Authorization: Bearer nf_whatsapp_your_key"
-
-# Check balance
+                {`# Check balance
 curl https://nepalfillings.com/api/v1/whatsapp/balance \\
   -H "Authorization: Bearer nf_whatsapp_your_key"`}
               </Box>
@@ -1175,93 +977,23 @@ curl https://nepalfillings.com/api/v1/whatsapp/balance \\
   }'`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Create Messenger Campaign
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/messenger/campaigns \\
-  -H "Authorization: Bearer nf_messenger_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Daily Market Summary",
-    "message_text": "📈 NEPSE Daily Update\\n\\nIndex: 2,450.30 (+1.5%)\\nTurnover: Rs. 5.2B\\nTop Gainer: NABIL (+5.2%)",
-    "image_url": "https://cdn.example.com/daily-chart.png",
-    "target_filter": {
-      "tags": ["daily-subscriber"],
-      "groups": [1, 3]
-    }
-  }'`}
-              </Box>
 
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Manage Messenger Contacts
+                Check Messenger Balance
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# List contacts
-curl https://nepalfillings.com/api/v1/messenger/contacts?page=1 \\
-  -H "Authorization: Bearer nf_messenger_your_key"
-
-# Response:
-{
-  "results": [
-    {
-      "id": 1,
-      "psid": "7835919308",
-      "name": "Tarka Raj Joshi",
-      "profile_pic": "https://platform-lookaside.fbsbx.com/...",
-      "opted_in": true,
-      "opted_in_at": "2026-03-15T10:30:00Z",
-      "tags": ["premium", "daily-subscriber"],
-      "last_interaction": "2026-03-17T08:00:00Z"
-    }
-  ],
-  "total": 150,
-  "page": 1,
-  "per_page": 50
-}
-
-# Add contact manually
-curl -X POST https://nepalfillings.com/api/v1/messenger/contacts \\
-  -H "Authorization: Bearer nf_messenger_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "psid": "7835919308",
-    "name": "Tarka Raj Joshi",
-    "tags": ["investor"]
-  }'
-
-# Check balance
+                {`# Check balance
 curl https://nepalfillings.com/api/v1/messenger/balance \\
   -H "Authorization: Bearer nf_messenger_your_key"
 
-# Get dashboard overview
-curl https://nepalfillings.com/api/v1/messenger/overview \\
-  -H "Authorization: Bearer nf_messenger_your_key"`}
-              </Box>
-
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                QR Code & Opt-in Settings
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# Generate a new opt-in keyword
-curl -X POST https://nepalfillings.com/api/v1/messenger/settings/generate-keyword \\
-  -H "Authorization: Bearer nf_messenger_your_key"
-
 # Response:
 {
-  "keyword": "XYBJKJQ3",
-  "subscribe_link": "https://m.me/104960767808713?ref=XYBJKJQ3"
-}
-
-# Upload QR code image
-curl -X POST https://nepalfillings.com/api/v1/messenger/settings/qr \\
-  -H "Authorization: Bearer nf_messenger_your_key" \\
-  -F "file=@messenger-qr.png"
-
-# Remove QR code
-curl -X DELETE https://nepalfillings.com/api/v1/messenger/settings/qr \\
-  -H "Authorization: Bearer nf_messenger_your_key"`}
+  "channel": "messenger",
+  "balance": 4027,
+  "reserved": 0
+}`}
               </Box>
+
 
               {/* ============== Email Integration ============== */}
               <Divider sx={{ my: 3 }} />
@@ -1365,49 +1097,23 @@ curl -X DELETE https://nepalfillings.com/api/v1/messenger/settings/qr \\
               </Alert>
 
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# Check all credit balances
-curl https://nepalfillings.com/api/v1/credits \\
-  -H "Authorization: Bearer nf_sms_your_key"
-
-# Response:
-[
-  { "channel": "sms", "balance": 5000, "reserved": 0 },
-  { "channel": "whatsapp", "balance": 3000, "reserved": 100 },
-  { "channel": "email", "balance": 10000, "reserved": 0 },
-  { "channel": "telegram", "balance": 2000, "reserved": 0 },
-  { "channel": "messenger", "balance": 1500, "reserved": 50 }
-]
-
-# Check transaction history
-curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
-  -H "Authorization: Bearer nf_sms_your_key"
+                {`# A key is bound to one channel, so it reads that channel's balance.
+curl https://nepalfillings.com/api/v1/whatsapp/balance \\
+  -H "Authorization: Bearer nf_whatsapp_your_key"
 
 # Response:
 {
-  "results": [
-    {
-      "id": 1,
-      "channel": "sms",
-      "type": "purchase",
-      "amount": 5000,
-      "balance_after": 5000,
-      "description": "Initial credit purchase",
-      "created_at": "2026-03-01T10:00:00Z"
-    },
-    {
-      "id": 2,
-      "channel": "sms",
-      "type": "deduct",
-      "amount": -1,
-      "balance_after": 4999,
-      "message_id": 123,
-      "created_at": "2026-03-17T08:30:00Z"
-    }
-  ],
-  "total": 2,
-  "page": 1,
-  "per_page": 25
-}`}
+  "channel": "whatsapp",
+  "balance": 100000,
+  "credit_per_message": 1
+}
+
+# Which account and channel a key belongs to
+curl https://nepalfillings.com/api/v1/me \\
+  -H "Authorization: Bearer nf_whatsapp_your_key"
+
+# Every balance at once, and the transaction history, are in this dashboard
+# rather than the API — see the Transaction History tab above.`}
               </Box>
 
               <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>

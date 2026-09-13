@@ -59,8 +59,17 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 		return apiError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Invalid phone number. Must be 10-15 digits", "to")
 	}
 
+	// Infer the type from what was actually sent rather than assuming "template".
+	// A caller who posts {to, message} plainly means a text message, but the old
+	// default answered them with "Template name is required for template
+	// messages" — an error about a request they had not made. Sending
+	// template_name still selects template, so nothing that worked before changes.
 	if req.Type == "" {
-		req.Type = "template"
+		if req.TemplateName != "" {
+			req.Type = "template"
+		} else {
+			req.Type = "text"
+		}
 	}
 
 	if req.Type != "template" && req.Type != "text" {
@@ -169,8 +178,19 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 					error_message = $2, updated_at = NOW() WHERE id = $1`,
 					msgID, fmt.Sprintf("no template named %q", req.TemplateName))
 
-				return apiError(c, http.StatusBadRequest, "TEMPLATE_NOT_FOUND",
-					fmt.Sprintf("No template named %q", req.TemplateName), "")
+				// "No template named X" is unhelpful to an account that has none at
+				// all, which is every account that has not created any: it reads as
+				// a typo rather than as a step never taken.
+				var haveAny int
+				h.db.Get(&haveAny, `SELECT COUNT(*) FROM wa_templates WHERE account_id = $1`, accountID)
+
+				detail := fmt.Sprintf("No template named %q on this account.", req.TemplateName)
+				if haveAny == 0 {
+					detail = "This account has no WhatsApp templates yet. Create one under WhatsApp > Templates, " +
+						`or send plain text with {"type":"text","message":"..."}.`
+				}
+
+				return apiError(c, http.StatusBadRequest, "TEMPLATE_NOT_FOUND", detail, "template_name")
 			}
 
 			var params []string
@@ -286,8 +306,13 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 		return apiError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", "Maximum 100 recipients per bulk request", "recipients")
 	}
 
+	// Same inference as the single send above.
 	if req.Type == "" {
-		req.Type = "template"
+		if req.TemplateName != "" {
+			req.Type = "template"
+		} else {
+			req.Type = "text"
+		}
 	}
 
 	accountID := keyInfo.AccountID
