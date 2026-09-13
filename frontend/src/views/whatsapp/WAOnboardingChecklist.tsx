@@ -31,7 +31,7 @@ const steps: ChecklistStep[] = [
   {
     id: 'connect_whatsapp',
     title: 'Connect your WhatsApp Business API',
-    description: 'Set up your Gupshup API credentials to start sending WhatsApp messages to your contacts.',
+    description: 'Link a WhatsApp number by scanning a QR code, so you can start messaging your contacts.',
     buttonLabel: 'Configure API',
     buttonUrl: '/whatsapp/settings',
     icon: 'tabler-brand-whatsapp'

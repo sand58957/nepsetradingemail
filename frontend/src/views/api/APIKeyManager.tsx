@@ -388,12 +388,12 @@ const APIKeyManager = () => {
                   ]
                 },
                 {
-                  title: 'WhatsApp API (Gupshup)',
+                  title: 'WhatsApp API',
                   base: '/api/v1/whatsapp',
                   endpoints: [
                     { method: 'GET', path: '/settings', desc: 'Get WhatsApp settings (app ID, phone, WABA ID)' },
                     { method: 'PUT', path: '/settings', desc: 'Update WhatsApp settings (API key, app name)' },
-                    { method: 'POST', path: '/settings/test', desc: 'Test Gupshup connection & check balance' },
+                    { method: 'POST', path: '/settings/test', desc: 'Check whether a WhatsApp number is linked' },
                     { method: 'POST', path: '/send', desc: 'Send WhatsApp message (text or template)' },
                     { method: 'POST', path: '/send/bulk', desc: 'Send bulk WhatsApp messages (max 100)' },
                     { method: 'GET', path: '/contacts', desc: 'List all WhatsApp contacts (paginated)' },
@@ -414,7 +414,7 @@ const APIKeyManager = () => {
                     { method: 'POST', path: '/campaigns/:id/send', desc: 'Send/schedule a campaign' },
                     { method: 'GET', path: '/campaigns/:id', desc: 'Get campaign details & stats' },
                     { method: 'GET', path: '/templates', desc: 'List approved WhatsApp templates' },
-                    { method: 'POST', path: '/templates/sync', desc: 'Sync templates from Gupshup' },
+                    { method: 'POST', path: '/templates/sync', desc: 'List stored message templates' },
                     { method: 'GET', path: '/messages', desc: 'List sent messages with delivery status' },
                     { method: 'GET', path: '/messages/:id', desc: 'Get single message status' },
                     { method: 'GET', path: '/balance', desc: 'Check WhatsApp credit balance' },
@@ -846,7 +846,7 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
               {/* ============== WhatsApp Integration ============== */}
               <Divider sx={{ my: 3 }} />
               <Typography variant='h6' gutterBottom>
-                WhatsApp Integration (Gupshup)
+                WhatsApp Integration
               </Typography>
 
               <Alert severity='info' sx={{ mb: 3 }}>
@@ -854,11 +854,11 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
                   How WhatsApp Works
                 </Typography>
                 <Typography variant='body2'>
-                  WhatsApp messages are sent through <strong>Gupshup</strong>, a Meta-approved Business Solution
-                  Provider (BSP). You must configure your Gupshup credentials (API key, App Name, Source Phone) in
-                  Settings. WhatsApp requires <strong>pre-approved templates</strong> for outbound messages outside the
-                  24-hour conversation window. Use the template sync feature to pull your approved templates from
-                  Gupshup. Each message consumes <strong>1 credit</strong>.
+                  WhatsApp messages are sent through a self-hosted gateway linked to a real WhatsApp account. An
+                  administrator links a number by scanning a QR code in Settings. WhatsApp requires{' '}
+                  <strong>pre-approved templates</strong> for outbound messages outside the 24-hour conversation window.
+                  Templates are stored in this dashboard and sent as text. Each message consumes{' '}
+                  <strong>1 credit</strong>.
                 </Typography>
               </Alert>
 
@@ -872,20 +872,20 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Provider</TableCell>
                       <TableCell>
-                        Gupshup (
-                        <a href='https://www.gupshup.io' target='_blank' rel='noopener'>
-                          gupshup.io
+                        a self-hosted gateway (
+                        <a href='https://github.com/rmyndharis/OpenWA' target='_blank' rel='noopener'>
+                          OpenWA
                         </a>
                         )
                       </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>API Key</TableCell>
-                      <TableCell>Obtained from Gupshup Dashboard → API Keys</TableCell>
+                      <TableCell>Managed by an administrator on the gateway</TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>App Name</TableCell>
-                      <TableCell>Your Gupshup app name (created in Gupshup dashboard)</TableCell>
+                      <TableCell>A label for the linked WhatsApp session</TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Source Phone</TableCell>
@@ -899,9 +899,7 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Templates</TableCell>
-                      <TableCell>
-                        Pre-approved message templates required for outbound messages (sync from Gupshup)
-                      </TableCell>
+                      <TableCell>Reusable message bodies stored in this dashboard</TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Credit Cost</TableCell>
@@ -954,7 +952,7 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
 {
   "id": 456,
   "status": "sent",
-  "provider_message_id": "gupshup_msg_abc123",
+  "provider_message_id": "wamid_abc123",
   "credits_charged": 1
 }`}
               </Box>
@@ -1002,7 +1000,7 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
                 Sync & List Templates
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# Sync templates from Gupshup
+                {`# List stored templates
 curl -X POST https://nepalfillings.com/api/v1/whatsapp/templates/sync \\
   -H "Authorization: Bearer nf_whatsapp_your_key"
 
@@ -1553,7 +1551,7 @@ curl https://nepalfillings.com/api/v1/credits/transactions?channel=sms&page=1 \\
                 <InputLabel>Channel</InputLabel>
                 <Select value={createChannel} label='Channel' onChange={e => setCreateChannel(e.target.value as any)}>
                   <MenuItem value='sms'>SMS (Aakash SMS)</MenuItem>
-                  <MenuItem value='whatsapp'>WhatsApp (Gupshup)</MenuItem>
+                  <MenuItem value='whatsapp'>WhatsApp</MenuItem>
                   <MenuItem value='email'>Email (SendGrid)</MenuItem>
                   <MenuItem value='telegram'>Telegram (Bot API)</MenuItem>
                   <MenuItem value='messenger'>Messenger (Facebook Page)</MenuItem>

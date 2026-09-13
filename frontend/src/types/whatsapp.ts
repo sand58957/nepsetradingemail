@@ -1,8 +1,10 @@
 export interface WASettings {
   id: number
   account_id: number
-  gupshup_app_id: string
-  gupshup_api_key: string
+  /** Which gateway session this account sends through. */
+  openwa_session_id: string
+  linked_phone: string
+  session_status: string
   source_phone: string
   app_name: string
   waba_id: string
@@ -31,6 +33,9 @@ export interface WAContact {
 export interface WATemplate {
   id: number
   account_id: number
+  /** Legacy column: held the Meta template id when Gupshup was the transport.
+   *  Retained because campaign delivery matching still joins on it; always empty
+   *  for templates created since the move to the self-hosted gateway. */
   gupshup_id: string
   name: string
   category: string
@@ -73,6 +78,7 @@ export interface WACampaignMessage {
   id: number
   campaign_id: number
   contact_id: number
+  /** Legacy column name; now holds the gateway's message id. */
   gupshup_msg_id: string
   wa_msg_id: string
   status: string

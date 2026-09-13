@@ -110,8 +110,8 @@ const WATemplateList = () => {
         open: true,
         message:
           response.data.total === 0
-            ? 'No templates found in Gupshup. Create templates first, then sync.'
-            : `Synced ${response.data.synced} templates (${response.data.total} total from Gupshup)`,
+            ? 'Templates live here now — there is no external catalogue to sync from.'
+            : 'Templates are stored here now; approval no longer applies.',
         severity: response.data.total === 0 ? 'info' : 'success'
       })
       fetchTemplates()
@@ -202,7 +202,7 @@ const WATemplateList = () => {
                 <div>
                   <Typography variant='h5'>WhatsApp Templates</Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    Pre-approved message templates from your Gupshup account
+                    Reusable message bodies. Numbered placeholders are filled per contact when a campaign sends.
                   </Typography>
                 </div>
                 <div className='flex gap-2'>
@@ -278,7 +278,7 @@ const WATemplateList = () => {
                     disabled={syncing}
                     startIcon={<i className='tabler-refresh' />}
                   >
-                    Sync from Gupshup
+                    Refresh
                   </Button>
                 </div>
               </CardContent>
@@ -309,11 +309,6 @@ const WATemplateList = () => {
                         variant='outlined'
                       />
                       <Chip label={template.language} size='small' variant='outlined' />
-                      {template.gupshup_id && (
-                        <Typography variant='caption' color='text.secondary'>
-                          ID: {template.gupshup_id}
-                        </Typography>
-                      )}
                     </div>
                   }
                   action={
@@ -486,7 +481,7 @@ const WATemplateList = () => {
         <DialogTitle>Delete Template</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete this template? This will also remove it from your Gupshup account.
+            Are you sure you want to delete this template? Templates are stored here only, so nothing else is affected.
           </Typography>
         </DialogContent>
         <DialogActions>
