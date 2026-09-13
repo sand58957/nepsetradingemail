@@ -9,7 +9,8 @@ import type {
   WACampaignListResponse,
   WAOverviewStats,
   WAContactGroup,
-  WAContactGroupWithCount
+  WAContactGroupWithCount,
+  OpenWASession
 } from '@/types/whatsapp'
 
 export interface PaginationParams {
@@ -33,10 +34,59 @@ export const whatsappService = {
     await api.put('/whatsapp/settings', data)
   },
 
-  testConnection: async (): Promise<{ data: { connected: boolean; balance: string } }> => {
+  testConnection: async (): Promise<{
+    data: { connected: boolean; status: string; linked_phone: string; last_error: string }
+  }> => {
     const response = await api.post('/whatsapp/settings/test')
 
     return response.data
+  },
+
+  // ==================== Gateway sessions (super admin) ====================
+  // Linking a number means scanning a QR with the handset that owns it, and a
+  // linked session can send as that account, so these live behind super admin
+  // rather than per-tenant settings.
+
+  listSessions: async (): Promise<{ data: OpenWASession[] }> => {
+    const response = await api.get('/system/whatsapp/sessions')
+
+    return response.data
+  },
+
+  createSession: async (name: string): Promise<{ data: OpenWASession }> => {
+    const response = await api.post('/system/whatsapp/sessions', { name })
+
+    return response.data
+  },
+
+  startSession: async (id: string): Promise<{ data: OpenWASession }> => {
+    const response = await api.post(`/system/whatsapp/sessions/${id}/start`)
+
+    return response.data
+  },
+
+  getSession: async (id: string): Promise<{ data: OpenWASession }> => {
+    const response = await api.get(`/system/whatsapp/sessions/${id}`)
+
+    return response.data
+  },
+
+  getSessionQR: async (id: string): Promise<{ data: { qrCode: string; status: string } }> => {
+    const response = await api.get(`/system/whatsapp/sessions/${id}/qr`)
+
+    return response.data
+  },
+
+  logoutSession: async (id: string): Promise<void> => {
+    await api.post(`/system/whatsapp/sessions/${id}/logout`)
+  },
+
+  deleteSession: async (id: string): Promise<void> => {
+    await api.delete(`/system/whatsapp/sessions/${id}`)
+  },
+
+  sendSessionTest: async (id: string, phone: string, message: string): Promise<void> => {
+    await api.post(`/system/whatsapp/sessions/${id}/test`, { phone, message })
   },
 
   // ==================== Contacts ====================

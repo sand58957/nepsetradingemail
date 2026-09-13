@@ -1,7 +1,10 @@
 'use client'
 
 // React Imports
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+
+// Next Imports
+import { useSession } from 'next-auth/react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -12,421 +15,354 @@ import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import Alert from '@mui/material/Alert'
+import AlertTitle from '@mui/material/AlertTitle'
 import Snackbar from '@mui/material/Snackbar'
 import CircularProgress from '@mui/material/CircularProgress'
 import Chip from '@mui/material/Chip'
-import InputAdornment from '@mui/material/InputAdornment'
-import IconButton from '@mui/material/IconButton'
 import Divider from '@mui/material/Divider'
+import Box from '@mui/material/Box'
 
 // Service Imports
 import whatsappService from '@/services/whatsapp'
 
 // Type Imports
-import type { WASettings as WASettingsType } from '@/types/whatsapp'
+import type { OpenWASession } from '@/types/whatsapp'
+
+type Severity = 'success' | 'error' | 'info' | 'warning'
+
+/** How the gateway's session statuses should read to an operator. */
+const STATUS_LABEL: Record<string, { label: string; color: 'success' | 'warning' | 'error' | 'default' }> = {
+  connected: { label: 'Connected', color: 'success' },
+  qr_ready: { label: 'Waiting for QR scan', color: 'warning' },
+  starting: { label: 'Starting', color: 'warning' },
+  created: { label: 'Not started', color: 'default' },
+  stopped: { label: 'Stopped', color: 'default' },
+  disconnected: { label: 'Disconnected', color: 'error' },
+  failed: { label: 'Failed', color: 'error' }
+}
+
+const describe = (status: string) => STATUS_LABEL[status] ?? { label: status || 'Unknown', color: 'default' as const }
 
 const WASettings = () => {
-  const [settings, setSettings] = useState<Partial<WASettingsType>>({
-    gupshup_app_id: '',
-    gupshup_api_key: '',
-    source_phone: '',
-    app_name: '',
-    waba_id: '',
-    send_rate: 10
-  })
+  const { data: session } = useSession()
+  const isSuperAdmin = (session as { role?: string } | null)?.role === 'superadmin'
 
+  const [sessions, setSessions] = useState<OpenWASession[]>([])
+  const [active, setActive] = useState<OpenWASession | null>(null)
+  const [qr, setQr] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [testing, setTesting] = useState(false)
-  const [configured, setConfigured] = useState(false)
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [connectionStatus, setConnectionStatus] = useState<'untested' | 'connected' | 'failed'>('untested')
-  const [walletBalance, setWalletBalance] = useState<string>('')
-
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
+  const [busy, setBusy] = useState(false)
+  const [newName, setNewName] = useState('nepalfillings-main')
+  const [testPhone, setTestPhone] = useState('')
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: Severity }>({
     open: false,
     message: '',
     severity: 'success'
   })
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await whatsappService.getSettings()
+  const notify = (message: string, severity: Severity = 'success') => setSnackbar({ open: true, message, severity })
 
-        if (response.data) {
-          setConfigured(response.data.configured)
+  const errorText = (err: unknown, fallback: string) =>
+    (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback
 
-          if (response.data.settings) {
-            setSettings(response.data.settings)
-          }
-        }
-      } catch (err: any) {
-        if (err?.response?.status === 401) return
+  const loadSessions = useCallback(async () => {
+    try {
+      const res = await whatsappService.listSessions()
+      const list = res.data || []
 
-        console.error('Failed to fetch WA settings:', err)
-      } finally {
-        setLoading(false)
-      }
+      setSessions(list)
+      setActive(prev => list.find(s => s.id === prev?.id) ?? list[0] ?? null)
+    } catch (err) {
+      notify(errorText(err, 'Could not reach the WhatsApp gateway'), 'error')
+    } finally {
+      setLoading(false)
     }
-
-    fetchSettings()
   }, [])
 
-  const handleSave = async () => {
-    if (!settings.gupshup_api_key || !settings.gupshup_app_id || !settings.source_phone || !settings.app_name) {
-      setSnackbar({ open: true, message: 'Please fill in all required fields', severity: 'error' })
+  useEffect(() => {
+    loadSessions()
+  }, [loadSessions])
 
-      return
-    }
+  // While a session is waiting to be linked, both the status and the QR code
+  // change on their own — the code rotates every few seconds and the status
+  // flips the moment someone scans. Poll so the operator is never looking at a
+  // code that has already expired.
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-    setSaving(true)
-
-    try {
-      await whatsappService.updateSettings(settings)
-      setConfigured(true)
-      setSnackbar({ open: true, message: 'Settings saved successfully', severity: 'success' })
-    } catch {
-      setSnackbar({ open: true, message: 'Failed to save settings', severity: 'error' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleTestConnection = async () => {
-    setTesting(true)
-    setConnectionStatus('untested')
-
-    try {
-      const response = await whatsappService.testConnection()
-
-      if (response.data?.connected) {
-        setConnectionStatus('connected')
-        setWalletBalance(response.data.balance || '')
-        setSnackbar({ open: true, message: 'Connection successful!', severity: 'success' })
-      } else {
-        setConnectionStatus('failed')
-        setSnackbar({ open: true, message: 'Connection failed. Check your API credentials.', severity: 'error' })
+  useEffect(() => {
+    const stop = () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
       }
-    } catch {
-      setConnectionStatus('failed')
-      setSnackbar({ open: true, message: 'Connection test failed. Check your credentials.', severity: 'error' })
+    }
+
+    if (!active || active.status !== 'qr_ready') {
+      setQr('')
+      stop()
+
+      return stop
+    }
+
+    let cancelled = false
+
+    const tick = async () => {
+      try {
+        const [qrRes, sessionRes] = await Promise.all([
+          whatsappService.getSessionQR(active.id),
+          whatsappService.getSession(active.id)
+        ])
+
+        if (cancelled) return
+
+        setQr(qrRes.data?.qrCode || '')
+
+        // Scanned: swap the code for the connected state straight away.
+        if (sessionRes.data?.status !== 'qr_ready') {
+          setActive(sessionRes.data)
+          setSessions(prev => prev.map(s => (s.id === sessionRes.data.id ? sessionRes.data : s)))
+          notify(`Linked ${sessionRes.data.phone || 'number'} successfully`, 'success')
+        }
+      } catch {
+        // A transient miss is expected while the engine rotates the code; the
+        // next tick recovers, so this is deliberately silent.
+      }
+    }
+
+    tick()
+    pollRef.current = setInterval(tick, 4000)
+
+    return () => {
+      cancelled = true
+      stop()
+    }
+  }, [active])
+
+  const run = async (fn: () => Promise<void>, done: string) => {
+    setBusy(true)
+
+    try {
+      await fn()
+      await loadSessions()
+      notify(done)
+    } catch (err) {
+      notify(errorText(err, 'That did not work'), 'error')
     } finally {
-      setTesting(false)
+      setBusy(false)
     }
   }
+
+  const handleCreate = () =>
+    run(async () => {
+      const created = await whatsappService.createSession(newName.trim())
+
+      await whatsappService.startSession(created.data.id)
+      setActive(created.data)
+    }, 'Session created — scan the QR code to link a number')
+
+  const handleStart = () =>
+    active && run(() => whatsappService.startSession(active.id).then(() => undefined), 'Starting')
+
+  const handleLogout = () => active && run(() => whatsappService.logoutSession(active.id), 'Number unlinked')
+
+  const handleDelete = () => active && run(() => whatsappService.deleteSession(active.id), 'Session deleted')
+
+  const handleTest = () =>
+    active &&
+    run(
+      () => whatsappService.sendSessionTest(active.id, testPhone.trim(), 'Test message from Nepal Fillings.'),
+      `Test message sent to ${testPhone.trim()}`
+    )
 
   if (loading) {
     return (
-      <div className='flex justify-center items-center py-16'>
-        <CircularProgress size={32} />
-        <Typography className='ml-3' color='text.secondary'>
-          Loading settings...
-        </Typography>
-      </div>
+      <Box className='flex justify-center items-center' sx={{ minHeight: 320 }}>
+        <CircularProgress />
+      </Box>
     )
   }
 
+  const status = describe(active?.status || '')
+
   return (
-    <>
-      <Grid container spacing={6}>
-        {/* Header */}
+    <Grid container spacing={6}>
+      <Grid size={{ xs: 12 }}>
+        <Card>
+          <CardContent className='flex flex-wrap items-center justify-between gap-4'>
+            <div>
+              <Typography variant='h5'>WhatsApp Connection</Typography>
+              <Typography color='text.secondary'>
+                Messages are sent through a WhatsApp account linked to this server by QR code.
+              </Typography>
+            </div>
+            <div className='flex items-center gap-2'>
+              <Chip label={status.label} color={status.color} variant='tonal' />
+              {active?.phone && <Chip label={active.phone} variant='tonal' />}
+            </div>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {!isSuperAdmin && (
         <Grid size={{ xs: 12 }}>
-          <Card>
-            <CardContent>
-              <div className='flex items-center justify-between flex-wrap gap-4'>
-                <div className='flex items-center gap-3'>
-                  <i className='tabler-brand-whatsapp text-[32px] text-green-500' />
-                  <div>
-                    <Typography variant='h5'>WhatsApp Settings</Typography>
-                    <Typography variant='body2' color='text.secondary'>
-                      Configure your Gupshup WhatsApp Business API credentials
-                    </Typography>
-                  </div>
-                </div>
-                <div className='flex items-center gap-2'>
-                  {connectionStatus === 'connected' && (
-                    <Chip label='Connected' color='success' variant='tonal' icon={<i className='tabler-check' />} />
-                  )}
-                  {connectionStatus === 'failed' && (
-                    <Chip label='Disconnected' color='error' variant='tonal' icon={<i className='tabler-x' />} />
-                  )}
-                  {walletBalance && <Chip label={`Balance: $${walletBalance}`} color='info' variant='tonal' />}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <Alert severity='info'>
+            <AlertTitle>Managed centrally</AlertTitle>
+            Linking a WhatsApp number requires scanning a QR code with the handset that owns it, so it is done by an
+            administrator. Ask them to link a number if this shows as disconnected.
+          </Alert>
         </Grid>
+      )}
 
-        {/* API Configuration */}
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Card>
-            <CardHeader title='API Configuration' subheader='Enter your Gupshup WhatsApp Business API credentials' />
-            <CardContent>
-              <div className='flex flex-col gap-5'>
-                <TextField
-                  fullWidth
-                  label='Gupshup App ID *'
-                  placeholder='e.g. f97e09c9-5a0d-4cd4-bb72-293a5baf330e'
-                  value={settings.gupshup_app_id || ''}
-                  onChange={e => setSettings({ ...settings, gupshup_app_id: e.target.value })}
-                />
-                <TextField
-                  fullWidth
-                  label='API Key *'
-                  placeholder='Enter your Gupshup API key'
-                  type={showApiKey ? 'text' : 'password'}
-                  value={settings.gupshup_api_key || ''}
-                  onChange={e => setSettings({ ...settings, gupshup_api_key: e.target.value })}
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position='end'>
-                          <IconButton
-                            onClick={() => setShowApiKey(!showApiKey)}
-                            edge='end'
-                            aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
-                          >
-                            <i className={showApiKey ? 'tabler-eye-off' : 'tabler-eye'} />
-                          </IconButton>
-                        </InputAdornment>
-                      )
-                    }
-                  }}
-                />
-                <TextField
-                  fullWidth
-                  label='App Name *'
-                  placeholder='e.g. Nepalwhatsapp'
-                  value={settings.app_name || ''}
-                  onChange={e => setSettings({ ...settings, app_name: e.target.value })}
-                  helperText='The app name as registered in Gupshup (used as src.name)'
-                />
-                <TextField
-                  fullWidth
-                  label='Source Phone Number *'
-                  placeholder='e.g. 9779812345678'
-                  value={settings.source_phone || ''}
-                  onChange={e => setSettings({ ...settings, source_phone: e.target.value })}
-                  helperText='Your WhatsApp Business phone number with country code (no + prefix)'
-                />
-                <TextField
-                  fullWidth
-                  label='WABA ID'
-                  placeholder='e.g. 183201240408546'
-                  value={settings.waba_id || ''}
-                  onChange={e => setSettings({ ...settings, waba_id: e.target.value })}
-                  helperText='WhatsApp Business Account ID (optional)'
-                />
-
-                <Divider />
-
-                <TextField
-                  fullWidth
-                  label='Send Rate (messages/second)'
-                  type='number'
-                  value={settings.send_rate || 10}
-                  onChange={e => setSettings({ ...settings, send_rate: parseInt(e.target.value) || 10 })}
-                  helperText='Maximum messages per second during campaign sending'
-                  slotProps={{ htmlInput: { min: 1, max: 50 } }}
-                />
-
-                <div className='flex gap-3 mt-2'>
-                  <Button
-                    variant='contained'
-                    onClick={handleSave}
-                    disabled={saving}
-                    startIcon={saving ? <CircularProgress size={18} /> : <i className='tabler-device-floppy' />}
-                  >
-                    {saving ? 'Saving...' : 'Save Settings'}
-                  </Button>
-                  <Button
-                    variant='outlined'
-                    onClick={handleTestConnection}
-                    disabled={testing || !configured}
-                    startIcon={testing ? <CircularProgress size={18} /> : <i className='tabler-plug-connected' />}
-                  >
-                    {testing ? 'Testing...' : 'Test Connection'}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Help / Info */}
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card>
-            <CardHeader title='Setup Guide' subheader='Follow these steps to connect WhatsApp Business API' />
-            <CardContent>
-              <div className='flex flex-col gap-4'>
-                <Alert severity='info' icon={<i className='tabler-info-circle' />}>
-                  You need a Gupshup WhatsApp Business API account to use this feature.
-                </Alert>
-
-                <Typography variant='subtitle2' color='primary'>
-                  Step 1: Create Gupshup Account
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  Go to{' '}
-                  <a
-                    href='https://www.gupshup.io/developer/home'
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    style={{ color: 'var(--mui-palette-primary-main)' }}
-                  >
-                    gupshup.io
-                  </a>{' '}
-                  &rarr; Click <strong>&ldquo;Sign Up&rdquo;</strong> &rarr; Verify your email &rarr; Complete the
-                  registration process.
-                </Typography>
-
-                <Divider />
-
-                <Typography variant='subtitle2' color='primary'>
-                  Step 2: Create a WhatsApp App
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  In{' '}
-                  <a
-                    href='https://www.gupshup.io/whatsapp/dashboard'
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    style={{ color: 'var(--mui-palette-primary-main)' }}
-                  >
-                    Gupshup Dashboard
-                  </a>{' '}
-                  &rarr; Go to <strong>&ldquo;WhatsApp&rdquo;</strong> section &rarr; Click{' '}
-                  <strong>&ldquo;Create App&rdquo;</strong> &rarr; Enter app name &rarr; Link your WhatsApp Business
-                  phone number.
-                </Typography>
-
-                <Divider />
-
-                <Typography variant='subtitle2' color='primary'>
-                  Step 3: Get App ID &amp; API Key
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  In Gupshup Dashboard &rarr; Select your app &rarr; Go to <strong>&ldquo;Settings&rdquo;</strong>{' '}
-                  &rarr; Copy the <strong>App ID</strong> (UUID format) &rarr; Go to{' '}
-                  <a
-                    href='https://www.gupshup.io/whatsapp/dashboard/api-key'
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    style={{ color: 'var(--mui-palette-primary-main)' }}
-                  >
-                    API Keys page
-                  </a>{' '}
-                  &rarr; Copy your <strong>API Key</strong>.
-                </Typography>
-
-                <Divider />
-
-                <Typography variant='subtitle2' color='primary'>
-                  Step 4: Get App Name &amp; Phone Number
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  The <strong>App Name</strong> is displayed in your Gupshup app settings (e.g.
-                  &ldquo;Nepalwhatsapp&rdquo;). The <strong>Source Phone</strong> is your WhatsApp Business number with
-                  country code, no &ldquo;+&rdquo; prefix (e.g. <code>9779812345678</code>).
-                </Typography>
-
-                <Divider />
-
-                <Typography variant='subtitle2' color='primary'>
-                  Step 5: Save &amp; Test
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  Fill all fields &rarr; Click <strong>&ldquo;Save Settings&rdquo;</strong> &rarr; Click{' '}
-                  <strong>&ldquo;Test Connection&rdquo;</strong>. If successful, your wallet balance will show.
-                </Typography>
-
-                <Divider />
-
-                <Typography variant='subtitle2' color='primary'>
-                  Step 6: Configure Webhook
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  In Gupshup Dashboard &rarr; <strong>&ldquo;Webhooks&rdquo;</strong> section &rarr; Add the webhook URL
-                  shown below for delivery reports and incoming messages.
-                </Typography>
-
-                {settings.webhook_secret && (
+      {isSuperAdmin && (
+        <>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Card>
+              <CardHeader
+                title='Link a number'
+                subheader='Scan the code below with the phone that will send your messages'
+              />
+              <CardContent className='flex flex-col gap-4'>
+                {!active && (
                   <>
-                    <Divider />
-                    <Typography variant='subtitle2'>Your Webhook URL</Typography>
-                    <Typography
-                      variant='body2'
-                      className='p-2 rounded break-all'
-                      sx={{ backgroundColor: 'action.hover', fontFamily: 'monospace', fontSize: '0.75rem' }}
-                    >
-                      {`${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/whatsapp/${settings.webhook_secret}`}
-                    </Typography>
-                    <Typography variant='caption' color='text.secondary'>
-                      Add this URL in your Gupshup dashboard under Webhook Settings
-                    </Typography>
+                    <TextField
+                      fullWidth
+                      label='Session name'
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      helperText='A label for this connection, for example nepalfillings-main'
+                    />
+                    <Button variant='contained' onClick={handleCreate} disabled={busy || !newName.trim()}>
+                      Create session
+                    </Button>
                   </>
                 )}
 
+                {active?.status === 'qr_ready' && (
+                  <>
+                    {qr ? (
+                      <Box className='flex flex-col items-center gap-3'>
+                        {/* The gateway returns a ready-to-render data URI. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={qr}
+                          alt='WhatsApp linking QR code'
+                          width={260}
+                          height={260}
+                          style={{ background: '#fff', padding: 12, borderRadius: 12 }}
+                        />
+                        <Typography variant='body2' color='text.secondary' className='text-center'>
+                          On the phone: WhatsApp → Settings → Linked devices → Link a device.
+                          <br />
+                          The code refreshes automatically until it is scanned.
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box className='flex justify-center' sx={{ py: 6 }}>
+                        <CircularProgress />
+                      </Box>
+                    )}
+                  </>
+                )}
+
+                {active && active.status !== 'qr_ready' && active.status !== 'connected' && (
+                  <>
+                    <Alert severity='warning'>
+                      This session is {status.label.toLowerCase()}. Start it to get a QR code.
+                      {active.lastError ? ` Last error: ${active.lastError}` : ''}
+                    </Alert>
+                    <Button variant='contained' onClick={handleStart} disabled={busy}>
+                      Start session
+                    </Button>
+                  </>
+                )}
+
+                {active?.status === 'connected' && (
+                  <Alert severity='success'>
+                    <AlertTitle>Linked</AlertTitle>
+                    Sending as {active.phone || 'the linked number'}
+                    {active.pushName ? ` (${active.pushName})` : ''}.
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Card>
+              <CardHeader title='Session' subheader='Check delivery and manage the link' />
+              <CardContent className='flex flex-col gap-4'>
+                <TextField
+                  fullWidth
+                  label='Send a test message to'
+                  placeholder='+977 98XXXXXXXX'
+                  value={testPhone}
+                  onChange={e => setTestPhone(e.target.value)}
+                  helperText='Confirms the linked number can actually deliver, without touching a campaign'
+                />
+                <Button
+                  variant='tonal'
+                  onClick={handleTest}
+                  disabled={busy || !testPhone.trim() || active?.status !== 'connected'}
+                >
+                  Send test message
+                </Button>
+
                 <Divider />
 
-                <Typography variant='subtitle2' color='primary'>
-                  Step 7: Create Message Templates
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  In Gupshup Dashboard &rarr; <strong>&ldquo;Templates&rdquo;</strong> &rarr; Create templates for
-                  marketing messages. Templates must be approved by WhatsApp before use. You can send template messages
-                  anytime (no 24-hour limit).
-                </Typography>
+                <div className='flex flex-wrap gap-3'>
+                  <Button color='warning' variant='tonal' onClick={handleLogout} disabled={busy || !active}>
+                    Unlink number
+                  </Button>
+                  <Button color='error' variant='tonal' onClick={handleDelete} disabled={busy || !active}>
+                    Delete session
+                  </Button>
+                </div>
 
-                <Divider />
+                {sessions.length > 1 && (
+                  <>
+                    <Divider />
+                    <Typography variant='body2' color='text.secondary'>
+                      Other sessions on this gateway
+                    </Typography>
+                    <div className='flex flex-wrap gap-2'>
+                      {sessions.map(s => (
+                        <Chip
+                          key={s.id}
+                          label={`${s.name} · ${describe(s.status).label}`}
+                          color={s.id === active?.id ? 'primary' : 'default'}
+                          variant='tonal'
+                          onClick={() => setActive(s)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
 
-                <Alert severity='warning' icon={<i className='tabler-alert-triangle' />}>
-                  <Typography variant='caption'>
-                    WhatsApp charges per conversation. Template messages (outside 24h window) cost more. Check{' '}
-                    <a
-                      href='https://developers.facebook.com/docs/whatsapp/pricing'
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      style={{ color: 'var(--mui-palette-primary-main)' }}
-                    >
-                      WhatsApp Pricing
-                    </a>{' '}
-                    for rates.
-                  </Typography>
-                </Alert>
+          <Grid size={{ xs: 12 }}>
+            <Alert severity='warning'>
+              <AlertTitle>Use a number you can afford to lose</AlertTitle>
+              This gateway drives WhatsApp through an unofficial client rather than Meta&apos;s Business API, so the
+              linked account can be restricted without warning — most often when messages go to people who never opted
+              in. Do not link a primary business line, and keep SMS or email available for anything critical.
+            </Alert>
+          </Grid>
+        </>
+      )}
 
-                <Alert severity='info' variant='outlined' sx={{ py: 0.5 }}>
-                  <Typography variant='caption'>
-                    <strong>Gupshup Docs:</strong>{' '}
-                    <a
-                      href='https://docs.gupshup.io/docs/whatsapp-overview'
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      style={{ color: 'var(--mui-palette-primary-main)' }}
-                    >
-                      docs.gupshup.io
-                    </a>
-                  </Typography>
-                </Alert>
-              </div>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={4000}
+        autoHideDuration={5000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant='filled'>
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </>
+    </Grid>
   )
 }
 

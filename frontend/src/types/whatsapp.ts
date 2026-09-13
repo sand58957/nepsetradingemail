@@ -146,3 +146,19 @@ export interface WAOverviewStats {
   }
   recent_campaigns: WACampaign[]
 }
+
+/** A WhatsApp session on the self-hosted gateway. */
+export interface OpenWASession {
+  id: string
+  name: string
+  /** created | starting | qr_ready | connected | disconnected | stopped | failed */
+  status: string
+  phone: string | null
+  pushName: string | null
+  connectedAt: string | null
+  lastActive: string | null
+  lastError: string | null
+  restriction: string | null
+  createdAt: string
+  updatedAt: string
+}
