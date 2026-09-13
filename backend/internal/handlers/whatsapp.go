@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lib/pq"
 	"io"
 	"log"
 	"net/http"
@@ -627,25 +628,47 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 		json.Unmarshal([]byte(gids), &groupIDs)
 	}
 
-	imported := 0
 	skipped := 0
 	now := time.Now()
-	var importedContactIDs []int
+
+	// Collect first, write in batches.
+	//
+	// This loop used to issue one INSERT ... RETURNING per row, then one more per
+	// (group x contact) pair afterwards. A 3.1MB export is on the order of a
+	// hundred thousand rows, so that was hundreds of thousands of sequential
+	// round-trips: the request ran past nginx's 60s proxy_read_timeout and the
+	// upload died with a 504 having written only part of the file.
+	type pending struct {
+		phone, name, email, tags string
+	}
+
+	rows := make([]pending, 0, 4096)
+	seen := make(map[string]int, 4096)
 
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			skipped++
+
+			continue
+		}
+
+		if phoneIdx >= len(record) {
+			skipped++
+
 			continue
 		}
 
 		phone := strings.TrimSpace(record[phoneIdx])
 		phone = strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(phone, " ", ""), "-", ""), "+", "")
+
 		if phone == "" {
 			skipped++
+
 			continue
 		}
 
@@ -653,53 +676,96 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 		if hasName && nameIdx < len(record) {
 			name = strings.TrimSpace(record[nameIdx])
 		}
+
 		email := ""
 		if hasEmail && emailIdx < len(record) {
 			email = strings.TrimSpace(record[emailIdx])
 		}
+
 		tags := "[]"
+
 		if hasTags && tagsIdx < len(record) {
-			tagStr := strings.TrimSpace(record[tagsIdx])
-			if tagStr != "" {
-				// Split comma-separated tags into JSON array
+			if tagStr := strings.TrimSpace(record[tagsIdx]); tagStr != "" {
 				parts := strings.Split(tagStr, ",")
 				for i := range parts {
 					parts[i] = strings.TrimSpace(parts[i])
 				}
+
 				tagJSON, _ := json.Marshal(parts)
 				tags = string(tagJSON)
 			}
 		}
 
-		var contactID int
-		err2 := h.db.Get(&contactID, `
+		// A file that repeats a number would make one batch touch the same row
+		// twice, which Postgres rejects outright ("cannot affect row a second
+		// time"). Collapse duplicates here and keep the last values seen.
+		if at, dup := seen[phone]; dup {
+			rows[at] = pending{phone, name, email, tags}
+
+			continue
+		}
+
+		seen[phone] = len(rows)
+		rows = append(rows, pending{phone, name, email, tags})
+	}
+
+	imported := 0
+	importedContactIDs := make([]int, 0, len(rows))
+
+	// 6 parameters per row; Postgres caps a statement at 65535, so 500 rows per
+	// batch leaves ample headroom.
+	const batchSize = 500
+
+	for start := 0; start < len(rows); start += batchSize {
+		end := start + batchSize
+		if end > len(rows) {
+			end = len(rows)
+		}
+
+		batch := rows[start:end]
+		values := make([]string, 0, len(batch))
+		args := make([]interface{}, 0, len(batch)*6)
+
+		for i, r := range batch {
+			b := i * 6
+			values = append(values, fmt.Sprintf("($%d, $%d, $%d, $%d, true, $%d, $%d::jsonb)",
+				b+1, b+2, b+3, b+4, b+5, b+6))
+			args = append(args, accountID, r.phone, r.name, r.email, now, r.tags)
+		}
+
+		var ids []int
+
+		err := h.db.Select(&ids, `
 			INSERT INTO wa_contacts (account_id, phone, name, email, opted_in, opted_in_at, tags)
-			VALUES ($1, $2, $3, $4, true, $5, $6::jsonb)
+			VALUES `+strings.Join(values, ",")+`
 			ON CONFLICT (account_id, phone) DO UPDATE SET
 				name = CASE WHEN EXCLUDED.name != '' THEN EXCLUDED.name ELSE wa_contacts.name END,
 				email = CASE WHEN EXCLUDED.email != '' THEN EXCLUDED.email ELSE wa_contacts.email END,
 				updated_at = NOW()
 			RETURNING id
-		`, accountID, phone, name, email, now, tags)
-		if err2 != nil {
-			log.Printf("[whatsapp] Import row error: %v", err2)
-			skipped++
+		`, args...)
+		if err != nil {
+			log.Printf("[whatsapp] Import batch %d-%d failed: %v", start, end, err)
+			skipped += len(batch)
+
 			continue
 		}
-		imported++
-		if len(groupIDs) > 0 {
-			importedContactIDs = append(importedContactIDs, contactID)
-		}
+
+		imported += len(ids)
+		importedContactIDs = append(importedContactIDs, ids...)
 	}
 
-	// Add imported contacts to specified groups
-	for _, gid := range groupIDs {
-		for _, cid := range importedContactIDs {
-			h.db.Exec(`
+	// One statement per group rather than one per contact per group.
+	if len(groupIDs) > 0 && len(importedContactIDs) > 0 {
+		for _, gid := range groupIDs {
+			if _, err := h.db.Exec(`
 				INSERT INTO wa_contact_group_members (group_id, contact_id)
-				SELECT $1, $2 WHERE EXISTS (SELECT 1 FROM wa_contact_groups WHERE id = $1 AND account_id = $3)
+				SELECT $1, cid FROM unnest($2::int[]) AS cid
+				WHERE EXISTS (SELECT 1 FROM wa_contact_groups WHERE id = $1 AND account_id = $3)
 				ON CONFLICT DO NOTHING
-			`, gid, cid, accountID)
+			`, gid, pq.Array(importedContactIDs), accountID); err != nil {
+				log.Printf("[whatsapp] Import: adding contacts to group %d: %v", gid, err)
+			}
 		}
 	}
 
