@@ -31,15 +31,21 @@ import type { OpenWASession } from '@/types/whatsapp'
 type Severity = 'success' | 'error' | 'info' | 'warning'
 
 /** How the gateway's session statuses should read to an operator. */
+// Keyed on the gateway's own SessionStatus enum. Note there is no 'connected':
+// guessing that name is what made a linked, working number render as "Unknown".
 const STATUS_LABEL: Record<string, { label: string; color: 'success' | 'warning' | 'error' | 'default' }> = {
-  connected: { label: 'Connected', color: 'success' },
-  qr_ready: { label: 'Waiting for QR scan', color: 'warning' },
-  starting: { label: 'Starting', color: 'warning' },
   created: { label: 'Not started', color: 'default' },
-  stopped: { label: 'Stopped', color: 'default' },
+  initializing: { label: 'Starting', color: 'warning' },
+  qr_ready: { label: 'Waiting for QR scan', color: 'warning' },
+  authenticating: { label: 'Authenticating', color: 'warning' },
+  ready: { label: 'Connected', color: 'success' },
   disconnected: { label: 'Disconnected', color: 'error' },
+  action_required: { label: 'Action needed on the phone', color: 'error' },
   failed: { label: 'Failed', color: 'error' }
 }
+
+/** The one status in which the gateway will accept a send. */
+const READY = 'ready'
 
 const describe = (status: string) => STATUS_LABEL[status] ?? { label: status || 'Unknown', color: 'default' as const }
 
@@ -264,7 +270,7 @@ const WASettings = () => {
                   </>
                 )}
 
-                {active && active.status !== 'qr_ready' && active.status !== 'connected' && (
+                {active && active.status !== 'qr_ready' && active.status !== READY && (
                   <>
                     <Alert severity='warning'>
                       This session is {status.label.toLowerCase()}. Start it to get a QR code.
@@ -276,7 +282,7 @@ const WASettings = () => {
                   </>
                 )}
 
-                {active?.status === 'connected' && (
+                {active?.status === READY && (
                   <Alert severity='success'>
                     <AlertTitle>Linked</AlertTitle>
                     Sending as {active.phone || 'the linked number'}
@@ -302,7 +308,7 @@ const WASettings = () => {
                 <Button
                   variant='tonal'
                   onClick={handleTest}
-                  disabled={busy || !testPhone.trim() || active?.status !== 'connected'}
+                  disabled={busy || !testPhone.trim() || active?.status !== READY}
                 >
                   Send test message
                 </Button>

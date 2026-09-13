@@ -51,7 +51,7 @@ func NewClient(baseURL, apiKey string) *Client {
 var ErrNotConfigured = fmt.Errorf("openwa: gateway URL or API key is not configured")
 
 // ErrNoConnectedSession is returned when a send is attempted with no session in
-// the connected state. This is an ordinary operational state — nobody has linked
+// the ready state. This is an ordinary operational state — nobody has linked
 // a phone yet, or the link dropped — not a bug, and callers should surface it as
 // an actionable message rather than a 500.
 var ErrNoConnectedSession = fmt.Errorf("openwa: no connected WhatsApp session")
@@ -72,11 +72,23 @@ type Session struct {
 }
 
 // Connected reports whether this session can currently send.
-func (s Session) Connected() bool { return s.Status == "connected" }
+func (s Session) Connected() bool { return s.Status == StatusReady }
 
-// StatusConnected is the one status in which sends succeed. The gateway also
-// reports created, starting, qr_ready, disconnected, stopped and failed.
-const StatusConnected = "connected"
+// Session statuses, taken from the gateway's own SessionStatus enum. There is
+// deliberately no "connected": an earlier version of this file guessed that
+// name from a start-response payload, and because the gateway never emits it,
+// every readiness check silently answered false — a linked, working number
+// still reported "no session linked" and no message could be sent.
+const (
+	StatusCreated        = "created"
+	StatusInitializing   = "initializing"
+	StatusQRReady        = "qr_ready"
+	StatusAuthenticating = "authenticating"
+	StatusReady          = "ready" // the one status in which sends succeed
+	StatusDisconnected   = "disconnected"
+	StatusActionRequired = "action_required"
+	StatusFailed         = "failed"
+)
 
 // QR carries a scannable code for linking a phone.
 type QR struct {

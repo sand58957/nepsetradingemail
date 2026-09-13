@@ -54,7 +54,7 @@ func TestUnconfiguredClientFailsClearly(t *testing.T) {
 }
 
 func TestSessionConnected(t *testing.T) {
-	if !(Session{Status: StatusConnected}).Connected() {
+	if !(Session{Status: StatusReady}).Connected() {
 		t.Error("a connected session should report Connected()")
 	}
 
@@ -86,5 +86,20 @@ func TestRenderTemplateLeavesUnfilledPlaceholdersVisible(t *testing.T) {
 func TestRenderTemplateOmitsEmptySections(t *testing.T) {
 	if got := RenderTemplate("", "Just a body.", "", nil); got != "Just a body." {
 		t.Errorf("got %q, want just the body with no blank lines", got)
+	}
+}
+
+// The gateway's SessionStatus enum has no "connected" member. Guessing that name
+// made every readiness check answer false, so a linked and working number still
+// reported "no session linked".
+func TestReadyIsTheSendableStatus(t *testing.T) {
+	if !(Session{Status: "ready"}).Connected() {
+		t.Error(`status "ready" must count as connected — it is the gateway's sendable state`)
+	}
+
+	for _, s := range []string{"connected", "created", "initializing", "qr_ready", "authenticating", "disconnected", "action_required", "failed"} {
+		if (Session{Status: s}).Connected() {
+			t.Errorf("status %q must not count as connected", s)
+		}
 	}
 }

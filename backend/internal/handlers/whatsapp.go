@@ -149,11 +149,37 @@ func (h *WhatsAppHandler) getClient(accountID int) (*openwa.Client, string, *WAS
 		return nil, "", nil, fmt.Errorf("WhatsApp is not configured for this account")
 	}
 
+	client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
+
+	// An account starts with no session assigned: linking happens on the gateway,
+	// by a super admin scanning a QR, and nothing in that flow knows which tenants
+	// should use the result. So adopt the first ready session and remember it.
+	// Without this the row stayed empty forever and every send was refused with
+	// "no session is linked" while a perfectly good linked number sat idle.
 	if settings.OpenWASessionID == "" {
-		return nil, "", nil, fmt.Errorf("no WhatsApp session is linked — ask an administrator to link a number")
+		ready, err := client.FirstConnectedSession(context.Background())
+		if err != nil {
+			return nil, "", nil, fmt.Errorf("no WhatsApp number is linked — link one in WhatsApp settings")
+		}
+
+		phone := ""
+		if ready.Phone != nil {
+			phone = *ready.Phone
+		}
+
+		if _, dbErr := h.db.Exec(
+			`UPDATE wa_settings SET openwa_session_id = $1, linked_phone = $2, session_status = $3,
+			 updated_at = NOW() WHERE account_id = $4`,
+			ready.ID, phone, ready.Status, accountID); dbErr != nil {
+			log.Printf("[whatsapp] adopting session %s for account %d: %v", ready.ID, accountID, dbErr)
+		}
+
+		settings.OpenWASessionID = ready.ID
+		settings.LinkedPhone = phone
+		settings.SessionStatus = ready.Status
 	}
 
-	return openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey), settings.OpenWASessionID, &settings, nil
+	return client, settings.OpenWASessionID, &settings, nil
 }
 
 func generateSecret() string {
