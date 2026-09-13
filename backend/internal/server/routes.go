@@ -697,6 +697,21 @@ func (s *Server) RegisterRoutes() {
 	system.PUT("/sendgrid", systemSettingsHandler.UpdateSendGrid)
 	system.POST("/sendgrid/test", systemSettingsHandler.TestSendGrid)
 
+	// Self-hosted WhatsApp gateway. Linking a number means scanning a QR with the
+	// handset that owns it, and a linked session can send as that account, so this
+	// sits behind super-admin rather than the per-tenant WhatsApp settings.
+	openWAAdmin := handlers.NewOpenWAAdminHandler(s.DB, s.Config)
+	waAdmin := system.Group("/whatsapp")
+	waAdmin.GET("/sessions", openWAAdmin.ListSessions)
+	waAdmin.POST("/sessions", openWAAdmin.CreateSession)
+	waAdmin.GET("/sessions/:id", openWAAdmin.GetSession)
+	waAdmin.POST("/sessions/:id/start", openWAAdmin.StartSession)
+	waAdmin.GET("/sessions/:id/qr", openWAAdmin.GetQR)
+	waAdmin.POST("/sessions/:id/stop", openWAAdmin.StopSession)
+	waAdmin.POST("/sessions/:id/logout", openWAAdmin.LogoutSession)
+	waAdmin.DELETE("/sessions/:id", openWAAdmin.DeleteSession)
+	waAdmin.POST("/sessions/:id/test", openWAAdmin.SendTest)
+
 	// 404 handler
 	s.Echo.RouteNotFound("/*", func(c echo.Context) error {
 		return response.NotFound(c, "Route not found")

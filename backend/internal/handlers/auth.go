@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -22,7 +23,7 @@ import (
 	mw "github.com/sandeep/nepsetradingemail/backend/internal/middleware"
 	"github.com/sandeep/nepsetradingemail/backend/internal/models"
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/aakashsms"
-	"github.com/sandeep/nepsetradingemail/backend/internal/services/gupshup"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/openwa"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/validator"
 )
@@ -336,15 +337,19 @@ func (h *AuthHandler) SendOTP(c echo.Context) error {
 			return response.InternalError(c, "Failed to send OTP via SMS")
 		}
 	} else {
-		// WhatsApp via Gupshup
-		if h.cfg.GupshupOTPKey == "" {
-			return response.InternalError(c, "WhatsApp OTP service is not configured")
-		}
-		waClient := gupshup.NewClient(h.cfg.GupshupOTPKey, h.cfg.GupshupOTPAppName, h.cfg.GupshupOTPSourcePhone)
-		// Add Nepal country code (977) for WhatsApp delivery
-		waPhone := "977" + req.Phone
-		_, err = waClient.SendTextMessage(waPhone, otpMessage)
-		if err != nil {
+		// WhatsApp via the self-hosted gateway. Unlike the official API this
+		// replaced, delivery depends on somebody having linked a handset by QR, so
+		// "nothing linked" is an ordinary state and is reported as such: the caller
+		// can fall back to SMS, which is why that channel is kept.
+		waClient := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
+		if _, err = waClient.SendTextFromAnySession(c.Request().Context(), req.Phone, otpMessage); err != nil {
+			if errors.Is(err, openwa.ErrNoConnectedSession) || errors.Is(err, openwa.ErrNotConfigured) {
+				return response.Error(c, http.StatusServiceUnavailable,
+					"WhatsApp OTP is unavailable right now. Please choose SMS instead.")
+			}
+
+			log.Printf("[auth] WhatsApp OTP send failed: %v", err)
+
 			return response.InternalError(c, "Failed to send OTP via WhatsApp")
 		}
 	}
@@ -559,13 +564,15 @@ func (h *AuthHandler) PasswordResetRequest(c echo.Context) error {
 			return response.InternalError(c, "Failed to send OTP via SMS")
 		}
 	case "whatsapp":
-		if h.cfg.GupshupOTPKey == "" {
-			return response.InternalError(c, "WhatsApp OTP service is not configured")
-		}
-		waClient := gupshup.NewClient(h.cfg.GupshupOTPKey, h.cfg.GupshupOTPAppName, h.cfg.GupshupOTPSourcePhone)
-		waPhone := "977" + req.Identifier
-		_, err = waClient.SendTextMessage(waPhone, otpMessage)
-		if err != nil {
+		waClient := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
+		if _, err = waClient.SendTextFromAnySession(c.Request().Context(), req.Identifier, otpMessage); err != nil {
+			if errors.Is(err, openwa.ErrNoConnectedSession) || errors.Is(err, openwa.ErrNotConfigured) {
+				return response.Error(c, http.StatusServiceUnavailable,
+					"WhatsApp OTP is unavailable right now. Please choose SMS instead.")
+			}
+
+			log.Printf("[auth] WhatsApp password-reset OTP send failed: %v", err)
+
 			return response.InternalError(c, "Failed to send OTP via WhatsApp")
 		}
 	case "email":

@@ -7,35 +7,37 @@ import (
 )
 
 type Config struct {
-	Port                  int
-	DatabaseURL           string
-	RedisURL              string
-	ListmonkAPIURL        string
-	ListmonkUser          string
-	ListmonkPassword      string
-	JWTSecret             string
-	JWTExpiry             int // in hours
-	RefreshExpiry         int // in hours
-	FrontendURL           string
-	SendGridAPIKey        string
-	TelegramBotToken      string
-	BunnyCDNStorageURL    string
-	BunnyCDNStorageZone   string
-	BunnyCDNStorageKey    string
-	BunnyCDNPullURL       string
-	GoogleClientID        string
-	GoogleClientSecret    string
-	AakashOTPToken        string
-	GupshupOTPKey         string
-	GupshupOTPAppName     string
-	GupshupOTPSourcePhone string
-	GlitchTipDSN          string
-	AppEnv                string
-	R2AccountID           string
-	R2AccessKeyID         string
-	R2SecretAccessKey     string
-	R2Bucket              string
-	R2PublicBaseURL       string
+	Port                int
+	DatabaseURL         string
+	RedisURL            string
+	ListmonkAPIURL      string
+	ListmonkUser        string
+	ListmonkPassword    string
+	JWTSecret           string
+	JWTExpiry           int // in hours
+	RefreshExpiry       int // in hours
+	FrontendURL         string
+	SendGridAPIKey      string
+	TelegramBotToken    string
+	BunnyCDNStorageURL  string
+	BunnyCDNStorageZone string
+	BunnyCDNStorageKey  string
+	BunnyCDNPullURL     string
+	GoogleClientID      string
+	GoogleClientSecret  string
+	AakashOTPToken      string
+	// OpenWA is the self-hosted WhatsApp gateway that replaced Gupshup. It runs
+	// on the internal Docker network with no published port, so BaseURL is a
+	// service name rather than a public URL.
+	OpenWABaseURL     string
+	OpenWAAPIKey      string
+	GlitchTipDSN      string
+	AppEnv            string
+	R2AccountID       string
+	R2AccessKeyID     string
+	R2SecretAccessKey string
+	R2Bucket          string
+	R2PublicBaseURL   string
 }
 
 func Load() (*Config, error) {
@@ -55,35 +57,34 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:                  port,
-		DatabaseURL:           getEnv("DATABASE_URL", "postgres://listmonk:listmonk@localhost:5432/listmonk?sslmode=disable"),
-		RedisURL:              getEnv("REDIS_URL", "redis://localhost:6379/0"),
-		ListmonkAPIURL:        getEnv("LISTMONK_API_URL", "http://localhost:9000/api"),
-		ListmonkUser:          getEnv("LISTMONK_ADMIN_USER", "admin"),
-		ListmonkPassword:      getEnv("LISTMONK_ADMIN_PASSWORD", "admin"),
-		JWTSecret:             getEnv("JWT_SECRET", ""),
-		JWTExpiry:             jwtExpiry,
-		RefreshExpiry:         refreshExpiry,
-		FrontendURL:           getEnv("FRONTEND_URL", "https://nepalfillings.com"),
-		SendGridAPIKey:        getEnv("SENDGRID_API_KEY", ""),
-		TelegramBotToken:      getEnv("TELEGRAM_BOT_TOKEN", ""),
-		BunnyCDNStorageURL:    getEnv("BUNNY_CDN_STORAGE_URL", "https://sg.storage.bunnycdn.com"),
-		BunnyCDNStorageZone:   getEnv("BUNNY_CDN_STORAGE_ZONE", "nepalfilling"),
-		BunnyCDNStorageKey:    getEnv("BUNNY_CDN_STORAGE_KEY", ""),
-		BunnyCDNPullURL:       getEnv("BUNNY_CDN_PULL_URL", "https://my-pull-zone-name-nepalfilling.b-cdn.net"),
-		GoogleClientID:        getEnv("GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret:    getEnv("GOOGLE_CLIENT_SECRET", ""),
-		AakashOTPToken:        getEnv("AAKASH_OTP_TOKEN", ""),
-		GupshupOTPKey:         getEnv("GUPSHUP_OTP_KEY", ""),
-		GupshupOTPAppName:     getEnv("GUPSHUP_OTP_APP_NAME", ""),
-		GupshupOTPSourcePhone: getEnv("GUPSHUP_OTP_SOURCE_PHONE", ""),
-		GlitchTipDSN:          getEnv("GLITCHTIP_DSN", ""),
-		AppEnv:                getEnv("APP_ENV", "production"),
-		R2AccountID:           getEnv("R2_ACCOUNT_ID", ""),
-		R2AccessKeyID:         getEnv("R2_ACCESS_KEY_ID", ""),
-		R2SecretAccessKey:     getEnv("R2_SECRET_ACCESS_KEY", ""),
-		R2Bucket:              getEnv("R2_BUCKET", "nepalfillings-images"),
-		R2PublicBaseURL:       getEnv("R2_PUBLIC_BASE_URL", "https://cdn.nepalfillings.com"),
+		Port:                port,
+		DatabaseURL:         getEnv("DATABASE_URL", "postgres://listmonk:listmonk@localhost:5432/listmonk?sslmode=disable"),
+		RedisURL:            getEnv("REDIS_URL", "redis://localhost:6379/0"),
+		ListmonkAPIURL:      getEnv("LISTMONK_API_URL", "http://localhost:9000/api"),
+		ListmonkUser:        getEnv("LISTMONK_ADMIN_USER", "admin"),
+		ListmonkPassword:    getEnv("LISTMONK_ADMIN_PASSWORD", "admin"),
+		JWTSecret:           getEnv("JWT_SECRET", ""),
+		JWTExpiry:           jwtExpiry,
+		RefreshExpiry:       refreshExpiry,
+		FrontendURL:         getEnv("FRONTEND_URL", "https://nepalfillings.com"),
+		SendGridAPIKey:      getEnv("SENDGRID_API_KEY", ""),
+		TelegramBotToken:    getEnv("TELEGRAM_BOT_TOKEN", ""),
+		BunnyCDNStorageURL:  getEnv("BUNNY_CDN_STORAGE_URL", "https://sg.storage.bunnycdn.com"),
+		BunnyCDNStorageZone: getEnv("BUNNY_CDN_STORAGE_ZONE", "nepalfilling"),
+		BunnyCDNStorageKey:  getEnv("BUNNY_CDN_STORAGE_KEY", ""),
+		BunnyCDNPullURL:     getEnv("BUNNY_CDN_PULL_URL", "https://my-pull-zone-name-nepalfilling.b-cdn.net"),
+		GoogleClientID:      getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:  getEnv("GOOGLE_CLIENT_SECRET", ""),
+		AakashOTPToken:      getEnv("AAKASH_OTP_TOKEN", ""),
+		OpenWABaseURL:       getEnv("OPENWA_BASE_URL", "http://openwa-api:2785"),
+		OpenWAAPIKey:        getEnv("OPENWA_API_KEY", ""),
+		GlitchTipDSN:        getEnv("GLITCHTIP_DSN", ""),
+		AppEnv:              getEnv("APP_ENV", "production"),
+		R2AccountID:         getEnv("R2_ACCOUNT_ID", ""),
+		R2AccessKeyID:       getEnv("R2_ACCESS_KEY_ID", ""),
+		R2SecretAccessKey:   getEnv("R2_SECRET_ACCESS_KEY", ""),
+		R2Bucket:            getEnv("R2_BUCKET", "nepalfillings-images"),
+		R2PublicBaseURL:     getEnv("R2_PUBLIC_BASE_URL", "https://cdn.nepalfillings.com"),
 	}
 
 	if cfg.JWTSecret == "" {

@@ -1,0 +1,369 @@
+// Package openwa talks to a self-hosted OpenWA gateway, which replaced Gupshup
+// as the WhatsApp transport.
+//
+// The two are not equivalent and the difference matters when reading this code.
+// Gupshup fronted Meta's official WhatsApp Business API: it had approved message
+// templates, a wallet balance, and a phone number provisioned through Meta.
+// OpenWA drives an unofficial client (whatsapp-web.js or Baileys) against a real
+// WhatsApp account that someone linked by scanning a QR code. So there are no
+// templates to list or submit for approval, no balance to read, and the transport
+// is only usable while a human-linked session is connected. Callers must handle
+// "no session connected" as a normal, expected state rather than an error case.
+//
+// The gateway is reachable only on the internal Docker network; it publishes no
+// port. Requests authenticate with an API key sent as X-API-Key.
+package openwa
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"regexp"
+	"strings"
+	"time"
+)
+
+// Client is a handle on one OpenWA gateway.
+type Client struct {
+	baseURL string
+	apiKey  string
+	http    *http.Client
+}
+
+// NewClient returns a client for the gateway at baseURL. A zero-value baseURL or
+// apiKey yields a client whose calls fail with ErrNotConfigured, so callers can
+// construct one unconditionally and report the misconfiguration at the point of
+// use rather than at startup.
+func NewClient(baseURL, apiKey string) *Client {
+	return &Client{
+		baseURL: strings.TrimRight(baseURL, "/"),
+		apiKey:  apiKey,
+		// Sends go through a headless browser on the gateway side and are not
+		// instant; the read timeout is generous for that reason.
+		http: &http.Client{Timeout: 45 * time.Second},
+	}
+}
+
+// ErrNotConfigured is returned when the gateway URL or API key is missing.
+var ErrNotConfigured = fmt.Errorf("openwa: gateway URL or API key is not configured")
+
+// ErrNoConnectedSession is returned when a send is attempted with no session in
+// the connected state. This is an ordinary operational state — nobody has linked
+// a phone yet, or the link dropped — not a bug, and callers should surface it as
+// an actionable message rather than a 500.
+var ErrNoConnectedSession = fmt.Errorf("openwa: no connected WhatsApp session")
+
+// Session mirrors the gateway's session object.
+type Session struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Status      string  `json:"status"`
+	Phone       *string `json:"phone"`
+	PushName    *string `json:"pushName"`
+	ConnectedAt *string `json:"connectedAt"`
+	LastActive  *string `json:"lastActive"`
+	LastError   *string `json:"lastError"`
+	Restriction *string `json:"restriction"`
+	CreatedAt   string  `json:"createdAt"`
+	UpdatedAt   string  `json:"updatedAt"`
+}
+
+// Connected reports whether this session can currently send.
+func (s Session) Connected() bool { return s.Status == "connected" }
+
+// StatusConnected is the one status in which sends succeed. The gateway also
+// reports created, starting, qr_ready, disconnected, stopped and failed.
+const StatusConnected = "connected"
+
+// QR carries a scannable code for linking a phone.
+type QR struct {
+	// QRCode is a ready-to-render data URI ("data:image/png;base64,..."),
+	// so the admin UI can put it straight in an <img src>.
+	QRCode string `json:"qrCode"`
+	Status string `json:"status"`
+}
+
+// SendResult identifies a delivered message.
+type SendResult struct {
+	ID        string `json:"id"`
+	MessageID string `json:"messageId"`
+	ChatID    string `json:"chatId"`
+	Status    string `json:"status"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// MessageID returns whichever identifier the gateway populated, so callers have
+// one field to store regardless of engine.
+func (r SendResult) Identifier() string {
+	if r.MessageID != "" {
+		return r.MessageID
+	}
+
+	return r.ID
+}
+
+func (c *Client) configured() bool { return c.baseURL != "" && c.apiKey != "" }
+
+// do issues a request and decodes the JSON body into out (which may be nil).
+func (c *Client) do(ctx context.Context, method, path string, body, out any) error {
+	if !c.configured() {
+		return ErrNotConfigured
+	}
+
+	var reader io.Reader
+
+	if body != nil {
+		encoded, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("openwa: encoding request: %w", err)
+		}
+
+		reader = bytes.NewReader(encoded)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reader)
+	if err != nil {
+		return fmt.Errorf("openwa: building request: %w", err)
+	}
+
+	req.Header.Set("X-API-Key", c.apiKey)
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("openwa: %s %s: %w", method, path, err)
+	}
+	defer resp.Body.Close()
+
+	// Cap the read: a compromised or wedged gateway should not be able to
+	// exhaust memory here.
+	payload, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	if err != nil {
+		return fmt.Errorf("openwa: reading response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// 409 is the gateway's way of saying the session is not connected.
+		if resp.StatusCode == http.StatusConflict {
+			return ErrNoConnectedSession
+		}
+
+		return fmt.Errorf("openwa: %s %s: %s: %s", method, path, resp.Status, snippet(payload))
+	}
+
+	if out == nil {
+		return nil
+	}
+
+	if err := json.Unmarshal(payload, out); err != nil {
+		return fmt.Errorf("openwa: decoding response: %w", err)
+	}
+
+	return nil
+}
+
+// snippet trims a response body for inclusion in an error, so a large HTML error
+// page does not end up in the logs verbatim.
+func snippet(b []byte) string {
+	s := strings.TrimSpace(string(b))
+	if len(s) > 240 {
+		s = s[:240] + "…"
+	}
+
+	return s
+}
+
+// ListSessions returns every session the API key can see.
+func (c *Client) ListSessions(ctx context.Context) ([]Session, error) {
+	var out []Session
+
+	if err := c.do(ctx, http.MethodGet, "/api/sessions", nil, &out); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+// CreateSession registers a new session. It does not connect: the caller must
+// Start it and have someone scan the resulting QR code.
+func (c *Client) CreateSession(ctx context.Context, name string) (*Session, error) {
+	var out Session
+
+	if err := c.do(ctx, http.MethodPost, "/api/sessions", map[string]string{"name": name}, &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// GetSession reads one session's current state.
+func (c *Client) GetSession(ctx context.Context, id string) (*Session, error) {
+	var out Session
+
+	if err := c.do(ctx, http.MethodGet, "/api/sessions/"+id, nil, &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// StartSession boots the engine so a QR code can be produced.
+func (c *Client) StartSession(ctx context.Context, id string) (*Session, error) {
+	var out Session
+
+	if err := c.do(ctx, http.MethodPost, "/api/sessions/"+id+"/start", map[string]any{}, &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// StopSession shuts the engine down but keeps the linked account.
+func (c *Client) StopSession(ctx context.Context, id string) error {
+	return c.do(ctx, http.MethodPost, "/api/sessions/"+id+"/stop", map[string]any{}, nil)
+}
+
+// LogoutSession unlinks the phone. The next Start needs a fresh QR scan.
+func (c *Client) LogoutSession(ctx context.Context, id string) error {
+	return c.do(ctx, http.MethodPost, "/api/sessions/"+id+"/logout", map[string]any{}, nil)
+}
+
+// DeleteSession removes the session entirely.
+func (c *Client) DeleteSession(ctx context.Context, id string) error {
+	return c.do(ctx, http.MethodDelete, "/api/sessions/"+id, nil, nil)
+}
+
+// GetQR fetches the current linking code. It is only meaningful while the
+// session status is qr_ready.
+func (c *Client) GetQR(ctx context.Context, id string) (*QR, error) {
+	var out QR
+
+	if err := c.do(ctx, http.MethodGet, "/api/sessions/"+id+"/qr", nil, &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// SendText sends a plain text message. phone may be given in any human format;
+// it is normalised to the gateway's chat id.
+func (c *Client) SendText(ctx context.Context, sessionID, phone, text string) (*SendResult, error) {
+	chatID, err := ChatID(phone)
+	if err != nil {
+		return nil, err
+	}
+
+	var out SendResult
+
+	body := map[string]string{"chatId": chatID, "text": text}
+	if err := c.do(ctx, http.MethodPost, "/api/sessions/"+sessionID+"/messages/send-text", body, &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+var nonDigits = regexp.MustCompile(`\D`)
+
+// ChatID converts a phone number to the gateway's chat identifier.
+//
+// WhatsApp addresses individuals as "<country><number>@c.us" with no plus sign
+// and no separators. Nepali numbers are frequently stored locally as ten digits
+// beginning 97xxxxxxxx or 98xxxxxxxx, which are indistinguishable from a
+// country-coded number by prefix alone, so length decides: exactly ten digits
+// starting 9 is treated as a local Nepali mobile and gets the 977 country code.
+func ChatID(phone string) (string, error) {
+	digits := nonDigits.ReplaceAllString(phone, "")
+
+	// Some inputs arrive as 00977…; strip the international access prefix.
+	digits = strings.TrimPrefix(digits, "00")
+
+	if len(digits) == 10 && strings.HasPrefix(digits, "9") {
+		digits = "977" + digits
+	}
+
+	if len(digits) < 10 || len(digits) > 15 {
+		return "", fmt.Errorf("openwa: %q is not a usable phone number", phone)
+	}
+
+	return digits + "@c.us", nil
+}
+
+// FirstConnectedSession returns a session that can currently send.
+//
+// Platform-level messages — the login and registration OTP — are not tied to a
+// tenant, so rather than pinning them to a session id in configuration (which
+// would break the moment somebody re-linked and got a new id) they go out
+// through whichever session is connected. Returns ErrNoConnectedSession when
+// nothing is linked, which callers surface as "pick another channel".
+func (c *Client) FirstConnectedSession(ctx context.Context) (*Session, error) {
+	sessions, err := c.ListSessions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range sessions {
+		if sessions[i].Connected() {
+			return &sessions[i], nil
+		}
+	}
+
+	return nil, ErrNoConnectedSession
+}
+
+// SendTextFromAnySession sends through the first connected session. It is for
+// platform messages that belong to no particular tenant.
+func (c *Client) SendTextFromAnySession(ctx context.Context, phone, text string) (*SendResult, error) {
+	session, err := c.FirstConnectedSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.SendText(ctx, session.ID, phone, text)
+}
+
+var placeholder = regexp.MustCompile(`\{\{\s*(\d+)\s*\}\}`)
+
+// RenderTemplate flattens a WhatsApp Business template into the plain text this
+// gateway sends.
+//
+// Templates were a Meta construct: a header, a body with {{1}}-style positional
+// placeholders, and a footer, submitted for approval and then referenced by id.
+// An unofficial gateway has no such concept, so a campaign built on a template
+// is rendered here into one message. Placeholders with no matching parameter are
+// left as-is rather than blanked, so a mis-configured campaign is obvious in the
+// delivered text instead of silently losing words.
+func RenderTemplate(header, body, footer string, params []string) string {
+	filled := placeholder.ReplaceAllStringFunc(body, func(m string) string {
+		idx := placeholder.FindStringSubmatch(m)
+		if len(idx) != 2 {
+			return m
+		}
+
+		n := 0
+		for _, r := range idx[1] {
+			n = n*10 + int(r-'0')
+		}
+
+		if n >= 1 && n <= len(params) {
+			return params[n-1]
+		}
+
+		return m
+	})
+
+	parts := make([]string, 0, 3)
+	for _, p := range []string{strings.TrimSpace(header), strings.TrimSpace(filled), strings.TrimSpace(footer)} {
+		if p != "" {
+			parts = append(parts, p)
+		}
+	}
+
+	return strings.Join(parts, "\n\n")
+}
