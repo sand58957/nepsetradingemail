@@ -1932,6 +1932,29 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 		body := openwa.RenderTemplate(tmpl.HeaderText, tmpl.BodyText, tmpl.FooterText, params)
 
 		result, err := client.SendText(sendCtx, sessionID, contact.Phone, body)
+
+		// The gateway's send governor refusing is not this contact failing. It is
+		// the linked number having reached its allowance for the day, or its much
+		// smaller allowance for people it has never messaged before, or its failure
+		// breaker opening. Those are the protections that keep the number from being
+		// banned, so the campaign stops and waits rather than pushing through.
+		//
+		// The queued row has to go: rows in wa_campaign_messages are what "already
+		// reached" means, so leaving one behind would quietly drop this contact from
+		// every future run without a message ever having been sent to them.
+		if paced := (*openwa.PacingLimitedError)(nil); errors.As(err, &paced) {
+			h.db.Exec(`DELETE FROM wa_campaign_messages WHERE id = $1`, msgID)
+
+			log.Printf("[whatsapp] Campaign %d: paused by the send governor — %s (retry after %s). "+
+				"%d recipients untouched and still eligible.",
+				campaignID, paced.Reason, paced.RetryAfter, len(contacts)-(sentCount+failedCount))
+
+			flushCounters()
+			h.db.Exec(`UPDATE wa_campaigns SET status='paused', updated_at=NOW() WHERE id=$1`, campaignID)
+
+			return
+		}
+
 		if err != nil {
 			log.Printf("[whatsapp] Campaign %d: failed to send to %s: %v", campaignID, contact.Phone, err)
 			h.db.Exec(`

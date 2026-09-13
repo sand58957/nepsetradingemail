@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -181,6 +182,22 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 		}
 
 		result, sendErr = client.SendText(c.Request().Context(), settings.SessionID, req.To, text)
+	}
+
+	// The send governor holding the number back is a rate limit, not a provider
+	// fault, and the caller can usefully retry it later — so say 429 and how long
+	// to wait, rather than 502.
+	if paced := (*openwa.PacingLimitedError)(nil); errors.As(sendErr, &paced) {
+		RefundCredit(h.db, accountID, "whatsapp", creditCost)
+		h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`,
+			msgID, paced.Error())
+
+		if seconds := int(paced.RetryAfter.Seconds()); seconds > 0 {
+			c.Response().Header().Set("Retry-After", strconv.Itoa(seconds))
+		}
+
+		return apiError(c, http.StatusTooManyRequests, "RATE_LIMITED",
+			"WhatsApp sending is paced to protect the linked number: "+paced.Reason, "")
 	}
 
 	if sendErr != nil {

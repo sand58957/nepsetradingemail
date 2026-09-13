@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -49,6 +50,33 @@ func NewClient(baseURL, apiKey string) *Client {
 
 // ErrNotConfigured is returned when the gateway URL or API key is missing.
 var ErrNotConfigured = fmt.Errorf("openwa: gateway URL or API key is not configured")
+
+// PacingLimitedError reports that the gateway's send governor refused a message
+// to protect the linked number, rather than the message itself failing.
+//
+// The governor enforces three things per session: a total daily allowance that
+// ramps with the session's age, a much smaller daily allowance for contacts the
+// number has never exchanged a message with, and a breaker that opens after a run
+// of consecutive send failures. All three are properties of the session and the
+// day, not of the recipient — so a caller that records the recipient as failed
+// would exclude a perfectly reachable person from every future run.
+//
+// The right response is to stop sending and come back after RetryAfter.
+type PacingLimitedError struct {
+	Reason     string
+	RetryAfter time.Duration
+}
+
+func (e *PacingLimitedError) Error() string {
+	return "openwa: send paced: " + e.Reason
+}
+
+// IsPacingLimited reports whether err is the gateway's send governor refusing.
+func IsPacingLimited(err error) bool {
+	var paced *PacingLimitedError
+
+	return errors.As(err, &paced)
+}
 
 // ErrNoConnectedSession is returned when a send is attempted with no session in
 // the ready state. This is an ordinary operational state — nobody has linked
@@ -164,6 +192,26 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 		// 409 is the gateway's way of saying the session is not connected.
 		if resp.StatusCode == http.StatusConflict {
 			return ErrNoConnectedSession
+		}
+
+		// 429 with the pacing code is the gateway's send governor holding the
+		// session back — a daily cap, the cold-contact allowance, or the failure
+		// breaker. It says nothing about the recipient, so it must be told apart
+		// from a real send failure: treated as one, the caller records the contact
+		// as failed and permanently excludes them from later runs.
+		if resp.StatusCode == http.StatusTooManyRequests {
+			var refusal struct {
+				Code              string `json:"code"`
+				Message           string `json:"message"`
+				RetryAfterSeconds int    `json:"retryAfterSeconds"`
+			}
+
+			if json.Unmarshal(payload, &refusal) == nil && refusal.Code == "SEND_PACING_LIMITED" {
+				return &PacingLimitedError{
+					Reason:     refusal.Message,
+					RetryAfter: time.Duration(refusal.RetryAfterSeconds) * time.Second,
+				}
+			}
 		}
 
 		return fmt.Errorf("openwa: %s %s: %s: %s", method, path, resp.Status, snippet(payload))
