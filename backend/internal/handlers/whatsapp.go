@@ -75,23 +75,28 @@ type WAContact struct {
 }
 
 type WATemplate struct {
-	ID           int             `json:"id" db:"id"`
-	AccountID    int             `json:"account_id" db:"account_id"`
-	GupshupID    string          `json:"gupshup_id" db:"gupshup_id"`
-	Name         string          `json:"name" db:"name"`
-	Category     string          `json:"category" db:"category"`
-	Language     string          `json:"language" db:"language"`
-	Status       string          `json:"status" db:"status"`
-	HeaderType   string          `json:"header_type" db:"header_type"`
-	HeaderText   string          `json:"header_text" db:"header_text"`
-	BodyText     string          `json:"body_text" db:"body_text"`
-	FooterText   string          `json:"footer_text" db:"footer_text"`
-	ButtonType   string          `json:"button_type" db:"button_type"`
-	Buttons      json.RawMessage `json:"buttons" db:"buttons"`
-	SampleValues json.RawMessage `json:"sample_values" db:"sample_values"`
-	SyncedAt     *time.Time      `json:"synced_at" db:"synced_at"`
-	CreatedAt    time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at" db:"updated_at"`
+	ID        int    `json:"id" db:"id"`
+	AccountID int    `json:"account_id" db:"account_id"`
+	GupshupID string `json:"gupshup_id" db:"gupshup_id"`
+	// Added by migration 029. The struct must declare it: these rows are read
+	// with SELECT *, and sqlx is strict — a column with no destination field
+	// fails the whole query, which took out template listing, template delete,
+	// test sends and campaign sends at once.
+	IsLegacyMetaTemplate bool            `json:"is_legacy_meta_template" db:"is_legacy_meta_template"`
+	Name                 string          `json:"name" db:"name"`
+	Category             string          `json:"category" db:"category"`
+	Language             string          `json:"language" db:"language"`
+	Status               string          `json:"status" db:"status"`
+	HeaderType           string          `json:"header_type" db:"header_type"`
+	HeaderText           string          `json:"header_text" db:"header_text"`
+	BodyText             string          `json:"body_text" db:"body_text"`
+	FooterText           string          `json:"footer_text" db:"footer_text"`
+	ButtonType           string          `json:"button_type" db:"button_type"`
+	Buttons              json.RawMessage `json:"buttons" db:"buttons"`
+	SampleValues         json.RawMessage `json:"sample_values" db:"sample_values"`
+	SyncedAt             *time.Time      `json:"synced_at" db:"synced_at"`
+	CreatedAt            time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 type WACampaign struct {
@@ -943,11 +948,10 @@ func (h *WhatsAppHandler) CreateTemplate(c echo.Context) error {
 	`, accountID, gupshupID, req.Name, req.Category, req.Language, status, req.Body, now)
 	if err != nil {
 		log.Printf("[whatsapp] Failed to save template to DB: %v", err)
-		// Template was created in Gupshup but failed to save locally - still return success
-		return response.Success(c, map[string]interface{}{
-			"message":    "Template created in Gupshup (pending approval)",
-			"gupshup_id": gupshupID,
-		})
+		// Nothing was submitted anywhere, so a failed write means the template
+		// does not exist. Reporting success here was left over from when the
+		// template had already been created upstream.
+		return response.InternalError(c, "Could not save the template")
 	}
 
 	return response.Created(c, tmpl)

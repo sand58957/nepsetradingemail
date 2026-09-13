@@ -410,7 +410,7 @@ func CheckWhatsAppConfigured(db *sqlx.DB, accountID int) error {
 	var count int
 	db.Get(&count, "SELECT COUNT(*) FROM wa_settings WHERE account_id = $1 AND openwa_session_id != ''", accountID)
 	if count == 0 {
-		return fmt.Errorf("WhatsApp not configured. Set up Gupshup credentials in your dashboard first.")
+		return fmt.Errorf("WhatsApp is not connected. Link a number in WhatsApp settings first")
 	}
 	return nil
 }

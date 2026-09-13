@@ -7,7 +7,6 @@ export interface WASettings {
   session_status: string
   source_phone: string
   app_name: string
-  waba_id: string
   webhook_secret: string
   send_rate: number
   is_active: boolean
