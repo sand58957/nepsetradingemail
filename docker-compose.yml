@@ -107,6 +107,12 @@ services:
       - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY:-}
       - R2_BUCKET=${R2_BUCKET:-nepalfillings-images}
       - R2_PUBLIC_BASE_URL=${R2_PUBLIC_BASE_URL:-https://cdn.nepalfillings.com}
+      # Self-hosted WhatsApp gateway. It publishes no port, so the URL is a
+      # service name on the app network. Declared here because compose only
+      # passes variables a service actually names -- putting them in .env alone
+      # left the container without them and every gateway call answered 503.
+      - OPENWA_BASE_URL=${OPENWA_BASE_URL:-http://openwa-api:2785}
+      - OPENWA_API_KEY=${OPENWA_API_KEY:-}
       # Local flyer assets for the title-bank publisher: one 1200x630 PNG per
       # content pillar, read from disk and pushed to R2 on first use.
       - BLOG_FLYER_DIR=/app/flyers
