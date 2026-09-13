@@ -11,18 +11,20 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 
+	"github.com/sandeep/nepsetradingemail/backend/internal/config"
 	mw "github.com/sandeep/nepsetradingemail/backend/internal/middleware"
-	"github.com/sandeep/nepsetradingemail/backend/internal/services/gupshup"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/openwa"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
 
 // PublicWhatsAppHandler handles the public WhatsApp API endpoints.
 type PublicWhatsAppHandler struct {
-	db *sqlx.DB
+	db  *sqlx.DB
+	cfg *config.Config
 }
 
-func NewPublicWhatsAppHandler(db *sqlx.DB) *PublicWhatsAppHandler {
-	return &PublicWhatsAppHandler{db: db}
+func NewPublicWhatsAppHandler(db *sqlx.DB, cfg *config.Config) *PublicWhatsAppHandler {
+	return &PublicWhatsAppHandler{db: db, cfg: cfg}
 }
 
 var waPhoneRegex = regexp.MustCompile(`^\d{10,15}$`)
@@ -95,12 +97,11 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 
 	// Get WhatsApp settings
 	var settings struct {
-		GupshupAPIKey string `db:"gupshup_api_key"`
-		GupshupAppID  string `db:"gupshup_app_id"`
-		AppName       string `db:"app_name"`
-		SourcePhone   string `db:"source_phone"`
+		SessionID   string `db:"openwa_session_id"`
+		AppName     string `db:"app_name"`
+		SourcePhone string `db:"linked_phone"`
 	}
-	if err := h.db.Get(&settings, "SELECT gupshup_api_key, gupshup_app_id, app_name, source_phone FROM wa_settings WHERE account_id = $1", accountID); err != nil {
+	if err := h.db.Get(&settings, "SELECT openwa_session_id, app_name, linked_phone FROM wa_settings WHERE account_id = $1", accountID); err != nil {
 		RefundCredit(h.db, accountID, "whatsapp", creditCost)
 		return apiError(c, http.StatusInternalServerError, "PROVIDER_ERROR", "Failed to load WhatsApp settings", "")
 	}
@@ -122,21 +123,43 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 		VALUES ($1, $2, 'whatsapp', $3, $4, $5, 'sending', $6, $7, $8) RETURNING id
 	`, accountID, keyInfo.KeyID, req.To, settings.SourcePhone, truncate(contentPreview, 200), creditCost, webhookURL, req.Reference).Scan(&msgID)
 
-	// Send via Gupshup
-	client := gupshup.NewClient(settings.GupshupAPIKey, settings.AppName, settings.SourcePhone)
+	// Send via the self-hosted gateway. A "template" request no longer references
+	// an approved Meta template by name — that concept went with Gupshup — so the
+	// stored body is rendered to text and sent like any other message.
+	client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
 
-	var result *gupshup.SendResponse
+	var result *openwa.SendResult
 	var sendErr error
 
-	if req.Type == "template" {
-		// Build template JSON for Gupshup
-		templateJSON := fmt.Sprintf(`{"id":"%s"}`, req.TemplateName)
-		if req.TemplateData != nil {
-			templateJSON = string(req.TemplateData)
-		}
-		result, sendErr = client.SendTemplateMessage(req.To, templateJSON)
+	if settings.SessionID == "" {
+		sendErr = openwa.ErrNoConnectedSession
 	} else {
-		result, sendErr = client.SendTextMessage(req.To, req.Message)
+		text := req.Message
+
+		if req.Type == "template" {
+			var tmpl struct {
+				HeaderText string `db:"header_text"`
+				BodyText   string `db:"body_text"`
+				FooterText string `db:"footer_text"`
+			}
+			if err := h.db.Get(&tmpl,
+				`SELECT header_text, body_text, footer_text FROM wa_templates
+				 WHERE account_id = $1 AND name = $2 LIMIT 1`, accountID, req.TemplateName); err != nil {
+				RefundCredit(h.db, accountID, "whatsapp", creditCost)
+
+				return apiError(c, http.StatusBadRequest, "TEMPLATE_NOT_FOUND",
+					fmt.Sprintf("No template named %q", req.TemplateName), "")
+			}
+
+			var params []string
+			if req.TemplateData != nil {
+				_ = json.Unmarshal(req.TemplateData, &params)
+			}
+
+			text = openwa.RenderTemplate(tmpl.HeaderText, tmpl.BodyText, tmpl.FooterText, params)
+		}
+
+		result, sendErr = client.SendText(c.Request().Context(), settings.SessionID, req.To, text)
 	}
 
 	if sendErr != nil {
@@ -247,13 +270,12 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 
 	// Get WhatsApp settings
 	var settings struct {
-		GupshupAPIKey string `db:"gupshup_api_key"`
-		GupshupAppID  string `db:"gupshup_app_id"`
-		AppName       string `db:"app_name"`
-		SourcePhone   string `db:"source_phone"`
+		SessionID   string `db:"openwa_session_id"`
+		AppName     string `db:"app_name"`
+		SourcePhone string `db:"linked_phone"`
 	}
-	h.db.Get(&settings, "SELECT gupshup_api_key, gupshup_app_id, app_name, source_phone FROM wa_settings WHERE account_id = $1", accountID)
-	client := gupshup.NewClient(settings.GupshupAPIKey, settings.AppName, settings.SourcePhone)
+	h.db.Get(&settings, "SELECT openwa_session_id, app_name, linked_phone FROM wa_settings WHERE account_id = $1", accountID)
+	client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
 
 	sent := 0
 	failed := 0
@@ -285,14 +307,37 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 		`, accountID, keyInfo.KeyID, r.To, settings.SourcePhone, truncate(contentPreview, 200)).Scan(&msgID)
 
 		var sendErr error
-		if req.Type == "template" {
-			templateJSON := fmt.Sprintf(`{"id":"%s"}`, templateName)
-			if templateData != nil {
-				templateJSON = string(templateData)
-			}
-			_, sendErr = client.SendTemplateMessage(r.To, templateJSON)
+
+		if settings.SessionID == "" {
+			sendErr = openwa.ErrNoConnectedSession
 		} else {
-			_, sendErr = client.SendTextMessage(r.To, msg)
+			text := msg
+
+			// As above: a template is a locally stored body now, rendered here
+			// rather than referenced by an approved name upstream.
+			if req.Type == "template" {
+				var tmpl struct {
+					HeaderText string `db:"header_text"`
+					BodyText   string `db:"body_text"`
+					FooterText string `db:"footer_text"`
+				}
+				if err := h.db.Get(&tmpl,
+					`SELECT header_text, body_text, footer_text FROM wa_templates
+					 WHERE account_id = $1 AND name = $2 LIMIT 1`, accountID, templateName); err != nil {
+					sendErr = fmt.Errorf("no template named %q", templateName)
+				} else {
+					var params []string
+					if templateData != nil {
+						_ = json.Unmarshal(templateData, &params)
+					}
+
+					text = openwa.RenderTemplate(tmpl.HeaderText, tmpl.BodyText, tmpl.FooterText, params)
+				}
+			}
+
+			if sendErr == nil {
+				_, sendErr = client.SendText(c.Request().Context(), settings.SessionID, r.To, text)
+			}
 		}
 
 		if sendErr != nil {
@@ -421,7 +466,7 @@ func (h *PublicWhatsAppHandler) GetStatus(c echo.Context) error {
 		"data": map[string]interface{}{
 			"channel":    "whatsapp",
 			"configured": err == nil,
-			"provider":   "gupshup",
+			"provider":   "openwa",
 		},
 	})
 }

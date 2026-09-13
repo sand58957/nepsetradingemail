@@ -208,7 +208,7 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	// WhatsApp Marketing — all authenticated users (account-scoped)
 	// ==============================================================
-	waHandler := handlers.NewWhatsAppHandler(s.DB)
+	waHandler := handlers.NewWhatsAppHandler(s.DB, s.Config)
 
 	// WhatsApp Settings
 	wa := staff.Group("/whatsapp")
@@ -568,7 +568,7 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	// Public API — WhatsApp (API key auth, separate from JWT)
 	// ==============================================================
-	publicWAHandler := handlers.NewPublicWhatsAppHandler(s.DB)
+	publicWAHandler := handlers.NewPublicWhatsAppHandler(s.DB, s.Config)
 	publicWALimiter := middleware.NewRateLimiter(30, 60)
 	publicWA := api.Group("/v1/whatsapp")
 	publicWA.Use(publicWALimiter.Middleware())

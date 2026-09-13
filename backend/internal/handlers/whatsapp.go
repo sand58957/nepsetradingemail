@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -17,19 +19,21 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 
+	"github.com/sandeep/nepsetradingemail/backend/internal/config"
 	mw "github.com/sandeep/nepsetradingemail/backend/internal/middleware"
-	"github.com/sandeep/nepsetradingemail/backend/internal/services/gupshup"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/openwa"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
 
 // WhatsAppHandler manages all WhatsApp marketing endpoints.
 type WhatsAppHandler struct {
-	db *sqlx.DB
+	db  *sqlx.DB
+	cfg *config.Config
 }
 
 // NewWhatsAppHandler creates a new WhatsApp handler.
-func NewWhatsAppHandler(db *sqlx.DB) *WhatsAppHandler {
-	return &WhatsAppHandler{db: db}
+func NewWhatsAppHandler(db *sqlx.DB, cfg *config.Config) *WhatsAppHandler {
+	return &WhatsAppHandler{db: db, cfg: cfg}
 }
 
 // ============================================================
@@ -37,18 +41,22 @@ func NewWhatsAppHandler(db *sqlx.DB) *WhatsAppHandler {
 // ============================================================
 
 type WASettings struct {
-	ID            int       `json:"id" db:"id"`
-	AccountID     int       `json:"account_id" db:"account_id"`
-	GupshupAppID  string    `json:"gupshup_app_id" db:"gupshup_app_id"`
-	GupshupAPIKey string    `json:"gupshup_api_key" db:"gupshup_api_key"`
-	SourcePhone   string    `json:"source_phone" db:"source_phone"`
-	AppName       string    `json:"app_name" db:"app_name"`
-	WabaID        string    `json:"waba_id" db:"waba_id"`
-	WebhookSecret string    `json:"webhook_secret" db:"webhook_secret"`
-	SendRate      int       `json:"send_rate" db:"send_rate"`
-	IsActive      bool      `json:"is_active" db:"is_active"`
-	CreatedAt     time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
+	ID        int `json:"id" db:"id"`
+	AccountID int `json:"account_id" db:"account_id"`
+	// OpenWA replaced Gupshup. There are no per-account API credentials any
+	// more: the gateway is process configuration, and all an account owns is
+	// which gateway session belongs to it. LinkedPhone and SessionStatus are a
+	// cache of what the gateway reports, refreshed on read, not settings.
+	OpenWASessionID string    `json:"openwa_session_id" db:"openwa_session_id"`
+	LinkedPhone     string    `json:"linked_phone" db:"linked_phone"`
+	SessionStatus   string    `json:"session_status" db:"session_status"`
+	SourcePhone     string    `json:"source_phone" db:"source_phone"`
+	AppName         string    `json:"app_name" db:"app_name"`
+	WebhookSecret   string    `json:"webhook_secret" db:"webhook_secret"`
+	SendRate        int       `json:"send_rate" db:"send_rate"`
+	IsActive        bool      `json:"is_active" db:"is_active"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type WAContact struct {
@@ -124,19 +132,23 @@ type WACampaignMessage struct {
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 }
 
-// helper to build a Gupshup client from account settings
-func (h *WhatsAppHandler) getClient(accountID int) (*gupshup.Client, *WASettings, error) {
+// getClient returns a gateway client and the session this account sends through.
+//
+// Unlike the Gupshup client it replaced, this can succeed while the transport is
+// still unusable: the session exists but nobody has scanned its QR, or the link
+// dropped. Sends surface that as openwa.ErrNoConnectedSession, which callers
+// report as an actionable message rather than a failure.
+func (h *WhatsAppHandler) getClient(accountID int) (*openwa.Client, string, *WASettings, error) {
 	var settings WASettings
-	err := h.db.Get(&settings, "SELECT * FROM wa_settings WHERE account_id = $1", accountID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("WhatsApp settings not configured")
-	}
-	if settings.GupshupAPIKey == "" {
-		return nil, nil, fmt.Errorf("Gupshup API key not set")
+	if err := h.db.Get(&settings, "SELECT * FROM wa_settings WHERE account_id = $1", accountID); err != nil {
+		return nil, "", nil, fmt.Errorf("WhatsApp is not configured for this account")
 	}
 
-	client := gupshup.NewClient(settings.GupshupAPIKey, settings.AppName, settings.SourcePhone)
-	return client, &settings, nil
+	if settings.OpenWASessionID == "" {
+		return nil, "", nil, fmt.Errorf("no WhatsApp session is linked — ask an administrator to link a number")
+	}
+
+	return openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey), settings.OpenWASessionID, &settings, nil
 }
 
 func generateSecret() string {
@@ -159,14 +171,11 @@ func (h *WhatsAppHandler) GetSettings(c echo.Context) error {
 			"configured": false,
 		})
 	}
-	// Mask the API key for security
-	masked := settings
-	if len(masked.GupshupAPIKey) > 8 {
-		masked.GupshupAPIKey = masked.GupshupAPIKey[:4] + "****" + masked.GupshupAPIKey[len(masked.GupshupAPIKey)-4:]
-	}
+	// Nothing to mask: the gateway credential lives in process configuration, not
+	// in this row, so no per-account secret is exposed here any more.
 	return response.Success(c, map[string]interface{}{
 		"configured": true,
-		"settings":   masked,
+		"settings":   settings,
 	})
 }
 
@@ -174,12 +183,11 @@ func (h *WhatsAppHandler) UpdateSettings(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 
 	var req struct {
-		GupshupAppID  string `json:"gupshup_app_id"`
-		GupshupAPIKey string `json:"gupshup_api_key"`
-		SourcePhone   string `json:"source_phone"`
-		AppName       string `json:"app_name"`
-		WabaID        string `json:"waba_id"`
-		SendRate      int    `json:"send_rate"`
+		// The gateway session this account sends through. Created and linked by
+		// a super admin; a tenant only chooses which one it uses.
+		OpenWASessionID string `json:"openwa_session_id"`
+		AppName         string `json:"app_name"`
+		SendRate        int    `json:"send_rate"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
@@ -191,17 +199,14 @@ func (h *WhatsAppHandler) UpdateSettings(c echo.Context) error {
 
 	// Upsert settings
 	_, err := h.db.Exec(`
-		INSERT INTO wa_settings (account_id, gupshup_app_id, gupshup_api_key, source_phone, app_name, waba_id, webhook_secret, send_rate, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+		INSERT INTO wa_settings (account_id, openwa_session_id, app_name, webhook_secret, send_rate, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW())
 		ON CONFLICT (account_id) DO UPDATE SET
-			gupshup_app_id = EXCLUDED.gupshup_app_id,
-			gupshup_api_key = CASE WHEN EXCLUDED.gupshup_api_key = '' THEN wa_settings.gupshup_api_key ELSE EXCLUDED.gupshup_api_key END,
-			source_phone = EXCLUDED.source_phone,
+			openwa_session_id = EXCLUDED.openwa_session_id,
 			app_name = EXCLUDED.app_name,
-			waba_id = EXCLUDED.waba_id,
 			send_rate = EXCLUDED.send_rate,
 			updated_at = NOW()
-	`, accountID, req.GupshupAppID, req.GupshupAPIKey, req.SourcePhone, req.AppName, req.WabaID, generateSecret(), req.SendRate)
+	`, accountID, req.OpenWASessionID, req.AppName, generateSecret(), req.SendRate)
 	if err != nil {
 		log.Printf("[whatsapp] Failed to save settings: %v", err)
 		return response.InternalError(c, "Failed to save settings")
@@ -213,21 +218,42 @@ func (h *WhatsAppHandler) UpdateSettings(c echo.Context) error {
 func (h *WhatsAppHandler) TestConnection(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 
-	client, settings, err := h.getClient(accountID)
+	client, sessionID, _, err := h.getClient(accountID)
 	if err != nil {
 		return response.BadRequest(c, err.Error())
 	}
 
-	if err := client.TestConnection(settings.GupshupAppID); err != nil {
-		return response.Error(c, http.StatusBadGateway, fmt.Sprintf("Connection failed: %v", err))
+	// There is no remote account to authenticate against any more and no wallet
+	// to read: the only question that matters is whether a handset is still
+	// linked to this session and able to send.
+	session, err := client.GetSession(c.Request().Context(), sessionID)
+	if err != nil {
+		return response.Error(c, http.StatusBadGateway, fmt.Sprintf("Could not reach the WhatsApp gateway: %v", err))
 	}
 
-	// Try to get wallet balance too
-	balance, _ := client.GetWalletBalance()
+	phone := ""
+	if session.Phone != nil {
+		phone = *session.Phone
+	}
+
+	lastError := ""
+	if session.LastError != nil {
+		lastError = *session.LastError
+	}
+
+	// Keep the cached copy in step so the settings screen does not disagree with
+	// the gateway until the next send.
+	if _, dbErr := h.db.Exec(
+		`UPDATE wa_settings SET session_status = $1, linked_phone = $2, updated_at = NOW() WHERE account_id = $3`,
+		session.Status, phone, accountID); dbErr != nil {
+		log.Printf("[whatsapp] caching session status: %v", dbErr)
+	}
 
 	return response.Success(c, map[string]interface{}{
-		"connected": true,
-		"balance":   balance,
+		"connected":    session.Connected(),
+		"status":       session.Status,
+		"linked_phone": phone,
+		"last_error":   lastError,
 	})
 }
 
@@ -862,59 +888,18 @@ func (h *WhatsAppHandler) GetTemplate(c echo.Context) error {
 }
 
 func (h *WhatsAppHandler) SyncTemplates(c echo.Context) error {
-	accountID := mw.GetAccountID(c)
-
-	client, settings, err := h.getClient(accountID)
-	if err != nil {
-		return response.BadRequest(c, err.Error())
-	}
-
-	templates, err := client.ListTemplates(settings.GupshupAppID)
-	if err != nil {
-		log.Printf("[whatsapp] Failed to sync templates: %v", err)
-		return response.Error(c, http.StatusBadGateway, fmt.Sprintf("Failed to fetch templates from Gupshup: %v", err))
-	}
-
-	now := time.Now()
-	synced := 0
-
-	for _, t := range templates {
-		status := strings.ToLower(t.Status)
-		if status == "" {
-			status = "pending"
-		}
-
-		_, err := h.db.Exec(`
-			INSERT INTO wa_templates (account_id, gupshup_id, name, category, language, status, body_text, synced_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-			ON CONFLICT (account_id, name, language) DO UPDATE SET
-				gupshup_id = EXCLUDED.gupshup_id,
-				category = EXCLUDED.category,
-				status = EXCLUDED.status,
-				body_text = EXCLUDED.body_text,
-				synced_at = EXCLUDED.synced_at,
-				updated_at = NOW()
-		`, accountID, t.ID, t.ElementName, t.Category, t.LanguageCode, status, t.Body, now)
-		if err != nil {
-			log.Printf("[whatsapp] Failed to upsert template %s: %v", t.ElementName, err)
-			continue
-		}
-		synced++
-	}
-
-	return response.Success(c, map[string]interface{}{
-		"synced": synced,
-		"total":  len(templates),
-	})
+	// Templates were a Meta construct: submitted through Gupshup, reviewed by
+	// Meta, then referenced by the id it returned. This endpoint pulled that
+	// remote list back down. The gateway that replaced it sends free-form text,
+	// so there is no remote catalogue to sync from — the rows in wa_templates
+	// are now the only copy, and they are edited here rather than upstream.
+	return response.SuccessWithMessage(c,
+		"Templates are stored here now. WhatsApp template approval no longer applies, so there is nothing to sync.",
+		map[string]interface{}{"synced": 0})
 }
 
 func (h *WhatsAppHandler) CreateTemplate(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
-
-	client, settings, err := h.getClient(accountID)
-	if err != nil {
-		return response.BadRequest(c, err.Error())
-	}
 
 	var req struct {
 		Name     string `json:"name"`
@@ -934,29 +919,14 @@ func (h *WhatsAppHandler) CreateTemplate(c echo.Context) error {
 		req.Language = "en"
 	}
 
-	// Create template in Gupshup
-	createReq := gupshup.CreateTemplateRequest{
-		ElementName: req.Name,
-		Language:    req.Language,
-		Category:    req.Category,
-		Content:     req.Body,
-		Example:     req.Example,
-		Vertical:    "TEXT",
-	}
-
-	result, err := client.CreateTemplate(settings.GupshupAppID, createReq)
-	if err != nil {
-		log.Printf("[whatsapp] Failed to create template in Gupshup: %v", err)
-		return response.Error(c, http.StatusBadGateway, fmt.Sprintf("Gupshup error: %v", err))
-	}
-
-	// Save to local database
+	// Nothing is submitted anywhere now. Templates used to go to Meta for review
+	// via Gupshup and came back "pending" until approved; the gateway that
+	// replaced it sends free-form text, so a template is just a saved message
+	// body and is usable immediately.
 	now := time.Now()
-	gupshupID := result.Template.ID
-	status := strings.ToLower(result.Template.Status)
-	if status == "" {
-		status = "pending"
-	}
+	gupshupID := ""
+	status := "approved"
+	var err error
 
 	var tmpl WATemplate
 	err = h.db.Get(&tmpl, `
@@ -995,13 +965,8 @@ func (h *WhatsAppHandler) DeleteTemplate(c echo.Context) error {
 		return response.NotFound(c, "Template not found")
 	}
 
-	// Try to delete from Gupshup
-	client, settings, clientErr := h.getClient(accountID)
-	if clientErr == nil && tmpl.Name != "" {
-		if delErr := client.DeleteTemplate(settings.GupshupAppID, tmpl.Name); delErr != nil {
-			log.Printf("[whatsapp] Warning: failed to delete template from Gupshup: %v", delErr)
-		}
-	}
+	// Templates exist only in this database now, so deleting the row is the whole
+	// operation — there is no remote catalogue to keep in step.
 
 	// Delete from local DB
 	if _, err := h.db.Exec("DELETE FROM wa_templates WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
@@ -1276,22 +1241,29 @@ func (h *WhatsAppHandler) TestCampaign(c echo.Context) error {
 		return response.NotFound(c, "Template not found")
 	}
 
-	client, _, err := h.getClient(accountID)
+	client, sessionID, _, err := h.getClient(accountID)
 	if err != nil {
 		return response.BadRequest(c, err.Error())
 	}
 
-	// Build template JSON
-	templateJSON := fmt.Sprintf(`{"id":"%s","params":[]}`, tmpl.GupshupID)
+	// The template is rendered here rather than referenced by id: the gateway
+	// sends text, so header, body and footer are flattened into one message. No
+	// parameters on a test send, so any {{n}} placeholders stay visible, which is
+	// what you want when checking a template reads correctly.
+	body := openwa.RenderTemplate(tmpl.HeaderText, tmpl.BodyText, tmpl.FooterText, nil)
 
-	phone := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(req.Phone, " ", ""), "-", ""), "+", "")
-	result, err := client.SendTemplateMessage(phone, templateJSON)
+	result, err := client.SendText(c.Request().Context(), sessionID, req.Phone, body)
 	if err != nil {
+		if errors.Is(err, openwa.ErrNoConnectedSession) {
+			return response.Error(c, http.StatusConflict,
+				"No WhatsApp number is linked. Ask an administrator to scan the QR code.")
+		}
+
 		return response.Error(c, http.StatusBadGateway, fmt.Sprintf("Failed to send test message: %v", err))
 	}
 
 	return response.Success(c, map[string]interface{}{
-		"message_id": result.MessageID,
+		"message_id": result.Identifier(),
 		"status":     result.Status,
 	})
 }
@@ -1352,7 +1324,7 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 
 // executeCampaignSend runs in background and sends messages to all contacts.
 func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WATemplate) {
-	client, settings, err := h.getClient(accountID)
+	client, sessionID, settings, err := h.getClient(accountID)
 	if err != nil {
 		log.Printf("[whatsapp] Campaign %d: failed to get client: %v", campaignID, err)
 		h.db.Exec("UPDATE wa_campaigns SET status = 'failed', updated_at = NOW() WHERE id = $1", campaignID)
@@ -1394,6 +1366,11 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WA
 	// Rate limiter: send N messages per second
 	ticker := time.NewTicker(time.Second / time.Duration(sendRate))
 	defer ticker.Stop()
+
+	// This runs detached from the HTTP request that started it, so it needs its
+	// own context rather than one that is cancelled the moment the caller's
+	// response is written.
+	sendCtx := context.Background()
 
 	var mu sync.Mutex
 	sentCount := 0
@@ -1452,11 +1429,11 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID int, tmpl WA
 			params = append(params, val)
 		}
 
-		paramsJSON, _ := json.Marshal(params)
-		templateJSON := fmt.Sprintf(`{"id":"%s","params":%s}`, tmpl.GupshupID, string(paramsJSON))
+		// Render the template with this contact's parameters into the plain text
+		// the gateway sends.
+		body := openwa.RenderTemplate(tmpl.HeaderText, tmpl.BodyText, tmpl.FooterText, params)
 
-		// Send via Gupshup
-		result, err := client.SendTemplateMessage(contact.Phone, templateJSON)
+		result, err := client.SendText(sendCtx, sessionID, contact.Phone, body)
 		if err != nil {
 			log.Printf("[whatsapp] Campaign %d: failed to send to %s: %v", campaignID, contact.Phone, err)
 			h.db.Exec(`
