@@ -24,7 +24,22 @@ export interface PaginationParams {
 
 export const whatsappService = {
   // ==================== Settings ====================
-  getSettings: async (): Promise<{ data: { configured: boolean; settings?: WASettings } }> => {
+  /** Account-scoped WhatsApp settings, including the live connection state.
+   *
+   *  `connection` is here rather than on the session endpoints because those are
+   *  super-admin only — an ordinary member of an account can read this. */
+  getSettings: async (): Promise<{
+    data: {
+      configured: boolean
+      settings?: WASettings
+      connection?: {
+        connected: boolean
+        status: string
+        linked_phone: string
+        detail?: string
+      }
+    }
+  }> => {
     const response = await api.get('/whatsapp/settings')
 
     return response.data

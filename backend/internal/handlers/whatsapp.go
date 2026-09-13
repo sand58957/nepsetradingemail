@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
@@ -153,10 +154,47 @@ type WACampaignMessage struct {
 // still unusable: the session exists but nobody has scanned its QR, or the link
 // dropped. Sends surface that as openwa.ErrNoConnectedSession, which callers
 // report as an actionable message rather than a failure.
-func (h *WhatsAppHandler) getClient(accountID int) (*openwa.Client, string, *WASettings, error) {
+// waSettings returns an account's WhatsApp settings row, creating it the first
+// time the account needs one.
+//
+// A row used to appear only when someone opened WhatsApp settings and saved, so
+// in practice two accounts out of forty-odd had one — and every other tenant was
+// told "WhatsApp is not configured for this account" no matter what the gateway
+// was doing. Nothing in the row is a decision the tenant has to make first: every
+// column but account_id has a default, and the session is adopted from the
+// gateway below. So create it on demand rather than treating its absence as a
+// configuration error.
+func (h *WhatsAppHandler) waSettings(accountID int) (*WASettings, error) {
 	var settings WASettings
+
+	err := h.db.Get(&settings, "SELECT * FROM wa_settings WHERE account_id = $1", accountID)
+	if err == nil {
+		return &settings, nil
+	}
+
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("could not read WhatsApp settings for this account")
+	}
+
+	if _, insErr := h.db.Exec(
+		`INSERT INTO wa_settings (account_id) VALUES ($1) ON CONFLICT (account_id) DO NOTHING`,
+		accountID); insErr != nil {
+		log.Printf("[whatsapp] creating settings row for account %d: %v", accountID, insErr)
+
+		return nil, fmt.Errorf("could not set up WhatsApp for this account")
+	}
+
 	if err := h.db.Get(&settings, "SELECT * FROM wa_settings WHERE account_id = $1", accountID); err != nil {
-		return nil, "", nil, fmt.Errorf("WhatsApp is not configured for this account")
+		return nil, fmt.Errorf("could not set up WhatsApp for this account")
+	}
+
+	return &settings, nil
+}
+
+func (h *WhatsAppHandler) getClient(accountID int) (*openwa.Client, string, *WASettings, error) {
+	settings, err := h.waSettings(accountID)
+	if err != nil {
+		return nil, "", nil, err
 	}
 
 	client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
@@ -189,7 +227,7 @@ func (h *WhatsAppHandler) getClient(accountID int) (*openwa.Client, string, *WAS
 		settings.SessionStatus = ready.Status
 	}
 
-	return client, settings.OpenWASessionID, &settings, nil
+	return client, settings.OpenWASessionID, settings, nil
 }
 
 func generateSecret() string {
@@ -204,19 +242,62 @@ func generateSecret() string {
 
 func (h *WhatsAppHandler) GetSettings(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
-	var settings WASettings
-	err := h.db.Get(&settings, "SELECT * FROM wa_settings WHERE account_id = $1", accountID)
+
+	settings, err := h.waSettings(accountID)
 	if err != nil {
-		// Return empty settings if none exist
-		return response.Success(c, map[string]interface{}{
-			"configured": false,
-		})
+		return response.Success(c, map[string]interface{}{"configured": false})
 	}
+
+	// Whether a number is linked is a live property of the gateway, and every
+	// tenant needs to see it — but the endpoints that list gateway sessions are
+	// super-admin only, so the settings page had nothing to read and showed every
+	// ordinary user "Unknown" for ever. Report the account's real connection state
+	// here, where any signed-in member of the account can see it.
+	connection := map[string]interface{}{
+		"connected":    false,
+		"status":       "not_linked",
+		"linked_phone": settings.LinkedPhone,
+	}
+
+	client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
+	sessionID := settings.OpenWASessionID
+
+	if sessionID == "" {
+		// Not adopted yet. The platform links one number centrally and each account
+		// picks it up on first use, so report what is actually available rather than
+		// "not configured" — otherwise a working number reads as missing until the
+		// account happens to send something.
+		if ready, findErr := client.FirstConnectedSession(c.Request().Context()); findErr == nil {
+			sessionID = ready.ID
+		}
+	}
+
+	if sessionID != "" {
+		session, sErr := client.GetSession(c.Request().Context(), sessionID)
+		switch {
+		case sErr != nil:
+			connection["status"] = "unreachable"
+			connection["detail"] = "The WhatsApp gateway could not be reached."
+		default:
+			connection["connected"] = session.Connected()
+			connection["status"] = session.Status
+
+			if session.Phone != nil && *session.Phone != "" {
+				connection["linked_phone"] = *session.Phone
+			}
+
+			if !session.Connected() {
+				connection["detail"] = "No WhatsApp number is linked right now. An administrator links it by scanning a QR code."
+			}
+		}
+	}
+
 	// Nothing to mask: the gateway credential lives in process configuration, not
 	// in this row, so no per-account secret is exposed here any more.
 	return response.Success(c, map[string]interface{}{
 		"configured": true,
 		"settings":   settings,
+		"connection": connection,
 	})
 }
 

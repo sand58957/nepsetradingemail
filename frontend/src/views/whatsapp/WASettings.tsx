@@ -54,6 +54,16 @@ const WASettings = () => {
   const isSuperAdmin = (session as { role?: string } | null)?.role === 'superadmin'
 
   const [sessions, setSessions] = useState<OpenWASession[]>([])
+
+  // The gateway session endpoints are super-admin only. Everyone else reads the
+  // account's connection state from their own settings endpoint — without this the
+  // status chip had nothing to render and every ordinary user saw "Unknown".
+  const [connection, setConnection] = useState<{
+    connected: boolean
+    status: string
+    linked_phone: string
+    detail?: string
+  } | null>(null)
   const [active, setActive] = useState<OpenWASession | null>(null)
   const [qr, setQr] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -71,19 +81,36 @@ const WASettings = () => {
   const errorText = (err: unknown, fallback: string) =>
     (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback
 
+  const loadConnection = useCallback(async () => {
+    try {
+      const res = await whatsappService.getSettings()
+
+      setConnection(res.data.connection ?? null)
+    } catch {
+      // Non-fatal: the chip falls back to whatever the session list gave us.
+    }
+  }, [])
+
   const loadSessions = useCallback(async () => {
+    // Every account can read its own connection state; only a super admin can
+    // list the gateway's sessions. Ask for both, and do not let the second
+    // failing hide the first.
+    await loadConnection()
+
     try {
       const res = await whatsappService.listSessions()
       const list = res.data || []
 
       setSessions(list)
       setActive(prev => list.find(s => s.id === prev?.id) ?? list[0] ?? null)
-    } catch (err) {
-      notify(errorText(err, 'Could not reach the WhatsApp gateway'), 'error')
+    } catch {
+      // Expected for anyone who is not a super admin — the connection state above
+      // is what they see, so this is not worth an error toast.
+      setSessions([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [loadConnection])
 
   useEffect(() => {
     loadSessions()
@@ -211,7 +238,10 @@ const WASettings = () => {
     )
   }
 
-  const status = describe(active?.status || '')
+  // Prefer the live session a super admin is looking at; otherwise fall back to
+  // the account's own connection state.
+  const status = describe(active?.status || connection?.status || '')
+  const linkedPhone = active?.phone || connection?.linked_phone || ''
 
   return (
     <Grid container spacing={6}>
@@ -226,7 +256,7 @@ const WASettings = () => {
             </div>
             <div className='flex items-center gap-2'>
               <Chip label={status.label} color={status.color} variant='tonal' />
-              {active?.phone && <Chip label={active.phone} variant='tonal' />}
+              {linkedPhone && <Chip label={linkedPhone} variant='tonal' />}
             </div>
           </CardContent>
         </Card>
@@ -234,10 +264,19 @@ const WASettings = () => {
 
       {!isSuperAdmin && (
         <Grid size={{ xs: 12 }}>
-          <Alert severity='info'>
-            <AlertTitle>Managed centrally</AlertTitle>
-            Linking a WhatsApp number requires scanning a QR code with the handset that owns it, so it is done by an
-            administrator. Ask them to link a number if this shows as disconnected.
+          {/* Say what the account's WhatsApp is actually doing. This used to be a
+              fixed notice next to a permanent "Unknown" chip, which told a tenant
+              nothing about whether their messages could go out. */}
+          <Alert severity={connection?.connected ? 'success' : 'warning'}>
+            <AlertTitle>
+              {connection?.connected ? `Connected — sending as ${linkedPhone || 'the linked number'}` : 'Not connected'}
+            </AlertTitle>
+            {connection?.connected
+              ? 'Your campaigns and messages will go out through this number.'
+              : connection?.detail ||
+                'No WhatsApp number is linked right now, so messages cannot be sent.'}{' '}
+            Linking a number means scanning a QR code with the handset that owns it, so an administrator does it for
+            you.
           </Alert>
         </Grid>
       )}

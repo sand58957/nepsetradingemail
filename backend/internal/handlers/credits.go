@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -406,12 +408,33 @@ func CheckSMSConfigured(db *sqlx.DB, accountID int) error {
 	return nil
 }
 
+// CheckWhatsAppConfigured reports whether the account may use the WhatsApp
+// channel at all. It deliberately does not ask whether a number is linked right
+// now — that is a live property of the gateway, it changes without warning, and
+// the send path already reports it accurately as CHANNEL_UNAVAILABLE.
+//
+// It used to require openwa_session_id to be non-empty. That id is only written
+// when the account first adopts a gateway session, which happens inside the send
+// path — after this check. So a tenant that had never sent could never send: this
+// refused, the adoption never ran, and the id stayed empty for ever.
 func CheckWhatsAppConfigured(db *sqlx.DB, accountID int) error {
-	var count int
-	db.Get(&count, "SELECT COUNT(*) FROM wa_settings WHERE account_id = $1 AND openwa_session_id != ''", accountID)
-	if count == 0 {
-		return fmt.Errorf("WhatsApp is not connected. Link a number in WhatsApp settings first")
+	var enabled bool
+	if err := db.Get(&enabled, `
+		SELECT is_active FROM wa_settings WHERE account_id = $1
+	`, accountID); err != nil {
+		// No row yet is not a refusal: one is created the first time the account
+		// touches WhatsApp. Only an explicitly deactivated channel is.
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return fmt.Errorf("WhatsApp is not available for this account")
 	}
+
+	if !enabled {
+		return fmt.Errorf("WhatsApp is switched off for this account. Enable it in WhatsApp settings")
+	}
+
 	return nil
 }
 
