@@ -51,7 +51,10 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 
 			parts := strings.SplitN(authHeader, " ", 2)
 			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-				log.Printf("apikey.auth_fail reason=bad_scheme ip=%s path=%s scheme=%q", ip, path, parts[0])
+				// Sending the bare key with no "Bearer " prefix is a common mistake,
+				// and in that case parts[0] is the key itself — logging it verbatim
+				// wrote a live credential into the container logs in plaintext.
+				log.Printf("apikey.auth_fail reason=bad_scheme ip=%s path=%s scheme=%s", ip, path, redactKey(parts[0]))
 				return response.Error(c, http.StatusUnauthorized, "Invalid authorization format. Use: Bearer <api_key>")
 			}
 

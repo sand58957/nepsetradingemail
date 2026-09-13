@@ -110,11 +110,18 @@ func (h *PublicEmailHandler) Send(c echo.Context) error {
 		webhookURL = *req.WebhookURL
 	}
 
+	// See the equivalent insert in the WhatsApp handler: dropping this error sends
+	// and charges for a message that has no record and an unusable message_id.
 	var msgID int
-	h.db.QueryRow(`
+	if err := h.db.QueryRow(`
 		INSERT INTO api_messages (account_id, api_key_id, channel, "to", "from", subject, content_preview, status, credits_charged, webhook_url, reference)
 		VALUES ($1, $2, 'email', $3, $4, $5, $6, 'sending', $7, $8, $9) RETURNING id
-	`, accountID, keyInfo.KeyID, req.To, req.From, req.Subject, truncate(req.Subject, 200), creditCost, webhookURL, req.Reference).Scan(&msgID)
+	`, accountID, keyInfo.KeyID, req.To, req.From, req.Subject, truncate(req.Subject, 200), creditCost, webhookURL, req.Reference).Scan(&msgID); err != nil {
+		RefundCredit(h.db, accountID, "email", creditCost)
+
+		return apiError(c, http.StatusInternalServerError, "PROVIDER_ERROR",
+			"Could not record the message, so it was not sent. No credit was charged.", "")
+	}
 
 	// Send via SendGrid
 	client := sendgrid.NewClient(h.currentKey())
@@ -130,7 +137,7 @@ func (h *PublicEmailHandler) Send(c echo.Context) error {
 
 	if sendErr != nil {
 		RefundCredit(h.db, accountID, "email", creditCost)
-		h.db.Exec(`UPDATE api_messages SET status = 'failed', error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
+		h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
 		return apiError(c, http.StatusBadGateway, "PROVIDER_ERROR", fmt.Sprintf("Email send failed: %v", sendErr), "")
 	}
 
@@ -285,7 +292,7 @@ func (h *PublicEmailHandler) SendBulk(c echo.Context) error {
 		})
 
 		if sendErr != nil {
-			h.db.Exec(`UPDATE api_messages SET status = 'failed', error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
+			h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
 			RefundCredit(h.db, accountID, "email", 1)
 			failed++
 		} else {

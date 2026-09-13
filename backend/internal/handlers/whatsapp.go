@@ -13,6 +13,7 @@ import (
 	"github.com/lib/pq"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -121,6 +122,12 @@ type WACampaign struct {
 	CreatedBy      *int            `json:"created_by" db:"created_by"`
 	CreatedAt      time.Time       `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at" db:"updated_at"`
+
+	// Continuous sending (migration 030). These must stay in step with the table:
+	// sqlx maps columns strictly here, so a column with no field fails every
+	// SELECT * against wa_campaigns, not just the ones that want the new value.
+	SendIntervalSeconds int  `json:"send_interval_seconds" db:"send_interval_seconds"`
+	Continuous          bool `json:"continuous" db:"continuous"`
 }
 
 type WACampaignMessage struct {
@@ -1452,8 +1459,16 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 		return response.NotFound(c, "Campaign not found")
 	}
 
-	if campaign.Status != "draft" && campaign.Status != "paused" {
-		return response.BadRequest(c, "Campaign must be in draft or paused status to send")
+	// A campaign that stopped can always be started again: who has already been
+	// reached is recorded in wa_campaign_messages, so resuming never re-messages
+	// anyone. 'failed' used to be excluded here, which made it a dead end — five
+	// places set it, nothing could clear it, and the only way out was deleting the
+	// campaign, which cascades its message rows away and re-messages everyone.
+	switch campaign.Status {
+	case "draft", "paused", "failed":
+	default:
+		return response.BadRequest(c,
+			"Campaign is "+campaign.Status+". Only a draft, paused or failed campaign can be sent.")
 	}
 
 	if campaign.TemplateID == nil {
@@ -1469,13 +1484,20 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 		return response.BadRequest(c, "Template must be approved before sending")
 	}
 
-	// How large a phase to send now. Sending is deliberately incremental: the
-	// transport is an unofficial WhatsApp client on a single number, and the
-	// surest way to get it restricted is a large run at strangers. The caller
-	// picks a size, a modest default applies, and the hard cap is there so one
-	// request cannot turn into an all-night blast.
+	// Two ways to pace a campaign.
+	//
+	// Batch mode sends a fixed number now and parks the campaign so an operator
+	// starts the next phase by hand. Continuous mode keeps going until the list is
+	// exhausted, leaving a chosen gap between messages.
+	//
+	// Either way something has to hold the rate down: the transport is an
+	// unofficial WhatsApp client on a single number, and a fast run at strangers is
+	// the surest way to get it restricted. In batch mode the batch size is that
+	// brake; in continuous mode the interval is.
 	var req struct {
-		BatchSize int `json:"batch_size"`
+		BatchSize       int  `json:"batch_size"`
+		Continuous      bool `json:"continuous"`
+		IntervalSeconds int  `json:"interval_seconds"`
 	}
 	_ = c.Bind(&req)
 
@@ -1493,6 +1515,8 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 		batchSize = maxBatch
 	}
 
+	intervalSeconds := resolveSendInterval(req.Continuous, req.IntervalSeconds)
+
 	// Contacts this campaign has not reached yet.
 	var remainingCount int
 	h.db.Get(&remainingCount, `
@@ -1509,27 +1533,138 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 	}
 
 	targetCount := batchSize
-	if remainingCount < targetCount {
+	if req.Continuous || remainingCount < targetCount {
 		targetCount = remainingCount
 	}
 
-	// Update campaign status
+	// total_targets is the whole audience for this campaign, not the size of the
+	// run being started: sent_count accumulates across every phase, and the UI
+	// draws its progress bar as sent_count / total_targets. Storing just this
+	// run's target made that fraction exceed 100% on the second phase, and a
+	// continuous run over 30,000 contacts would have taken it wildly past.
+	var alreadyAttempted int
+	h.db.Get(&alreadyAttempted, `SELECT COUNT(*) FROM wa_campaign_messages WHERE campaign_id = $1`, campaign.ID)
+
+	audienceTotal := alreadyAttempted + remainingCount
+
+	// Persist the pacing alongside the status. The resumer that picks a campaign
+	// back up after a restart reads these columns rather than being told again.
 	now := time.Now()
-	h.db.Exec(`
-		UPDATE wa_campaigns SET status = 'sending', total_targets = $1, started_at = $2, updated_at = NOW()
-		WHERE id = $3
-	`, targetCount, now, campaign.ID)
+	// Claim the campaign and start it in one statement. The status was read a few
+	// lines above and written here, so two requests arriving together could both
+	// pass the guard and launch a sender; each holds its own in-memory copy of the
+	// contact list, and a contact's wa_campaign_messages row is only written when
+	// its turn comes, so the usual "skip anyone already messaged" protection does
+	// not help — the same person gets the message twice. Repeating the status
+	// condition in the WHERE clause makes exactly one of them win.
+	claimed, err := h.db.Exec(`
+		UPDATE wa_campaigns SET
+			status = 'sending',
+			total_targets = $1,
+			started_at = $2,
+			continuous = $4,
+			send_interval_seconds = $5,
+			updated_at = NOW()
+		WHERE id = $3 AND status IN ('draft', 'paused', 'failed')
+	`, audienceTotal, now, campaign.ID, req.Continuous, intervalSeconds)
+
+	if err != nil {
+		return response.BadRequest(c, "Could not start the campaign")
+	}
+
+	if rows, _ := claimed.RowsAffected(); rows == 0 {
+		return response.BadRequest(c, "This campaign is already sending")
+	}
 
 	// Launch sending in background goroutine
 	go h.executeCampaignSend(campaign.ID, accountID, batchSize, tmpl)
 
+	if req.Continuous {
+		// Tell the operator up front how long this will take. At one message every
+		// 30 seconds a 30,000-contact list runs for ten days, which is not obvious
+		// from picking "30" in a form.
+		// Widen before multiplying, and cap: a big enough audience times a long
+		// interval overflows the nanosecond arithmetic and silently wraps negative,
+		// which would print a finish date in the past.
+		etaSeconds := int64(targetCount) * int64(intervalSeconds)
+		if maxSeconds := int64(math.MaxInt64 / int64(time.Second)); etaSeconds > maxSeconds {
+			etaSeconds = maxSeconds
+		}
+
+		eta := time.Duration(etaSeconds) * time.Second
+
+		return response.Success(c, map[string]interface{}{
+			"status":           "sending",
+			"mode":             "continuous",
+			"sending_now":      targetCount,
+			"remaining_after":  0,
+			"total_remaining":  remainingCount,
+			"interval_seconds": intervalSeconds,
+			"estimated_finish": now.Add(eta).UTC().Format(time.RFC3339),
+			"message": fmt.Sprintf(
+				"Sending to all %d remaining contacts, one every %ds. At that pace this takes about %s and will keep running on its own — pause the campaign to stop it.",
+				targetCount, intervalSeconds, humaniseDuration(eta)),
+		})
+	}
+
 	return response.Success(c, map[string]interface{}{
 		"status":          "sending",
+		"mode":            "batch",
 		"sending_now":     targetCount,
 		"remaining_after": remainingCount - targetCount,
 		"total_remaining": remainingCount,
 		"message":         fmt.Sprintf("Sending to %d contacts. %d will remain — run the campaign again to continue.", targetCount, remainingCount-targetCount),
 	})
+}
+
+// humaniseDuration renders a send window the way an operator would say it, so a
+// ten-day run reads as "10 days" rather than "240h0m0s".
+func humaniseDuration(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%d seconds", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%d minutes", int(d.Minutes()))
+	case d < 48*time.Hour:
+		return fmt.Sprintf("%.1f hours", d.Hours())
+	default:
+		return fmt.Sprintf("%.1f days", d.Hours()/24)
+	}
+}
+
+// maxIntervalSeconds bounds the gap between two campaign messages, in both the
+// request that sets it and the sender that reads it back. One hour is already far
+// slower than anyone needs; the bound exists so the value can never reach
+// time.Duration arithmetic large enough to overflow and panic time.NewTicker.
+const maxIntervalSeconds = 3600
+
+const (
+	defaultIntervalSeconds = 30
+	minIntervalSeconds     = 1
+)
+
+// resolveSendInterval decides what goes in wa_campaigns.send_interval_seconds.
+//
+// The interval belongs to continuous mode. A batch run stores 0, which tells the
+// sender to pace from the account's send rate instead. That distinction matters
+// because the send dialog posts interval_seconds whatever the mode: taking the
+// value unconditionally paced a 500-contact phase at the continuous default of
+// 30s, four hours instead of the four minutes the dialog promises.
+func resolveSendInterval(continuous bool, requested int) int {
+	if !continuous {
+		return 0
+	}
+
+	switch {
+	case requested <= 0:
+		return defaultIntervalSeconds
+	case requested < minIntervalSeconds:
+		return minIntervalSeconds
+	case requested > maxIntervalSeconds:
+		return maxIntervalSeconds
+	default:
+		return requested
+	}
 }
 
 // executeCampaignSend runs in background and sends messages to all contacts.
@@ -1562,10 +1697,18 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 
 	// Get all opted-in contacts
 	var contacts []WAContact
-	// Only contacts this campaign has not already reached, capped at one phase.
-	// Sending is deliberately resumable: an unofficial gateway should not be fed
-	// thirty thousand cold numbers in one run, and re-running a campaign must
-	// continue where it stopped rather than message everyone a second time.
+	// Only contacts this campaign has not already reached. Sending stays resumable
+	// either way: re-running a campaign, or picking one back up after a restart,
+	// continues where it stopped rather than messaging everyone a second time.
+	//
+	// A batch run takes one phase worth; a continuous run takes the lot and paces
+	// itself with the interval instead. LIMIT ALL is how Postgres spells "no limit"
+	// in a parameterised query, so the two modes share one statement.
+	limit := strconv.Itoa(batchSize)
+	if campaign.Continuous {
+		limit = "ALL"
+	}
+
 	if err := h.db.Select(&contacts, `
 		SELECT c.* FROM wa_contacts c
 		WHERE c.account_id = $1 AND c.opted_in = true
@@ -1574,8 +1717,7 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 			WHERE m.campaign_id = $2 AND m.contact_id = c.id
 		  )
 		ORDER BY c.id
-		LIMIT $3
-	`, accountID, campaignID, batchSize); err != nil {
+		LIMIT `+limit, accountID, campaignID); err != nil {
 		log.Printf("[whatsapp] Campaign %d: failed to fetch contacts: %v", campaignID, err)
 		h.db.Exec("UPDATE wa_campaigns SET status = 'failed', updated_at = NOW() WHERE id = $1", campaignID)
 		return
@@ -1597,36 +1739,96 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 			state = session.Status
 		}
 
-		log.Printf("[whatsapp] Campaign %d: refusing to start, session is %s", campaignID, state)
-		h.db.Exec(`UPDATE wa_campaigns SET status='failed', updated_at=NOW() WHERE id=$1`, campaignID)
+		// Park rather than fail. The number being offline is a transient, recoverable
+		// condition — most often the gateway container still coming up right after a
+		// deploy — and marking it failed used to strand the campaign for good.
+		log.Printf("[whatsapp] Campaign %d: not starting, session is %s — parked at paused", campaignID, state)
+		h.db.Exec(`UPDATE wa_campaigns SET status='paused', updated_at=NOW() WHERE id=$1`, campaignID)
 
 		return
 	}
 
-	sendRate := settings.SendRate
-	if sendRate <= 0 {
-		sendRate = 10
-	}
-
-	// Clamp the rate. This value was configured when the transport was Meta's
-	// official API, where 100 messages a second was plausible; account 20 still
-	// held 100. The gateway that replaced it throttles far below that and answers
-	// 429, and an unofficial client sending that fast is the surest way to get
-	// the number restricted. Its own guidance is a few messages per minute.
+	// Work out the gap between messages.
+	//
+	// An explicit interval wins: it is the whole point of a continuous run, and it
+	// is the only brake on one. Otherwise fall back to the account's send rate,
+	// clamped — that value was set when the transport was Meta's official API,
+	// where 100 a second was plausible, and account 20 still holds 100. The gateway
+	// that replaced it throttles far below that and answers 429, and an unofficial
+	// client sending that fast is the surest way to get the number restricted.
 	const maxSendRate = 2
-	if sendRate > maxSendRate {
-		log.Printf("[whatsapp] Campaign %d: send rate %d/s clamped to %d/s for the WhatsApp gateway",
-			campaignID, sendRate, maxSendRate)
-		sendRate = maxSendRate
+
+	var gap time.Duration
+
+	switch {
+	case campaign.SendIntervalSeconds > 0:
+		// Clamp what came out of the database, not just what came in over HTTP.
+		// time.NewTicker panics on a non-positive duration, and this goroutine has
+		// no recover() above it, so a stored value large enough to overflow the
+		// int64 nanosecond arithmetic would take the whole process down.
+		seconds := campaign.SendIntervalSeconds
+		if seconds > maxIntervalSeconds {
+			log.Printf("[whatsapp] Campaign %d: stored interval %ds is out of range, using %ds",
+				campaignID, seconds, maxIntervalSeconds)
+			seconds = maxIntervalSeconds
+		}
+
+		gap = time.Duration(seconds) * time.Second
+	default:
+		sendRate := settings.SendRate
+		if sendRate <= 0 {
+			sendRate = 10
+		}
+
+		if sendRate > maxSendRate {
+			log.Printf("[whatsapp] Campaign %d: send rate %d/s clamped to %d/s for the WhatsApp gateway",
+				campaignID, sendRate, maxSendRate)
+			sendRate = maxSendRate
+		}
+
+		gap = time.Second / time.Duration(sendRate)
 	}
 
-	// Rate limiter: send N messages per second
-	ticker := time.NewTicker(time.Second / time.Duration(sendRate))
-	defer ticker.Stop()
+	log.Printf("[whatsapp] Campaign %d: %d to send, one every %s%s",
+		campaignID, len(contacts), gap,
+		map[bool]string{true: " (continuous, runs to completion)", false: " (single phase)"}[campaign.Continuous])
 
 	var mu sync.Mutex
 	sentCount := 0
 	failedCount := 0
+
+	// A campaign is sent in phases, so the counters on wa_campaigns accumulate
+	// across every phase — the writes below add to them rather than assigning.
+	// These track how much of this phase has already been added, so the periodic
+	// flush and the final write between them count each message exactly once.
+	flushedSent := 0
+	flushedFailed := 0
+
+	// Record whatever has not been written yet. Every way out of the send loop
+	// goes through this, including the early returns for a user pause and for the
+	// consecutive-failure abort — both of those used to return without recording
+	// the messages the phase had already sent, so those sends vanished from the
+	// campaign's totals while their per-recipient rows remained.
+	flushCounters := func() {
+		mu.Lock()
+		deltaSent := sentCount - flushedSent
+		deltaFailed := failedCount - flushedFailed
+		flushedSent = sentCount
+		flushedFailed = failedCount
+		mu.Unlock()
+
+		if deltaSent == 0 && deltaFailed == 0 {
+			return
+		}
+
+		h.db.Exec(`
+			UPDATE wa_campaigns SET
+				sent_count = COALESCE(sent_count, 0) + $1,
+				failed_count = COALESCE(failed_count, 0) + $2,
+				updated_at = NOW()
+			WHERE id = $3
+		`, deltaSent, deltaFailed, campaignID)
+	}
 
 	// If the transport starts refusing everything — the session dropped, or the
 	// gateway is rate-limiting — stop rather than marking the rest of the list
@@ -1635,14 +1837,51 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 	consecutiveFailures := 0
 	const maxConsecutiveFailures = 20
 
-	for _, contact := range contacts {
-		<-ticker.C
+	// Wait out the gap between two messages, watching for the operator stopping the
+	// campaign while we wait. Returns the status that ended the wait, or "" to carry
+	// on sending.
+	//
+	// This used to be a plain <-ticker.C followed by one status read. That was fine
+	// at two messages a second, but a continuous run can be paced up to an hour
+	// apart, and Pause is the only control an operator has over a run that lasts
+	// days — it must not sit unnoticed until the next message happens to be due.
+	waitOrStop := func(d time.Duration) string {
+		const poll = 3 * time.Second
 
-		// Check if campaign was paused/cancelled
-		var status string
-		h.db.Get(&status, "SELECT status FROM wa_campaigns WHERE id = $1", campaignID)
-		if status == "paused" || status == "cancelled" {
+		deadline := time.Now().Add(d)
+
+		for {
+			var status string
+			h.db.Get(&status, "SELECT status FROM wa_campaigns WHERE id = $1", campaignID)
+
+			if status == "paused" || status == "cancelled" {
+				return status
+			}
+
+			left := time.Until(deadline)
+			if left <= 0 {
+				return ""
+			}
+
+			if left > poll {
+				left = poll
+			}
+
+			time.Sleep(left)
+		}
+	}
+
+	for i, contact := range contacts {
+		// Pace between messages, not before the first one.
+		wait := gap
+		if i == 0 {
+			wait = 0
+		}
+
+		if status := waitOrStop(wait); status != "" {
 			log.Printf("[whatsapp] Campaign %d: %s by user", campaignID, status)
+			flushCounters()
+
 			return
 		}
 
@@ -1707,7 +1946,11 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 			if stop {
 				log.Printf("[whatsapp] Campaign %d: %d sends failed in a row, stopping with %d recipients untouched",
 					campaignID, consecutiveFailures, len(contacts)-(sentCount+failedCount))
-				h.db.Exec(`UPDATE wa_campaigns SET status='failed', updated_at=NOW() WHERE id=$1`, campaignID)
+				// Stopping here is the safety valve working, not the campaign failing.
+				// Park it so an operator can check the number and continue; the
+				// untouched recipients stay eligible.
+				flushCounters()
+				h.db.Exec(`UPDATE wa_campaigns SET status='paused', updated_at=NOW() WHERE id=$1`, campaignID)
 
 				return
 			}
@@ -1728,11 +1971,17 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 		sentCount++
 		mu.Unlock()
 
-		// Update campaign counters periodically (every 50 messages)
+		// Flush progress periodically so the dashboard moves during a long phase.
+		//
+		// This used to assign the running totals outright, which contradicted the
+		// accumulating write at the end of the phase: with a batch size that is a
+		// multiple of 50 the flush fired, set the counters to this phase's totals,
+		// and then the final write added those same totals on top. A 50-recipient
+		// phase that sent 44 and failed 6 was recorded as 88 sent and 12 failed.
+		// Assigning was also wrong on its own, since it discarded whatever earlier
+		// phases had already recorded. Add the delta since the last flush instead.
 		if (sentCount+failedCount)%50 == 0 {
-			h.db.Exec(`
-				UPDATE wa_campaigns SET sent_count = $1, failed_count = $2, updated_at = NOW() WHERE id = $3
-			`, sentCount, failedCount, campaignID)
+			flushCounters()
 		}
 	}
 
@@ -1754,6 +2003,7 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 		finalStatus = "paused"
 	}
 
+	// Only whatever the periodic flush has not already recorded.
 	h.db.Exec(`
 		UPDATE wa_campaigns SET
 			status = $4,
@@ -1762,10 +2012,139 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 			completed_at = CASE WHEN $4 = 'sent' THEN NOW() ELSE completed_at END,
 			updated_at = NOW()
 		WHERE id = $3
-	`, sentCount, failedCount, campaignID, finalStatus)
+	`, sentCount-flushedSent, failedCount-flushedFailed, campaignID, finalStatus)
 
 	log.Printf("[whatsapp] Campaign %d: phase finished — sent %d, failed %d, %d still to reach (status %s)",
 		campaignID, sentCount, failedCount, remaining, finalStatus)
+}
+
+// ResumeInterruptedCampaigns picks up campaigns that were mid-send when the
+// process last stopped. Call it once at startup.
+//
+// A campaign's progress lives in wa_campaign_messages, not in the goroutine, so
+// resuming is just starting again: the contact query skips everyone already
+// messaged. Without this a run left at 'sending' by a deploy or a crash sits
+// there for ever, looking active while nothing is happening — tolerable when a
+// phase lasted five minutes, but a continuous run over a 30,000-contact list
+// takes days and will span several deploys.
+//
+// Continuous campaigns restart on their own. A batch run is deliberately left
+// alone: its phase size was never persisted, and silently choosing one would send
+// a different number of messages than the operator asked for. Those are moved to
+// 'paused' instead, which is both true and actionable.
+// waitForGateway blocks until the account's WhatsApp session is ready to send, or
+// gives up after a few minutes.
+//
+// The resumer runs the instant the process boots, and the gateway is a separate
+// container restarted by the same deploy. Without this wait the resumed run hit
+// its pre-flight session check while whatsapp-web.js was still authenticating and
+// stopped immediately — so every deploy would halt the very campaign the resumer
+// exists to keep alive.
+func (h *WhatsAppHandler) waitForGateway(accountID int) bool {
+	const (
+		attempts = 30
+		delay    = 10 * time.Second
+	)
+
+	for attempt := 1; attempt <= attempts; attempt++ {
+		client, sessionID, _, err := h.getClient(accountID)
+		if err == nil && sessionID != "" {
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			session, sErr := client.GetSession(ctx, sessionID)
+			cancel()
+
+			if sErr == nil && session.Connected() {
+				return true
+			}
+		}
+
+		if attempt == attempts {
+			break
+		}
+
+		time.Sleep(delay)
+	}
+
+	return false
+}
+
+func (h *WhatsAppHandler) ResumeInterruptedCampaigns() {
+	var interrupted []struct {
+		ID         int  `db:"id"`
+		AccountID  int  `db:"account_id"`
+		TemplateID *int `db:"template_id"`
+		Continuous bool `db:"continuous"`
+	}
+
+	if err := h.db.Select(&interrupted, `
+		SELECT id, account_id, template_id, continuous
+		FROM wa_campaigns WHERE status = 'sending' ORDER BY id
+	`); err != nil {
+		log.Printf("[whatsapp] resume: could not look for interrupted campaigns: %v", err)
+
+		return
+	}
+
+	if len(interrupted) == 0 {
+		return
+	}
+
+	for _, campaign := range interrupted {
+		if campaign.Continuous && !h.waitForGateway(campaign.AccountID) {
+			// Leave it at 'sending' rather than parking it. Nothing is sending, but
+			// the next restart's resumer will find it again and try once more; parking
+			// it here would need a human to notice and press send.
+			log.Printf("[whatsapp] resume: gateway not ready for account %d, leaving campaign %d for the next restart",
+				campaign.AccountID, campaign.ID)
+
+			continue
+		}
+
+		if !campaign.Continuous {
+			h.db.Exec(`UPDATE wa_campaigns SET status = 'paused', updated_at = NOW() WHERE id = $1`, campaign.ID)
+			log.Printf("[whatsapp] resume: campaign %d was interrupted mid-phase, parked at paused", campaign.ID)
+
+			continue
+		}
+
+		if campaign.TemplateID == nil {
+			h.db.Exec(`UPDATE wa_campaigns SET status = 'failed', updated_at = NOW() WHERE id = $1`, campaign.ID)
+			log.Printf("[whatsapp] resume: campaign %d has no template, marked failed", campaign.ID)
+
+			continue
+		}
+
+		var tmpl WATemplate
+		if err := h.db.Get(&tmpl, "SELECT * FROM wa_templates WHERE id = $1", *campaign.TemplateID); err != nil {
+			h.db.Exec(`UPDATE wa_campaigns SET status = 'paused', updated_at = NOW() WHERE id = $1`, campaign.ID)
+			log.Printf("[whatsapp] resume: campaign %d template %d unreadable (%v), parked at paused",
+				campaign.ID, *campaign.TemplateID, err)
+
+			continue
+		}
+
+		var remaining int
+		h.db.Get(&remaining, `
+			SELECT COUNT(*) FROM wa_contacts c
+			WHERE c.account_id = $1 AND c.opted_in = true
+			  AND NOT EXISTS (
+				SELECT 1 FROM wa_campaign_messages m
+				WHERE m.campaign_id = $2 AND m.contact_id = c.id
+			  )
+		`, campaign.AccountID, campaign.ID)
+
+		if remaining == 0 {
+			h.db.Exec(`
+				UPDATE wa_campaigns SET status = 'sent', completed_at = NOW(), updated_at = NOW() WHERE id = $1
+			`, campaign.ID)
+			log.Printf("[whatsapp] resume: campaign %d had already reached everyone, marked sent", campaign.ID)
+
+			continue
+		}
+
+		log.Printf("[whatsapp] resume: continuing campaign %d, %d contacts still to reach", campaign.ID, remaining)
+		go h.executeCampaignSend(campaign.ID, campaign.AccountID, remaining, tmpl)
+	}
 }
 
 func (h *WhatsAppHandler) PauseCampaign(c echo.Context) error {
@@ -1893,10 +2272,24 @@ func (h *WhatsAppHandler) GetCampaignAnalytics(c echo.Context) error {
 		}{}
 	}
 
+	// How many opted-in contacts this campaign has still not reached. The send
+	// dialog needs it to tell an operator how long a continuous run will take
+	// before they start one.
+	var remaining int
+	h.db.Get(&remaining, `
+		SELECT COUNT(*) FROM wa_contacts c
+		WHERE c.account_id = $1 AND c.opted_in = true
+		  AND NOT EXISTS (
+			SELECT 1 FROM wa_campaign_messages m
+			WHERE m.campaign_id = $2 AND m.contact_id = c.id
+		  )
+	`, accountID, id)
+
 	return response.Success(c, map[string]interface{}{
 		"campaign":         campaign,
 		"status_breakdown": statusBreakdown,
 		"failed_messages":  failedMessages,
+		"remaining":        remaining,
 	})
 }
 

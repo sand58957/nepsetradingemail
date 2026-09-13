@@ -210,6 +210,11 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	waHandler := handlers.NewWhatsAppHandler(s.DB, s.Config)
 
+	// A continuous campaign runs for days, so it outlives deploys. Anything left
+	// mid-send when the process last stopped is picked up here; progress lives in
+	// wa_campaign_messages, so resuming never re-messages anyone.
+	go waHandler.ResumeInterruptedCampaigns()
+
 	// WhatsApp Settings
 	wa := staff.Group("/whatsapp")
 	wa.GET("/settings", waHandler.GetSettings)

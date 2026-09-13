@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -98,11 +99,18 @@ func (h *PublicSMSHandler) Send(c echo.Context) error {
 		webhookURL = *req.WebhookURL
 	}
 
+	// See the equivalent insert in the WhatsApp handler: dropping this error sends
+	// and charges for a message that has no record and an unusable message_id.
 	var msgID int
-	h.db.QueryRow(`
+	if err := h.db.QueryRow(`
 		INSERT INTO api_messages (account_id, api_key_id, channel, "to", "from", content_preview, status, credits_charged, webhook_url, reference)
 		VALUES ($1, $2, 'sms', $3, $4, $5, 'sending', $6, $7, $8) RETURNING id
-	`, accountID, keyInfo.KeyID, req.To, settings.SenderID, truncate(req.Message, 200), creditCost, webhookURL, req.Reference).Scan(&msgID)
+	`, accountID, keyInfo.KeyID, req.To, settings.SenderID, truncate(req.Message, 200), creditCost, webhookURL, req.Reference).Scan(&msgID); err != nil {
+		RefundCredit(h.db, accountID, "sms", creditCost)
+
+		return apiError(c, http.StatusInternalServerError, "PROVIDER_ERROR",
+			"Could not record the message, so it was not sent. No credit was charged.", "")
+	}
 
 	// Send via Aakash SMS
 	client := aakashsms.NewClient(settings.AuthToken)
@@ -110,7 +118,7 @@ func (h *PublicSMSHandler) Send(c echo.Context) error {
 
 	if sendErr != nil {
 		RefundCredit(h.db, accountID, "sms", creditCost)
-		h.db.Exec(`UPDATE api_messages SET status = 'failed', error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
+		h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
 		return apiError(c, http.StatusBadGateway, "PROVIDER_ERROR", fmt.Sprintf("SMS send failed: %v", sendErr), "")
 	}
 
@@ -238,7 +246,7 @@ func (h *PublicSMSHandler) SendBulk(c echo.Context) error {
 
 		_, sendErr := client.SendSMS(r.To, msg)
 		if sendErr != nil {
-			h.db.Exec(`UPDATE api_messages SET status = 'failed', error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
+			h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
 			RefundCredit(h.db, accountID, "sms", 1)
 			failed++
 		} else {
@@ -403,9 +411,24 @@ func apiError(c echo.Context, status int, code, message, field string) error {
 	})
 }
 
+// truncate shortens a message preview to fit its column, cutting on a character
+// boundary rather than a byte one.
+//
+// maxLen is a byte budget, and a plain s[:maxLen] can land in the middle of a
+// multi-byte character. Every Devanagari character is three bytes, so a Nepali
+// message a little over the limit was reliably cut mid-character; the result is
+// not valid UTF-8, Postgres rejects the parameter outright, and the INSERT that
+// was carrying it fails. Callers use this for message previews, so that failure
+// took the whole api_messages row with it.
 func truncate(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
+
+	// Walk back off any continuation byte so the cut lands between characters.
+	for maxLen > 0 && !utf8.RuneStart(s[maxLen]) {
+		maxLen--
+	}
+
 	return s[:maxLen]
 }

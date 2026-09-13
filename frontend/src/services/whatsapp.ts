@@ -228,7 +228,15 @@ export const whatsappService = {
 
   getCampaign: async (
     id: number
-  ): Promise<{ data: { campaign: WACampaign; status_breakdown: any[]; recipients: WACampaignRecipient[] } }> => {
+  ): Promise<{
+    data: {
+      campaign: WACampaign
+      status_breakdown: any[]
+      recipients: WACampaignRecipient[]
+      /** Opted-in contacts this campaign has still not reached. */
+      remaining?: number
+    }
+  }> => {
     const response = await api.get(`/whatsapp/campaigns/${id}`)
 
     return response.data
@@ -254,15 +262,34 @@ export const whatsappService = {
     await api.delete(`/whatsapp/campaigns/${id}`)
   },
 
-  /** Sends one phase. Contacts already reached by this campaign are skipped, so
-   *  calling it again continues rather than starting over. */
+  /** Starts a send. Contacts already reached by this campaign are skipped, so
+   *  calling it again continues rather than starting over.
+   *
+   *  In phase mode it sends `batchSize` contacts and then parks the campaign. In
+   *  continuous mode it works through everyone remaining, leaving `intervalSeconds`
+   *  between messages, and keeps going across restarts until it finishes or is
+   *  paused. */
   sendCampaign: async (
     id: number,
-    batchSize?: number
+    batchSize?: number,
+    options?: { continuous?: boolean; intervalSeconds?: number }
   ): Promise<{
-    data: { status: string; sending_now: number; remaining_after: number; total_remaining: number; message: string }
+    data: {
+      status: string
+      mode: 'batch' | 'continuous'
+      sending_now: number
+      remaining_after: number
+      total_remaining: number
+      interval_seconds?: number
+      estimated_finish?: string
+      message: string
+    }
   }> => {
-    const response = await api.post(`/whatsapp/campaigns/${id}/send`, { batch_size: batchSize })
+    const response = await api.post(`/whatsapp/campaigns/${id}/send`, {
+      batch_size: batchSize,
+      continuous: options?.continuous ?? false,
+      interval_seconds: options?.intervalSeconds
+    })
 
     return response.data
   },

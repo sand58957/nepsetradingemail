@@ -29,6 +29,9 @@ import DialogActions from '@mui/material/DialogActions'
 import TextField from '@mui/material/TextField'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Switch from '@mui/material/Switch'
+import Divider from '@mui/material/Divider'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -61,6 +64,10 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
   const [campaign, setCampaign] = useState<WACampaign | null>(null)
   const [statusBreakdown, setStatusBreakdown] = useState<{ status: string; count: number }[]>([])
   const [recipients, setRecipients] = useState<WACampaignRecipient[]>([])
+
+  // Opted-in contacts this campaign has not reached yet, straight from the API —
+  // it is what sets the length of a continuous run.
+  const [remainingEstimate, setRemainingEstimate] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -79,6 +86,11 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
   // choice, starting small.
   const [batchSize, setBatchSize] = useState(25)
 
+  // Continuous mode works through the whole remaining list on its own, spacing
+  // messages by intervalSeconds, instead of stopping after one phase.
+  const [continuous, setContinuous] = useState(false)
+  const [intervalSeconds, setIntervalSeconds] = useState(30)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -96,6 +108,7 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
         setCampaign(response.data.campaign)
         setStatusBreakdown(response.data.status_breakdown || [])
         setRecipients(response.data.recipients || [])
+        setRemainingEstimate(response.data.remaining ?? null)
       } catch {
         setError('Failed to load campaign details')
       } finally {
@@ -124,6 +137,18 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
 
     return ((campaign.failed_count / campaign.sent_count) * 100).toFixed(1)
   }, [campaign])
+
+  // How long a continuous run would take at the chosen interval. Picking "30" in
+  // a form does not make it obvious that 30,000 contacts is then ten days of
+  // sending, so say so before they start.
+  const continuousEta = useMemo(() => {
+    const hours = ((remainingEstimate ?? 0) * intervalSeconds) / 3600
+
+    if (hours < 1) return { hours, label: `${Math.max(1, Math.round(hours * 60))} minutes` }
+    if (hours < 48) return { hours, label: `${hours.toFixed(1)} hours` }
+
+    return { hours, label: `${(hours / 24).toFixed(1)} days` }
+  }, [remainingEstimate, intervalSeconds])
 
   // Test send
   const handleTestSend = async () => {
@@ -157,7 +182,10 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
     setSending(true)
 
     try {
-      const response = await whatsappService.sendCampaign(Number(id), batchSize)
+      const response = await whatsappService.sendCampaign(Number(id), batchSize, {
+        continuous,
+        intervalSeconds
+      })
 
       setSnackbar({
         open: true,
@@ -172,6 +200,7 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
       const updated = await whatsappService.getCampaign(Number(id))
 
       setCampaign(updated.data.campaign)
+      setRemainingEstimate(updated.data.remaining ?? null)
     } catch {
       setSnackbar({ open: true, message: 'Failed to send campaign', severity: 'error' })
     } finally {
@@ -258,7 +287,14 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                   )}
                 </div>
                 <div className='flex gap-2 flex-wrap'>
-                  {campaign.status === 'draft' && (
+                  {/* A campaign that has stopped must still offer a way forward.
+                      These buttons used to render only for 'draft', so the moment a
+                      phase finished and parked the campaign at 'paused' there was no
+                      control left to continue it — the backend accepted a resume the
+                      whole time, the button simply was not there. */}
+                  {(campaign.status === 'draft' ||
+                    campaign.status === 'paused' ||
+                    campaign.status === 'failed') && (
                     <>
                       <Button
                         variant='outlined'
@@ -273,7 +309,7 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                         startIcon={<i className='tabler-send' />}
                         onClick={() => setSendDialogOpen(true)}
                       >
-                        Send Campaign
+                        {campaign.status === 'draft' ? 'Send Campaign' : 'Continue Sending'}
                       </Button>
                     </>
                   )}
@@ -613,18 +649,51 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
             phase first and check the number is still connected before widening.
           </Alert>
           <Typography className='mb-4'>
-            Send the next phase of &quot;{campaign.name}&quot;. Contacts already reached by this campaign are skipped,
-            so you can run it again to continue.
+            Send &quot;{campaign.name}&quot;. Contacts already reached by this campaign are skipped, so nobody is
+            messaged twice however many times you run it.
           </Typography>
-          <TextField
-            fullWidth
-            type='number'
-            label='Contacts in this phase'
-            value={batchSize}
-            onChange={e => setBatchSize(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
-            helperText='Start around 25. Maximum 500 per phase; sending is capped at 2 messages per second.'
-            inputProps={{ min: 1, max: 500 }}
+
+          <FormControlLabel
+            control={<Switch checked={continuous} onChange={e => setContinuous(e.target.checked)} />}
+            label='Keep sending until the list is finished'
           />
+          <Typography variant='body2' color='text.secondary' className='mbe-4'>
+            {continuous
+              ? 'The campaign works through everyone remaining on its own, waiting the interval below between messages. It carries on after a restart, and stops when you pause it.'
+              : 'The campaign sends one phase and then pauses, so you can check the number is still connected before continuing.'}
+          </Typography>
+
+          <Divider className='mbe-4' />
+
+          {continuous ? (
+            <>
+              <TextField
+                fullWidth
+                type='number'
+                label='Seconds between messages'
+                value={intervalSeconds}
+                onChange={e => setIntervalSeconds(Math.max(1, Math.min(3600, Number(e.target.value) || 1)))}
+                helperText='Longer gaps look more like a person and are much safer for the number. 30 seconds is a reasonable starting point.'
+                inputProps={{ min: 1, max: 3600 }}
+              />
+              {remainingEstimate !== null && (
+                <Alert severity={continuousEta.hours > 24 ? 'warning' : 'info'} className='mbs-4'>
+                  About {remainingEstimate.toLocaleString()} contacts left. At one every {intervalSeconds}s that is
+                  roughly <strong>{continuousEta.label}</strong> of continuous sending.
+                </Alert>
+              )}
+            </>
+          ) : (
+            <TextField
+              fullWidth
+              type='number'
+              label='Contacts in this phase'
+              value={batchSize}
+              onChange={e => setBatchSize(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
+              helperText='Start around 25. Maximum 500 per phase; sending is capped at 2 messages per second.'
+              inputProps={{ min: 1, max: 500 }}
+            />
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSendDialogOpen(false)}>Cancel</Button>

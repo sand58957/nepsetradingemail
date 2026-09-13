@@ -296,6 +296,15 @@ func ChatID(phone string) (string, error) {
 	// Some inputs arrive as 00977…; strip the international access prefix.
 	digits = strings.TrimPrefix(digits, "00")
 
+	// "098…" is how a Nepali mobile is written locally, and it is the form that
+	// arrives from most address books and CSV exports. The leading 0 is a national
+	// trunk prefix and never part of an international number — no country code
+	// begins with 0 — so it has to come off before the length is measured.
+	// Left on, the number stayed 11 digits, skipped the country-code branch below,
+	// and was handed to the gateway as 09805749767@c.us: a chat id that belongs to
+	// nobody, so the message silently went nowhere.
+	digits = strings.TrimPrefix(digits, "0")
+
 	if len(digits) == 10 && strings.HasPrefix(digits, "9") {
 		digits = "977" + digits
 	}
@@ -352,26 +361,32 @@ var placeholder = regexp.MustCompile(`\{\{\s*(\d+)\s*\}\}`)
 // left as-is rather than blanked, so a mis-configured campaign is obvious in the
 // delivered text instead of silently losing words.
 func RenderTemplate(header, body, footer string, params []string) string {
-	filled := placeholder.ReplaceAllStringFunc(body, func(m string) string {
-		idx := placeholder.FindStringSubmatch(m)
-		if len(idx) != 2 {
+	// Meta numbered a template's placeholders per component, so a header carried
+	// its own {{1}}. Here the three parts are concatenated into one plain-text
+	// message and share a single parameter list. Substituting only the body left
+	// "Hi {{1}}" headers going out to recipients verbatim.
+	fill := func(s string) string {
+		return placeholder.ReplaceAllStringFunc(s, func(m string) string {
+			idx := placeholder.FindStringSubmatch(m)
+			if len(idx) != 2 {
+				return m
+			}
+
+			n := 0
+			for _, r := range idx[1] {
+				n = n*10 + int(r-'0')
+			}
+
+			if n >= 1 && n <= len(params) {
+				return params[n-1]
+			}
+
 			return m
-		}
-
-		n := 0
-		for _, r := range idx[1] {
-			n = n*10 + int(r-'0')
-		}
-
-		if n >= 1 && n <= len(params) {
-			return params[n-1]
-		}
-
-		return m
-	})
+		})
+	}
 
 	parts := make([]string, 0, 3)
-	for _, p := range []string{strings.TrimSpace(header), strings.TrimSpace(filled), strings.TrimSpace(footer)} {
+	for _, p := range []string{strings.TrimSpace(fill(header)), strings.TrimSpace(fill(body)), strings.TrimSpace(fill(footer))} {
 		if p != "" {
 			parts = append(parts, p)
 		}

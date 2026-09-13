@@ -117,11 +117,22 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 		contentPreview = fmt.Sprintf("[Template: %s]", req.TemplateName)
 	}
 
+	// This row is the only record that the send happened, so a failure to write it
+	// has to stop the send. Discarding the error left msgID at 0: the message went
+	// out, the credit was spent, every later UPDATE matched no row, and the caller
+	// got a 200 quoting message_id "wa_msg_0", which then 404s on lookup and never
+	// appears in GET /messages. An over-long `reference` (the column is 255) is
+	// enough to trigger it.
 	var msgID int
-	h.db.QueryRow(`
+	if err := h.db.QueryRow(`
 		INSERT INTO api_messages (account_id, api_key_id, channel, "to", "from", content_preview, status, credits_charged, webhook_url, reference)
 		VALUES ($1, $2, 'whatsapp', $3, $4, $5, 'sending', $6, $7, $8) RETURNING id
-	`, accountID, keyInfo.KeyID, req.To, settings.SourcePhone, truncate(contentPreview, 200), creditCost, webhookURL, req.Reference).Scan(&msgID)
+	`, accountID, keyInfo.KeyID, req.To, settings.SourcePhone, truncate(contentPreview, 200), creditCost, webhookURL, req.Reference).Scan(&msgID); err != nil {
+		RefundCredit(h.db, accountID, "whatsapp", creditCost)
+
+		return apiError(c, http.StatusInternalServerError, "PROVIDER_ERROR",
+			"Could not record the message, so it was not sent. No credit was charged.", "")
+	}
 
 	// Send via the self-hosted gateway. A "template" request no longer references
 	// an approved Meta template by name — that concept went with Gupshup — so the
@@ -147,6 +158,16 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 				 WHERE account_id = $1 AND name = $2 LIMIT 1`, accountID, req.TemplateName); err != nil {
 				RefundCredit(h.db, accountID, "whatsapp", creditCost)
 
+				// The api_messages row was inserted before this lookup, so it has
+				// to be closed out here as well. Under Gupshup the template name
+				// went straight to Meta and there was nothing to look up locally;
+				// rendering templates ourselves added a failure point between the
+				// insert and the send, and rows that took it sat at 'sending' for
+				// ever, still claiming a credit that had just been handed back.
+				h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0,
+					error_message = $2, updated_at = NOW() WHERE id = $1`,
+					msgID, fmt.Sprintf("no template named %q", req.TemplateName))
+
 				return apiError(c, http.StatusBadRequest, "TEMPLATE_NOT_FOUND",
 					fmt.Sprintf("No template named %q", req.TemplateName), "")
 			}
@@ -164,7 +185,7 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 
 	if sendErr != nil {
 		RefundCredit(h.db, accountID, "whatsapp", creditCost)
-		h.db.Exec(`UPDATE api_messages SET status = 'failed', error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
+		h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
 		return apiError(c, http.StatusBadGateway, "PROVIDER_ERROR", fmt.Sprintf("WhatsApp send failed: %v", sendErr), "")
 	}
 
@@ -280,7 +301,43 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 	sent := 0
 	failed := 0
 
-	for _, r := range req.Recipients {
+	// Pace the batch the way the campaign sender is paced. This is an unofficial
+	// gateway driving a real WhatsApp account, and a burst of back-to-back sends is
+	// the behaviour that gets a number restricted; the campaign path was clamped to
+	// this rate after a run at roughly 5,000/min burned through 15,783 contacts
+	// against a logged-out session. A bulk call of 100 previously went out as fast
+	// as the loop could turn, which is the same risk through a different door.
+	const bulkSendRate = 2 // messages per second
+	throttle := time.NewTicker(time.Second / bulkSendRate)
+	defer throttle.Stop()
+
+	// Give up rather than hammer a gateway that is clearly not accepting anything —
+	// the failure mode that made the earlier incident expensive was continuing to
+	// send into a dead session and marking every contact failed on the way.
+	const maxConsecutiveFailures = 10
+	consecutiveFailures := 0
+	aborted := false
+
+	for i, r := range req.Recipients {
+		if consecutiveFailures >= maxConsecutiveFailures {
+			aborted = true
+
+			break
+		}
+
+		// Pace between sends, not before the first one.
+		if i > 0 {
+			select {
+			case <-throttle.C:
+			case <-c.Request().Context().Done():
+				aborted = true
+			}
+
+			if aborted {
+				break
+			}
+		}
+
 		// Determine template/message per recipient (fallback to shared)
 		templateName := r.TemplateName
 		if templateName == "" {
@@ -341,27 +398,42 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 		}
 
 		if sendErr != nil {
-			h.db.Exec(`UPDATE api_messages SET status = 'failed', error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
+			h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())
 			RefundCredit(h.db, accountID, "whatsapp", 1)
 			failed++
+			consecutiveFailures++
 		} else {
 			h.db.Exec(`UPDATE api_messages SET status = 'sent', sent_at = NOW(), updated_at = NOW() WHERE id = $1`, msgID)
 			ConfirmCredit(h.db, accountID, "whatsapp", 1, msgID)
 			sent++
+			consecutiveFailures = 0
 		}
 	}
 
 	remaining := GetCreditBalance(h.db, accountID, "whatsapp")
 
+	// Say plainly when the batch stopped early. Reporting total as the requested
+	// count while sent+failed is lower would read as though the rest succeeded.
+	skipped := len(req.Recipients) - (sent + failed)
+
+	data := map[string]interface{}{
+		"total":             len(req.Recipients),
+		"sent":              sent,
+		"failed":            failed,
+		"credits_used":      float64(sent),
+		"credits_remaining": remaining,
+	}
+
+	if aborted && skipped > 0 {
+		data["skipped"] = skipped
+		data["message"] = fmt.Sprintf(
+			"Stopped after %d consecutive failures; %d recipients were not attempted. Check the WhatsApp connection and resend those.",
+			consecutiveFailures, skipped)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
-		"data": map[string]interface{}{
-			"total":             len(req.Recipients),
-			"sent":              sent,
-			"failed":            failed,
-			"credits_used":      float64(sent),
-			"credits_remaining": remaining,
-		},
+		"data":    data,
 	})
 }
 
@@ -459,15 +531,55 @@ func (h *PublicWhatsAppHandler) GetBalance(c echo.Context) error {
 // GetStatus checks if WhatsApp is configured and working.
 func (h *PublicWhatsAppHandler) GetStatus(c echo.Context) error {
 	keyInfo := mw.GetAPIKeyInfo(c)
-	err := CheckWhatsAppConfigured(h.db, keyInfo.AccountID)
+	configured := CheckWhatsAppConfigured(h.db, keyInfo.AccountID) == nil
+
+	data := map[string]interface{}{
+		"channel":    "whatsapp",
+		"configured": configured,
+		"provider":   "openwa",
+	}
+
+	// "configured" only means a session id is stored against the account. Whether
+	// a message can actually be sent depends on the gateway still holding that
+	// session in the ready state, and a linked handset can drop out at any time —
+	// someone unlinks the device, the phone goes offline, WhatsApp restricts the
+	// account. Reporting configured alone told callers the channel was fine while
+	// every send came back 502, so ask the gateway and report what it says.
+	if configured {
+		var settings struct {
+			SessionID   string `db:"openwa_session_id"`
+			LinkedPhone string `db:"linked_phone"`
+		}
+
+		if err := h.db.Get(&settings,
+			"SELECT openwa_session_id, linked_phone FROM wa_settings WHERE account_id = $1",
+			keyInfo.AccountID); err == nil {
+			data["linked_phone"] = settings.LinkedPhone
+
+			client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
+
+			session, err := client.GetSession(c.Request().Context(), settings.SessionID)
+			switch {
+			case err != nil:
+				data["connected"] = false
+				data["session_status"] = "unreachable"
+				data["detail"] = "The WhatsApp gateway could not be reached, so sends will fail."
+			case session.Connected():
+				data["connected"] = true
+				data["session_status"] = session.Status
+			default:
+				data["connected"] = false
+				data["session_status"] = session.Status
+				data["detail"] = "The linked number is not ready to send. Re-link it in WhatsApp settings."
+			}
+		}
+	} else {
+		data["connected"] = false
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
-		"data": map[string]interface{}{
-			"channel":    "whatsapp",
-			"configured": err == nil,
-			"provider":   "openwa",
-		},
+		"data":    data,
 	})
 }
 
@@ -476,32 +588,32 @@ func (h *PublicWhatsAppHandler) ListTemplates(c echo.Context) error {
 	keyInfo := mw.GetAPIKeyInfo(c)
 	accountID := keyInfo.AccountID
 
-	var templates []struct {
+	// The columns here are name and body_text. Selecting template_name and body —
+	// neither of which this table has ever had — made Postgres reject the query
+	// outright, and because the error was discarded the endpoint answered 200 with
+	// an empty list. An account with ten approved templates was told it had none.
+	//
+	// Status is stored lowercase ("approved"); the old filter compared against
+	// Meta's uppercase 'APPROVED', so fixing only the column names would still have
+	// returned nothing. Compare case-insensitively so either spelling matches.
+	type apiTemplate struct {
 		ID           int    `json:"id" db:"id"`
-		TemplateName string `json:"template_name" db:"template_name"`
+		TemplateName string `json:"template_name" db:"name"`
 		Category     string `json:"category" db:"category"`
 		Language     string `json:"language" db:"language"`
 		Status       string `json:"status" db:"status"`
 		HeaderType   string `json:"header_type" db:"header_type"`
-		Body         string `json:"body" db:"body"`
+		Body         string `json:"body" db:"body_text"`
 	}
 
-	h.db.Select(&templates, `
-		SELECT id, template_name, category, language, status, header_type, body
-		FROM wa_templates WHERE account_id = $1 AND status = 'APPROVED'
-		ORDER BY template_name
-	`, accountID)
+	templates := []apiTemplate{}
 
-	if templates == nil {
-		templates = make([]struct {
-			ID           int    `json:"id" db:"id"`
-			TemplateName string `json:"template_name" db:"template_name"`
-			Category     string `json:"category" db:"category"`
-			Language     string `json:"language" db:"language"`
-			Status       string `json:"status" db:"status"`
-			HeaderType   string `json:"header_type" db:"header_type"`
-			Body         string `json:"body" db:"body"`
-		}, 0)
+	if err := h.db.Select(&templates, `
+		SELECT id, name, category, language, status, header_type, body_text
+		FROM wa_templates WHERE account_id = $1 AND lower(status) = 'approved'
+		ORDER BY name
+	`, accountID); err != nil {
+		return apiError(c, http.StatusInternalServerError, "PROVIDER_ERROR", "Could not load templates", "")
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
