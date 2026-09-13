@@ -200,6 +200,28 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 			"WhatsApp sending is paced to protect the linked number: "+paced.Reason, "")
 	}
 
+	// No linked number is an ordinary state the caller can fix, not a gateway
+	// fault: 503 says "try again once it is linked", where 502 read as an outage.
+	if errors.Is(sendErr, openwa.ErrNoConnectedSession) {
+		RefundCredit(h.db, accountID, "whatsapp", creditCost)
+		h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`,
+			msgID, sendErr.Error())
+
+		return apiError(c, http.StatusServiceUnavailable, "CHANNEL_UNAVAILABLE",
+			"No WhatsApp number is linked right now, so the message was not sent. No credit was charged.", "")
+	}
+
+	// A 4xx from the gateway is about this message — a number not on WhatsApp, a
+	// recipient it cannot resolve — so tell the caller that rather than blaming the
+	// provider. Those are the bulk of real-world send failures.
+	if gwErr, ok := openwa.AsGatewayError(sendErr); ok && gwErr.ClientFault() {
+		RefundCredit(h.db, accountID, "whatsapp", creditCost)
+		h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`,
+			msgID, gwErr.Message)
+
+		return apiError(c, http.StatusUnprocessableEntity, "UNDELIVERABLE", gwErr.Message, "to")
+	}
+
 	if sendErr != nil {
 		RefundCredit(h.db, accountID, "whatsapp", creditCost)
 		h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`, msgID, sendErr.Error())

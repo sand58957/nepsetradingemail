@@ -1145,9 +1145,28 @@ func (h *WhatsAppHandler) DeleteTemplate(c echo.Context) error {
 
 	// Templates exist only in this database now, so deleting the row is the whole
 	// operation — there is no remote catalogue to keep in step.
+	//
+	// Campaigns point at their template, and that reference is enforced. Deleting
+	// one still in use raised a foreign-key violation that came back as a bare 500,
+	// which tells the operator nothing; name the campaigns instead so they can see
+	// what is holding it.
+	var usedBy []string
+	h.db.Select(&usedBy, `SELECT name FROM wa_campaigns WHERE template_id = $1 ORDER BY id`, id)
+
+	if len(usedBy) > 0 {
+		return response.Error(c, http.StatusConflict, fmt.Sprintf(
+			"This template is used by %d campaign(s): %s. Delete or re-point them first.",
+			len(usedBy), strings.Join(usedBy, ", ")))
+	}
 
 	// Delete from local DB
 	if _, err := h.db.Exec("DELETE FROM wa_templates WHERE id = $1 AND account_id = $2", id, accountID); err != nil {
+		// Anything still referencing it that the check above did not cover.
+		if pqErr := (*pq.Error)(nil); errors.As(err, &pqErr) && pqErr.Code == "23503" {
+			return response.Error(c, http.StatusConflict,
+				"This template is still referenced by other records and cannot be deleted.")
+		}
+
 		return response.InternalError(c, "Failed to delete template")
 	}
 

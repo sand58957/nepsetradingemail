@@ -78,6 +78,70 @@ func IsPacingLimited(err error) bool {
 	return errors.As(err, &paced)
 }
 
+// GatewayError carries a non-2xx answer from the gateway along with the status it
+// used, so callers can decide what it means to their own client.
+//
+// Most of these are not faults. Asking for a QR code while a session is
+// disconnected, starting a session that is already running, sending to a number
+// the engine cannot resolve — the gateway answers 4xx and explains itself, and
+// that explanation is what an operator needs to see.
+type GatewayError struct {
+	Status  int
+	Method  string
+	Path    string
+	Message string
+}
+
+func (e *GatewayError) Error() string {
+	if e.Message != "" {
+		return fmt.Sprintf("openwa: %s %s: %d: %s", e.Method, e.Path, e.Status, e.Message)
+	}
+
+	return fmt.Sprintf("openwa: %s %s: %d", e.Method, e.Path, e.Status)
+}
+
+// ClientFault reports whether the gateway blamed the request rather than itself,
+// which means retrying it unchanged will not help.
+func (e *GatewayError) ClientFault() bool { return e.Status >= 400 && e.Status < 500 }
+
+// AsGatewayError extracts a GatewayError from err, if there is one.
+func AsGatewayError(err error) (*GatewayError, bool) {
+	var gwErr *GatewayError
+
+	return gwErr, errors.As(err, &gwErr)
+}
+
+// gatewayMessage pulls the human-readable part out of the gateway's error body,
+// which is JSON with a "message" field, falling back to the raw text.
+func gatewayMessage(payload []byte) string {
+	var body struct {
+		Message any `json:"message"`
+	}
+
+	if json.Unmarshal(payload, &body) == nil {
+		switch m := body.Message.(type) {
+		case string:
+			if m != "" {
+				return m
+			}
+		case []any:
+			// Validation errors come back as an array of strings.
+			parts := make([]string, 0, len(m))
+			for _, item := range m {
+				if s, ok := item.(string); ok {
+					parts = append(parts, s)
+				}
+			}
+
+			if len(parts) > 0 {
+				return strings.Join(parts, "; ")
+			}
+		}
+	}
+
+	return snippet(payload)
+}
+
 // ErrNoConnectedSession is returned when a send is attempted with no session in
 // the ready state. This is an ordinary operational state — nobody has linked
 // a phone yet, or the link dropped — not a bug, and callers should surface it as
@@ -214,7 +278,17 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 			}
 		}
 
-		return fmt.Errorf("openwa: %s %s: %s: %s", method, path, resp.Status, snippet(payload))
+		// Keep the gateway's own status. A 4xx from it is almost always a normal
+		// operational state an operator needs to read — "this session has no QR
+		// right now, start it first" — and flattening every one of them into a 502
+		// turned those into alarming gateway faults that the settings page then
+		// retried in a loop, 300 times in an hour.
+		return &GatewayError{
+			Status:  resp.StatusCode,
+			Method:  method,
+			Path:    path,
+			Message: gatewayMessage(payload),
+		}
 	}
 
 	if out == nil {

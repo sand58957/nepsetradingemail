@@ -48,9 +48,23 @@ func (h *OpenWAAdminHandler) gatewayError(c echo.Context, err error) error {
 	case errors.Is(err, openwa.ErrNoConnectedSession):
 		return response.Error(c, http.StatusConflict,
 			"No WhatsApp number is linked. Create a session and scan its QR code.")
-	default:
-		return response.Error(c, http.StatusBadGateway, "WhatsApp gateway error: "+err.Error())
 	}
+
+	// A 4xx from the gateway is it describing the state we asked about, not a
+	// fault: no QR while a session is disconnected, a session already started.
+	// Passing the status through keeps those out of the 502 bucket, where they
+	// read as an outage and get retried in a loop — the settings page polling a
+	// disconnected session's QR produced 304 of those in one hour.
+	if gwErr, ok := openwa.AsGatewayError(err); ok && gwErr.ClientFault() {
+		message := gwErr.Message
+		if message == "" {
+			message = "The gateway rejected that request."
+		}
+
+		return response.Error(c, http.StatusConflict, message)
+	}
+
+	return response.Error(c, http.StatusBadGateway, "WhatsApp gateway error: "+err.Error())
 }
 
 // ListSessions returns every session on the gateway.

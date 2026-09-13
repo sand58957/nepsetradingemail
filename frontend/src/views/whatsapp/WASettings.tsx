@@ -112,6 +112,15 @@ const WASettings = () => {
 
     let cancelled = false
 
+    // A miss or two is expected while the engine rotates the code, so the first
+    // few are ignored. A persistent one is not: when the session had dropped out
+    // of qr_ready the gateway refused every request, and because this loop
+    // swallowed the error and never gave up it asked 304 times in one hour and
+    // showed the operator nothing at all. After a few failures in a row, say what
+    // the gateway said and stop.
+    let consecutiveFailures = 0
+    const maxConsecutiveFailures = 3
+
     const tick = async () => {
       try {
         const [qrRes, sessionRes] = await Promise.all([
@@ -121,6 +130,7 @@ const WASettings = () => {
 
         if (cancelled) return
 
+        consecutiveFailures = 0
         setQr(qrRes.data?.qrCode || '')
 
         // Scanned: swap the code for the connected state straight away.
@@ -129,9 +139,20 @@ const WASettings = () => {
           setSessions(prev => prev.map(s => (s.id === sessionRes.data.id ? sessionRes.data : s)))
           notify(`Linked ${sessionRes.data.phone || 'number'} successfully`, 'success')
         }
-      } catch {
-        // A transient miss is expected while the engine rotates the code; the
-        // next tick recovers, so this is deliberately silent.
+      } catch (err) {
+        if (cancelled) return
+
+        consecutiveFailures += 1
+
+        if (consecutiveFailures >= maxConsecutiveFailures) {
+          stop()
+          setQr('')
+          notify(
+            errorText(err, 'The QR code could not be fetched. Start the session and try again.'),
+            'error'
+          )
+          loadSessions()
+        }
       }
     }
 
@@ -142,7 +163,9 @@ const WASettings = () => {
       cancelled = true
       stop()
     }
-  }, [active])
+    // loadSessions is a useCallback with no dependencies, so listing it here
+    // satisfies the exhaustive-deps rule without making the poll restart.
+  }, [active, loadSessions])
 
   const run = async (fn: () => Promise<void>, done: string) => {
     setBusy(true)
