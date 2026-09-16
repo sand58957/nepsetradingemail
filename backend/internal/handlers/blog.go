@@ -162,6 +162,7 @@ type BlogPost struct {
 	// Joined fields
 	AuthorName   string `json:"author_name,omitempty" db:"author_name"`
 	CategoryName string `json:"category_name,omitempty" db:"category_name"`
+	CategorySlug string `json:"category_slug,omitempty" db:"category_slug"`
 }
 
 type BlogPostFAQ struct {
@@ -1221,7 +1222,8 @@ func (h *BlogHandler) PublicGetPost(c echo.Context) error {
 
 	var post BlogPost
 	err := h.db.Get(&post, `
-		SELECT p.*, COALESCE(a.name, '') AS author_name, COALESCE(cat.name, '') AS category_name
+		SELECT p.*, COALESCE(a.name, '') AS author_name, COALESCE(cat.name, '') AS category_name,
+		       COALESCE(cat.slug, '') AS category_slug
 		FROM blog_posts p
 		LEFT JOIN blog_authors a ON a.id = p.author_id
 		LEFT JOIN blog_categories cat ON cat.id = p.category_id
@@ -1286,8 +1288,37 @@ func (h *BlogHandler) PublicGetPost(c echo.Context) error {
 	return c.JSON(http.StatusOK, payload)
 }
 
+// PublicGetCategory returns one category that has published posts, or 404.
+// /categories/:slug used to be routed to the post list, so the category page read
+// a list as a category and rendered "undefined" for every category.
+func (h *BlogHandler) PublicGetCategory(c echo.Context) error {
+	var category struct {
+		ID          int    `db:"id" json:"id"`
+		Name        string `db:"name" json:"name"`
+		Slug        string `db:"slug" json:"slug"`
+		Description string `db:"description" json:"description"`
+		PostCount   int    `db:"post_count" json:"post_count"`
+	}
+
+	err := h.db.Get(&category, `
+		SELECT MIN(c.id) AS id, MIN(c.name) AS name, c.slug,
+		       COALESCE(MIN(NULLIF(c.description, '')), '') AS description,
+		       COUNT(p.id) AS post_count
+		FROM blog_categories c
+		JOIN blog_posts p ON p.category_id = c.id AND p.status = 'published'
+		WHERE c.slug = $1
+		GROUP BY c.slug`, c.Param("slug"))
+	if err != nil {
+		return response.NotFound(c, "Category not found")
+	}
+
+	return response.Success(c, category)
+}
+
 func (h *BlogHandler) PublicListByCategory(c echo.Context) error {
-	c.SetParamNames("category")
+	// A SetParamNames("category") call used to stand here. It renamed the route's
+	// :slug parameter away, so c.Param("slug") was always empty and every category,
+	// including invented ones, listed all posts.
 	c.QueryParams().Set("category", c.Param("slug"))
 	return h.PublicListPosts(c)
 }

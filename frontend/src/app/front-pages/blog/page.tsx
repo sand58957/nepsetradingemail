@@ -1,38 +1,32 @@
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 
 import type { Metadata } from 'next'
 
 import { getApiBase } from '@/utils/apiBase'
+import { pagedPath, pageMetadata, parsePageParam } from '@/utils/seo'
 
 const API_URL = getApiBase()
 const BASE_URL = 'https://nepalfillings.com'
 
-export const metadata: Metadata = {
-  title: 'Blog - Nepal Fillings | Digital Marketing Guides for Nepal',
-  description:
-    'Expert guides on email marketing, SMS, WhatsApp, Telegram, and Messenger marketing for Nepal businesses. Tips, strategies, and case studies.',
-  keywords: [
-    'Nepal digital marketing blog',
-    'email marketing Nepal',
-    'SMS marketing Nepal',
-    'WhatsApp marketing Nepal',
-    'Telegram marketing Nepal'
-  ],
-  openGraph: {
-    title: 'Blog - Nepal Fillings | Digital Marketing Guides',
+// Each page of the archive is its own URL. Every page used to declare /blog as its
+// canonical, which asked search engines to ignore pages 2 to 134 and the posts
+// reachable only through them.
+export async function generateMetadata({
+  searchParams
+}: {
+  searchParams: Promise<{ page?: string | string[] }>
+}): Promise<Metadata> {
+  const page = parsePageParam((await searchParams).page) ?? 1
+
+  return pageMetadata({
+    path: pagedPath('/blog', page),
+    title: page === 1 ? 'Nepal Fillings Blog: Marketing Guides for Nepal' : `Nepal Fillings Blog – Page ${page}`,
     description:
-      'Expert digital marketing guides for Nepal businesses. Email, SMS, WhatsApp, Telegram, and Messenger strategies.',
-    url: `${BASE_URL}/blog`,
-    siteName: 'Nepal Fillings',
-    type: 'website'
-  },
-  alternates: { canonical: '/blog' },
-  other: {
-    'geo.region': 'NP',
-    'geo.placename': 'Kathmandu',
-    'geo.position': '27.7172;85.3240',
-    ICBM: '27.7172, 85.3240'
-  }
+      page === 1
+        ? 'Guides to email, SMS, WhatsApp, Telegram and Messenger marketing for businesses in Nepal, published by Nepal Fillings.'
+        : `Page ${page} of the Nepal Fillings blog archive, newest articles first.`
+  })
 }
 
 interface BlogPost {
@@ -98,9 +92,14 @@ async function getCategories(): Promise<{ id: number; name: string; slug: string
 
 // metadata is exported at the top of the file
 
-export default async function BlogListingPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function BlogListingPage({ searchParams }: { searchParams: Promise<{ page?: string | string[] }> }) {
   const params = await searchParams
-  const currentPage = Number(params.page) || 1
+  const parsedPage = parsePageParam(params.page)
+
+  // ?page=abc, ?page=0 and the like are not pages of this archive.
+  if (parsedPage === null) notFound()
+
+  const currentPage = parsedPage
   const [postsResponse, categories] = await Promise.all([getPublishedPosts(currentPage), getCategories()])
 
   const posts = postsResponse.data || []
@@ -110,13 +109,17 @@ export default async function BlogListingPage({ searchParams }: { searchParams: 
   const totalPages =
     postsResponse.total_pages || Math.ceil((postsResponse.total || 0) / (postsResponse.per_page || 12))
 
+  // ?page=999 used to answer 200 with an empty listing. Only when the API answered,
+  // so an outage never turns real pages into 404s.
+  if (postsResponse.success && currentPage > Math.max(1, totalPages)) notFound()
+
   const blogListSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: 'Nepal Fillings Blog',
     description:
-      'Expert articles on email marketing, SMS campaigns, WhatsApp business, Telegram marketing, and digital growth strategies for Nepali businesses.',
-    url: `${BASE_URL}/blog`,
+      'Guides to email, SMS, WhatsApp, Telegram and Messenger marketing for businesses in Nepal, published by Nepal Fillings.',
+    url: `${BASE_URL}${pagedPath('/blog', currentPage)}`,
     isPartOf: {
       '@type': 'WebSite',
       name: 'Nepal Fillings',
@@ -133,7 +136,7 @@ export default async function BlogListingPage({ searchParams }: { searchParams: 
         <Link href='/' className='blog-back-link'>
           &larr; Back to Nepal Fillings
         </Link>
-        <h1 className='blog-list-title'>Nepal Fillings Blog</h1>
+        <h1 className='blog-list-title'>Nepal Fillings Blog{currentPage > 1 ? ` – page ${currentPage}` : ''}</h1>
         <p className='blog-list-subtitle'>
           Expert insights on email marketing, SMS campaigns, WhatsApp business, and digital growth strategies for Nepali
           businesses.

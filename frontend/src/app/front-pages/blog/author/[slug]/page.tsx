@@ -6,6 +6,7 @@ import type { Metadata } from 'next'
 import type { BlogAuthor } from '@/utils/blogSchema'
 import { generateAuthorSchema } from '@/utils/blogSchema'
 import { getApiBase } from '@/utils/apiBase'
+import { BLOG_NAME, pagedPath, parsePageParam, withBrand } from '@/utils/seo'
 
 const API_URL = getApiBase()
 const BASE_URL = 'https://nepalfillings.com'
@@ -66,25 +67,34 @@ async function getAuthorPosts(slug: string, page = 1): Promise<PostsResponse> {
   }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
+export async function generateMetadata({
+  params,
+  searchParams
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ page?: string | string[] }>
+}): Promise<Metadata> {
+  const [{ slug }, sp] = await Promise.all([params, searchParams])
   const author = await getAuthor(slug)
 
   if (!author) {
-    return { title: 'Author Not Found' }
+    return { title: { absolute: `Author not found | ${BLOG_NAME}` }, robots: { index: false, follow: true } }
   }
 
-  const title = `${author.name} - Author at Nepal Fillings Blog`
+  const page = parsePageParam(sp.page) ?? 1
+
+  // Absolute: "Author at Nepal Fillings Blog" plus the layout template doubled the brand.
+  const title = withBrand(page === 1 ? `${author.name}: Articles` : `${author.name}: Articles, Page ${page}`, BLOG_NAME)
   const description =
     author.bio || `Read articles by ${author.name} on digital marketing strategies for Nepali businesses.`
 
   return {
-    title,
+    title: { absolute: title },
     description,
     openGraph: {
       title,
       description,
-      url: `${BASE_URL}/blog/author/${author.slug}`,
+      url: `${BASE_URL}${pagedPath(`/blog/author/${author.slug}`, page)}`,
       siteName: 'Nepal Fillings',
       type: 'profile',
       ...(author.avatar_url
@@ -106,7 +116,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description
     },
     alternates: {
-      canonical: `/blog/author/${author.slug}`
+      canonical: pagedPath(`/blog/author/${author.slug}`, page)
     }
   }
 }
@@ -116,11 +126,15 @@ export default async function AuthorPage({
   searchParams
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string | string[] }>
 }) {
   const { slug } = await params
   const resolvedSearchParams = await searchParams
-  const currentPage = Number(resolvedSearchParams.page) || 1
+  const parsedPage = parsePageParam(resolvedSearchParams.page)
+
+  if (parsedPage === null) notFound()
+
+  const currentPage = parsedPage
 
   const [author, postsResponse] = await Promise.all([getAuthor(slug), getAuthorPosts(slug, currentPage)])
 
@@ -132,6 +146,8 @@ export default async function AuthorPage({
   const totalPages = postsResponse.total_pages || 0
   const totalPosts = postsResponse.total || 0
 
+  if (postsResponse.success && currentPage > Math.max(1, totalPages)) notFound()
+
   const authorSchema = generateAuthorSchema(author, BASE_URL)
 
   const breadcrumbSchema = {
@@ -140,7 +156,7 @@ export default async function AuthorPage({
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
       { '@type': 'ListItem', position: 2, name: 'Blog', item: `${BASE_URL}/blog` },
-      { '@type': 'ListItem', position: 3, name: author.name }
+      { '@type': 'ListItem', position: 3, name: author.name, item: `${BASE_URL}/blog/author/${author.slug}` }
     ]
   }
 

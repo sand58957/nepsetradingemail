@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 
 export const SITE_URL = 'https://nepalfillings.com'
 export const SITE_NAME = 'Nepal Fillings'
+export const BLOG_NAME = 'Nepal Fillings Blog'
 
 export type OgImage = { url: string; width?: number; height?: number; alt: string }
 
@@ -21,6 +22,30 @@ export type PageSeo = {
   /** false renders noindex, follow. */
   index?: boolean
   image?: OgImage
+}
+
+/** Appends ' | brand' only when the whole title still fits in max characters. */
+export function withBrand(title: string, brand: string = SITE_NAME, max = 60): string {
+  const branded = `${title} | ${brand}`
+
+  return branded.length <= max ? branded : title
+}
+
+/**
+ * Reads ?page=. 1 when absent; null for anything that isn't a plain positive
+ * integer (0, 01, abc, 2.5, or the parameter given twice), which callers turn into
+ * a 404 rather than a duplicate of page 1.
+ */
+export function parsePageParam(raw: string | string[] | undefined): number | null {
+  if (raw === undefined) return 1
+  if (Array.isArray(raw) || !/^[1-9][0-9]{0,4}$/.test(raw)) return null
+
+  return Number(raw)
+}
+
+/** A listing's own URL: page 1 is the bare path, later pages carry ?page=N. */
+export function pagedPath(basePath: string, page: number): string {
+  return page === 1 ? basePath : `${basePath}?page=${page}`
 }
 
 /**

@@ -55,10 +55,8 @@ const Layout = async ({ children }: ChildrenType) => {
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <meta name='theme-color' content='#7c3aed' />
         {/* canonical is emitted per-page via Next.js metadata `alternates.canonical` — do NOT hardcode it here, it produces duplicate <link rel="canonical"> tags */}
-        <meta name='geo.region' content='NP' />
-        <meta name='geo.placename' content='Kathmandu' />
-        <meta name='geo.position' content='27.7172;85.3240' />
-        <meta name='ICBM' content='27.7172, 85.3240' />
+        {/* No geo.* meta: search engines ignore it, and the coordinates were
+            Kathmandu's centre rather than the Koteshwor office. */}
         {/* AdSense moved to the blog layout (the only routes with ad slots) so it
             no longer loads on LCP-sensitive landing/pricing pages. */}
       </head>

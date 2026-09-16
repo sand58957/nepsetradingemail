@@ -80,3 +80,32 @@ func TestAccountSettingsAreAdminOnly(t *testing.T) {
 		t.Error("GetAll must return only the known settings keys, never sendgrid_config")
 	}
 }
+
+// The category and author routes used to hand the page a post list where it
+// expected a category or author, so every one rendered "undefined". And a
+// SetParamNames call renamed :slug away, so every category, even an invented one,
+// listed all posts.
+func TestPublicTaxonomyRoutesReturnTheTaxonomy(t *testing.T) {
+	src, err := os.ReadFile("../server/routes.go")
+	if err != nil {
+		t.Fatalf("reading routes.go: %v", err)
+	}
+
+	routes := string(src)
+
+	for _, want := range []string{
+		`publicBlog.GET("/categories/:slug", blogHandler.PublicGetCategory)`,
+		`publicBlog.GET("/categories/:slug/posts", blogHandler.PublicListByCategory)`,
+		`publicBlog.GET("/authors/:slug", blogHandler.PublicGetAuthor)`,
+		`publicBlog.GET("/authors/:slug/posts", blogHandler.PublicListByAuthor)`,
+	} {
+		if !strings.Contains(routes, want) {
+			t.Errorf("routes.go is missing %s", want)
+		}
+	}
+
+	byCategory := handlerSource(t, "blog.go", "func (h *BlogHandler) PublicListByCategory", 600)
+	if strings.Contains(byCategory[:strings.Index(byCategory, "\n}")], "c.SetParamNames(") {
+		t.Error("PublicListByCategory renames the route params, which empties :slug and lists every post")
+	}
+}

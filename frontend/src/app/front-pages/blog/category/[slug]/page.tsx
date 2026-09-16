@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
 import { getApiBase } from '@/utils/apiBase'
+import { BLOG_NAME, pagedPath, pageMetadata, parsePageParam, withBrand } from '@/utils/seo'
 
 const API_URL = getApiBase()
 const BASE_URL = 'https://nepalfillings.com'
@@ -73,38 +74,31 @@ async function getCategoryPosts(slug: string, page = 1): Promise<PostsResponse> 
   }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
+export async function generateMetadata({
+  params,
+  searchParams
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ page?: string | string[] }>
+}): Promise<Metadata> {
+  const [{ slug }, sp] = await Promise.all([params, searchParams])
   const category = await getCategory(slug)
 
   if (!category) {
-    return { title: 'Category Not Found' }
+    return { title: { absolute: `Category not found | ${BLOG_NAME}` }, robots: { index: false, follow: true } }
   }
 
-  const title = `${category.name} - Digital Marketing Articles | Nepal Fillings Blog`
-  const description =
-    category.description ||
-    `Read expert articles about ${category.name}. Digital marketing insights and strategies for Nepali businesses.`
+  const page = parsePageParam(sp.page) ?? 1
 
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      url: `${BASE_URL}/blog/category/${category.slug}`,
-      siteName: 'Nepal Fillings',
-      type: 'website'
-    },
-    twitter: {
-      card: 'summary',
-      title,
-      description
-    },
-    alternates: {
-      canonical: `/blog/category/${category.slug}`
-    }
-  }
+  // Absolute title: the blog layout's "%s | Nepal Fillings Blog" template used to be
+  // appended to a title that already ended in the brand, doubling it.
+  return pageMetadata({
+    path: pagedPath(`/blog/category/${category.slug}`, page),
+    title: withBrand(page === 1 ? `${category.name} Articles` : `${category.name} Articles – Page ${page}`, BLOG_NAME),
+    description:
+      category.description ||
+      `${category.post_count ?? ''} ${category.name.toLowerCase()} articles from the Nepal Fillings blog, newest first.`.trim()
+  })
 }
 
 export default async function CategoryPage({
@@ -112,11 +106,15 @@ export default async function CategoryPage({
   searchParams
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string | string[] }>
 }) {
   const { slug } = await params
   const resolvedSearchParams = await searchParams
-  const currentPage = Number(resolvedSearchParams.page) || 1
+  const parsedPage = parsePageParam(resolvedSearchParams.page)
+
+  if (parsedPage === null) notFound()
+
+  const currentPage = parsedPage
 
   const [category, postsResponse] = await Promise.all([getCategory(slug), getCategoryPosts(slug, currentPage)])
 
@@ -127,13 +125,16 @@ export default async function CategoryPage({
   const posts = postsResponse.data || []
   const totalPages = postsResponse.total_pages || 0
 
+  // ?page=999 used to answer 200 with "No articles in this category yet".
+  if (postsResponse.success && currentPage > Math.max(1, totalPages)) notFound()
+
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
       { '@type': 'ListItem', position: 2, name: 'Blog', item: `${BASE_URL}/blog` },
-      { '@type': 'ListItem', position: 3, name: category.name }
+      { '@type': 'ListItem', position: 3, name: category.name, item: `${BASE_URL}/blog/category/${category.slug}` }
     ]
   }
 
@@ -142,7 +143,7 @@ export default async function CategoryPage({
     '@type': 'CollectionPage',
     name: `${category.name} - Nepal Fillings Blog`,
     description: category.description || `Articles about ${category.name}`,
-    url: `${BASE_URL}/blog/category/${category.slug}`,
+    url: `${BASE_URL}${pagedPath(`/blog/category/${category.slug}`, currentPage)}`,
     isPartOf: {
       '@type': 'WebSite',
       name: 'Nepal Fillings',

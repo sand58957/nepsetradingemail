@@ -6,17 +6,17 @@ import type { Metadata } from 'next'
 import type { BlogPost, BlogAuthor, BlogFAQ } from '@/utils/blogSchema'
 import {
   generateArticleSchema,
-  generateFAQSchema,
   generateBreadcrumbSchema,
   generateAuthorSchema
 } from '@/utils/blogSchema'
 import { getApiBase } from '@/utils/apiBase'
+import { withBrand } from '@/utils/seo'
 
 const API_URL = getApiBase()
 const BASE_URL = 'https://nepalfillings.com'
 
 interface FullPostData {
-  post: BlogPost & { author_name?: string; category_name?: string }
+  post: BlogPost & { author_name?: string; category_name?: string; category_slug?: string }
   author?: BlogAuthor | null
   tags: any[]
   faqs: BlogFAQ[]
@@ -28,19 +28,19 @@ interface PostResponse {
 }
 
 async function getPost(slug: string): Promise<FullPostData | null> {
-  try {
-    const res = await fetch(`${API_URL}/public/blog/posts/${slug}`, {
-      next: { revalidate: 60 }
-    })
+  const res = await fetch(`${API_URL}/public/blog/posts/${encodeURIComponent(slug)}`, {
+    next: { revalidate: 60 }
+  })
 
-    if (!res.ok) return null
+  // Only a real miss is a 404. Any other failure used to be one too, so a brief API
+  // outage told crawlers that live posts no longer existed. Throwing renders a 500,
+  // which they retry.
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`GET post ${slug} returned ${res.status}`)
 
-    const json: PostResponse = await res.json()
+  const json: PostResponse = await res.json()
 
-    return json.success ? json.data : null
-  } catch {
-    return null
-  }
+  return json.success ? json.data : null
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -48,11 +48,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const data = await getPost(slug)
 
   if (!data) {
-    return { title: 'Post Not Found' }
+    return { title: { absolute: 'Post not found | Nepal Fillings Blog' }, robots: { index: false, follow: true } }
   }
 
   const post = data.post
-  const title = post.meta_title || post.title
+  // The layout's " | Nepal Fillings Blog" suffix pushed 97% of post titles past what
+  // search results show. The brand is added only when the title still fits.
+  const title = withBrand(post.meta_title || post.title, 'Nepal Fillings Blog')
   const description = post.meta_description || post.excerpt
   const imageUrl = post.featured_image_url || `${BASE_URL}/images/front-pages/landing-page/hero-dashboard-dark.png`
 
@@ -63,7 +65,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (post.tags) keywords.push(...post.tags)
 
   return {
-    title,
+    title: { absolute: title },
     description,
     keywords: keywords.length > 0 ? keywords : undefined,
     authors: post.author ? [{ name: post.author.name }] : undefined,
@@ -93,13 +95,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     },
     alternates: {
       canonical: `/blog/${post.slug}`
-    },
-    other: {
-      'geo.region': 'NP',
-      'geo.placename': 'Kathmandu',
-      'geo.position': '27.7172;85.3240',
-      ICBM: '27.7172, 85.3240'
     }
+    // No geo.* tags: search engines ignore them, and the coordinates were the city
+    // centre, not the office.
   }
 }
 
@@ -164,10 +162,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const articleSchema = generateArticleSchema(post as any, author as any, BASE_URL)
   const breadcrumbSchema = generateBreadcrumbSchema(
     post as any,
-    post.category_name ? ({ name: post.category_name, slug: '' } as any) : undefined,
+    // The slug was an empty string, so the breadcrumb's category link pointed at
+    // /blog/category/ itself.
+    post.category_name && post.category_slug ? { name: post.category_name, slug: post.category_slug } : undefined,
     BASE_URL
   )
-  const faqSchema = faqs.length > 0 ? generateFAQSchema(faqs) : null
+  // No FAQPage markup on posts. The FAQs were generated from shared templates (the
+  // same answer on hundreds of unrelated posts), and Google no longer shows FAQ
+  // rich results for sites like this one, so the markup carried the claims without
+  // any benefit. Post-specific FAQs still render on the page.
   const authorSchema = author ? generateAuthorSchema(author, BASE_URL) : null
 
   return (
@@ -175,9 +178,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       {/* JSON-LD Structured Data */}
       <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      {faqSchema && (
-        <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      )}
       {authorSchema && (
         <script type='application/ld+json' dangerouslySetInnerHTML={{ __html: JSON.stringify(authorSchema) }} />
       )}
@@ -235,7 +235,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                   day: 'numeric'
                 })}
               </time>
-              {post.reading_time_min && (
+              {/* > 0, not truthiness: a reading time of 0 rendered as a stray "0". */}
+              {(post.reading_time_min ?? 0) > 0 && (
                 <>
                   <span className='blog-meta-divider'>·</span>
                   <span>{post.reading_time_min} min read</span>
