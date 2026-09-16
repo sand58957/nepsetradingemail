@@ -201,8 +201,12 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
 
       setCampaign(updated.data.campaign)
       setRemainingEstimate(updated.data.remaining ?? null)
-    } catch {
-      setSnackbar({ open: true, message: 'Failed to send campaign', severity: 'error' })
+    } catch (err) {
+      // Say why: a refused send explains itself, e.g. when nobody opted in is in the
+      // campaign's groups.
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+
+      setSnackbar({ open: true, message: message || 'Failed to send campaign', severity: 'error' })
     } finally {
       setSending(false)
     }

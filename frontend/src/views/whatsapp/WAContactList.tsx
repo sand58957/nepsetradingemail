@@ -243,7 +243,7 @@ const WAContactList = () => {
                 >
                   <MenuItem value=''>All</MenuItem>
                   <MenuItem value='true'>Opted In</MenuItem>
-                  <MenuItem value='false'>Opted Out</MenuItem>
+                  <MenuItem value='false'>Not opted in</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -296,7 +296,7 @@ const WAContactList = () => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={contact.opted_in ? 'Opted In' : 'Opted Out'}
+                          label={contact.opted_in ? 'Opted In' : contact.opted_out_at ? 'Opted Out' : 'Not opted in'}
                           color={contact.opted_in ? 'success' : 'default'}
                           size='small'
                           variant='tonal'

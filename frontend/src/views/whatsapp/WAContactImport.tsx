@@ -21,6 +21,7 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import Chip from '@mui/material/Chip'
 import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
 
 // Service Imports
 import whatsappService from '@/services/whatsapp'
@@ -33,7 +34,16 @@ const WAContactImport = () => {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [importResult, setImportResult] = useState<{
+    imported: number
+    skipped: number
+    opted_in?: number
+    not_opted_in?: number
+  } | null>(null)
+
+  // Unticked by default: an import only opts people in when the uploader says
+  // everyone in the file agreed, or the file says so row by row.
+  const [consentConfirmed, setConsentConfirmed] = useState(false)
 
   const [availableGroups, setAvailableGroups] = useState<WAContactGroup[]>([])
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([])
@@ -91,6 +101,10 @@ const WAContactImport = () => {
         formData.append('group_ids', JSON.stringify(selectedGroupIds))
       }
 
+      if (consentConfirmed) {
+        formData.append('consent_confirmed', 'true')
+      }
+
       const response = await whatsappService.importContacts(formData)
 
       setImportResult(response.data)
@@ -99,6 +113,7 @@ const WAContactImport = () => {
         message: `Imported ${response.data.imported} contacts (${response.data.skipped} skipped)`,
         severity: 'success'
       })
+      setConsentConfirmed(false)
     } catch {
       setSnackbar({ open: true, message: 'Failed to import contacts', severity: 'error' })
     } finally {
@@ -186,6 +201,21 @@ const WAContactImport = () => {
                   </FormControl>
                 )}
 
+                {/* Consent */}
+                <Box>
+                  <FormControlLabel
+                    control={
+                      <Checkbox checked={consentConfirmed} onChange={e => setConsentConfirmed(e.target.checked)} />
+                    }
+                    label='Everyone in this file agreed to receive WhatsApp messages from us'
+                  />
+                  <Typography variant='body2' color='text.secondary' className='mis-8'>
+                    Leave this unticked if you are not sure. The contacts are still imported, but campaigns skip them
+                    until they are opted in. An <strong>opted_in</strong> column (yes or no) decides for each row
+                    instead.
+                  </Typography>
+                </Box>
+
                 {/* Progress */}
                 {importing && (
                   <Box>
@@ -198,9 +228,11 @@ const WAContactImport = () => {
 
                 {/* Result */}
                 {importResult && (
-                  <Alert severity='success' className='mt-2'>
-                    Successfully imported <strong>{importResult.imported}</strong> contacts.
-                    {importResult.skipped > 0 && ` ${importResult.skipped} duplicates skipped.`}
+                  <Alert severity={importResult.not_opted_in ? 'warning' : 'success'} className='mt-2'>
+                    Imported <strong>{importResult.imported}</strong> contacts.
+                    {importResult.opted_in !== undefined &&
+                      ` ${importResult.opted_in} can receive campaigns; ${importResult.not_opted_in ?? 0} are not opted in, so campaigns will skip them.`}
+                    {importResult.skipped > 0 && ` ${importResult.skipped} rows skipped.`}
                   </Alert>
                 )}
 
@@ -257,6 +289,9 @@ const WAContactImport = () => {
                 <Typography variant='body2' color='text.secondary'>
                   <strong>tags</strong> — Comma-separated tags
                 </Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  <strong>opted_in</strong> — yes or no: whether this person agreed to receive WhatsApp messages
+                </Typography>
 
                 <Typography variant='subtitle2' className='mt-2'>
                   Example:
@@ -273,7 +308,8 @@ const WAContactImport = () => {
                 </Box>
 
                 <Typography variant='caption' color='text.secondary' className='mt-2'>
-                  Duplicate phone numbers will be skipped. Existing contacts will not be overwritten.
+                  Existing contacts keep their details. An import can withdraw consent (opted_in = no), but it never
+                  re-subscribes someone who opted out.
                 </Typography>
               </div>
             </CardContent>

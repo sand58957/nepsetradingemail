@@ -543,15 +543,18 @@ func (h *WhatsAppHandler) UpdateContact(c echo.Context) error {
 		attrs = json.RawMessage("{}")
 	}
 
-	optedIn := true
-	if req.OptedIn != nil {
-		optedIn = *req.OptedIn
-	}
-
+	// Leave consent alone unless the request sets it. Defaulting a missing
+	// opted_in to true re-subscribed an opted-out contact whenever anything else
+	// about them was edited. A change records when it happened.
 	_, err2 := h.db.Exec(`
-		UPDATE wa_contacts SET name = $1, email = $2, opted_in = $3, tags = $4, attributes = $5, updated_at = NOW()
+		UPDATE wa_contacts SET
+			name = $1, email = $2, tags = $4, attributes = $5,
+			opted_in = COALESCE($3::boolean, opted_in),
+			opted_in_at = CASE WHEN $3::boolean AND NOT opted_in THEN NOW() ELSE opted_in_at END,
+			opted_out_at = CASE WHEN NOT $3::boolean AND opted_in THEN NOW() ELSE opted_out_at END,
+			updated_at = NOW()
 		WHERE id = $6 AND account_id = $7
-	`, req.Name, req.Email, optedIn, tags, attrs, id, accountID)
+	`, req.Name, req.Email, req.OptedIn, tags, attrs, id, accountID)
 	if err2 != nil {
 		log.Printf("[whatsapp] Failed to update contact: %v", err2)
 		return response.InternalError(c, "Failed to update contact")
@@ -689,6 +692,14 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 	emailIdx, hasEmail := pick("email", "email_address")
 	tagsIdx, hasTags := pick("tags", "tag")
 
+	// Whether each person agreed to receive WhatsApp messages. Every imported row
+	// used to be marked opted in, so "opted in" meant only "was in a file". Now a
+	// row is opted in when its own consent column says yes, or when the uploader
+	// confirms that everyone in the file agreed. Otherwise the contact is stored
+	// but no campaign will message it.
+	consentIdx, hasConsent := pick(consentColumns...)
+	confirmed := consentConfirmed(c.FormValue("consent_confirmed"))
+
 	// Parse group_ids from form data
 	var groupIDs []int
 	if gids := c.FormValue("group_ids"); gids != "" {
@@ -707,6 +718,7 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 	// upload died with a 504 having written only part of the file.
 	type pending struct {
 		phone, name, email, tags string
+		consent                  consentState
 	}
 
 	rows := make([]pending, 0, 4096)
@@ -763,63 +775,97 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 			}
 		}
 
+		consent := consentUnknown
+		if hasConsent && consentIdx < len(record) {
+			consent = parseConsentCell(record[consentIdx])
+		}
+
+		if consent == consentUnknown && confirmed {
+			consent = consentGiven
+		}
+
 		// A file that repeats a number would make one batch touch the same row
 		// twice, which Postgres rejects outright ("cannot affect row a second
 		// time"). Collapse duplicates here and keep the last values seen.
 		if at, dup := seen[phone]; dup {
-			rows[at] = pending{phone, name, email, tags}
+			rows[at] = pending{phone, name, email, tags, consent}
 
 			continue
 		}
 
 		seen[phone] = len(rows)
-		rows = append(rows, pending{phone, name, email, tags})
+		rows = append(rows, pending{phone, name, email, tags, consent})
 	}
 
 	imported := 0
+	optedIn := 0
 	importedContactIDs := make([]int, 0, len(rows))
 
-	// 6 parameters per row; Postgres caps a statement at 65535, so 500 rows per
+	// Rows are written grouped by what they say about consent, because each group
+	// treats a contact that already exists differently (see importConflictSQL).
+	byConsent := make(map[consentState][]pending, 3)
+	for _, r := range rows {
+		byConsent[r.consent] = append(byConsent[r.consent], r)
+	}
+
+	// 7 parameters per row; Postgres caps a statement at 65535, so 500 rows per
 	// batch leaves ample headroom.
 	const batchSize = 500
 
-	for start := 0; start < len(rows); start += batchSize {
-		end := start + batchSize
-		if end > len(rows) {
-			end = len(rows)
+	for _, state := range []consentState{consentGiven, consentRefused, consentUnknown} {
+		group := byConsent[state]
+		conflict := importConflictSQL(state)
+
+		// A new contact is opted in only with consent, and only then gets an
+		// opt-in time.
+		var optedInAt *time.Time
+		if state == consentGiven {
+			optedInAt = &now
 		}
 
-		batch := rows[start:end]
-		values := make([]string, 0, len(batch))
-		args := make([]interface{}, 0, len(batch)*6)
+		for start := 0; start < len(group); start += batchSize {
+			end := min(start+batchSize, len(group))
 
-		for i, r := range batch {
-			b := i * 6
-			values = append(values, fmt.Sprintf("($%d, $%d, $%d, $%d, true, $%d, $%d::jsonb)",
-				b+1, b+2, b+3, b+4, b+5, b+6))
-			args = append(args, accountID, r.phone, r.name, r.email, now, r.tags)
+			batch := group[start:end]
+			values := make([]string, 0, len(batch))
+			args := make([]interface{}, 0, len(batch)*7)
+
+			for i, r := range batch {
+				b := i * 7
+				values = append(values, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d::boolean, $%d::timestamptz, $%d::jsonb)",
+					b+1, b+2, b+3, b+4, b+5, b+6, b+7))
+				args = append(args, accountID, r.phone, r.name, r.email, state == consentGiven, optedInAt, r.tags)
+			}
+
+			var written []struct {
+				ID      int  `db:"id"`
+				OptedIn bool `db:"opted_in"`
+			}
+
+			err := h.db.Select(&written, `
+				INSERT INTO wa_contacts (account_id, phone, name, email, opted_in, opted_in_at, tags)
+				VALUES `+strings.Join(values, ",")+`
+				ON CONFLICT (account_id, phone) DO UPDATE SET
+				`+conflict+`
+				RETURNING id, opted_in
+			`, args...)
+			if err != nil {
+				log.Printf("[whatsapp] Import batch %d-%d failed: %v", start, end, err)
+				skipped += len(batch)
+
+				continue
+			}
+
+			imported += len(written)
+
+			for _, w := range written {
+				importedContactIDs = append(importedContactIDs, w.ID)
+
+				if w.OptedIn {
+					optedIn++
+				}
+			}
 		}
-
-		var ids []int
-
-		err := h.db.Select(&ids, `
-			INSERT INTO wa_contacts (account_id, phone, name, email, opted_in, opted_in_at, tags)
-			VALUES `+strings.Join(values, ",")+`
-			ON CONFLICT (account_id, phone) DO UPDATE SET
-				name = CASE WHEN EXCLUDED.name != '' THEN EXCLUDED.name ELSE wa_contacts.name END,
-				email = CASE WHEN EXCLUDED.email != '' THEN EXCLUDED.email ELSE wa_contacts.email END,
-				updated_at = NOW()
-			RETURNING id
-		`, args...)
-		if err != nil {
-			log.Printf("[whatsapp] Import batch %d-%d failed: %v", start, end, err)
-			skipped += len(batch)
-
-			continue
-		}
-
-		imported += len(ids)
-		importedContactIDs = append(importedContactIDs, ids...)
 	}
 
 	// One statement per group rather than one per contact per group.
@@ -839,6 +885,11 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 	return response.Success(c, map[string]interface{}{
 		"imported": imported,
 		"skipped":  skipped,
+		// Of the imported contacts, how many campaigns can now message and how many
+		// they will skip. Counted from the rows as written, so a contact that was
+		// already opted out and stayed that way is counted as not opted in.
+		"opted_in":     optedIn,
+		"not_opted_in": imported - optedIn,
 	})
 }
 
@@ -1350,11 +1401,23 @@ func (h *WhatsAppHandler) GetCampaign(c echo.Context) error {
 		recipients = []RecipientRow{}
 	}
 
-	return response.Success(c, map[string]interface{}{
+	payload := map[string]interface{}{
 		"campaign":         campaign,
 		"status_breakdown": statusBreakdown,
 		"recipients":       recipients,
-	})
+	}
+
+	// The send dialog reads "remaining" from this response to say how long a
+	// continuous run will take, and it has to count the campaign's own audience,
+	// not the whole contact list.
+	if audience, aErr := parseWAAudience(campaign.TargetFilter); aErr != nil {
+		payload["remaining"] = 0
+		payload["audience_error"] = aErr.Error()
+	} else if remaining, cErr := h.countUnreached(accountID, campaign.ID, audience); cErr == nil {
+		payload["remaining"] = remaining
+	}
+
+	return response.Success(c, payload)
 }
 
 func (h *WhatsAppHandler) CreateCampaign(c echo.Context) error {
@@ -1596,24 +1659,18 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 
 	intervalSeconds := resolveSendInterval(req.Continuous, req.IntervalSeconds)
 
-	// Contacts this campaign has not reached yet.
-	var remainingCount int
-	h.db.Get(&remainingCount, `
-		SELECT COUNT(*) FROM wa_contacts c
-		WHERE c.account_id = $1 AND c.opted_in = true
-		  AND NOT EXISTS (
-			SELECT 1 FROM wa_campaign_messages m
-			WHERE m.campaign_id = $2 AND m.contact_id = c.id
-		  )
-	`, accountID, campaign.ID)
-
-	if remainingCount == 0 {
-		return response.BadRequest(c, "Every opted-in contact has already been sent this campaign")
+	audience, err := parseWAAudience(campaign.TargetFilter)
+	if err != nil {
+		return response.BadRequest(c, "This campaign's audience can't be read ("+err.Error()+
+			"). Edit the campaign and choose its groups or tags again.")
 	}
 
-	targetCount := batchSize
-	if req.Continuous || remainingCount < targetCount {
-		targetCount = remainingCount
+	// Contacts in this campaign's audience that it has not reached yet.
+	remainingCount, err := h.countUnreached(accountID, campaign.ID, audience)
+	if err != nil {
+		log.Printf("[whatsapp] Campaign %d: counting recipients: %v", campaign.ID, err)
+
+		return response.InternalError(c, "Could not work out who this campaign goes to")
 	}
 
 	// total_targets is the whole audience for this campaign, not the size of the
@@ -1623,6 +1680,15 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 	// continuous run over 30,000 contacts would have taken it wildly past.
 	var alreadyAttempted int
 	h.db.Get(&alreadyAttempted, `SELECT COUNT(*) FROM wa_campaign_messages WHERE campaign_id = $1`, campaign.ID)
+
+	if remainingCount == 0 {
+		return response.BadRequest(c, noRecipientsMessage(audience, alreadyAttempted))
+	}
+
+	targetCount := batchSize
+	if req.Continuous || remainingCount < targetCount {
+		targetCount = remainingCount
+	}
 
 	audienceTotal := alreadyAttempted + remainingCount
 
@@ -1774,29 +1840,31 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 		json.Unmarshal(campaign.TemplateParams, &templateParams)
 	}
 
-	// Get all opted-in contacts
-	var contacts []WAContact
-	// Only contacts this campaign has not already reached. Sending stays resumable
-	// either way: re-running a campaign, or picking one back up after a restart,
-	// continues where it stopped rather than messaging everyone a second time.
-	//
-	// A batch run takes one phase worth; a continuous run takes the lot and paces
-	// itself with the interval instead. LIMIT ALL is how Postgres spells "no limit"
-	// in a parameterised query, so the two modes share one statement.
-	limit := strconv.Itoa(batchSize)
-	if campaign.Continuous {
-		limit = "ALL"
+	// The campaign's audience. An unreadable one stops the run: sending to
+	// everyone instead is how a campaign aimed at one group used to reach the
+	// whole list.
+	audience, err := parseWAAudience(campaign.TargetFilter)
+	if err != nil {
+		log.Printf("[whatsapp] Campaign %d: not sending, %v", campaignID, err)
+		h.db.Exec("UPDATE wa_campaigns SET status = 'failed', updated_at = NOW() WHERE id = $1", campaignID)
+
+		return
 	}
 
-	if err := h.db.Select(&contacts, `
-		SELECT c.* FROM wa_contacts c
-		WHERE c.account_id = $1 AND c.opted_in = true
-		  AND NOT EXISTS (
-			SELECT 1 FROM wa_campaign_messages m
-			WHERE m.campaign_id = $2 AND m.contact_id = c.id
-		  )
-		ORDER BY c.id
-		LIMIT `+limit, accountID, campaignID); err != nil {
+	// Only contacts in the audience this campaign has not already reached. Sending
+	// stays resumable either way: re-running a campaign, or picking one back up
+	// after a restart, continues where it stopped rather than messaging everyone a
+	// second time.
+	//
+	// A batch run takes one phase worth; a continuous run takes the lot and paces
+	// itself with the interval instead.
+	limit := batchSize
+	if campaign.Continuous {
+		limit = 0
+	}
+
+	contacts, err := h.unreachedContacts(accountID, campaignID, audience, limit)
+	if err != nil {
 		log.Printf("[whatsapp] Campaign %d: failed to fetch contacts: %v", campaignID, err)
 		h.db.Exec("UPDATE wa_campaigns SET status = 'failed', updated_at = NOW() WHERE id = $1", campaignID)
 		return
@@ -2087,22 +2155,20 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 		}
 	}
 
-	// How many opted-in contacts this campaign still has not reached.
-	var remaining int
-	h.db.Get(&remaining, `
-		SELECT COUNT(*) FROM wa_contacts c
-		WHERE c.account_id = $1 AND c.opted_in = true
-		  AND NOT EXISTS (
-			SELECT 1 FROM wa_campaign_messages m
-			WHERE m.campaign_id = $2 AND m.contact_id = c.id
-		  )
-	`, accountID, campaignID)
+	// How many contacts in the audience this campaign still has not reached.
+	remaining, countErr := h.countUnreached(accountID, campaignID, audience)
 
 	// A phase that leaves people unreached parks the campaign rather than
 	// declaring it sent, so the next run picks up exactly where this one ended.
+	// If the count itself failed, park it too: "sent" is a claim that nobody is
+	// left, and that could not be checked.
 	finalStatus := "sent"
-	if remaining > 0 {
+	if remaining > 0 || countErr != nil {
 		finalStatus = "paused"
+	}
+
+	if countErr != nil {
+		log.Printf("[whatsapp] Campaign %d: counting who is left failed, parking: %v", campaignID, countErr)
 	}
 
 	// Only whatever the periodic flush has not already recorded.
@@ -2172,14 +2238,15 @@ func (h *WhatsAppHandler) waitForGateway(accountID int) bool {
 
 func (h *WhatsAppHandler) ResumeInterruptedCampaigns() {
 	var interrupted []struct {
-		ID         int  `db:"id"`
-		AccountID  int  `db:"account_id"`
-		TemplateID *int `db:"template_id"`
-		Continuous bool `db:"continuous"`
+		ID           int             `db:"id"`
+		AccountID    int             `db:"account_id"`
+		TemplateID   *int            `db:"template_id"`
+		Continuous   bool            `db:"continuous"`
+		TargetFilter json.RawMessage `db:"target_filter"`
 	}
 
 	if err := h.db.Select(&interrupted, `
-		SELECT id, account_id, template_id, continuous
+		SELECT id, account_id, template_id, continuous, target_filter
 		FROM wa_campaigns WHERE status = 'sending' ORDER BY id
 	`); err != nil {
 		log.Printf("[whatsapp] resume: could not look for interrupted campaigns: %v", err)
@@ -2225,15 +2292,22 @@ func (h *WhatsAppHandler) ResumeInterruptedCampaigns() {
 			continue
 		}
 
-		var remaining int
-		h.db.Get(&remaining, `
-			SELECT COUNT(*) FROM wa_contacts c
-			WHERE c.account_id = $1 AND c.opted_in = true
-			  AND NOT EXISTS (
-				SELECT 1 FROM wa_campaign_messages m
-				WHERE m.campaign_id = $2 AND m.contact_id = c.id
-			  )
-		`, campaign.AccountID, campaign.ID)
+		audience, err := parseWAAudience(campaign.TargetFilter)
+		if err != nil {
+			h.db.Exec(`UPDATE wa_campaigns SET status = 'failed', updated_at = NOW() WHERE id = $1`, campaign.ID)
+			log.Printf("[whatsapp] resume: campaign %d not resumed, %v", campaign.ID, err)
+
+			continue
+		}
+
+		remaining, err := h.countUnreached(campaign.AccountID, campaign.ID, audience)
+		if err != nil {
+			// Leave it at 'sending' so the next restart tries again, as when the
+			// gateway is not ready.
+			log.Printf("[whatsapp] resume: counting recipients for campaign %d failed, leaving it: %v", campaign.ID, err)
+
+			continue
+		}
 
 		if remaining == 0 {
 			h.db.Exec(`
@@ -2374,25 +2448,21 @@ func (h *WhatsAppHandler) GetCampaignAnalytics(c echo.Context) error {
 		}{}
 	}
 
-	// How many opted-in contacts this campaign has still not reached. The send
-	// dialog needs it to tell an operator how long a continuous run will take
-	// before they start one.
-	var remaining int
-	h.db.Get(&remaining, `
-		SELECT COUNT(*) FROM wa_contacts c
-		WHERE c.account_id = $1 AND c.opted_in = true
-		  AND NOT EXISTS (
-			SELECT 1 FROM wa_campaign_messages m
-			WHERE m.campaign_id = $2 AND m.contact_id = c.id
-		  )
-	`, accountID, id)
-
-	return response.Success(c, map[string]interface{}{
+	payload := map[string]interface{}{
 		"campaign":         campaign,
 		"status_breakdown": statusBreakdown,
 		"failed_messages":  failedMessages,
-		"remaining":        remaining,
-	})
+		"remaining":        0,
+	}
+
+	// How many contacts in this campaign's audience it has still not reached.
+	if audience, aErr := parseWAAudience(campaign.TargetFilter); aErr != nil {
+		payload["audience_error"] = aErr.Error()
+	} else if remaining, cErr := h.countUnreached(accountID, campaign.ID, audience); cErr == nil {
+		payload["remaining"] = remaining
+	}
+
+	return response.Success(c, payload)
 }
 
 // ============================================================

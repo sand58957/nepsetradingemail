@@ -360,7 +360,7 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={contact.opted_in ? 'Opted In' : 'Opted Out'}
+                          label={contact.opted_in ? 'Opted In' : contact.opted_out_at ? 'Opted Out' : 'Not opted in'}
                           color={contact.opted_in ? 'success' : 'default'}
                           size='small'
                           variant='tonal'
@@ -472,7 +472,7 @@ const WAGroupDetail = ({ groupId }: WAGroupDetailProps) => {
                         <TableCell>{contact.name || '-'}</TableCell>
                         <TableCell>
                           <Chip
-                            label={contact.opted_in ? 'Opted In' : 'Opted Out'}
+                            label={contact.opted_in ? 'Opted In' : contact.opted_out_at ? 'Opted Out' : 'Not opted in'}
                             color={contact.opted_in ? 'success' : 'default'}
                             size='small'
                             variant='tonal'
