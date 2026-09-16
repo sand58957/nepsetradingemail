@@ -35,7 +35,9 @@ const LogoText = styled.span<LogoTextProps>`
   font-weight: 700;
   letter-spacing: 0.25px;
   transition: ${({ transitionDuration }) =>
-    `margin-inline-start ${transitionDuration}ms ease-in-out, opacity ${transitionDuration}ms ease-in-out`};
+    // Outside the dashboard there is no vertical nav, so no duration: "undefinedms" was
+    // emitted into the CSS of every public page.
+    `margin-inline-start ${transitionDuration ?? 0}ms ease-in-out, opacity ${transitionDuration ?? 0}ms ease-in-out`};
 
   ${({ isHovered, isCollapsed, isBreakpointReached }) =>
     !isBreakpointReached && isCollapsed && !isHovered

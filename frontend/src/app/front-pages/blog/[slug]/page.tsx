@@ -183,21 +183,33 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       )}
 
       {/* Breadcrumb Navigation */}
+      {/* Scheme-aware accent and underlined links: the fixed #7c3aed measured 3.33:1 on the
+          dark background, and colour alone told the links apart from the text around them. */}
       <nav
         className='blog-breadcrumb'
+        aria-label='Breadcrumb'
         style={{ marginBottom: 24, fontSize: 14, overflowWrap: 'break-word', wordBreak: 'break-word' }}
       >
-        <Link href='/' style={{ color: '#7c3aed', textDecoration: 'none' }}>
+        <Link href='/' style={{ color: 'var(--blog-accent)', textDecoration: 'underline', textUnderlineOffset: 3 }}>
           Home
         </Link>
         <span style={{ margin: '0 8px' }}>/</span>
-        <Link href='/blog' style={{ color: '#7c3aed', textDecoration: 'none' }}>
+        <Link href='/blog' style={{ color: 'var(--blog-accent)', textDecoration: 'underline', textUnderlineOffset: 3 }}>
           Blog
         </Link>
         {post.category_name && (
           <>
             <span style={{ margin: '0 8px' }}>/</span>
-            <span style={{ color: '#7c3aed' }}>{post.category_name}</span>
+            {post.category_slug ? (
+              <Link
+                href={`/blog/category/${post.category_slug}`}
+                style={{ color: 'var(--blog-accent)', textDecoration: 'underline', textUnderlineOffset: 3 }}
+              >
+                {post.category_name}
+              </Link>
+            ) : (
+              <span>{post.category_name}</span>
+            )}
           </>
         )}
         <span style={{ margin: '0 8px' }}>/</span>
