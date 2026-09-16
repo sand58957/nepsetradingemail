@@ -218,7 +218,7 @@ const TelegramSettings = () => {
                   value={settings.subscription_code || ''}
                   onChange={e => setSettings({ ...settings, subscription_code: e.target.value.toUpperCase() })}
                   helperText='Users must send /start CODE to subscribe. Leave empty to allow open subscription without a code.'
-                  placeholder='e.g. PAID4283'
+                  placeholder='e.g. VIP2026'
                 />
 
                 <div className='flex gap-3 mt-2'>

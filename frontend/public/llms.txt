@@ -26,6 +26,7 @@ Paid plans and API credits are set up by the Nepal Fillings team.
 
 - [Homepage](https://nepalfillings.com): Product overview, channels and FAQ
 - [Pricing](https://nepalfillings.com/pricing): Plans in NPR
+- [About](https://nepalfillings.com/about): Who runs Nepal Fillings and how each channel works
 - [Blog](https://nepalfillings.com/blog): Articles on email, SMS, WhatsApp, Telegram and Messenger marketing in Nepal
 - [Privacy Policy](https://nepalfillings.com/privacy)
 - [Terms of Service](https://nepalfillings.com/terms)

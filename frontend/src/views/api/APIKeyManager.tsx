@@ -452,19 +452,81 @@ const APIKeyManager = () => {
                 </Box>
               ))}
 
+              {/* Everything below is checked against the /api/v1 handlers. An earlier
+                  version documented request bodies the API rejects (string arrays for
+                  bulk SMS, template_id/params for WhatsApp), response fields it never
+                  returns, a per-key rate limit that isn't enforced, and one account's
+                  own Telegram subscription code, Facebook Page ID and opt-in keyword,
+                  shown to every account that opened this page. */}
               <Divider sx={{ my: 3 }} />
               <Typography variant='h6' gutterBottom>
                 Authentication
               </Typography>
               <Alert severity='info' sx={{ mb: 2 }}>
-                Include your API key in the Authorization header:
+                Each key belongs to one channel. Send it in the Authorization header:
                 <Box component='pre' sx={{ mt: 1, p: 1, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto' }}>
                   {`Authorization: Bearer nf_sms_your_api_key_here`}
                 </Box>
+                Test keys (<code>nf_test_…</code>) accept the same requests but send nothing and use no credits.
               </Alert>
 
+              <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                  Limits and responses
+                </Typography>
+                <Table size='small'>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Credits</TableCell>
+                      <TableCell>
+                        Live sends use this account&apos;s prepaid API credits for the key&apos;s channel:{' '}
+                        <strong>1 credit per message</strong>, reserved when the message is submitted and returned if the
+                        submission fails. Credits are added by the Nepal Fillings team.
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Rate limit</TableCell>
+                      <TableCell>
+                        30 requests per second per IP address, with bursts up to 60. Above that the API answers HTTP 429.
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Bulk sends</TableCell>
+                      <TableCell>
+                        Up to <strong>100 recipients</strong> per call
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Response shape</TableCell>
+                      <TableCell>
+                        Success: <code>{`{"success": true, "data": {…}}`}</code>. Error:{' '}
+                        <code>{`{"success": false, "error": {"code", "message", "field"}}`}</code>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Which key is this?</TableCell>
+                      <TableCell>
+                        <code>GET /api/v1/me</code> returns the account and channel a key belongs to
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </Box>
+
+              {/* ============== SMS ============== */}
+              <Divider sx={{ my: 3 }} />
               <Typography variant='h6' gutterBottom>
-                Send SMS Example
+                SMS
+              </Typography>
+
+              <Alert severity='info' sx={{ mb: 3 }}>
+                SMS is sent through this account&apos;s <strong>own Aakash SMS account</strong>. Connect your Aakash auth
+                token and approved sender ID under SMS &gt; Settings first; SMS credits themselves are bought from Aakash
+                SMS. Each API send also uses 1 Nepal Fillings API credit.
+              </Alert>
+
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                Send one SMS
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
                 {`curl -X POST https://nepalfillings.com/api/v1/sms/send \\
@@ -472,307 +534,66 @@ const APIKeyManager = () => {
   -H "Content-Type: application/json" \\
   -d '{
     "to": "9812345678",
-    "message": "Hello from API!"
-  }'`}
-              </Box>
+    "message": "Your order #1042 has shipped.",
+    "reference": "order-1042"
+  }'
 
-              <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>
-                Telegram Bot Integration
-              </Typography>
-
-              <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>
-                  Subscription Method (Password-Gated)
-                </Typography>
-                <Typography variant='body2'>
-                  Users subscribe to your Telegram bot by sending <strong>/start PAID4283</strong> (with the
-                  subscription code). Without the correct code, the bot will reject the subscription. They are
-                  automatically added to your contact list upon valid code. When they send <strong>/stop</strong>, they
-                  are automatically opted out.
-                </Typography>
-              </Alert>
-
-              <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                  <i className='tabler-settings' style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  Bot Setup Details
-                </Typography>
-                <Table size='small'>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Bot Username</TableCell>
-                      <TableCell>
-                        <code>@nepsemarket_alert_bot</code>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Bot Link</TableCell>
-                      <TableCell>
-                        <a href='https://t.me/nepsemarket_alert_bot' target='_blank' rel='noopener'>
-                          https://t.me/nepsemarket_alert_bot
-                        </a>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Webhook Endpoint</TableCell>
-                      <TableCell>
-                        <code>POST /telegram/:webhook_secret</code>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Subscribe Command</TableCell>
-                      <TableCell>
-                        <code>/start PAID4283</code> — Requires valid code to subscribe
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Subscription Code</TableCell>
-                      <TableCell>
-                        <code>PAID4283</code> — Required access code for new subscribers
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Unsubscribe Command</TableCell>
-                      <TableCell>
-                        <code>/stop</code> — Opts out user from campaigns
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Auto-Captured Data</TableCell>
-                      <TableCell>Chat ID, Username, First Name, Last Name</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
-
-
-
-
-              {/* ============== SMS Integration ============== */}
-              <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>
-                SMS Integration (Aakash SMS)
-              </Typography>
-
-              <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>
-                  How SMS Works
-                </Typography>
-                <Typography variant='body2'>
-                  SMS messages are sent through <strong>Aakash SMS</strong>, Nepal&apos;s leading bulk SMS provider. You
-                  need to configure your Aakash SMS credentials (auth token &amp; sender ID) in Settings before sending.
-                  Each SMS consumes <strong>1 credit</strong> per message. Bulk sending supports up to 100 recipients
-                  per request. Messages are queued and sent at the configured rate limit to avoid throttling.
-                </Typography>
-              </Alert>
-
-              <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                  <i className='tabler-settings' style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  SMS Setup Details
-                </Typography>
-                <Table size='small'>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Provider</TableCell>
-                      <TableCell>
-                        Aakash SMS (
-                        <a href='https://aakashsms.com' target='_blank' rel='noopener'>
-                          aakashsms.com
-                        </a>
-                        )
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Auth Token</TableCell>
-                      <TableCell>Obtained from your Aakash SMS dashboard → API section</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Sender ID</TableCell>
-                      <TableCell>
-                        Your registered sender ID (e.g., <code>InfoAlert</code>, <code>NepseTrade</code>)
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Credit Cost</TableCell>
-                      <TableCell>
-                        <strong>1 credit</strong> per SMS message (160 characters max per segment)
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Bulk Limit</TableCell>
-                      <TableCell>
-                        Max <strong>100 recipients</strong> per bulk API call
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Rate Limit</TableCell>
-                      <TableCell>Configurable per API key (default: 60 requests/minute)</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Contact Fields</TableCell>
-                      <TableCell>Phone number (required), Name, Tags, Groups</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>API Key Format</TableCell>
-                      <TableCell>
-                        <code>nf_sms_xxxxxxxx...</code> (live) or <code>nf_test_sms_xxxxxxxx...</code> (test)
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
-
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                Send Single SMS
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/sms/send \\
-  -H "Authorization: Bearer nf_sms_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
+# Response:
+{
+  "success": true,
+  "data": {
+    "message_id": "sms_msg_123",
     "to": "9812345678",
-    "message": "Hello from NEPSE Trading! Your portfolio is up 5% today."
-  }'
-
-# Response:
-{
-  "id": 123,
-  "status": "sent",
-  "credits_charged": 1,
-  "message": "SMS sent successfully"
+    "status": "sent",
+    "credits_used": 1,
+    "credits_remaining": 499
+  }
 }`}
               </Box>
 
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Send Bulk SMS
+                Send to many numbers
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/sms/send/bulk \\
+                {`# "message" is shared; a recipient's own "message" replaces it for that number.
+curl -X POST https://nepalfillings.com/api/v1/sms/send/bulk \\
   -H "Authorization: Bearer nf_sms_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "recipients": ["9812345678", "9823456789", "9834567890"],
-    "message": "NEPSE Market Alert: Banking sector up 3.2%!"
+    "message": "Our shop is closed on Saturday.",
+    "recipients": [
+      { "to": "9812345678" },
+      { "to": "9823456789", "message": "Your pickup is moved to Sunday." }
+    ]
   }'
 
 # Response:
 {
-  "total": 3,
-  "sent": 3,
-  "failed": 0,
-  "credits_charged": 3
+  "success": true,
+  "data": { "total": 2, "sent": 2, "failed": 0, "credits_used": 2, "credits_remaining": 497 }
 }`}
               </Box>
 
-
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Check SMS Balance
+              <Typography variant='body2' sx={{ mt: 2 }}>
+                Also: <code>GET /api/v1/sms/balance</code>, <code>GET /api/v1/sms/messages</code>,{' '}
+                <code>GET /api/v1/sms/messages/:id</code> and <code>GET /api/v1/sms/status</code>.
               </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# Check balance
-curl https://nepalfillings.com/api/v1/sms/balance \\
-  -H "Authorization: Bearer nf_sms_your_key"
 
-# Response:
-{
-  "channel": "sms",
-  "balance": 5000,
-  "reserved": 0
-}`}
-              </Box>
-
-              {/* ============== WhatsApp Integration ============== */}
+              {/* ============== WhatsApp ============== */}
               <Divider sx={{ my: 3 }} />
               <Typography variant='h6' gutterBottom>
-                WhatsApp Integration
+                WhatsApp
               </Typography>
 
-              <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>
-                  How WhatsApp Works
-                </Typography>
-                <Typography variant='body2'>
-                  WhatsApp messages are sent through a self-hosted gateway linked to a real WhatsApp account. An
-                  administrator links a number by scanning a QR code in Settings. WhatsApp requires{' '}
-                  <strong>pre-approved templates</strong> for outbound messages outside the 24-hour conversation window.
-                  Templates are stored in this dashboard and sent as text. Each message consumes{' '}
-                  <strong>1 credit</strong>.
-                </Typography>
+              <Alert severity='warning' sx={{ mb: 3 }}>
+                Messages are sent from the WhatsApp number linked to this account under WhatsApp &gt; Settings (scan the
+                QR code). This is <strong>not Meta&apos;s WhatsApp Business API</strong>: there is no template approval,
+                and templates here are saved message bodies. WhatsApp can restrict a linked number, especially when people
+                who did not opt in report your messages. Each message uses 1 credit.
               </Alert>
 
-              <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                  <i className='tabler-settings' style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  WhatsApp Setup Details
-                </Typography>
-                <Table size='small'>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Provider</TableCell>
-                      <TableCell>
-                        a self-hosted gateway (
-                        <a href='https://github.com/rmyndharis/OpenWA' target='_blank' rel='noopener'>
-                          OpenWA
-                        </a>
-                        )
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>API Key</TableCell>
-                      <TableCell>Managed by an administrator on the gateway</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>App Name</TableCell>
-                      <TableCell>A label for the linked WhatsApp session</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Source Phone</TableCell>
-                      <TableCell>
-                        Your WhatsApp Business phone number (e.g., <code>9779800000000</code>)
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>WABA ID</TableCell>
-                      <TableCell>WhatsApp Business Account ID from Meta Business Manager</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Templates</TableCell>
-                      <TableCell>Reusable message bodies stored in this dashboard</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Credit Cost</TableCell>
-                      <TableCell>
-                        <strong>1 credit</strong> per WhatsApp message
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Bulk Limit</TableCell>
-                      <TableCell>
-                        Max <strong>100 recipients</strong> per bulk API call
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Rate Limit</TableCell>
-                      <TableCell>Configurable per API key (default: 60 requests/minute)</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Contact Fields</TableCell>
-                      <TableCell>Phone number (required), Name, Tags, Groups, Opt-in status</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>API Key Format</TableCell>
-                      <TableCell>
-                        <code>nf_whatsapp_xxxxxxxx...</code> (live) or <code>nf_test_whatsapp_xxxxxxxx...</code> (test)
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
-
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                Send WhatsApp Template Message
+                Send a text message
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
                 {`curl -X POST https://nepalfillings.com/api/v1/whatsapp/send \\
@@ -780,465 +601,202 @@ curl https://nepalfillings.com/api/v1/sms/balance \\
   -H "Content-Type: application/json" \\
   -d '{
     "to": "9779812345678",
-    "template_id": "market_alert_v1",
-    "params": {
-      "1": "NEPSE Index",
-      "2": "2,450.30",
-      "3": "+1.5%"
-    }
+    "type": "text",
+    "message": "Your appointment is confirmed for 3 PM tomorrow."
   }'
 
 # Response:
 {
-  "id": 456,
-  "status": "sent",
-  "provider_message_id": "wamid_abc123",
-  "credits_charged": 1
+  "success": true,
+  "data": {
+    "message_id": "wa_msg_456",
+    "to": "9779812345678",
+    "type": "text",
+    "status": "sent",
+    "credits_used": 1,
+    "credits_remaining": 99
+  }
 }`}
               </Box>
 
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Send Bulk WhatsApp Messages
+                Send a saved template
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/whatsapp/send/bulk \\
+                {`# template_data fills {{1}}, {{2}}, … in order. Omitting "type" with a
+# template_name also works; without one, the message is sent as text.
+curl -X POST https://nepalfillings.com/api/v1/whatsapp/send \\
   -H "Authorization: Bearer nf_whatsapp_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "recipients": ["9779812345678", "9779823456789"],
-    "template_id": "daily_update",
-    "params": {
-      "1": "March 17, 2026",
-      "2": "2,450.30"
-    }
+    "to": "9779812345678",
+    "type": "template",
+    "template_name": "order_update",
+    "template_data": ["Sita", "#1042"]
   }'`}
               </Box>
 
-
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                List Templates
+                Send to many numbers
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# List the templates you can send with type: "template".
-# Templates are created in the dashboard under WhatsApp > Templates;
-# there is no endpoint to create or sync them with an API key.
+                {`# Shared fields at the top; per-recipient template_data or message override them.
+# Messages go out one at a time, and a run that keeps failing stops early (see "skipped").
+curl -X POST https://nepalfillings.com/api/v1/whatsapp/send/bulk \\
+  -H "Authorization: Bearer nf_whatsapp_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "type": "template",
+    "template_name": "order_update",
+    "recipients": [
+      { "to": "9779812345678", "template_data": ["Sita", "#1042"] },
+      { "to": "9779823456789", "template_data": ["Ram", "#1043"] }
+    ]
+  }'
+
+# Response:
+{
+  "success": true,
+  "data": { "total": 2, "sent": 2, "failed": 0, "credits_used": 2, "credits_remaining": 97 }
+}`}
+              </Box>
+
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                List templates
+              </Typography>
+              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
+                {`# Templates are created in the dashboard under WhatsApp > Templates.
 curl https://nepalfillings.com/api/v1/whatsapp/templates \\
   -H "Authorization: Bearer nf_whatsapp_your_key"
 
 # Response:
 {
-  "results": [
+  "success": true,
+  "data": [
     {
-      "id": "market_alert_v1",
-      "name": "Market Alert",
-      "category": "MARKETING",
-      "status": "APPROVED",
+      "id": 7,
+      "template_name": "order_update",
+      "category": "UTILITY",
       "language": "en",
-      "components": [...]
+      "status": "approved",
+      "header_type": "",
+      "body": "Hi {{1}}, your order {{2}} is on its way."
     }
   ]
 }`}
               </Box>
 
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Check WhatsApp Balance
+              <Typography variant='body2' sx={{ mt: 2 }}>
+                Also: <code>GET /api/v1/whatsapp/status</code> (whether a number is linked and connected),{' '}
+                <code>GET /api/v1/whatsapp/balance</code>, <code>GET /api/v1/whatsapp/messages</code> and{' '}
+                <code>GET /api/v1/whatsapp/messages/:id</code>.
               </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# Check balance
-curl https://nepalfillings.com/api/v1/whatsapp/balance \\
-  -H "Authorization: Bearer nf_whatsapp_your_key"`}
-              </Box>
 
-              {/* ============== Messenger Integration ============== */}
+              {/* ============== Email ============== */}
               <Divider sx={{ my: 3 }} />
               <Typography variant='h6' gutterBottom>
-                Messenger Integration (Facebook Page)
+                Email
               </Typography>
 
               <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>
-                  How Messenger Works
-                </Typography>
-                <Typography variant='body2'>
-                  Messenger contacts are collected when users message your <strong>Facebook Page</strong> with the
-                  opt-in keyword. Each contact has a unique <strong>PSID (Page-Scoped ID)</strong> assigned by Facebook.
-                  Due to Facebook&apos;s <strong>24-hour messaging policy</strong>, you can only send messages to users
-                  who interacted with your page within the last 24 hours, unless you use approved{' '}
-                  <strong>Message Tags</strong> (e.g., account updates, confirmed events). Each message consumes{' '}
-                  <strong>1 credit</strong>. Share the <code>m.me/PAGE_ID?ref=KEYWORD</code> link or QR code for easy
-                  subscription.
-                </Typography>
+                The <code>from</code> address must use a sending domain verified for this account; otherwise the API
+                answers 403 <code>DOMAIN_NOT_VERIFIED</code>. Each email uses 1 credit.
               </Alert>
 
-              <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                  <i className='tabler-settings' style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  Messenger Setup Details
-                </Typography>
-                <Table size='small'>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Platform</TableCell>
-                      <TableCell>Facebook Messenger via Graph API</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Facebook Page</TableCell>
-                      <TableCell>
-                        NEPSE Trading (ID: <code>104960767808713</code>)
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Page Token</TableCell>
-                      <TableCell>Long-lived Page Access Token from Facebook Developer Console</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>App Secret</TableCell>
-                      <TableCell>Facebook App Secret for webhook signature verification</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Webhook Endpoint</TableCell>
-                      <TableCell>
-                        <code>POST /messenger/:account_id/webhook</code>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Opt-in Keyword</TableCell>
-                      <TableCell>
-                        Users send this keyword to subscribe (e.g., <code>XYBJKJQ3</code>)
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Subscribe Link</TableCell>
-                      <TableCell>
-                        <code>https://m.me/104960767808713?ref=XYBJKJQ3</code>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>24-Hour Policy</TableCell>
-                      <TableCell>Free messaging within 24h of user interaction; Message Tags required after</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Credit Cost</TableCell>
-                      <TableCell>
-                        <strong>1 credit</strong> per Messenger message
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Auto-Captured Data</TableCell>
-                      <TableCell>PSID, Facebook Name, Profile Picture URL, Opt-in timestamp</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Contact Fields</TableCell>
-                      <TableCell>PSID (required), Name, Tags, Groups, Opted-in status</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>API Key Format</TableCell>
-                      <TableCell>
-                        <code>nf_messenger_xxxxxxxx...</code> (live) or <code>nf_test_messenger_xxxxxxxx...</code>{' '}
-                        (test)
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
-
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                Send Messenger Message
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/messenger/send \\
-  -H "Authorization: Bearer nf_messenger_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "to": "7835919308",
-    "message": "NEPSE closed at 2,450 today! Your portfolio is up 3.2%."
-  }'
-
-# Response:
-{
-  "id": 789,
-  "status": "sent",
-  "provider_message_id": "mid.$cAABb...",
-  "credits_charged": 1
-}`}
-              </Box>
-
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Send Message with Image
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/messenger/send \\
-  -H "Authorization: Bearer nf_messenger_your_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "to": "7835919308",
-    "message": "Today'"'"'s NEPSE Chart 📊",
-    "image_url": "https://cdn.example.com/nepse-chart-2026-03-17.png"
-  }'`}
-              </Box>
-
-
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
-                Check Messenger Balance
-              </Typography>
-              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# Check balance
-curl https://nepalfillings.com/api/v1/messenger/balance \\
-  -H "Authorization: Bearer nf_messenger_your_key"
-
-# Response:
-{
-  "channel": "messenger",
-  "balance": 4027,
-  "reserved": 0
-}`}
-              </Box>
-
-
-              {/* ============== Email Integration ============== */}
-              <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>
-                Email Integration
-              </Typography>
-
-              <Alert severity='info' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>
-                  How Email Works
-                </Typography>
-                <Typography variant='body2'>
-                  Email campaigns are powered by <strong>Listmonk</strong> (self-hosted newsletter engine) with delivery
-                  through your configured SMTP provider (SendGrid, Amazon SES, Mailgun, Postmark, etc.). You must verify
-                  a <strong>sending domain</strong> with SPF, DKIM, and DMARC records before sending. Each email
-                  consumes <strong>1 credit</strong>. Subscriber management happens through Listmonk lists.
-                </Typography>
-              </Alert>
-
-              <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                  <i className='tabler-settings' style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                  Email Setup Details
-                </Typography>
-                <Table size='small'>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Engine</TableCell>
-                      <TableCell>Listmonk (self-hosted, open-source)</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>SMTP Providers</TableCell>
-                      <TableCell>SendGrid, Amazon SES, Mailgun, Postmark, or any SMTP server</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Domain Verification</TableCell>
-                      <TableCell>Required: SPF, DKIM, and DMARC DNS records on your sending domain</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Credit Cost</TableCell>
-                      <TableCell>
-                        <strong>1 credit</strong> per email sent
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Bulk Limit</TableCell>
-                      <TableCell>
-                        Max <strong>100 recipients</strong> per bulk API call
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>API Key Format</TableCell>
-                      <TableCell>
-                        <code>nf_email_xxxxxxxx...</code> (live) or <code>nf_test_email_xxxxxxxx...</code> (test)
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
-
-              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                Send Email
+                Send an email
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
                 {`curl -X POST https://nepalfillings.com/api/v1/email/send \\
   -H "Authorization: Bearer nf_email_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "to": "investor@example.com",
-    "from": "alerts@yourdomain.com",
-    "subject": "NEPSE Daily Market Summary - March 17, 2026",
-    "html": "<h1>Market Summary</h1><p>NEPSE Index: 2,450.30 (+1.5%)</p>",
-    "text": "Market Summary\\nNEPSE Index: 2,450.30 (+1.5%)"
-  }'
-
-# Response:
-{
-  "id": 101,
-  "status": "queued",
-  "credits_charged": 1
-}`}
+    "to": "customer@example.com",
+    "from": "orders@yourdomain.com",
+    "from_name": "Your Shop",
+    "subject": "Your order has shipped",
+    "html": "<p>Your order #1042 is on its way.</p>",
+    "text": "Your order #1042 is on its way."
+  }'`}
               </Box>
 
-              {/* ============== Credit Management ============== */}
-              <Divider sx={{ my: 3 }} />
-              <Typography variant='h6' gutterBottom>
-                Credit Management
+              <Typography variant='body2' sx={{ mt: 2 }}>
+                Bulk: <code>POST /api/v1/email/send/bulk</code> with shared <code>from</code>, <code>subject</code> and{' '}
+                <code>html</code>, and <code>{`"recipients": [{"to": "…"}, {"to": "…", "subject": "…"}]`}</code>. Also:{' '}
+                <code>GET /api/v1/email/domains</code>, <code>/balance</code>, <code>/messages</code>,{' '}
+                <code>/messages/:id</code> and <code>/status</code>.
               </Typography>
 
-              <Alert severity='warning' sx={{ mb: 3 }}>
-                <Typography variant='subtitle2' gutterBottom>
-                  How Credits Work
-                </Typography>
-                <Typography variant='body2'>
-                  Each channel (SMS, WhatsApp, Email, Telegram, Messenger) has its own{' '}
-                  <strong>separate credit balance</strong>. Credits are deducted when messages are sent successfully. In
-                  test mode, no credits are charged. When sending a campaign, credits are <strong>reserved</strong>{' '}
-                  first, then confirmed after delivery, or <strong>refunded</strong> on failure. Contact your
-                  administrator to purchase or adjust credit balances.
-                </Typography>
+              {/* ============== Messenger ============== */}
+              <Divider sx={{ my: 3 }} />
+              <Typography variant='h6' gutterBottom>
+                Facebook Messenger
+              </Typography>
+
+              <Alert severity='info' sx={{ mb: 3 }}>
+                Messages are sent from the Facebook Page connected under Messenger &gt; Settings, to people identified by
+                their Page-scoped ID (PSID), which is recorded when they message your Page. Facebook limits when a Page may
+                message someone, generally to 24 hours after their last message. Each message uses 1 credit.
               </Alert>
 
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`# A key is bound to one channel, so it reads that channel's balance.
-curl https://nepalfillings.com/api/v1/whatsapp/balance \\
-  -H "Authorization: Bearer nf_whatsapp_your_key"
+                {`curl -X POST https://nepalfillings.com/api/v1/messenger/send \\
+  -H "Authorization: Bearer nf_messenger_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "to": "PSID_OF_THE_PERSON", "message": "Thanks for your message. We are open until 6 PM." }'
 
-# Response:
-{
-  "channel": "whatsapp",
-  "balance": 100000,
-  "credit_per_message": 1
-}
-
-# Which account and channel a key belongs to
-curl https://nepalfillings.com/api/v1/me \\
-  -H "Authorization: Bearer nf_whatsapp_your_key"
-
-# Every balance at once, and the transaction history, are in this dashboard
-# rather than the API — see the Transaction History tab above.`}
+# Bulk: recipients is a list of PSIDs
+curl -X POST https://nepalfillings.com/api/v1/messenger/send/bulk \\
+  -H "Authorization: Bearer nf_messenger_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "message": "New stock arrives on Friday.", "recipients": ["PSID_1", "PSID_2"] }'`}
               </Box>
 
-              <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
-                  Credit Flow
-                </Typography>
-                <Table size='small'>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Transaction Type</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Effect</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>
-                        <Chip label='purchase' size='small' color='success' />
-                      </TableCell>
-                      <TableCell>Credits added by admin</TableCell>
-                      <TableCell>Balance increases</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <Chip label='deduct' size='small' color='error' />
-                      </TableCell>
-                      <TableCell>Credits used for sending messages</TableCell>
-                      <TableCell>Balance decreases</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <Chip label='refund' size='small' color='info' />
-                      </TableCell>
-                      <TableCell>Credits returned on send failure</TableCell>
-                      <TableCell>Balance increases</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <Chip label='bonus' size='small' color='warning' />
-                      </TableCell>
-                      <TableCell>Promotional credits added</TableCell>
-                      <TableCell>Balance increases</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <Chip label='admin adjust' size='small' color='secondary' />
-                      </TableCell>
-                      <TableCell>Manual adjustment by admin</TableCell>
-                      <TableCell>Balance increases or decreases</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
+              <Alert severity='info' sx={{ mt: 3 }}>
+                Telegram is not available through the API. Send Telegram broadcasts from the dashboard.
+              </Alert>
 
+              {/* ============== Errors ============== */}
               <Divider sx={{ my: 3 }} />
               <Typography variant='h6' gutterBottom>
-                Rate Limits & Error Handling
+                Errors
               </Typography>
 
-              <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+              <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, overflowX: 'auto' }}>
                 <Table size='small'>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>HTTP Code</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Meaning</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Action</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>HTTP</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>error.code</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>What to do</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    <TableRow>
-                      <TableCell>
-                        <code>200</code>
-                      </TableCell>
-                      <TableCell>Success</TableCell>
-                      <TableCell>Request processed successfully</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <code>201</code>
-                      </TableCell>
-                      <TableCell>Created</TableCell>
-                      <TableCell>Resource created successfully</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <code>400</code>
-                      </TableCell>
-                      <TableCell>Bad Request</TableCell>
-                      <TableCell>Check request body and parameters</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <code>401</code>
-                      </TableCell>
-                      <TableCell>Unauthorized</TableCell>
-                      <TableCell>Invalid or missing API key</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <code>402</code>
-                      </TableCell>
-                      <TableCell>Payment Required</TableCell>
-                      <TableCell>Insufficient credits — top up your balance</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <code>404</code>
-                      </TableCell>
-                      <TableCell>Not Found</TableCell>
-                      <TableCell>Resource does not exist</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <code>429</code>
-                      </TableCell>
-                      <TableCell>Rate Limited</TableCell>
-                      <TableCell>Too many requests — wait and retry after the rate limit window</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <code>500</code>
-                      </TableCell>
-                      <TableCell>Server Error</TableCell>
-                      <TableCell>Internal error — contact support</TableCell>
-                    </TableRow>
+                    {[
+                      ['400', 'TEMPLATE_NOT_FOUND', 'WhatsApp: check template_name against GET /whatsapp/templates.'],
+                      ['401', 'AUTH_ERROR', 'The key is missing, wrong, revoked or for another channel.'],
+                      ['402', 'INSUFFICIENT_CREDITS', 'Not enough API credits for this channel. Contact us to add credits.'],
+                      ['403', 'CHANNEL_NOT_CONFIGURED', 'Set the channel up in the dashboard first (for example the Aakash SMS token).'],
+                      ['403', 'DOMAIN_NOT_VERIFIED', 'Email: verify the domain of the from address.'],
+                      ['404', 'NOT_FOUND', 'No message with that id for this key.'],
+                      ['422', 'VALIDATION_ERROR', 'A field is missing or invalid; error.field names it.'],
+                      ['422', 'UNDELIVERABLE', 'WhatsApp: the number cannot receive WhatsApp messages. Nothing was charged.'],
+                      ['429', 'RATE_LIMITED', 'WhatsApp: the linked number reached its sending allowance. Wait for the Retry-After header.'],
+                      ['429', '(none)', 'Too many requests from this IP address. Slow down and retry.'],
+                      ['502', 'PROVIDER_ERROR or DELIVERY_FAILED', 'The provider refused or failed the send. Retry later.'],
+                      ['503', 'CHANNEL_UNAVAILABLE', 'WhatsApp: no linked number is connected. Check WhatsApp > Settings.'],
+                      ['500', 'PROVIDER_ERROR', 'Something failed on our side. Retry later, and contact us if it persists.']
+                    ].map(([http, code, action]) => (
+                      <TableRow key={http + code}>
+                        <TableCell>
+                          <code>{http}</code>
+                        </TableCell>
+                        <TableCell>
+                          <code>{code}</code>
+                        </TableCell>
+                        <TableCell>{action}</TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </Box>

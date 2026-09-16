@@ -51,6 +51,11 @@ const NotFound = ({ mode }: { mode: SystemMode }) => {
         <Button href='/' component={Link} variant='contained'>
           Back To Home
         </Button>
+        {/* A way onward besides the homepage: this page used to be a dead end. */}
+        <Typography className='mbs-4'>
+          <Link href='/pricing'>Pricing</Link> · <Link href='/blog'>Blog</Link> · <Link href='/about'>About</Link> ·{' '}
+          <Link href='/#contact-us'>Contact us</Link>
+        </Typography>
         <img
           alt='error-404-illustration'
           src='/images/illustrations/characters/1.png'

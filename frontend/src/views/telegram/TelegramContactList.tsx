@@ -481,7 +481,8 @@ const TelegramContactList = () => {
                         className='mt-2 p-2 rounded'
                         sx={{ bgcolor: 'action.hover', fontFamily: 'monospace', fontSize: 14 }}
                       >
-                        /start PAID4283
+                        {/* A generic placeholder: this used to print one account's real code to everyone. */}
+                        /start YOUR_ACCESS_CODE
                       </Box>
                       <Typography variant='caption' color='text.secondary' className='mt-1 block'>
                         Without the correct code, the bot will not subscribe you.

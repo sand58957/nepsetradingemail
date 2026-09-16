@@ -182,8 +182,10 @@ const Register = ({ mode }: { mode: SystemMode }) => {
         </Link>
         <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-8 sm:mbs-11 md:mbs-0'>
           <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>Create your account</Typography>
-            <Typography>Subscribe to Nepal Fillings email newsletters</Typography>
+            <Typography variant='h4'>Create your free Nepal Fillings account</Typography>
+            {/* Was "Subscribe to Nepal Fillings email newsletters", on the page where
+                people sign up for the product. */}
+            <Typography>Free for up to 500 subscribers. Upgrade to a paid plan when your list grows.</Typography>
           </div>
 
           {error && (
@@ -237,6 +239,17 @@ const Register = ({ mode }: { mode: SystemMode }) => {
             <Button fullWidth variant='contained' type='submit' disabled={loading}>
               {loading ? 'Creating account...' : 'Sign Up'}
             </Button>
+            <Typography variant='body2' color='text.secondary' className='text-center'>
+              By creating an account you agree to the{' '}
+              <Link href='/terms' target='_blank'>
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href='/privacy' target='_blank'>
+                Privacy Policy
+              </Link>
+              .
+            </Typography>
             <div className='flex justify-center items-center flex-wrap gap-2'>
               <Typography>Already have an account?</Typography>
               <Typography component={Link} href={getLocalizedUrl('/login', locale as Locale)} color='primary.main'>

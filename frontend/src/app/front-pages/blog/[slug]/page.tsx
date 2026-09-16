@@ -368,23 +368,43 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 )}
                 <div className='blog-author-socials'>
                   {author.social_links?.twitter && (
-                    <a href={author.social_links?.twitter} target='_blank' rel='noopener noreferrer'>
-                      <i className='tabler-brand-x' />
+                    <a
+                      href={author.social_links?.twitter}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      aria-label={`${author.name} on X`}
+                    >
+                      <i className='tabler-brand-x' aria-hidden='true' />
                     </a>
                   )}
                   {author.social_links?.linkedin && (
-                    <a href={author.social_links?.linkedin} target='_blank' rel='noopener noreferrer'>
-                      <i className='tabler-brand-linkedin' />
+                    <a
+                      href={author.social_links?.linkedin}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      aria-label={`${author.name} on LinkedIn`}
+                    >
+                      <i className='tabler-brand-linkedin' aria-hidden='true' />
                     </a>
                   )}
                   {author.social_links?.facebook && (
-                    <a href={author.social_links?.facebook} target='_blank' rel='noopener noreferrer'>
-                      <i className='tabler-brand-facebook' />
+                    <a
+                      href={author.social_links?.facebook}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      aria-label={`${author.name} on Facebook`}
+                    >
+                      <i className='tabler-brand-facebook' aria-hidden='true' />
                     </a>
                   )}
                   {author.social_links?.website && (
-                    <a href={author.social_links?.website} target='_blank' rel='noopener noreferrer'>
-                      <i className='tabler-world' />
+                    <a
+                      href={author.social_links?.website}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      aria-label={`${author.name}'s website`}
+                    >
+                      <i className='tabler-world' aria-hidden='true' />
                     </a>
                   )}
                 </div>
