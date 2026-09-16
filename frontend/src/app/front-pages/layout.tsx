@@ -1,3 +1,6 @@
+// Next Imports
+import type { Metadata } from 'next'
+
 // MUI Imports
 import Button from '@mui/material/Button'
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript'
@@ -20,6 +23,7 @@ import WhatsAppFloat from '@components/layout/front-pages/WhatsAppFloat'
 
 // Util Imports
 import { getSystemMode } from '@core/utils/serverHelpers'
+import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL } from '@/utils/seo'
 
 // Style Imports
 import '@/app/globals.css'
@@ -27,73 +31,18 @@ import '@/app/globals.css'
 // Generated Icon CSS Imports
 import '@assets/iconify-icons/generated-icons.css'
 
-export const metadata = {
-  // Title/description kept within SERP display limits (~60 / ~155 chars) so they don't truncate.
-  // Channel keywords (Email/SMS/WhatsApp/...) live in `keywords`, the H1, and on-page copy.
-  title: 'Nepal Fillings - #1 Digital Marketing Platform in Nepal',
-  description:
-    'Send bulk Email, SMS, WhatsApp, Telegram & Messenger campaigns from one dashboard. Credit-based pricing, no monthly fees. Built for Nepali businesses.',
-  keywords: [
-    'Nepal email marketing',
-    'bulk SMS Nepal',
-    'WhatsApp marketing Nepal',
-    'Telegram marketing Nepal',
-    'Messenger marketing Nepal',
-    'digital marketing Nepal',
-    'Nepal Fillings',
-    'NEPSE trading alerts',
-    'bulk email Nepal',
-    'Nepal marketing platform',
-    'Aakash SMS',
-    'email campaign Nepal',
-    'marketing automation Nepal',
-    'Nepal business marketing',
-    'Kathmandu digital marketing'
-  ],
-  authors: [{ name: 'Marketminds Investment Group Pvt Ltd' }],
-  creator: 'Nepal Fillings',
+// Only what every marketing page shares. No canonical, title or description here:
+// layout metadata is inherited by each child page that doesn't override it, which
+// is how pricing, privacy, terms and the help centre all ended up declaring the
+// homepage as their canonical. Pages set their own through pageMetadata().
+// GSC verification is handled by /public/google16932f9bf54e4b87.html.
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: SITE_NAME,
+  applicationName: SITE_NAME,
   publisher: 'Marketminds Investment Group Pvt Ltd',
-  metadataBase: new URL('https://nepalfillings.com'),
-  alternates: {
-    canonical: '/'
-  },
-  openGraph: {
-    title: 'Nepal Fillings - #1 Digital Marketing Platform in Nepal',
-    description:
-      'Send bulk Email, SMS, WhatsApp, Telegram & Messenger campaigns from one dashboard. Credit-based pricing, no monthly fees. Built for Nepali businesses.',
-    url: 'https://nepalfillings.com',
-    siteName: 'Nepal Fillings',
-    locale: 'en_US',
-    type: 'website',
-    images: [
-      {
-        url: '/images/front-pages/landing-page/hero-og.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Nepal Fillings - Digital Marketing Dashboard'
-      }
-    ]
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Nepal Fillings - #1 Digital Marketing Platform in Nepal',
-    description:
-      'Send bulk Email, SMS, WhatsApp, Telegram & Messenger campaigns from one dashboard. Built for Nepali businesses.',
-    images: ['/images/front-pages/landing-page/hero-og.jpg']
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large' as const,
-      'max-snippet': -1
-    }
-  }
-
-  // GSC verification is handled by /public/google16932f9bf54e4b87.html — do NOT emit a placeholder meta tag here
+  openGraph: { siteName: SITE_NAME, locale: 'en_US', type: 'website', images: [DEFAULT_OG_IMAGE] },
+  twitter: { card: 'summary_large_image' }
 }
 
 const Layout = async ({ children }: ChildrenType) => {

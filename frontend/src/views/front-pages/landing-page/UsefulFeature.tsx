@@ -41,19 +41,19 @@ const feature = [
     icon: <Paper color='var(--mui-palette-primary-main)' />,
     title: 'SMS Campaigns',
     description:
-      'Reach customers instantly with bulk SMS via Nepal Telecom and Ncell networks with high delivery rates.'
+      'Send bulk SMS campaigns through your own Aakash SMS account, with scheduling and a status for every message.'
   },
   {
     icon: <Check color='var(--mui-palette-primary-main)' />,
     title: 'API Integration',
     description:
-      'RESTful APIs for all channels — automate campaign sending, manage contacts, and track analytics programmatically.'
+      'A REST API with per-channel keys for SMS, WhatsApp, email and Messenger, so your website or app can send messages.'
   },
   {
     icon: <User color='var(--mui-palette-primary-main)' />,
     title: 'WhatsApp & Messenger',
     description:
-      'Engage customers on WhatsApp Business and Facebook Messenger with automated responses and broadcast campaigns.'
+      "Send WhatsApp campaigns from a number you link by QR code (not Meta's Business API), and message people through your Facebook Page."
   },
   {
     icon: <Document color='var(--mui-palette-primary-main)' />,

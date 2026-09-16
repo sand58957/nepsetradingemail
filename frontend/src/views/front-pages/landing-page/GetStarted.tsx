@@ -48,10 +48,10 @@ const GetStarted = ({ mode }: { mode: SystemMode }) => {
               Ready to Grow Your Business?
             </Typography>
             <Typography variant='h5' component='p' color='text.secondary' className='text-center'>
-              Start sending campaigns today — no monthly fees, pay only for what you use
+              Start free with up to 500 subscribers, and upgrade when your list grows
             </Typography>
           </div>
-          <Button component={Link} href='/en/register' variant='contained'>
+          <Button component={Link} href='/register' variant='contained'>
             Get started free
           </Button>
         </div>

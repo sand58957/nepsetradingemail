@@ -70,7 +70,7 @@ const Header = ({ mode }: { mode: Mode }) => {
             <Button
               component={Link}
               variant='contained'
-              href='/en/register'
+              href='/register'
               color='primary'
               className='lg:hidden'
               sx={{
@@ -91,7 +91,7 @@ const Header = ({ mode }: { mode: Mode }) => {
               <Button
                 component={Link}
                 variant='outlined'
-                href='/en/login'
+                href='/login'
                 color='primary'
                 startIcon={<i className='tabler-login text-lg' />}
                 sx={{
@@ -113,7 +113,7 @@ const Header = ({ mode }: { mode: Mode }) => {
               <Button
                 component={Link}
                 variant='contained'
-                href='/en/register'
+                href='/register'
                 startIcon={<i className='tabler-rocket text-lg' />}
                 sx={{
                   borderRadius: '50px',

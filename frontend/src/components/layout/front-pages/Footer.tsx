@@ -3,7 +3,6 @@
 // MUI Imports
 import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 
 // Third-party Imports
@@ -15,7 +14,6 @@ import type { Mode } from '@core/types'
 // Component Imports
 import Link from '@components/Link'
 import Logo from '@components/layout/shared/Logo'
-import CustomTextField from '@core/components/mui/TextField'
 
 // Hooks Imports
 import { useImageVariant } from '@core/hooks/useImageVariant'
@@ -24,7 +22,6 @@ import { useImageVariant } from '@core/hooks/useImageVariant'
 import { frontLayoutClasses } from '@layouts/utils/layoutClasses'
 
 // Styles Imports
-import styles from './styles.module.css'
 import frontCommonStyles from '@views/front-pages/styles.module.css'
 
 const Footer = ({ mode }: { mode: Mode }) => {
@@ -58,36 +55,8 @@ const Footer = ({ mode }: { mode: Mode }) => {
                   Nepal Fillings - Multi-channel digital marketing platform for Email, SMS, Telegram, WhatsApp &
                   Messenger campaigns. Powered by Marketminds Investment Group Pvt Ltd.
                 </Typography>
-                <div className='flex items-end is-full'>
-                  <CustomTextField
-                    size='small'
-                    className={classnames(styles.inputBorder, 'flex-1 min-is-0')}
-                    label='Subscribe to newsletter'
-                    placeholder='Your email'
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        borderStartEndRadius: '0 !important',
-                        borderEndEndRadius: '0 !important',
-                        '&:not(.Mui-focused)': {
-                          borderColor: 'rgb(var(--mui-mainColorChannels-dark) / 0.22)'
-                        },
-                        '&.MuiFilledInput-root:not(.Mui-focused):not(.Mui-disabled):hover': {
-                          borderColor: 'rgba(255 255 255 / 0.6) !important'
-                        }
-                      }
-                    }}
-                  />
-                  <Button
-                    variant='contained'
-                    color='primary'
-                    sx={{
-                      borderStartStartRadius: 0,
-                      borderEndStartRadius: 0
-                    }}
-                  >
-                    Subscribe
-                  </Button>
-                </div>
+                {/* The newsletter box that sat here had no handler: its Subscribe button
+                    sent nothing. It comes back when it posts to a real list. */}
               </div>
             </Grid>
             <Grid size={{ xs: 12, sm: 3, lg: 2 }}>
@@ -137,7 +106,7 @@ const Footer = ({ mode }: { mode: Mode }) => {
                 <Typography component={Link} href='/#features' color='white' className='opacity-[0.78] plb-1'>
                   Messenger Marketing
                 </Typography>
-                <Typography component={Link} href='/en/register' color='white' className='font-medium plb-1'>
+                <Typography component={Link} href='/register' color='white' className='font-medium plb-1'>
                   Get started free
                 </Typography>
               </div>
@@ -147,19 +116,19 @@ const Footer = ({ mode }: { mode: Mode }) => {
                 Legal & Contact
               </Typography>
               <div className='flex flex-col gap-4'>
-                <Typography component={Link} href='/front-pages/privacy' color='white' className='opacity-[0.78] plb-1'>
+                <Typography component={Link} href='/privacy' color='white' className='opacity-[0.78] plb-1'>
                   Privacy Policy
                 </Typography>
-                <Typography component={Link} href='/front-pages/terms' color='white' className='opacity-[0.78] plb-1'>
+                <Typography component={Link} href='/terms' color='white' className='opacity-[0.78] plb-1'>
                   Terms of Service
                 </Typography>
                 <Typography
                   component={Link}
-                  href='mailto:admin@nepsetrading.com'
+                  href='mailto:admin@nepalfillings.com'
                   color='white'
                   className='opacity-[0.78]'
                 >
-                  admin@nepsetrading.com
+                  admin@nepalfillings.com
                 </Typography>
                 <Typography
                   component={Link}
@@ -201,7 +170,7 @@ const Footer = ({ mode }: { mode: Mode }) => {
           <div className='flex gap-4 items-center'>
             <Typography
               component={Link}
-              href='/front-pages/privacy'
+              href='/privacy'
               variant='body2'
               className='text-white opacity-[0.78]'
             >
@@ -209,7 +178,7 @@ const Footer = ({ mode }: { mode: Mode }) => {
             </Typography>
             <Typography
               component={Link}
-              href='/front-pages/terms'
+              href='/terms'
               variant='body2'
               className='text-white opacity-[0.78]'
             >

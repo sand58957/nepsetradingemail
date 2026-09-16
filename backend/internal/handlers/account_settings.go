@@ -7,6 +7,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
+	"github.com/lib/pq"
 
 	"github.com/sandeep/nepsetradingemail/backend/internal/models"
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/listmonk"
@@ -34,8 +35,15 @@ var validSettingsKeys = map[string]bool{
 
 // GetAll returns all account settings as a map keyed by setting key.
 func (h *AccountSettingsHandler) GetAll(c echo.Context) error {
+	// Only the known settings sections. The same table holds sendgrid_config, whose
+	// API key this endpoint used to hand to anyone who asked.
+	keys := make([]string, 0, len(validSettingsKeys))
+	for key := range validSettingsKeys {
+		keys = append(keys, key)
+	}
+
 	var settings []models.AccountSetting
-	err := h.db.Select(&settings, "SELECT * FROM app_account_settings ORDER BY key")
+	err := h.db.Select(&settings, "SELECT * FROM app_account_settings WHERE key = ANY($1) ORDER BY key", pq.Array(keys))
 	if err != nil {
 		return response.InternalError(c, "Failed to fetch account settings")
 	}

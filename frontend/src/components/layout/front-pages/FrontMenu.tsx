@@ -42,7 +42,7 @@ type Props = {
 const menuItems = [
   { label: 'Home', href: '/', icon: 'tabler-home', section: null },
   { label: 'Features', href: '/#features', icon: 'tabler-sparkles', section: 'features' },
-  { label: 'Pricing', href: '/#pricing-plans', icon: 'tabler-currency-dollar', section: 'pricing-plans' },
+  { label: 'Pricing', href: '/pricing', icon: 'tabler-currency-dollar', section: 'pricing-plans' },
   { label: 'FAQ', href: '/#faq', icon: 'tabler-help-circle', section: 'faq' },
   { label: 'Contact', href: '/#contact-us', icon: 'tabler-mail', section: 'contact-us' },
   { label: 'Blog', href: '/blog', icon: 'tabler-article', section: null }
@@ -142,7 +142,7 @@ const FrontMenu = (props: Props) => {
               signing up, which is what a first-time visitor is there to do. */}
           <Box
             component={Link}
-            href='/en/login'
+            href='/login'
             onClick={() => setIsDrawerOpen(false)}
             sx={{
               display: 'flex',

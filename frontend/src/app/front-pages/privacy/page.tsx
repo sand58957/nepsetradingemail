@@ -1,3 +1,6 @@
+// Next Imports
+import type { Metadata } from 'next'
+
 // MUI Imports
 import Typography from '@mui/material/Typography'
 import Container from '@mui/material/Container'
@@ -6,21 +9,26 @@ import CardContent from '@mui/material/CardContent'
 import Divider from '@mui/material/Divider'
 import Box from '@mui/material/Box'
 
-export const metadata = {
-  title: 'Privacy Policy - Nepal Fillings',
-  description: 'Privacy Policy for Nepal Fillings Digital Marketing Platform by Marketminds Investment Group Pvt Ltd.'
-}
+// Util Imports
+import { pageMetadata } from '@/utils/seo'
+
+export const metadata: Metadata = pageMetadata({
+  path: '/privacy',
+  title: 'Privacy Policy | Nepal Fillings',
+  description:
+    'How Marketminds Investment Group Pvt Ltd (Nepal Fillings) collects, uses and protects account, subscriber, campaign and technical data.'
+})
 
 const PrivacyPolicyPage = () => {
   return (
     <Container maxWidth='lg' sx={{ py: 8 }}>
       <Card>
         <CardContent sx={{ p: { xs: 4, md: 8 } }}>
-          <Typography variant='h3' fontWeight='bold' gutterBottom>
+          <Typography variant='h3' component='h1' fontWeight='bold' gutterBottom>
             Privacy Policy
           </Typography>
           <Typography variant='body2' color='text.secondary' gutterBottom>
-            Last Updated: March 16, 2026
+            Last Updated: September 16, 2026
           </Typography>
           <Divider sx={{ my: 4 }} />
 
@@ -109,9 +117,7 @@ const PrivacyPolicyPage = () => {
               <ul style={{ paddingLeft: '1.5rem', lineHeight: 2 }}>
                 <li>SSL/TLS encryption for all data in transit</li>
                 <li>JWT-based authentication with role-based access control</li>
-                <li>Encrypted storage of API keys and sensitive credentials</li>
-                <li>Regular security audits and monitoring</li>
-                <li>Multi-tenant data isolation (each account can only access its own data)</li>
+                <li>API keys stored only as one-way SHA-256 hashes, so a key cannot be read back after it is created</li>
               </ul>
             </Typography>
           </Box>
@@ -139,6 +145,20 @@ const PrivacyPolicyPage = () => {
                 </li>
                 <li>
                   <strong>Listmonk</strong> &mdash; For email campaign processing and delivery
+                </li>
+                <li>
+                  <strong>SendGrid</strong> &mdash; For sending email
+                </li>
+                <li>
+                  <strong>Aakash SMS</strong> &mdash; SMS campaigns are sent through the Aakash SMS account you connect
+                </li>
+                <li>
+                  <strong>WhatsApp</strong> &mdash; WhatsApp messages are sent from the number you link, through a
+                  WhatsApp Web client that we run on our servers (not Meta&apos;s WhatsApp Business API)
+                </li>
+                <li>
+                  <strong>Google AdSense</strong> &mdash; Shows ads on blog pages and may set cookies to serve and
+                  measure them
                 </li>
               </ul>
             </Typography>
@@ -185,15 +205,17 @@ const PrivacyPolicyPage = () => {
               6. Anti-Spam Policy
             </Typography>
             <Typography variant='body1' paragraph>
-              We strictly prohibit the use of our platform for sending unsolicited messages. All recipients must have
-              explicitly opted in to receive communications. Our platform enforces:
+              We strictly prohibit the use of our platform for sending unsolicited messages. Every recipient must have
+              agreed to receive your messages, and you are responsible for having that consent. In particular:
             </Typography>
             <Typography variant='body1' component='div'>
               <ul style={{ paddingLeft: '1.5rem', lineHeight: 2 }}>
-                <li>Mandatory opt-in for all subscribers (including Telegram subscription codes)</li>
-                <li>Easy unsubscribe/opt-out mechanism for all channels</li>
-                <li>Automatic handling of bounce-backs and complaints</li>
-                <li>Credit-based sending limits to prevent abuse</li>
+                <li>Telegram contacts subscribe themselves through your bot</li>
+                <li>
+                  WhatsApp contacts you import are not opted in unless you confirm that they agreed, or your file says
+                  so for each contact
+                </li>
+                <li>Messages sent through the API use prepaid credits</li>
               </ul>
             </Typography>
           </Box>
@@ -232,8 +254,8 @@ const PrivacyPolicyPage = () => {
               9. Cookies
             </Typography>
             <Typography variant='body1' paragraph>
-              We use essential cookies for authentication and session management. We do not use third-party tracking
-              cookies for advertising purposes.
+              We use essential cookies for authentication and session management. Blog pages show ads from Google
+              AdSense, which may set cookies to serve and measure those ads.
             </Typography>
           </Box>
 

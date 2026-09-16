@@ -5,6 +5,7 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   basePath: process.env.BASEPATH,
   output: 'standalone',
+  poweredByHeader: false,
   outputFileTracingRoot: path.join(__dirname),
   turbopack: {
     root: path.join(__dirname)
@@ -64,8 +65,9 @@ const nextConfig: NextConfig = {
         source: '/pricing',
         destination: '/front-pages/pricing'
       },
+      // Public paths are excluded explicitly, or the catch-all sends them to the dashboard.
       {
-        source: '/:path((?!en|fr|ar|front-pages|blog|images|api|favicon.ico|_next).+)+',
+        source: '/:path((?!en|fr|ar|front-pages|blog|images|api|favicon.ico|_next|sitemaps|pricing|privacy|terms|help|contact).+)+',
         destination: '/en/:path*'
       }
     ]
@@ -78,6 +80,13 @@ const nextConfig: NextConfig = {
         permanent: true,
         locale: false
       },
+      // The clean URLs are canonical; the /front-pages/ copies of the same pages redirect
+      // to them. Redirects match only the incoming URL, so the rewrites above don't loop.
+      { source: '/front-pages/pricing', destination: '/pricing', permanent: true, locale: false },
+      { source: '/front-pages/privacy', destination: '/privacy', permanent: true, locale: false },
+      { source: '/front-pages/terms', destination: '/terms', permanent: true, locale: false },
+      { source: '/front-pages/blog', destination: '/blog', permanent: true, locale: false },
+      { source: '/front-pages/blog/:path*', destination: '/blog/:path*', permanent: true, locale: false },
       {
         source: '/dashboards/email-marketing',
         destination: '/dashboards',

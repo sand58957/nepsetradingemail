@@ -1,28 +1,25 @@
 import type { MetadataRoute } from 'next'
 
-// Every AI crawler we grant access to. Kept as one list so a new engine is a
-// single-line change rather than another copied block.
-const AI_CRAWLERS = [
-  'GPTBot',
-  'OAI-SearchBot',
-  'ChatGPT-User',
-  'Google-Extended',
-  'PerplexityBot',
-  'Perplexity-User',
-  'ClaudeBot',
-  'Claude-User',
-  'Claude-SearchBot',
-  'anthropic-ai',
-  'Applebot',
-  'Applebot-Extended',
-  'CCBot',
-  'meta-externalagent',
-  'FacebookBot',
-  'Amazonbot',
-  'Bytespider',
-  'cohere-ai',
-  'DuckAssistBot',
-  'MistralAI-User'
+// One group for every crawler, AI crawlers included.
+//
+// A crawler that finds a group naming it follows only that group and ignores `*`.
+// There used to be a separate group per AI bot, none of which disallowed /api/, so
+// the private API was open to all of them.
+//
+// /login, /register and /forgot-password are not blocked: they send
+// X-Robots-Tag: noindex (see src/proxy.ts), which a crawler can only see on a page
+// it may fetch. Removed template pages aren't blocked either, so crawlers can see
+// their 410.
+const DISALLOW = [
+  '/api/',
+  '/en/',
+  '/fr/',
+  '/ar/',
+  '/dashboards',
+  '/portal',
+  '/*?redirectTo=',
+  '/*&redirectTo=',
+  '/*?callbackUrl='
 ]
 
 export default function robots(): MetadataRoute.Robots {
@@ -30,25 +27,10 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/api/public/blog/sitemap.xml'],
-        disallow: ['/api/', '/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
-      },
-
-      // AI/LLM crawlers. Allowed on public content so the blog can be cited in
-      // AI answers; only private dashboard and auth routes are withheld.
-      //
-      // These are distinct jobs and need listing separately:
-      //   GPTBot          - OpenAI training crawler
-      //   OAI-SearchBot   - OpenAI *search* crawler, powers ChatGPT search results
-      //   ChatGPT-User    - fetches a page when a user asks about it live
-      //   Google-Extended - Gemini / AI Overviews grounding
-      //   CCBot           - Common Crawl, an input to many open models
-      ...AI_CRAWLERS.map(userAgent => ({
-        userAgent,
-        allow: ['/blog/', '/front-pages/', '/api/public/'],
-        disallow: ['/en/login', '/en/register', '/en/dashboards/', '/en/forgot-password']
-      }))
+        allow: ['/api/public/blog/sitemap.xml'],
+        disallow: DISALLOW
+      }
     ],
-    sitemap: ['https://nepalfillings.com/sitemap.xml', 'https://nepalfillings.com/api/public/blog/sitemap.xml']
+    sitemap: 'https://nepalfillings.com/sitemap.xml'
   }
 }

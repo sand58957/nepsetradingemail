@@ -532,7 +532,8 @@ func (s *Server) RegisterRoutes() {
 	publicBlog.GET("/posts/:slug", blogHandler.PublicGetPost)
 	publicBlog.GET("/categories", blogHandler.PublicListCategories)
 	publicBlog.GET("/categories/:slug", blogHandler.PublicListByCategory)
-	publicBlog.GET("/authors/:slug", blogHandler.PublicListByAuthor)
+	publicBlog.GET("/authors/:slug", blogHandler.PublicGetAuthor)
+	publicBlog.GET("/authors/:slug/posts", blogHandler.PublicListByAuthor)
 	publicBlog.GET("/tags/:slug", blogHandler.PublicListByTag)
 	publicBlog.GET("/sitemap.xml", blogHandler.PublicGetSitemap)
 	publicBlog.GET("/robots.txt", blogHandler.PublicGetRobotsTxt)
@@ -667,8 +668,11 @@ func (s *Server) RegisterRoutes() {
 	settings.POST("/smtp/test", settingsHandler.TestSMTP)
 	settings.GET("/logs", settingsHandler.GetLogs)
 
-	// Account Settings (platform-level settings in our DB) — accessible to all staff
-	accountSettings := staff.Group("/account-settings")
+	// Account Settings (platform-level settings in our DB)
+	// Admin only. These rows are global, not per account: any signed-up user could
+	// read them (including the SendGrid key and a store API key) and rewrite
+	// site-wide settings such as the public WhatsApp widget number.
+	accountSettings := admin.Group("/account-settings")
 	accountSettings.GET("", accountSettingsHandler.GetAll)
 	accountSettings.GET("/:key", accountSettingsHandler.GetByKey)
 	accountSettings.PUT("/:key", accountSettingsHandler.UpdateByKey)

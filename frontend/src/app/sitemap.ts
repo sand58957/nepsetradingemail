@@ -80,26 +80,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.9
     },
+    // Clean URLs only. The /front-pages/ copies redirect here, and the help centre is
+    // still a theme demo, kept out of search until it has real articles.
     {
-      url: `${BASE_URL}/front-pages/pricing`,
+      url: `${BASE_URL}/pricing`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8
     },
     {
-      url: `${BASE_URL}/front-pages/help-center`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6
-    },
-    {
-      url: `${BASE_URL}/front-pages/privacy`,
+      url: `${BASE_URL}/privacy`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.3
     },
     {
-      url: `${BASE_URL}/front-pages/terms`,
+      url: `${BASE_URL}/terms`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.3

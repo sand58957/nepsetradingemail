@@ -97,10 +97,10 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
               visitors who make up most of this audience. The badge row below already
               makes the point without an arrow. */}
           <div className='flex flex-wrap mbs-6 items-baseline justify-center relative gap-4'>
-            <Button component={Link} size='large' href='/en/register' variant='contained' color='primary'>
+            <Button component={Link} size='large' href='/register' variant='contained' color='primary'>
               Get started free
             </Button>
-            <Button component={Link} size='large' href='/#pricing-plans' variant='outlined' color='primary'>
+            <Button component={Link} size='large' href='/pricing' variant='outlined' color='primary'>
               View Pricing
             </Button>
           </div>
@@ -113,11 +113,14 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
           frontCommonStyles.layoutSpacing
         )}
       >
+        {/* Each caption says how the channel works, not a figure nobody measured:
+            "99.5% Delivery" had no source, and "Business API" was untrue once
+            WhatsApp moved to a linked-number gateway. */}
         {[
           {
             icon: 'tabler-mail',
             label: 'Email',
-            sub: '99.5% Delivery',
+            sub: 'Campaigns & templates',
             color: 'var(--mui-palette-primary-main)',
             bg: 'rgba(var(--mui-palette-primary-mainChannel), 0.12)',
             border: 'rgba(var(--mui-palette-primary-mainChannel), 0.2)'
@@ -125,7 +128,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
           {
             icon: 'tabler-message-2',
             label: 'SMS',
-            sub: 'Bulk Nepal',
+            sub: 'Via your Aakash SMS',
             color: 'var(--mui-palette-success-main)',
             bg: 'rgba(var(--mui-palette-success-mainChannel), 0.12)',
             border: 'rgba(var(--mui-palette-success-mainChannel), 0.2)'
@@ -133,7 +136,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
           {
             icon: 'tabler-brand-whatsapp',
             label: 'WhatsApp',
-            sub: 'Business API',
+            sub: 'Linked number',
             color: '#28a745',
             bg: 'rgba(40,167,69,0.12)',
             border: 'rgba(40,167,69,0.25)'
@@ -149,7 +152,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
           {
             icon: 'tabler-brand-messenger',
             label: 'Messenger',
-            sub: 'FB Campaigns',
+            sub: 'Facebook Page',
             color: '#0084ff',
             bg: 'rgba(0,132,255,0.12)',
             border: 'rgba(0,132,255,0.25)'
@@ -200,7 +203,7 @@ const HeroSection = ({ mode }: { mode: SystemMode }) => {
         <div className='block relative'>
           <img
             src={dashboardImage}
-            alt='dashboard-image'
+            alt='Nepal Fillings campaign dashboard'
             width={1600}
             height={828}
             fetchPriority='high'

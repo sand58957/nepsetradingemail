@@ -67,10 +67,8 @@ const planPricing: Record<string, Record<number, number>> = {
     15000: 14700,
     20000: 17500,
     30000: 25200,
-    50000: 37800,
-    100000: 67200,
-    150000: 100800,
-    200000: 134400
+    50000: 37800
+    // No prices above 50,000: that is the plan's subscriber limit.
   }
 }
 
@@ -86,6 +84,13 @@ interface PlanDef {
   sectionTitle?: string
 }
 
+// Feature lists name only what the product configures for each plan
+// (/api/public/plan-limits) and actually has. The previous lists were copied from
+// another email tool's pricing page and promised a website builder, an AI writing
+// assistant, surveys, social posting, a dedicated IP and "15% off Google
+// Workspace", none of which exist here.
+const GROWING_BUSINESS_MAX_SUBSCRIBERS = 50000
+
 const plans: PlanDef[] = [
   {
     title: 'Enterprise',
@@ -94,21 +99,12 @@ const plans: PlanDef[] = [
     buttonText: 'Contact us',
     buttonVariant: 'outlined',
     highlight: false,
-    features: [
-      'Onboarding consultation and training',
-      'Unlimited user seats',
-      'Unlimited email sends',
-      '24/7 Live chat & email support',
-      'Dedicated success manager',
-      'Dedicated IP',
-      'Deliverability consultation',
-      'Account audit and performance improvements'
-    ],
-    sectionTitle: 'All in Advanced, plus'
+    features: ['More than 200,000 subscribers', 'All five channels', 'Unlimited user seats', 'Pricing agreed with our team'],
+    sectionTitle: 'Everything in Advanced, plus'
   },
   {
     title: 'Advanced',
-    tagline: 'Best value for growing businesses with advanced needs.',
+    tagline: 'All five channels, for up to 200,000 subscribers.',
     badge: 'Best value',
     getPrice: (tier, annual) => {
       const base = planPricing['Advanced'][tier] || 4200
@@ -123,27 +119,20 @@ const plans: PlanDef[] = [
     buttonText: 'Start with Advanced',
     buttonVariant: 'contained',
     highlight: true,
-    features: [
-      'Unlimited monthly emails',
-      'Unlimited user seats',
-      '24/7 Live chat & email support',
-      'Smart sending',
-      'Facebook integration',
-      'Custom HTML editor',
-      'Promotional pop-ups',
-      'Enhanced automations',
-      'Preference center',
-      'AI writing assistant',
-      'Partner discounts',
-      '15% off Google Workspace'
-    ],
-    sectionTitle: 'All in Growing Business, plus'
+    features: ['Up to 200,000 subscribers', 'Adds SMS and Facebook Messenger', 'Unlimited user seats'],
+    sectionTitle: 'Everything in Growing Business, plus'
   },
   {
     title: 'Growing Business',
-    tagline: 'For businesses that want more control and flexibility.',
+    tagline: 'Adds WhatsApp, for up to 50,000 subscribers.',
     badge: 'Save up to 15%',
     getPrice: (tier, annual) => {
+      // The plan stops at 50,000 subscribers, so there is no Growing Business
+      // price for a bigger list; the slider used to invent one up to 200,000.
+      if (tier > GROWING_BUSINESS_MAX_SUBSCRIBERS) {
+        return { display: 'Up to 50,000', sub: 'subscribers. Choose Advanced for more.' }
+      }
+
       const base = planPricing['Growing Business'][tier] || 1750
       const price = annual ? Math.round(base * 0.85) : base
 
@@ -156,20 +145,8 @@ const plans: PlanDef[] = [
     buttonText: 'Start with Growing Business',
     buttonVariant: 'tonal',
     highlight: false,
-    features: [
-      'Unlimited monthly emails',
-      '3 user seats',
-      '24/7 Email support',
-      'Sell digital products',
-      'Unlimited templates',
-      'Dynamic emails',
-      'Campaign auto-resend',
-      'Multivariate testing',
-      'Unlimited websites & blogs',
-      'Unlimited landing pages',
-      'Unsubscribe page builder'
-    ],
-    sectionTitle: 'All in Free, plus'
+    features: ['Up to 50,000 subscribers', 'Unlimited monthly emails', 'Adds WhatsApp campaigns', '3 user seats'],
+    sectionTitle: 'Everything in Free, plus'
   },
   {
     title: 'Free',
@@ -185,19 +162,13 @@ const plans: PlanDef[] = [
     buttonVariant: 'outlined',
     highlight: false,
     features: [
-      '12,000 monthly emails',
-      '1 user seat',
-      'Email support',
-      'Email automation builder',
-      'Creative assistant',
-      'Website builder',
-      '10 landing pages',
-      'Signup forms & pop-ups',
-      'Social posting',
-      'Tags',
-      'Surveys'
+      'Up to 500 subscribers',
+      '12,000 emails a month',
+      'Email and Telegram campaigns',
+      'Email templates and automations',
+      '1 user seat'
     ],
-    sectionTitle: 'Core features'
+    sectionTitle: 'Includes'
   }
 ]
 
@@ -247,7 +218,8 @@ const PricingPlan = () => {
             Choose your plan
           </Typography>
           <Typography color='text.secondary' className='text-center max-w-lg'>
-            Calculate your price based on your subscriber count. All plans include powerful email marketing tools.
+            Calculate your price based on your subscriber count. Every plan includes email campaigns, templates and
+            automations.
           </Typography>
         </div>
 
@@ -397,7 +369,7 @@ const PricingPlan = () => {
                     {/* CTA Button */}
                     <Button
                       component={Link}
-                      href={plan.title === 'Enterprise' ? '/#contact-us' : '/en/register'}
+                      href={plan.title === 'Enterprise' ? '/#contact-us' : '/register'}
                       variant={plan.buttonVariant as any}
                       color='primary'
                       fullWidth
@@ -442,8 +414,9 @@ const PricingPlan = () => {
 
         {/* Note */}
         <Typography variant='caption' color='text.secondary' className='text-center block mbs-6'>
-          All prices are in NPR (Nepali Rupees). Annual plans are billed yearly with up to 15% savings. Prices may vary
-          based on subscriber count. Contact us for custom enterprise pricing.
+          All prices are in NPR (Nepali Rupees). Annual plans are billed yearly with up to 15% savings. Paid plans are
+          set up by our team after you sign up, so contact us to upgrade. SMS messages are sent through your own Aakash
+          SMS account and paid to Aakash SMS.
         </Typography>
       </div>
     </section>

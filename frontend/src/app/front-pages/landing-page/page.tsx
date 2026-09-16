@@ -1,8 +1,25 @@
+// Next Imports
+import type { Metadata } from 'next'
+
 // Component Imports
 import LandingPageWrapper from '@views/front-pages/landing-page'
 
 // Server Action Imports
 import { getServerMode } from '@core/utils/serverHelpers'
+
+// Data Imports
+import { landingFaqs } from '@/data/landingFaqs'
+
+// Util Imports
+import { pageMetadata } from '@/utils/seo'
+
+export const metadata: Metadata = pageMetadata({
+  path: '/',
+  // Was "#1 Digital Marketing Platform in Nepal": a ranking nobody measured.
+  title: 'Nepal Fillings – Bulk SMS, Email & WhatsApp Marketing',
+  description:
+    'Send bulk SMS, email, WhatsApp, Telegram and Messenger campaigns to customers in Nepal from one dashboard. Plans priced in NPR, with a free plan to start.'
+})
 
 // JSON-LD Structured Data for SEO
 const jsonLd = {
@@ -11,30 +28,23 @@ const jsonLd = {
   name: 'Nepal Fillings',
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
-  description:
-    'All-in-one digital marketing platform in Nepal for Email, SMS, WhatsApp, Telegram & Messenger campaigns.',
+  description: 'Dashboard for sending email, SMS, WhatsApp, Telegram and Messenger campaigns to customers in Nepal.',
   url: 'https://nepalfillings.com',
   offers: {
     '@type': 'AggregateOffer',
     priceCurrency: 'NPR',
-    // Was 4000-8000 across 3 offers, which matched neither the pricing table nor
-    // the FAQ and hid the free tier from the search snippet. The table lists four
-    // tiers: Free, Growing Business and Advanced (both priced by subscriber count,
-    // topping out at 200,000) and Enterprise, which is quoted on request.
+    // The pricing table's four tiers: Free, Growing Business and Advanced (priced
+    // by subscriber count, topping out at 200,000) and Enterprise, quoted on request.
     lowPrice: '0',
     highPrice: '186500',
     offerCount: '4'
   },
-  // An aggregateRating of 4.8 from 150 reviews was declared here against a page
-  // that shows nine testimonials and no review system. A rating a business
-  // publishes about its own product is self-serving and earns no rich result
-  // either way, so the markup carried the risk of an unverifiable claim without
-  // the benefit. Reinstate it only if it can be tied to real, countable reviews.
   provider: {
     '@type': 'Organization',
     name: 'Marketminds Investment Group Pvt Ltd',
     url: 'https://nepalfillings.com',
-    logo: 'https://nepalfillings.com/images/front-pages/landing-page/hero-dashboard-dark.png',
+    // No logo: the only raster brand mark is a 32px icon, below Google's minimum,
+    // and the dashboard screenshot this used to name is not a logo.
     address: {
       '@type': 'PostalAddress',
       streetAddress: 'Koteshwor',
@@ -46,50 +56,25 @@ const jsonLd = {
         '@type': 'ContactPoint',
         telephone: '+977-9802348957',
         contactType: 'customer service',
-        email: 'admin@nepsetrading.com'
+        email: 'admin@nepalfillings.com'
       }
-    ],
-    sameAs: ['https://nepsetrading.com', 'https://nepalfillings.com']
+    ]
+    // sameAs used to list nepsetrading.com, which merged this product with a
+    // separate stock-market brand in search and AI answers.
   }
 }
 
+// Built from the same list the page renders, so the markup always matches what
+// visitors read. Google shows FAQ rich results only for government and health
+// sites, so this is for answer engines, not a search feature.
 const faqJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'What is Nepal Fillings and how does it help my business?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Nepal Fillings is an all-in-one digital marketing platform built for businesses in Nepal. It enables you to send bulk emails, Telegram messages, SMS, WhatsApp messages, and Facebook Messenger campaigns from a single dashboard.'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I send bulk SMS to customers across Nepal?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes! Nepal Fillings integrates with Nepal Telecom and Ncell networks for high delivery rate bulk SMS across all of Nepal.'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: 'What payment methods do you accept?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'We accept eSewa, Khalti, ConnectIPS, IME Pay, FonePay, Visa, Mastercard, PayPal, and bank transfers from NMB, Civil Bank, and Laxmi Sunrise Bank.'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: 'Is Nepal Fillings suitable for small businesses in Nepal?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes. You can start free with up to 500 subscribers, and paid plans are priced by the size of your subscriber list, so the cost grows only as your audience does.'
-      }
-    }
-  ]
+  mainEntity: landingFaqs.map(faq => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: { '@type': 'Answer', text: faq.answer }
+  }))
 }
 
 const LandingPage = async () => {

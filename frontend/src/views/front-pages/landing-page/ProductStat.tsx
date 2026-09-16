@@ -24,32 +24,34 @@ type StatData = {
 }
 
 // Data
+// Only facts the product itself shows. "10k+ Messages Delivered", "99.5% Avg.
+// Delivery Rate" and "NPR 0.5 Pay Per Message" had no source, and the last
+// contradicted the subscriber-priced plans.
 const statData: StatData[] = [
   {
-    title: 'Marketing Channels',
-    // The page states an exact five channels everywhere else.
+    title: 'Marketing channels',
     value: '5',
     svg: <LaptopCharging color='var(--mui-palette-primary-main)' />,
     color: 'var(--mui-palette-primary-darkerOpacity)',
     isHover: false
   },
   {
-    title: 'Messages Delivered',
-    value: '10k+',
+    title: 'Subscribers on the free plan',
+    value: '500',
     svg: <User color='var(--mui-palette-success-main)' />,
     color: 'var(--mui-palette-success-darkerOpacity)',
     isHover: false
   },
   {
-    title: 'Avg. Delivery Rate',
-    value: '99.5%',
+    title: 'Plans priced in Nepali rupees',
+    value: 'NPR',
     svg: <Diamond color='var(--mui-palette-info-main)' />,
     color: 'var(--mui-palette-info-darkerOpacity)',
     isHover: false
   },
   {
-    title: 'Pay Per Message',
-    value: 'NPR 0.5',
+    title: 'Channels in the REST API',
+    value: '4',
     svg: <Check color='var(--mui-palette-warning-main)' />,
     color: 'var(--mui-palette-warning-darkerOpacity)',
     isHover: false

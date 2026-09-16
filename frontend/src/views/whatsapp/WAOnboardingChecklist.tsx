@@ -30,9 +30,12 @@ interface ChecklistStep {
 const steps: ChecklistStep[] = [
   {
     id: 'connect_whatsapp',
-    title: 'Connect your WhatsApp Business API',
-    description: 'Link a WhatsApp number by scanning a QR code, so you can start messaging your contacts.',
-    buttonLabel: 'Configure API',
+    // Not "Connect your WhatsApp Business API": the settings page this opens warns,
+    // correctly, that sending goes through an unofficial client instead.
+    title: 'Link a WhatsApp number',
+    description:
+      "Scan a QR code to link a WhatsApp number. Messages go out through an unofficial client, not Meta's Business API, so link a number you can afford to lose.",
+    buttonLabel: 'Link number',
     buttonUrl: '/whatsapp/settings',
     icon: 'tabler-brand-whatsapp'
   },

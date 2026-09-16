@@ -9,14 +9,17 @@ import (
 // publicRoutes are application routes verified to resolve on the live site.
 // Nothing outside this map (plus DB-backed taxonomy slugs) is ever linked, so the
 // composer cannot emit a fictional internal URL.
+//
+// Clean URLs only. The /front-pages/ paths were a theme's demo pages (pricing was
+// a USD form-builder with a card form behind it) or a redirect hop, and the help
+// centre is still a demo, so it isn't linked at all.
 var publicRoutes = map[string]string{
-	"home":        "/",
-	"blog":        "/blog",
-	"pricing":     "/front-pages/pricing",
-	"help-center": "/front-pages/help-center",
-	"privacy":     "/front-pages/privacy",
-	"terms":       "/front-pages/terms",
-	"platform":    "/front-pages/landing-page",
+	"home":     "/",
+	"blog":     "/blog",
+	"pricing":  "/pricing",
+	"privacy":  "/privacy",
+	"terms":    "/terms",
+	"platform": "/",
 }
 
 // featureAnchors maps a channel keyword to the public page that best explains it.

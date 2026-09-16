@@ -8,13 +8,13 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import Link from '@mui/material/Link'
 
 // Third-party Imports
 import classnames from 'classnames'
 
 // Components Imports
 import CustomAvatar from '@core/components/mui/Avatar'
-import CustomTextField from '@core/components/mui/TextField'
 
 // Hook Imports
 import { useIntersection } from '@/hooks/useIntersection'
@@ -68,7 +68,7 @@ const ContactUs = () => {
                 together
               </Typography>
             </div>
-            <Typography className='text-center'>Any question or remark? just write us a message</Typography>
+            <Typography className='text-center'>Questions about plans, API credits or setting up a channel? Call or email us.</Typography>
           </div>
         </div>
         <div className='lg:pis-[38px]'>
@@ -186,12 +186,12 @@ const ContactUs = () => {
                     </CustomAvatar>
                     <div>
                       <Typography>Email</Typography>
-                      <Typography color='text.primary' className='font-medium'>
-                        admin@nepsetrading.com
-                      </Typography>
-                      <Typography color='text.primary' className='font-medium'>
+                      <Link href='mailto:admin@nepalfillings.com' color='text.primary' className='font-medium block'>
                         admin@nepalfillings.com
-                      </Typography>
+                      </Link>
+                      <Link href='mailto:admin@nepsetrading.com' color='text.primary' className='font-medium block'>
+                        admin@nepsetrading.com
+                      </Link>
                     </div>
                   </div>
                   <div className='flex gap-3'>
@@ -200,15 +200,22 @@ const ContactUs = () => {
                     </CustomAvatar>
                     <div>
                       <Typography>Phone</Typography>
-                      <Typography color='text.primary' className='font-medium'>
-                        +977-9802348957 / 9709066517
-                      </Typography>
-                      <Typography color='text.primary' className='font-medium'>
-                        +977-9709066745 / 9708072951
-                      </Typography>
-                      <Typography color='text.primary' className='font-medium'>
-                        +977-9802363869 / 01-5253221
-                      </Typography>
+                      {/* Tappable: on a phone, a number that can't be tapped is one that doesn't get called. */}
+                      {[
+                        ['+977-9802348957', '+9779802348957', '9709066517', '+9779709066517'],
+                        ['+977-9709066745', '+9779709066745', '9708072951', '+9779708072951'],
+                        ['+977-9802363869', '+9779802363869', '01-5253221', '+97715253221']
+                      ].map(([label, tel, label2, tel2]) => (
+                        <Typography key={tel} color='text.primary' className='font-medium'>
+                          <Link href={`tel:${tel}`} color='inherit'>
+                            {label}
+                          </Link>
+                          {' / '}
+                          <Link href={`tel:${tel2}`} color='inherit'>
+                            {label2}
+                          </Link>
+                        </Typography>
+                      ))}
                     </div>
                   </div>
                   <div className='flex gap-3'>
@@ -231,23 +238,39 @@ const ContactUs = () => {
             <Grid size={{ xs: 12, md: 6, lg: 7 }}>
               <Card>
                 <CardContent>
+                  {/* This used to be a message form whose Send button did nothing: the
+                      inputs were never read and nothing was posted anywhere, so every
+                      enquiry was lost while looking sent. Until a form is wired to an
+                      inbox someone reads, it offers the two ways that do reach us. */}
                   <div className='flex flex-col gap-y-[6px] mbe-6'>
                     <Typography variant='h4' component='h3'>
-                      Send a message
+                      Talk to us
                     </Typography>
                     <Typography>
-                      Have questions about our digital marketing services? Want to discuss pricing, partnerships, or
-                      need a demo? First visit our office at Koteshwor (Near Rastriya Banijya Bank) or call us directly.
+                      Want to upgrade your plan, buy API credits, or get help setting up SMS, WhatsApp or another
+                      channel? Call us or send an email.
                     </Typography>
                   </div>
-                  <form className='flex flex-col items-start gap-6'>
-                    <div className='flex flex-col sm:flex-row gap-5 is-full'>
-                      <CustomTextField fullWidth label='Full name' id='name-input' />
-                      <CustomTextField fullWidth label='Email address' id='email-input' type='email' />
-                    </div>
-                    <CustomTextField fullWidth multiline rows={7} label='Message' id='message-input' />
-                    <Button variant='contained'>Send Inquiry</Button>
-                  </form>
+                  <div className='flex flex-col gap-3 is-full'>
+                    <Button
+                      component='a'
+                      href='tel:+9779802348957'
+                      variant='contained'
+                      size='large'
+                      startIcon={<i className='tabler-phone' />}
+                    >
+                      Call +977-9802348957
+                    </Button>
+                    <Button
+                      component='a'
+                      href='mailto:admin@nepalfillings.com?subject=Nepal%20Fillings%20enquiry'
+                      variant='outlined'
+                      size='large'
+                      startIcon={<i className='tabler-mail' />}
+                    >
+                      Email admin@nepalfillings.com
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </Grid>

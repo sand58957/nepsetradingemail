@@ -1,3 +1,6 @@
+// Next Imports
+import type { Metadata } from 'next'
+
 // MUI Imports
 import Typography from '@mui/material/Typography'
 import Container from '@mui/material/Container'
@@ -6,17 +9,22 @@ import CardContent from '@mui/material/CardContent'
 import Divider from '@mui/material/Divider'
 import Box from '@mui/material/Box'
 
-export const metadata = {
-  title: 'Terms of Service - Nepal Fillings',
-  description: 'Terms of Service for Nepal Fillings Digital Marketing Platform by Marketminds Investment Group Pvt Ltd.'
-}
+// Util Imports
+import { pageMetadata } from '@/utils/seo'
+
+export const metadata: Metadata = pageMetadata({
+  path: '/terms',
+  title: 'Terms of Service | Nepal Fillings',
+  description:
+    'The terms that govern use of the Nepal Fillings messaging platform, operated by Marketminds Investment Group Pvt Ltd in Kathmandu, Nepal.'
+})
 
 const TermsOfServicePage = () => {
   return (
     <Container maxWidth='lg' sx={{ py: 8 }}>
       <Card>
         <CardContent sx={{ p: { xs: 4, md: 8 } }}>
-          <Typography variant='h3' fontWeight='bold' gutterBottom>
+          <Typography variant='h3' component='h1' fontWeight='bold' gutterBottom>
             Terms of Service
           </Typography>
           <Typography variant='body2' color='text.secondary' gutterBottom>

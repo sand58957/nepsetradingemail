@@ -71,6 +71,37 @@ type BlogAuthor struct {
 	UpdatedAt   time.Time       `json:"updated_at" db:"updated_at"`
 }
 
+// PublicBlogAuthor is the only author shape the public API returns. The public
+// post endpoint used to serialise BlogAuthor itself, which published the lead
+// author's personal email address, along with internal fields, on every post.
+type PublicBlogAuthor struct {
+	Name        string          `json:"name"`
+	Slug        string          `json:"slug"`
+	Bio         string          `json:"bio"`
+	AvatarURL   string          `json:"avatar_url"`
+	Expertise   pq.StringArray  `json:"expertise"`
+	Credentials string          `json:"credentials"`
+	SocialLinks json.RawMessage `json:"social_links"`
+	PostCount   int             `json:"post_count"`
+}
+
+func toPublicAuthor(a *BlogAuthor) *PublicBlogAuthor {
+	if a == nil {
+		return nil
+	}
+
+	return &PublicBlogAuthor{
+		Name:        a.Name,
+		Slug:        a.Slug,
+		Bio:         a.Bio,
+		AvatarURL:   a.AvatarURL,
+		Expertise:   a.Expertise,
+		Credentials: a.Credentials,
+		SocialLinks: a.SocialLinks,
+		PostCount:   a.PostCount,
+	}
+}
+
 type BlogCategory struct {
 	ID          int       `json:"id" db:"id"`
 	AccountID   int       `json:"account_id" db:"account_id"`
@@ -1233,11 +1264,16 @@ func (h *BlogHandler) PublicGetPost(c echo.Context) error {
 		faqs = []BlogPostFAQ{}
 	}
 
+	// Stored citations are never shown on the page, and most were invented: report
+	// titles credited to the telecom regulator, pointing at its homepage. Until each
+	// one has been checked by a person, the public API does not publish them.
+	post.SourceCitations = json.RawMessage(`[]`)
+
 	payload := response.Response{
 		Success: true,
 		Data: map[string]interface{}{
 			"post":   post,
-			"author": author,
+			"author": toPublicAuthor(author),
 			"tags":   tags,
 			"faqs":   faqs,
 		},
@@ -1254,6 +1290,26 @@ func (h *BlogHandler) PublicListByCategory(c echo.Context) error {
 	c.SetParamNames("category")
 	c.QueryParams().Set("category", c.Param("slug"))
 	return h.PublicListPosts(c)
+}
+
+// PublicGetAuthor returns one active author, or 404. /authors/:slug used to be
+// routed to the post list, so the author page read a list as an author and
+// rendered "undefined" everywhere.
+func (h *BlogHandler) PublicGetAuthor(c echo.Context) error {
+	var a BlogAuthor
+
+	err := h.db.Get(&a, `
+		SELECT a.*, (SELECT COUNT(*) FROM blog_posts p
+		             WHERE p.author_id = a.id AND p.status = 'published') AS post_count
+		FROM blog_authors a
+		WHERE a.slug = $1 AND a.is_active
+		ORDER BY post_count DESC
+		LIMIT 1`, c.Param("slug"))
+	if err != nil {
+		return response.NotFound(c, "Author not found")
+	}
+
+	return response.Success(c, toPublicAuthor(&a))
 }
 
 func (h *BlogHandler) PublicListByAuthor(c echo.Context) error {

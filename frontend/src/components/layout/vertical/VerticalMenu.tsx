@@ -180,9 +180,12 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
               <MenuItem href={`/${locale}/dashboards/analytics`} icon={<i className='tabler-chart-bar' />}>
                 Analytics
               </MenuItem>
-              <MenuItem href={`/${locale}/settings`} icon={<i className='tabler-settings' />}>
-                Settings
-              </MenuItem>
+              {/* Global settings: admins only, like the API behind them. */}
+              {isAdmin && (
+                <MenuItem href={`/${locale}/settings`} icon={<i className='tabler-settings' />}>
+                  Settings
+                </MenuItem>
+              )}
             </>
           ) : (
             <MenuItem icon={<i className='tabler-eye' />} onClick={() => toggleSection('email')}>
