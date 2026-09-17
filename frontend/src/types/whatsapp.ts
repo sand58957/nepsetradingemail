@@ -12,6 +12,8 @@ export interface WASettings {
   is_active: boolean
   created_at: string
   updated_at: string
+  /** When the linked number was last unlinked. Campaigns wait 24 hours after it. */
+  unlinked_at: string | null
 }
 
 export interface WAContact {
@@ -27,6 +29,8 @@ export interface WAContact {
   attributes: Record<string, string>
   created_at: string
   updated_at: string
+  /** When WhatsApp last could not resolve this number. Campaigns skip the contact for 30 days after it. */
+  unreachable_at: string | null
 }
 
 export interface WATemplate {
@@ -71,6 +75,10 @@ export interface WACampaign {
   created_by: number | null
   created_at: string
   updated_at: string
+  send_interval_seconds: number
+  continuous: boolean
+  /** Why the campaign paused itself. Empty while sending, or when a person paused it. */
+  pause_reason: string
 }
 
 export interface WACampaignMessage {

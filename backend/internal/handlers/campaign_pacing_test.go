@@ -14,8 +14,8 @@ import (
 func TestResolveSendIntervalIgnoresTheFieldInBatchMode(t *testing.T) {
 	for _, requested := range []int{0, 1, 30, 600, 3600, 99999, -5} {
 		if got := resolveSendInterval(false, requested); got != 0 {
-			t.Errorf("resolveSendInterval(false, %d) = %d, want 0 — a batch run must pace from "+
-				"the account send rate, not the continuous interval", requested, got)
+			t.Errorf("resolveSendInterval(false, %d) = %d, want 0 — a batch run must use the "+
+				"batch gap, not the continuous interval", requested, got)
 		}
 	}
 }
@@ -28,8 +28,10 @@ func TestResolveSendIntervalClampsContinuousMode(t *testing.T) {
 	}{
 		{0, defaultIntervalSeconds, "unset falls back to the default"},
 		{-1, defaultIntervalSeconds, "negative falls back to the default"},
-		{1, 1, "the minimum is allowed"},
-		{30, 30, "an ordinary value passes through"},
+		{1, minIntervalSeconds, "below the minimum is raised to it"},
+		{29, minIntervalSeconds, "just below the minimum is raised to it"},
+		{30, 30, "the minimum is allowed"},
+		{600, 600, "an ordinary value passes through"},
 		{3600, 3600, "the maximum is allowed"},
 		{3601, maxIntervalSeconds, "above the maximum is clamped"},
 		{1 << 40, maxIntervalSeconds, "a value that would overflow the duration is clamped"},

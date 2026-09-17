@@ -53,6 +53,9 @@ const WASettings = () => {
   // own session and the server resolves it from the request — the client never
   // names one.
   const [session, setSession] = useState<OpenWASession | null>(null)
+
+  // Set while campaigns wait out an unlink of this number; the server words it.
+  const [blockedMessage, setBlockedMessage] = useState('')
   const [qr, setQr] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -73,6 +76,7 @@ const WASettings = () => {
       const res = await whatsappService.mySession()
 
       setSession(res.data.linked ? res.data.session : null)
+      setBlockedMessage(res.data.campaigns_blocked_message || '')
     } catch (err) {
       notify(errorText(err, 'Could not check your WhatsApp connection'), 'error')
     } finally {
@@ -120,6 +124,7 @@ const WASettings = () => {
 
         consecutiveFailures = 0
         setQr(qrRes.data?.qrCode || '')
+        setBlockedMessage(sessionRes.data.campaigns_blocked_message || '')
 
         const fresh = sessionRes.data.linked ? sessionRes.data.session : null
 
@@ -215,6 +220,16 @@ const WASettings = () => {
           </CardContent>
         </Card>
       </Grid>
+
+      {blockedMessage && (
+        <Grid size={{ xs: 12 }}>
+          <Alert severity='error'>
+            <AlertTitle>Campaigns are on hold for this number</AlertTitle>
+            {blockedMessage} In the meantime, use WhatsApp on the phone as normal and don&apos;t message people who
+            haven&apos;t asked to hear from you.
+          </Alert>
+        </Grid>
+      )}
 
       <Grid size={{ xs: 12, md: 6 }}>
         <Card>
@@ -320,8 +335,10 @@ const WASettings = () => {
         <Alert severity='warning'>
           <AlertTitle>Use a number you can afford to lose</AlertTitle>
           This sends through an unofficial WhatsApp client rather than Meta&apos;s Business API, so the linked account
-          can be restricted without warning — most often when messages go to people who never opted in. Do not link a
-          primary business line, and keep SMS or email available for anything critical.
+          can be restricted without warning — most often when messages go to people who never opted in or have never
+          chatted with the number. WhatsApp usually unlinks a number a few times before it bans it, so campaigns wait
+          24 hours after an unlink. Do not link a primary business line, and keep SMS or email available for anything
+          critical.
         </Alert>
       </Grid>
 

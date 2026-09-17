@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -138,24 +140,47 @@ func (h *WhatsAppHandler) GetMySession(c echo.Context) error {
 
 	h.rememberSession(accountID, session)
 
-	return response.Success(c, map[string]interface{}{
+	payload := map[string]interface{}{
 		"linked":  true,
 		"session": sessionPayload(session),
-	})
+	}
+
+	// Read back after rememberSession, which may just have noticed an unlink.
+	if settings, err := h.waSettings(accountID); err == nil {
+		if until, blocked := campaignsBlockedUntil(settings, time.Now()); blocked {
+			payload["unlinked_at"] = settings.UnlinkedAt
+			payload["campaigns_blocked_until"] = until
+			payload["campaigns_blocked_message"] = unlinkCooldownMessage(*settings.UnlinkedAt, until)
+		}
+	}
+
+	return response.Success(c, payload)
 }
 
 // rememberSession keeps wa_settings in step with what the gateway reports, so the
 // send path and the dashboard agree without another round trip.
+//
+// It is also where an unlink is noticed outside a campaign. A session that asks
+// for a QR code while a phone is still recorded against it has lost its link —
+// WhatsApp unlinked it, or someone removed it from the phone's linked devices —
+// and that starts the campaign cooldown (whatsapp_link_safety.go). Unlinking from
+// this dashboard clears the phone first, so it does not count. The comparison
+// reads the row's old linked_phone, which is what Postgres gives the right-hand
+// side of an UPDATE.
 func (h *WhatsAppHandler) rememberSession(accountID int, s *openwa.Session) {
 	phone := ""
 	if s.Phone != nil {
 		phone = *s.Phone
 	}
 
-	h.db.Exec(`
-		UPDATE wa_settings SET openwa_session_id = $1, linked_phone = $2, session_status = $3, updated_at = NOW()
+	if _, err := h.db.Exec(`
+		UPDATE wa_settings SET
+			unlinked_at = CASE WHEN linked_phone <> '' AND $3::text = 'qr_ready' THEN NOW() ELSE unlinked_at END,
+			openwa_session_id = $1, linked_phone = $2, session_status = $3, updated_at = NOW()
 		WHERE account_id = $4
-	`, s.ID, phone, s.Status, accountID)
+	`, s.ID, phone, s.Status, accountID); err != nil {
+		log.Printf("[whatsapp] caching session state for account %d: %v", accountID, err)
+	}
 }
 
 // CreateMySession gives this account its own session on the gateway and starts it

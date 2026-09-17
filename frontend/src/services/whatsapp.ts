@@ -64,7 +64,16 @@ export const whatsappService = {
   // Creating, linking and unlinking need to be an owner or admin of the account.
 
   /** This account's connection, or `linked: false` if it has never linked one. */
-  mySession: async (): Promise<{ data: { linked: boolean; session: OpenWASession | null } }> => {
+  mySession: async (): Promise<{
+    data: {
+      linked: boolean
+      session: OpenWASession | null
+      /** Present while campaigns wait out an unlink of this number. */
+      unlinked_at?: string
+      campaigns_blocked_until?: string
+      campaigns_blocked_message?: string
+    }
+  }> => {
     const response = await api.get('/whatsapp/session')
 
     return response.data

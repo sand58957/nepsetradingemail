@@ -27,7 +27,7 @@ import (
 // their own inside the database WA_TEST_DSN points at, and drops that schema
 // when the test ends. Point it only at a disposable database, for example:
 //
-//	docker run -d --rm --name wa-test-pg -e POSTGRES_PASSWORD=test -p 127.0.0.1:55439:5432 postgres:16-alpine
+//	docker run -d --rm --name wa-test-pg -e POSTGRES_PASSWORD=test -p 127.0.0.1:55439:5432 postgres:17-alpine
 //	WA_TEST_DSN='postgres://postgres:test@127.0.0.1:55439/postgres?sslmode=disable' go test ./internal/handlers/
 func waTestDB(t *testing.T) *sqlx.DB {
 	t.Helper()
@@ -81,6 +81,7 @@ func waTestDB(t *testing.T) *sqlx.DB {
 		"013_contact_groups.up.sql",
 		"029_openwa.up.sql",
 		"030_campaign_continuous_send.up.sql",
+		"031_whatsapp_link_safety.up.sql",
 	} {
 		migration, err := os.ReadFile(filepath.Join("..", "database", "migrations", f))
 		if err != nil {
@@ -313,6 +314,8 @@ func TestCampaignSendMessagesOnlyItsAudience(t *testing.T) {
 		}
 	}))
 	defer gateway.Close()
+
+	instantSends(t)
 
 	f := newWAFixture(t)
 	f.h = NewWhatsAppHandler(f.db, &config.Config{OpenWABaseURL: gateway.URL, OpenWAAPIKey: "test-key"})

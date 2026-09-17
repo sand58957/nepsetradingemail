@@ -29,6 +29,7 @@ import DialogActions from '@mui/material/DialogActions'
 import TextField from '@mui/material/TextField'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
+import AlertTitle from '@mui/material/AlertTitle'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 import Divider from '@mui/material/Divider'
@@ -140,9 +141,10 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
 
   // How long a continuous run would take at the chosen interval. Picking "30" in
   // a form does not make it obvious that 30,000 contacts is then ten days of
-  // sending, so say so before they start.
+  // sending, so say so before they start. Each gap is the interval plus up to half
+  // again at random, so the average is 1.25 times the interval.
   const continuousEta = useMemo(() => {
-    const hours = ((remainingEstimate ?? 0) * intervalSeconds) / 3600
+    const hours = ((remainingEstimate ?? 0) * intervalSeconds * 1.25) / 3600
 
     if (hours < 1) return { hours, label: `${Math.max(1, Math.round(hours * 60))} minutes` }
     if (hours < 48) return { hours, label: `${hours.toFixed(1)} hours` }
@@ -337,6 +339,22 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                   </Button>
                 </div>
               </div>
+              {/* A campaign that stopped itself says why: the number being unlinked
+                  and a sending limit call for very different next steps. */}
+              {campaign.status === 'paused' && campaign.pause_reason && (
+                <Alert severity='warning' className='mbs-4'>
+                  <AlertTitle>
+                    Paused automatically ·{' '}
+                    {new Date(campaign.updated_at).toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}
+                  </AlertTitle>
+                  {campaign.pause_reason}
+                </Alert>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -663,8 +681,8 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
           />
           <Typography variant='body2' color='text.secondary' className='mbe-4'>
             {continuous
-              ? 'The campaign works through everyone remaining on its own, waiting the interval below between messages. It carries on after a restart, and stops when you pause it.'
-              : 'The campaign sends one phase and then pauses, so you can check the number is still connected before continuing.'}
+              ? 'The campaign works through everyone remaining on its own, waiting at least the interval below between messages. It carries on after a restart, and stops when you pause it or if WhatsApp unlinks the number.'
+              : 'The campaign sends one phase, one message every 30 to 60 seconds, and then pauses so you can check the number is still connected before continuing.'}
           </Typography>
 
           <Divider className='mbe-4' />
@@ -676,14 +694,15 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                 type='number'
                 label='Seconds between messages'
                 value={intervalSeconds}
-                onChange={e => setIntervalSeconds(Math.max(1, Math.min(3600, Number(e.target.value) || 1)))}
-                helperText='Longer gaps look more like a person and are much safer for the number. 30 seconds is a reasonable starting point.'
-                inputProps={{ min: 1, max: 3600 }}
+                onChange={e => setIntervalSeconds(Math.max(30, Math.min(3600, Number(e.target.value) || 30)))}
+                helperText='At least 30 seconds. Each gap adds up to half again at random, because an exact rhythm looks automated. Longer gaps are safer for the number.'
+                inputProps={{ min: 30, max: 3600 }}
               />
               {remainingEstimate !== null && (
                 <Alert severity={continuousEta.hours > 24 ? 'warning' : 'info'} className='mbs-4'>
-                  About {remainingEstimate.toLocaleString()} contacts left. At one every {intervalSeconds}s that is
-                  roughly <strong>{continuousEta.label}</strong> of continuous sending.
+                  About {remainingEstimate.toLocaleString()} contacts left. At one every {intervalSeconds} to{' '}
+                  {Math.round(intervalSeconds * 1.5)} seconds that is roughly <strong>{continuousEta.label}</strong> of
+                  continuous sending.
                 </Alert>
               )}
             </>
@@ -694,7 +713,7 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
               label='Contacts in this phase'
               value={batchSize}
               onChange={e => setBatchSize(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
-              helperText='Start around 25. Maximum 500 per phase; sending is capped at 2 messages per second.'
+              helperText={`Start around 25. Maximum 500 per phase. At one message every 30 to 60 seconds, ${batchSize} ${batchSize === 1 ? 'message takes' : 'messages take'} about ${Math.max(1, Math.round((batchSize * 45) / 60))} minutes.`}
               inputProps={{ min: 1, max: 500 }}
             />
           )}

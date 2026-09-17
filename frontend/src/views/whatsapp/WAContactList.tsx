@@ -295,12 +295,25 @@ const WAContactList = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={contact.opted_in ? 'Opted In' : contact.opted_out_at ? 'Opted Out' : 'Not opted in'}
-                          color={contact.opted_in ? 'success' : 'default'}
-                          size='small'
-                          variant='tonal'
-                        />
+                        <div className='flex gap-1 flex-wrap'>
+                          <Chip
+                            label={contact.opted_in ? 'Opted In' : contact.opted_out_at ? 'Opted Out' : 'Not opted in'}
+                            color={contact.opted_in ? 'success' : 'default'}
+                            size='small'
+                            variant='tonal'
+                          />
+                          {/* Campaigns skip a number WhatsApp could not resolve for 30 days. */}
+                          {contact.unreachable_at &&
+                            Date.now() - new Date(contact.unreachable_at).getTime() < 30 * 24 * 60 * 60 * 1000 && (
+                              <Chip
+                                label="WhatsApp can't reach"
+                                title='WhatsApp could not resolve this number, so campaigns skip it for 30 days'
+                                color='warning'
+                                size='small'
+                                variant='tonal'
+                              />
+                            )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className='flex gap-1 flex-wrap'>

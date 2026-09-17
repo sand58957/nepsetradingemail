@@ -92,8 +92,13 @@ func parseWAAudience(raw json.RawMessage) (waAudience, error) {
 //
 // Tags and groups widen each other: a contact is in the audience if it carries
 // every chosen tag, or belongs to any chosen group.
+//
+// A contact whose number WhatsApp recently could not resolve is left out: another
+// attempt would fail the same way, and each one counts against the sending number
+// (whatsapp_link_safety.go).
 func (a waAudience) unreachedWhere() (string, []interface{}) {
 	where := `c.account_id = $1 AND c.opted_in = true
+		AND (c.unreachable_at IS NULL OR c.unreachable_at < NOW() - INTERVAL '` + unreachableSkipSQL + `')
 		AND NOT EXISTS (
 			SELECT 1 FROM wa_campaign_messages m
 			WHERE m.campaign_id = $2 AND m.contact_id = c.id
