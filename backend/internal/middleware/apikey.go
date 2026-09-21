@@ -3,7 +3,9 @@ package middleware
 import (
 	"crypto/sha256"
 	"crypto/subtle"
+	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,6 +24,21 @@ func redactKey(key string) string {
 		return key
 	}
 	return key[:12] + "...len=" + fmt.Sprintf("%d", len(key))
+}
+
+// keyCheckUnavailable answers a request whose key could not be checked because
+// the database could not be read. That says nothing about the key, so it is a
+// 503 the caller should retry, not a 401.
+//
+// It used to be a 401. While the server's disk was full on 19–21 September 2026
+// the database kept crashing, and 323 requests were told "Invalid or inactive
+// API key" — most of them carrying valid keys. API clients treat a 401 as final
+// and drop the message; a 503 is retried once the service is back.
+func keyCheckUnavailable(c echo.Context) error {
+	c.Response().Header().Set("Retry-After", "30")
+
+	return response.Error(c, http.StatusServiceUnavailable,
+		"The service is temporarily unavailable, so nothing was sent. Please retry in a minute.")
 }
 
 // APIKeyInfo holds the validated API key details set in context.
@@ -84,9 +101,14 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 				FROM api_keys WHERE key_prefix = $1 AND is_active = true
 			`, prefix)
 
-			if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
 				log.Printf("apikey.auth_fail reason=prefix_not_found ip=%s path=%s prefix=%s key=%s", ip, path, prefix, redactKey(apiKey))
 				return response.Error(c, http.StatusUnauthorized, "Invalid or inactive API key")
+			}
+
+			if err != nil {
+				log.Printf("apikey.lookup_error ip=%s path=%s prefix=%s: %v", ip, path, prefix, err)
+				return keyCheckUnavailable(c)
 			}
 
 			// Verify hash. Compared in constant time so response latency can't leak
@@ -105,9 +127,14 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 					fmt.Sprintf("This API key is for %s, not %s", keyRecord.Channel, channel))
 			}
 
-			// Check account has API enabled
+			// Check account has API enabled. A read that fails is the database, not the
+			// account being switched off, and must not be reported as the latter.
 			var apiEnabled bool
-			db.Get(&apiEnabled, "SELECT api_enabled FROM app_accounts WHERE id = $1", keyRecord.AccountID)
+			if err := db.Get(&apiEnabled, "SELECT api_enabled FROM app_accounts WHERE id = $1", keyRecord.AccountID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+				log.Printf("apikey.lookup_error reason=account ip=%s path=%s account=%d: %v", ip, path, keyRecord.AccountID, err)
+				return keyCheckUnavailable(c)
+			}
+
 			if !apiEnabled {
 				log.Printf("apikey.auth_fail reason=api_disabled ip=%s path=%s account=%d", ip, path, keyRecord.AccountID)
 				return response.Error(c, http.StatusForbidden, "API access is not enabled for this account. Contact admin.")
