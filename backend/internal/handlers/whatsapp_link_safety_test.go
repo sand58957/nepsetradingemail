@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -119,6 +120,41 @@ func TestCampaignsWaitADayAfterAnUnlink(t *testing.T) {
 
 	if _, blocked := campaignsBlockedUntil(&WASettings{UnlinkedAt: &dayAndHourAgo}, now); blocked {
 		t.Error("25 hours after an unlink campaigns must be allowed again")
+	}
+
+	// The hold belongs to the number that was unlinked.
+	cases := []struct {
+		name          string
+		unlinked, now string
+		wantBlocked   bool
+	}{
+		{"the unlinked number linked again", "9779805749767", "9779805749767", true},
+		{"no number linked yet", "9779805749767", "", true},
+		{"which number it was is not known", "", "9779709066745", true},
+		{"a different number linked", "9779805749767", "9779709066745", false},
+	}
+
+	for _, c := range cases {
+		settings := &WASettings{UnlinkedAt: &hourAgo, UnlinkedPhone: c.unlinked, LinkedPhone: c.now}
+		if _, blocked := campaignsBlockedUntil(settings, now); blocked != c.wantBlocked {
+			t.Errorf("%s: blocked = %v, want %v", c.name, blocked, c.wantBlocked)
+		}
+	}
+}
+
+func TestUnlinkCooldownMessageNamesTheNumber(t *testing.T) {
+	at := time.Date(2026, 9, 17, 3, 26, 29, 0, time.UTC)
+	until := at.Add(unlinkCooldown)
+
+	msg := unlinkCooldownMessage(&WASettings{UnlinkedAt: &at, UnlinkedPhone: "9779805749767"}, until)
+	for _, want := range []string{"9779805749767", "17 Sep at 9:11 AM Nepal time", "18 Sep at 9:11 AM Nepal time"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("message %q does not contain %q", msg, want)
+		}
+	}
+
+	if msg := unlinkCooldownMessage(&WASettings{UnlinkedAt: &at}, until); !strings.HasPrefix(msg, "This WhatsApp number was unlinked") {
+		t.Errorf("without a recorded number the message reads %q", msg)
 	}
 }
 

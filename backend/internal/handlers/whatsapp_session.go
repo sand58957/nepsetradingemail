@@ -150,7 +150,7 @@ func (h *WhatsAppHandler) GetMySession(c echo.Context) error {
 		if until, blocked := campaignsBlockedUntil(settings, time.Now()); blocked {
 			payload["unlinked_at"] = settings.UnlinkedAt
 			payload["campaigns_blocked_until"] = until
-			payload["campaigns_blocked_message"] = unlinkCooldownMessage(*settings.UnlinkedAt, until)
+			payload["campaigns_blocked_message"] = unlinkCooldownMessage(settings, until)
 		}
 	}
 
@@ -166,7 +166,8 @@ func (h *WhatsAppHandler) GetMySession(c echo.Context) error {
 // and that starts the campaign cooldown (whatsapp_link_safety.go). Unlinking from
 // this dashboard clears the phone first, so it does not count. The comparison
 // reads the row's old linked_phone, which is what Postgres gives the right-hand
-// side of an UPDATE.
+// side of an UPDATE, and that old value is also recorded as the number the
+// unlink happened to.
 func (h *WhatsAppHandler) rememberSession(accountID int, s *openwa.Session) {
 	phone := ""
 	if s.Phone != nil {
@@ -176,6 +177,7 @@ func (h *WhatsAppHandler) rememberSession(accountID int, s *openwa.Session) {
 	if _, err := h.db.Exec(`
 		UPDATE wa_settings SET
 			unlinked_at = CASE WHEN linked_phone <> '' AND $3::text = 'qr_ready' THEN NOW() ELSE unlinked_at END,
+			unlinked_phone = CASE WHEN linked_phone <> '' AND $3::text = 'qr_ready' THEN linked_phone ELSE unlinked_phone END,
 			openwa_session_id = $1, linked_phone = $2, session_status = $3, updated_at = NOW()
 		WHERE account_id = $4
 	`, s.ID, phone, s.Status, accountID); err != nil {

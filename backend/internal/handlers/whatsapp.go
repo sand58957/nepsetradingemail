@@ -63,9 +63,11 @@ type WASettings struct {
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 
-	// When the number was last unlinked (migration 031). Campaigns wait a day
-	// after it; see whatsapp_link_safety.go.
-	UnlinkedAt *time.Time `json:"unlinked_at" db:"unlinked_at"`
+	// When the number was last unlinked (migration 031), and which number it was
+	// (migration 032). Campaigns wait a day after it while that number, or none,
+	// is linked; see whatsapp_link_safety.go.
+	UnlinkedAt    *time.Time `json:"unlinked_at" db:"unlinked_at"`
+	UnlinkedPhone string     `json:"unlinked_phone" db:"unlinked_phone"`
 }
 
 type WAContact struct {
@@ -1644,7 +1646,7 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 	}
 
 	if until, blocked := campaignsBlockedUntil(settings, time.Now()); blocked {
-		return response.Error(c, http.StatusConflict, unlinkCooldownMessage(*settings.UnlinkedAt, until))
+		return response.Error(c, http.StatusConflict, unlinkCooldownMessage(settings, until))
 	}
 
 	// Two ways to pace a campaign.

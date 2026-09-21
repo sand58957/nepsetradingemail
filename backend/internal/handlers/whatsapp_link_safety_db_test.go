@@ -185,10 +185,14 @@ func TestCampaignStopsWhenWhatsAppUnlinksTheNumber(t *testing.T) {
 		t.Errorf("unlinked_at = %v, want the moment of the unlink", settings.UnlinkedAt)
 	}
 
+	if settings.UnlinkedPhone != "9779800000000" {
+		t.Errorf("unlinked_phone = %q, want the number that was linked, 9779800000000", settings.UnlinkedPhone)
+	}
+
 	code, body := waServe(t, f.h.SendCampaign, http.MethodPost, "/", strings.NewReader(`{"batch_size":10}`),
 		echo.MIMEApplicationJSON, f.account, fmt.Sprint(campaignID))
 
-	if msg, _ := body["message"].(string); code != http.StatusConflict || !strings.Contains(msg, "campaigns can start again on") {
+	if msg, _ := body["message"].(string); code != http.StatusConflict || !strings.Contains(msg, "can start again on") {
 		t.Errorf("sending again right after the unlink: status %d, message %q; want 409 explaining the wait", code, msg)
 	}
 
@@ -339,6 +343,13 @@ func TestRememberSessionNoticesAnUnlink(t *testing.T) {
 		t.Fatal("a linked number asking for a QR code did not set unlinked_at")
 	}
 
+	var unlinkedPhone string
+	f.db.Get(&unlinkedPhone, `SELECT unlinked_phone FROM wa_settings WHERE account_id = $1`, f.account)
+
+	if unlinkedPhone != "9779800000000" {
+		t.Errorf("unlinked_phone = %q, want the number that was linked", unlinkedPhone)
+	}
+
 	time.Sleep(10 * time.Millisecond)
 	f.h.rememberSession(f.account, &openwa.Session{ID: "sess-1", Status: openwa.StatusQRReady})
 
@@ -376,5 +387,51 @@ func TestPausingByHandClearsTheReason(t *testing.T) {
 
 	if reason != "" {
 		t.Errorf("pause_reason = %q after a manual pause, want empty", reason)
+	}
+}
+
+// What happened on 21 September 2026: after the old number was unlinked the
+// account linked a different one, and the page held the new number and said it
+// "was unlinked". The hold belongs to the unlinked number only.
+func TestADifferentNumberIsNotHeldForAnUnlink(t *testing.T) {
+	instantSends(t)
+
+	gw := &fakeGateway{}
+	gw.status = func() string { return openwa.StatusReady }
+	gw.reply = func(n int, chatID string) (int, string) {
+		return http.StatusOK, fmt.Sprintf(`{"messageId":"m%d","chatId":%q}`, n, chatID)
+	}
+
+	f, campaignID, _, _ := linkedFixture(t, gw.server(t))
+	f.db.MustExec(`UPDATE wa_campaigns SET status = 'paused' WHERE id = $1`, campaignID)
+
+	// The old number was unlinked an hour ago.
+	f.db.MustExec(`UPDATE wa_settings SET unlinked_at = NOW() - INTERVAL '1 hour', unlinked_phone = '9779811111111'
+		WHERE account_id = $1`, f.account)
+
+	code, body := waServe(t, f.h.SendCampaign, http.MethodPost, "/", strings.NewReader(`{"batch_size":10}`),
+		echo.MIMEApplicationJSON, f.account, fmt.Sprint(campaignID))
+
+	if code != http.StatusOK {
+		t.Fatalf("a different number is linked, but sending was refused: status %d, body %v", code, body)
+	}
+
+	deadline := time.Now().Add(10 * time.Second)
+	for outcomeOf(t, f, campaignID).Status == "sending" && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// Relinking the old number brings the hold back.
+	f.db.MustExec(`UPDATE wa_settings SET linked_phone = '9779811111111' WHERE account_id = $1`, f.account)
+
+	other := waInsertID(t, f.db, `INSERT INTO wa_campaigns (account_id, name, template_id, target_filter, status)
+		SELECT account_id, 'again', template_id, '{}'::jsonb, 'paused' FROM wa_campaigns WHERE id = $1 RETURNING id`,
+		campaignID)
+
+	code, body = waServe(t, f.h.SendCampaign, http.MethodPost, "/", strings.NewReader(`{"batch_size":10}`),
+		echo.MIMEApplicationJSON, f.account, fmt.Sprint(other))
+
+	if msg, _ := body["message"].(string); code != http.StatusConflict || !strings.Contains(msg, "9779811111111") {
+		t.Errorf("the unlinked number linked again: status %d, message %q; want 409 naming the number", code, msg)
 	}
 }
