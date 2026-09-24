@@ -33,6 +33,7 @@ import AlertTitle from '@mui/material/AlertTitle'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 import Divider from '@mui/material/Divider'
+import MenuItem from '@mui/material/MenuItem'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
@@ -41,7 +42,7 @@ import CustomAvatar from '@core/components/mui/Avatar'
 import whatsappService from '@/services/whatsapp'
 
 // Type Imports
-import type { WACampaign, WACampaignRecipient } from '@/types/whatsapp'
+import type { WACampaign, WACampaignRecipient, WANumber } from '@/types/whatsapp'
 
 const statusColorMap: Record<string, 'default' | 'success' | 'primary' | 'warning' | 'error' | 'info'> = {
   draft: 'default',
@@ -92,6 +93,12 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
   const [continuous, setContinuous] = useState(false)
   const [intervalSeconds, setIntervalSeconds] = useState(30)
 
+  // Which number sends. 'default' leaves the choice to the account's default
+  // number; spreading shares the run out over every linked number instead.
+  const [numbers, setNumbers] = useState<WANumber[]>([])
+  const [sendFrom, setSendFrom] = useState<number | 'default'>('default')
+  const [spread, setSpread] = useState(false)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -110,6 +117,8 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
         setStatusBreakdown(response.data.status_breakdown || [])
         setRecipients(response.data.recipients || [])
         setRemainingEstimate(response.data.remaining ?? null)
+        setSendFrom(response.data.campaign.wa_number_id ?? 'default')
+        setSpread(response.data.campaign.rotate_numbers ?? false)
       } catch {
         setError('Failed to load campaign details')
       } finally {
@@ -118,7 +127,38 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
     }
 
     fetchCampaign()
+
+    // The numbers only decorate the page, so a failure here must not hide the
+    // campaign; the send dialog then falls back to the default number.
+    whatsappService
+      .listNumbers()
+      .then(res => setNumbers(res.data.numbers))
+      .catch(() => setNumbers([]))
   }, [id])
+
+  // What to call a number, and whether it can send right now.
+  const numberLabel = (n: WANumber) =>
+    n.label && n.linked_phone ? `${n.label} (${n.linked_phone})` : n.label || n.linked_phone || `Number ${n.id}`
+
+  const numberUnavailable = (n: WANumber) =>
+    n.campaigns_blocked_message ? 'on hold after an unlink' : !n.connected ? 'not connected' : ''
+
+  const defaultNumber = numbers.find(n => n.is_default)
+  const sendableNumbers = numbers.filter(n => !numberUnavailable(n))
+
+  // How the campaign header describes where messages come from.
+  const sendsFromText = useMemo(() => {
+    if (!campaign) return ''
+    if (campaign.rotate_numbers) return 'Spread across all linked numbers'
+
+    const chosen = numbers.find(n => n.id === campaign.wa_number_id)
+
+    if (chosen) return `Sends from ${numberLabel(chosen)}`
+    if (defaultNumber) return `Sends from ${numberLabel(defaultNumber)} (default)`
+
+    return ''
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign, numbers, defaultNumber])
 
   // Stats
   const deliveryRate = useMemo(() => {
@@ -186,7 +226,9 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
     try {
       const response = await whatsappService.sendCampaign(Number(id), batchSize, {
         continuous,
-        intervalSeconds
+        intervalSeconds,
+        waNumberId: sendFrom === 'default' ? null : sendFrom,
+        rotateNumbers: spread
       })
 
       setSnackbar({
@@ -289,6 +331,12 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                   {campaign.scheduled_at && campaign.status === 'scheduled' && (
                     <Typography variant='body2' color='text.secondary'>
                       Scheduled for {new Date(campaign.scheduled_at).toLocaleString()}
+                    </Typography>
+                  )}
+                  {sendsFromText && (
+                    <Typography variant='body2' color='text.secondary' className='flex items-center gap-1'>
+                      <i className='tabler-brand-whatsapp text-base' />
+                      {sendsFromText}
                     </Typography>
                   )}
                 </div>
@@ -674,6 +722,54 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
             Send &quot;{campaign.name}&quot;. Contacts already reached by this campaign are skipped, so nobody is
             messaged twice however many times you run it.
           </Typography>
+
+          {numbers.length > 0 && (
+            <>
+              <TextField
+                select
+                fullWidth
+                label='Send from'
+                value={spread ? 'default' : sendFrom}
+                onChange={e => setSendFrom(e.target.value === 'default' ? 'default' : Number(e.target.value))}
+                disabled={spread}
+                className='mbe-2'
+                helperText={
+                  spread
+                    ? 'Spreading uses every connected number, so no single one is picked.'
+                    : 'Each number keeps its own sending history and reputation.'
+                }
+              >
+                <MenuItem value='default'>
+                  Default number{defaultNumber ? ` — ${numberLabel(defaultNumber)}` : ''}
+                </MenuItem>
+                {numbers.map(n => (
+                  <MenuItem key={n.id} value={n.id} disabled={Boolean(numberUnavailable(n))}>
+                    {numberLabel(n)}
+                    {numberUnavailable(n) ? ` — ${numberUnavailable(n)}` : ''}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              {numbers.length > 1 && (
+                <>
+                  <FormControlLabel
+                    control={<Switch checked={spread} onChange={e => setSpread(e.target.checked)} />}
+                    label={`Spread across all connected numbers (${sendableNumbers.length})`}
+                  />
+                  {spread && (
+                    <Alert severity='warning' className='mbe-3'>
+                      Messages take turns across your numbers at the same pace as usual, so each number sends a share
+                      rather than the whole run. It does not send faster. If WhatsApp treats the campaign as spam it
+                      can unlink every number it came from, so only spread campaigns to people who expect to hear from
+                      you.
+                    </Alert>
+                  )}
+                </>
+              )}
+
+              <Divider className='mbe-4' />
+            </>
+          )}
 
           <FormControlLabel
             control={<Switch checked={continuous} onChange={e => setContinuous(e.target.checked)} />}

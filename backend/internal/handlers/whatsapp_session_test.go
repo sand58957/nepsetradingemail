@@ -126,3 +126,53 @@ func TestSendPathDoesNotBorrowAnotherAccountsSession(t *testing.T) {
 			"number: their phone sends the message and their inbox gets the reply.")
 	}
 }
+
+// The per-number endpoints take an id from the URL, which is safe only because it
+// is this table's own id looked up inside the caller's account. They must never
+// read a gateway session id from the request, and every handler that acts on one
+// number must resolve it through numberFromRequest.
+func TestNumberEndpointsResolveTheNumberInsideTheAccount(t *testing.T) {
+	src, err := os.ReadFile("whatsapp_numbers.go")
+	if err != nil {
+		t.Fatalf("reading whatsapp_numbers.go: %v", err)
+	}
+
+	body := string(src)
+
+	fromRequest := regexp.MustCompile(`c\.(Param|QueryParam|FormValue)\(\s*"[^"]*(?i:session)[^"]*"\s*\)`)
+	if found := fromRequest.FindAllString(body, -1); len(found) > 0 {
+		t.Errorf("a number handler reads a session id from the request (%s)", strings.Join(found, ", "))
+	}
+
+	if regexp.MustCompile(`(?i)SessionID\s+\*?string\s+` + "`" + `json:"[a-z_]+"`).MatchString(body) {
+		t.Error("a request struct binds a gateway session id from JSON")
+	}
+
+	for _, name := range []string{
+		"GetMyNumberQR", "StartMyNumber", "RenameMyNumber", "SetMyDefaultNumber",
+		"LogoutMyNumber", "DeleteMyNumber", "TestMyNumber",
+	} {
+		at := strings.Index(body, "func (h *WhatsAppHandler) "+name+"(")
+		if at < 0 {
+			t.Errorf("%s not found", name)
+
+			continue
+		}
+
+		end := strings.Index(body[at+1:], "\nfunc ")
+		if end < 0 {
+			end = len(body) - at - 1
+		}
+
+		fn := body[at : at+1+end]
+
+		if !strings.Contains(fn, "h.numberFromRequest(c)") {
+			t.Errorf("%s does not resolve its number with numberFromRequest, so it could act on another "+
+				"account's number", name)
+		}
+
+		if !strings.Contains(fn[:min(len(fn), 240)], "h.accountManager(c)") {
+			t.Errorf("%s does not check accountManager first", name)
+		}
+	}
+}

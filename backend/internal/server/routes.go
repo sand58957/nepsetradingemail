@@ -234,6 +234,18 @@ func (s *Server) RegisterRoutes() {
 	wa.DELETE("/session", waHandler.DeleteMySession)
 	wa.POST("/session/test", waHandler.TestMySession)
 
+	// Several numbers per account. The :id is the account's own number id, looked
+	// up inside the account; it is never a gateway session id.
+	wa.GET("/numbers", waHandler.ListMyNumbers)
+	wa.POST("/numbers", waHandler.AddMyNumber)
+	wa.GET("/numbers/:id/qr", waHandler.GetMyNumberQR)
+	wa.POST("/numbers/:id/start", waHandler.StartMyNumber)
+	wa.PUT("/numbers/:id", waHandler.RenameMyNumber)
+	wa.POST("/numbers/:id/default", waHandler.SetMyDefaultNumber)
+	wa.POST("/numbers/:id/logout", waHandler.LogoutMyNumber)
+	wa.DELETE("/numbers/:id", waHandler.DeleteMyNumber)
+	wa.POST("/numbers/:id/test", waHandler.TestMyNumber)
+
 	// WhatsApp Contacts
 	waContacts := wa.Group("/contacts")
 	waContacts.GET("", waHandler.ListContacts)

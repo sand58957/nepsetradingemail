@@ -79,6 +79,27 @@ export interface WACampaign {
   continuous: boolean
   /** Why the campaign paused itself. Empty while sending, or when a person paused it. */
   pause_reason: string
+  /** The number it sends from; null means the account's default number. */
+  wa_number_id: number | null
+  /** Spread the run over every linked number, at the same overall pace. */
+  rotate_numbers: boolean
+}
+
+/** One WhatsApp number an account can send from. */
+export interface WANumber {
+  id: number
+  label: string
+  linked_phone: string
+  /** The gateway's session status: qr_ready, ready, disconnected, … */
+  status: string
+  connected: boolean
+  is_default: boolean
+  /** False once the number's session has gone from the gateway. */
+  linked: boolean
+  last_error: string
+  /** Present while campaigns from this number wait out an unlink. */
+  campaigns_blocked_until?: string
+  campaigns_blocked_message?: string
 }
 
 export interface WACampaignMessage {

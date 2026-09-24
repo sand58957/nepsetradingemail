@@ -88,6 +88,8 @@ func linkedFixture(t *testing.T, gateway *httptest.Server) (*waFixture, int, WAT
 	f.h = NewWhatsAppHandler(f.db, &config.Config{OpenWABaseURL: gateway.URL, OpenWAAPIKey: "test-key"})
 	f.db.MustExec(`INSERT INTO wa_settings (account_id, openwa_session_id, linked_phone, session_status)
 		VALUES ($1, 'sess-1', '9779800000000', 'ready')`, f.account)
+	f.db.MustExec(`INSERT INTO wa_numbers (account_id, openwa_session_id, linked_phone, session_status, is_default)
+		VALUES ($1, 'sess-1', '9779800000000', 'ready', true)`, f.account)
 
 	var contacts []int
 	for i := 1; i <= 5; i++ {
@@ -178,8 +180,8 @@ func TestCampaignStopsWhenWhatsAppUnlinksTheNumber(t *testing.T) {
 		t.Errorf("%d contacts still to reach (err %v), want 3: nobody after the unlink was messaged", remaining, err)
 	}
 
-	var settings WASettings
-	f.db.Get(&settings, `SELECT * FROM wa_settings WHERE account_id = $1`, f.account)
+	var settings WANumber
+	f.db.Get(&settings, `SELECT * FROM wa_numbers WHERE account_id = $1`, f.account)
 
 	if settings.UnlinkedAt == nil || time.Since(*settings.UnlinkedAt) > time.Minute {
 		t.Errorf("unlinked_at = %v, want the moment of the unlink", settings.UnlinkedAt)
@@ -201,7 +203,7 @@ func TestCampaignStopsWhenWhatsAppUnlinksTheNumber(t *testing.T) {
 	}
 
 	// A day later campaigns may start again.
-	f.db.MustExec(`UPDATE wa_settings SET unlinked_at = NOW() - INTERVAL '25 hours' WHERE account_id = $1`, f.account)
+	f.db.MustExec(`UPDATE wa_numbers SET unlinked_at = NOW() - INTERVAL '25 hours' WHERE account_id = $1`, f.account)
 
 	gw.mu.Lock()
 	gw.unlinked = false
@@ -257,7 +259,7 @@ func TestCampaignPausesWithoutFailingAnyoneWhenTheGatewayErrors(t *testing.T) {
 	}
 
 	var unlinkedAt *time.Time
-	f.db.Get(&unlinkedAt, `SELECT unlinked_at FROM wa_settings WHERE account_id = $1`, f.account)
+	f.db.Get(&unlinkedAt, `SELECT unlinked_at FROM wa_numbers WHERE account_id = $1`, f.account)
 
 	if unlinkedAt != nil {
 		t.Errorf("unlinked_at = %v after a gateway error on a session that stayed linked, want none", unlinkedAt)
@@ -321,10 +323,12 @@ func TestRememberSessionNoticesAnUnlink(t *testing.T) {
 	f := newWAFixture(t)
 	f.db.MustExec(`INSERT INTO wa_settings (account_id, openwa_session_id, linked_phone, session_status)
 		VALUES ($1, 'sess-1', '9779800000000', 'ready')`, f.account)
+	f.db.MustExec(`INSERT INTO wa_numbers (account_id, openwa_session_id, linked_phone, session_status, is_default)
+		VALUES ($1, 'sess-1', '9779800000000', 'ready', true)`, f.account)
 
 	unlinkedAt := func() *time.Time {
 		var at *time.Time
-		f.db.Get(&at, `SELECT unlinked_at FROM wa_settings WHERE account_id = $1`, f.account)
+		f.db.Get(&at, `SELECT unlinked_at FROM wa_numbers WHERE account_id = $1`, f.account)
 
 		return at
 	}
@@ -344,7 +348,7 @@ func TestRememberSessionNoticesAnUnlink(t *testing.T) {
 	}
 
 	var unlinkedPhone string
-	f.db.Get(&unlinkedPhone, `SELECT unlinked_phone FROM wa_settings WHERE account_id = $1`, f.account)
+	f.db.Get(&unlinkedPhone, `SELECT unlinked_phone FROM wa_numbers WHERE account_id = $1`, f.account)
 
 	if unlinkedPhone != "9779800000000" {
 		t.Errorf("unlinked_phone = %q, want the number that was linked", unlinkedPhone)
@@ -359,9 +363,9 @@ func TestRememberSessionNoticesAnUnlink(t *testing.T) {
 
 	// Unlinked from the dashboard: LogoutMySession clears the phone before the
 	// session is next read.
-	f.db.MustExec(`UPDATE wa_settings SET linked_phone = '9779800000000', unlinked_at = NULL WHERE account_id = $1`,
+	f.db.MustExec(`UPDATE wa_numbers SET linked_phone = '9779800000000', unlinked_at = NULL WHERE account_id = $1`,
 		f.account)
-	f.db.MustExec(`UPDATE wa_settings SET linked_phone = '', session_status = 'disconnected' WHERE account_id = $1`,
+	f.db.MustExec(`UPDATE wa_numbers SET linked_phone = '', session_status = 'disconnected' WHERE account_id = $1`,
 		f.account)
 	f.h.rememberSession(f.account, &openwa.Session{ID: "sess-1", Status: openwa.StatusQRReady})
 
@@ -406,7 +410,7 @@ func TestADifferentNumberIsNotHeldForAnUnlink(t *testing.T) {
 	f.db.MustExec(`UPDATE wa_campaigns SET status = 'paused' WHERE id = $1`, campaignID)
 
 	// The old number was unlinked an hour ago.
-	f.db.MustExec(`UPDATE wa_settings SET unlinked_at = NOW() - INTERVAL '1 hour', unlinked_phone = '9779811111111'
+	f.db.MustExec(`UPDATE wa_numbers SET unlinked_at = NOW() - INTERVAL '1 hour', unlinked_phone = '9779811111111'
 		WHERE account_id = $1`, f.account)
 
 	code, body := waServe(t, f.h.SendCampaign, http.MethodPost, "/", strings.NewReader(`{"batch_size":10}`),
@@ -422,7 +426,7 @@ func TestADifferentNumberIsNotHeldForAnUnlink(t *testing.T) {
 	}
 
 	// Relinking the old number brings the hold back.
-	f.db.MustExec(`UPDATE wa_settings SET linked_phone = '9779811111111' WHERE account_id = $1`, f.account)
+	f.db.MustExec(`UPDATE wa_numbers SET linked_phone = '9779811111111' WHERE account_id = $1`, f.account)
 
 	other := waInsertID(t, f.db, `INSERT INTO wa_campaigns (account_id, name, template_id, target_filter, status)
 		SELECT account_id, 'again', template_id, '{}'::jsonb, 'paused' FROM wa_campaigns WHERE id = $1 RETURNING id`,

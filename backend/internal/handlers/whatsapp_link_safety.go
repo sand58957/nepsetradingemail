@@ -96,24 +96,24 @@ func recipientUnreachable(err error) bool {
 		strings.Contains(strings.ToLower(gwErr.Message), "could not resolve the recipient")
 }
 
-// campaignsBlockedUntil reports whether campaigns are still waiting out an unlink,
+// campaignsBlockedUntil reports whether a number is still waiting out an unlink,
 // and until when.
 //
-// The hold is for the number that was unlinked. Once a different number is
-// linked there is nothing to wait out, and holding it anyway told the operator
-// that the number they had just linked "was unlinked". While the unlinked number,
-// or no number, is linked — or when which number it was is not known — the hold
-// stands.
-func campaignsBlockedUntil(settings *WASettings, now time.Time) (time.Time, bool) {
-	if settings == nil || settings.UnlinkedAt == nil {
+// The hold is for the phone that was unlinked. Once a different phone is linked
+// to this number there is nothing to wait out, and holding it anyway told the
+// operator that the phone they had just linked "was unlinked". While the
+// unlinked phone, or none, is linked — or when which phone it was is not known —
+// the hold stands.
+func campaignsBlockedUntil(number *WANumber, now time.Time) (time.Time, bool) {
+	if number == nil || number.UnlinkedAt == nil {
 		return time.Time{}, false
 	}
 
-	if settings.UnlinkedPhone != "" && settings.LinkedPhone != "" && settings.LinkedPhone != settings.UnlinkedPhone {
+	if number.UnlinkedPhone != "" && number.LinkedPhone != "" && number.LinkedPhone != number.UnlinkedPhone {
 		return time.Time{}, false
 	}
 
-	until := settings.UnlinkedAt.Add(unlinkCooldown)
+	until := number.UnlinkedAt.Add(unlinkCooldown)
 
 	return until, now.Before(until)
 }
@@ -127,16 +127,17 @@ func nepalClock(t time.Time) string {
 	return t.In(nepalZone).Format("2 Jan at 3:04 PM") + " Nepal time"
 }
 
-// unlinkCooldownMessage explains why a campaign cannot start yet.
-func unlinkCooldownMessage(settings *WASettings, until time.Time) string {
-	number := "This WhatsApp number"
-	if settings.UnlinkedPhone != "" {
-		number = "The WhatsApp number " + settings.UnlinkedPhone
+// unlinkCooldownMessage explains why a campaign cannot start from a number yet.
+func unlinkCooldownMessage(number *WANumber, until time.Time) string {
+	what := "This WhatsApp number"
+	if number.UnlinkedPhone != "" {
+		what = "The WhatsApp number " + number.UnlinkedPhone
 	}
 
 	return fmt.Sprintf("%s was unlinked on %s. Numbers that go straight back to sending campaigns after an "+
-		"unlink usually get banned, so campaigns from it can start again on %s. Test messages still work.",
-		number, nepalClock(*settings.UnlinkedAt), nepalClock(until))
+		"unlink usually get banned, so campaigns from it can start again on %s. Test messages still work, and "+
+		"another linked number can send in the meantime.",
+		what, nepalClock(*number.UnlinkedAt), nepalClock(until))
 }
 
 // Why a campaign paused itself, as shown on the campaign page.
@@ -190,23 +191,24 @@ const (
 	dropUnlinked                      // asking for a QR code: the link is gone
 )
 
-// followDroppedSession watches a session that a send found disconnected, long
-// enough to tell a brief reconnect from an unlink. After an unlink the gateway
-// restarts the engine and shows a QR code within about fifteen seconds; after the
-// page behind it crashes it restores the stored login in about the same time.
-func (h *WhatsAppHandler) followDroppedSession(ctx context.Context, client *openwa.Client, accountID int,
-	sessionID string) sessionDrop {
+// followDroppedSession watches the session of a number that a send found
+// disconnected, long enough to tell a brief reconnect from an unlink. After an
+// unlink the gateway restarts the engine and shows a QR code within about fifteen
+// seconds; after the page behind it crashes it restores the stored login in about
+// the same time.
+func (h *WhatsAppHandler) followDroppedSession(ctx context.Context, client *openwa.Client,
+	number *WANumber) sessionDrop {
 	deadline := time.Now().Add(dropWatch)
 
 	for {
-		session, err := client.GetSession(ctx, sessionID)
+		session, err := client.GetSession(ctx, number.OpenWASessionID)
 		if err == nil {
 			if session.Status == openwa.StatusQRReady {
-				// Record which number it was before rememberSession clears it.
-				h.db.Exec(`UPDATE wa_settings SET unlinked_at = NOW(),
+				// Record which phone it was before rememberNumber clears it.
+				h.db.Exec(`UPDATE wa_numbers SET unlinked_at = NOW(),
 					unlinked_phone = CASE WHEN linked_phone <> '' THEN linked_phone ELSE unlinked_phone END,
-					updated_at = NOW() WHERE account_id = $1`, accountID)
-				h.rememberSession(accountID, session)
+					updated_at = NOW() WHERE id = $1`, number.ID)
+				h.rememberNumber(number, session)
 
 				return dropUnlinked
 			}

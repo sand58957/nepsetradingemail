@@ -83,6 +83,7 @@ func waTestDB(t *testing.T) *sqlx.DB {
 		"030_campaign_continuous_send.up.sql",
 		"031_whatsapp_link_safety.up.sql",
 		"032_whatsapp_unlinked_phone.up.sql",
+		"033_whatsapp_numbers.up.sql",
 	} {
 		migration, err := os.ReadFile(filepath.Join("..", "database", "migrations", f))
 		if err != nil {
@@ -321,6 +322,7 @@ func TestCampaignSendMessagesOnlyItsAudience(t *testing.T) {
 	f := newWAFixture(t)
 	f.h = NewWhatsAppHandler(f.db, &config.Config{OpenWABaseURL: gateway.URL, OpenWAAPIKey: "test-key"})
 	f.db.MustExec(`INSERT INTO wa_settings (account_id, openwa_session_id) VALUES ($1, 'sess-1')`, f.account)
+	f.db.MustExec(`INSERT INTO wa_numbers (account_id, openwa_session_id, is_default) VALUES ($1, 'sess-1', true)`, f.account)
 
 	customers := f.group(t, f.account, "Customers")
 	for _, phone := range []string{"9800000001", "9800000002"} {
@@ -406,6 +408,7 @@ func TestResumeFinishesACampaignThatReachedItsAudience(t *testing.T) {
 	f := newWAFixture(t)
 	f.h = NewWhatsAppHandler(f.db, &config.Config{OpenWABaseURL: gateway.URL, OpenWAAPIKey: "test-key"})
 	f.db.MustExec(`INSERT INTO wa_settings (account_id, openwa_session_id) VALUES ($1, 'sess-1')`, f.account)
+	f.db.MustExec(`INSERT INTO wa_numbers (account_id, openwa_session_id, is_default) VALUES ($1, 'sess-1', true)`, f.account)
 
 	customers := f.group(t, f.account, "Customers")
 	reached := f.contact(t, f.account, "9800000011", true, `[]`)

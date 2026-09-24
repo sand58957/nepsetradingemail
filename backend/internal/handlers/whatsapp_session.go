@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -25,10 +24,14 @@ import (
 // replies land in a stranger's inbox, and one tenant messaging people who never
 // opted in gets everyone else's number banned along with theirs.
 //
-// So each account links its own number and sends from it. The rule that makes
+// So each account links its own numbers and sends from them. The rule that makes
 // that safe is small and absolute: the session an endpoint acts on is always
-// looked up from wa_settings for the authenticated account, and never taken from
-// the request. There is deliberately no route here that accepts a session id.
+// looked up for the authenticated account, and never taken from the request.
+// There is deliberately no route here that accepts a session id.
+//
+// An account can now link several numbers (whatsapp_numbers.go). The endpoints in
+// this file are the single-number ones the dashboard and the public API were
+// written against, and they act on the account's default number.
 //
 // Linking is done by an owner or admin of the account, not by a super admin —
 // scanning the QR requires the handset, and only the account holder has it.
@@ -66,15 +69,20 @@ func (h *WhatsAppHandler) accountManager(c echo.Context) error {
 	return nil
 }
 
-// mySessionID returns the gateway session this account owns, or "" if it has not
-// linked one. This is the only way a session id enters any handler in this file.
+// mySessionID returns the gateway session of this account's default number, or
+// "" if it has not linked one. This is the only way a session id enters any
+// handler in this file.
 func (h *WhatsAppHandler) mySessionID(accountID int) (string, error) {
-	settings, err := h.waSettings(accountID)
+	number, err := h.defaultNumberOf(accountID)
 	if err != nil {
 		return "", err
 	}
 
-	return settings.OpenWASessionID, nil
+	if number == nil {
+		return "", nil
+	}
+
+	return number.OpenWASessionID, nil
 }
 
 // sessionPayload renders a session for the UI, plus whether it can send.
@@ -129,8 +137,9 @@ func (h *WhatsAppHandler) GetMySession(c echo.Context) error {
 		// gateway's storage was reset. Report it as unlinked rather than as an
 		// error, and clear the stale id so the account can start again.
 		if gwErr, ok := openwa.AsGatewayError(err); ok && gwErr.Status == http.StatusNotFound {
-			h.db.Exec(`UPDATE wa_settings SET openwa_session_id = '', linked_phone = '', session_status = '',
-				updated_at = NOW() WHERE account_id = $1`, accountID)
+			h.db.Exec(`UPDATE wa_numbers SET openwa_session_id = '', linked_phone = '', session_status = '',
+				updated_at = NOW() WHERE account_id = $1 AND openwa_session_id = $2`, accountID, sessionID)
+			h.mirrorDefaultNumber(accountID)
 
 			return response.Success(c, map[string]interface{}{"linked": false, "session": nil})
 		}
@@ -146,43 +155,38 @@ func (h *WhatsAppHandler) GetMySession(c echo.Context) error {
 	}
 
 	// Read back after rememberSession, which may just have noticed an unlink.
-	if settings, err := h.waSettings(accountID); err == nil {
-		if until, blocked := campaignsBlockedUntil(settings, time.Now()); blocked {
-			payload["unlinked_at"] = settings.UnlinkedAt
+	if number, nErr := h.defaultNumberOf(accountID); nErr == nil && number != nil {
+		payload["number_id"] = number.ID
+
+		if until, blocked := campaignsBlockedUntil(number, time.Now()); blocked {
+			payload["unlinked_at"] = number.UnlinkedAt
 			payload["campaigns_blocked_until"] = until
-			payload["campaigns_blocked_message"] = unlinkCooldownMessage(settings, until)
+			payload["campaigns_blocked_message"] = unlinkCooldownMessage(number, until)
 		}
 	}
 
 	return response.Success(c, payload)
 }
 
-// rememberSession keeps wa_settings in step with what the gateway reports, so the
-// send path and the dashboard agree without another round trip.
-//
-// It is also where an unlink is noticed outside a campaign. A session that asks
-// for a QR code while a phone is still recorded against it has lost its link —
-// WhatsApp unlinked it, or someone removed it from the phone's linked devices —
-// and that starts the campaign cooldown (whatsapp_link_safety.go). Unlinking from
-// this dashboard clears the phone first, so it does not count. The comparison
-// reads the row's old linked_phone, which is what Postgres gives the right-hand
-// side of an UPDATE, and that old value is also recorded as the number the
-// unlink happened to.
+// rememberSession keeps the account's row for this session in step with what the
+// gateway reports, so the send path and the dashboard agree without another round
+// trip. The work, including noticing an unlink, is rememberNumber's.
 func (h *WhatsAppHandler) rememberSession(accountID int, s *openwa.Session) {
-	phone := ""
-	if s.Phone != nil {
-		phone = *s.Phone
+	var number WANumber
+
+	err := h.db.Get(&number, `SELECT * FROM wa_numbers WHERE account_id = $1 AND openwa_session_id = $2`,
+		accountID, s.ID)
+	if err != nil {
+		// A session this account has no row for: nothing to remember, and writing
+		// it against another row would credit one number's state to another.
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("[whatsapp] finding the number for a session of account %d: %v", accountID, err)
+		}
+
+		return
 	}
 
-	if _, err := h.db.Exec(`
-		UPDATE wa_settings SET
-			unlinked_at = CASE WHEN linked_phone <> '' AND $3::text = 'qr_ready' THEN NOW() ELSE unlinked_at END,
-			unlinked_phone = CASE WHEN linked_phone <> '' AND $3::text = 'qr_ready' THEN linked_phone ELSE unlinked_phone END,
-			openwa_session_id = $1, linked_phone = $2, session_status = $3, updated_at = NOW()
-		WHERE account_id = $4
-	`, s.ID, phone, s.Status, accountID); err != nil {
-		log.Printf("[whatsapp] caching session state for account %d: %v", accountID, err)
-	}
+	h.rememberNumber(&number, s)
 }
 
 // CreateMySession gives this account its own session on the gateway and starts it
@@ -203,14 +207,16 @@ func (h *WhatsAppHandler) CreateMySession(c echo.Context) error {
 	client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
 
 	if existing != "" {
-		// Already has one. Start it again rather than creating a duplicate: two
-		// sessions for one account would both be charged against it and only one
-		// could ever be the sender.
+		// Already has one. Start it again rather than creating a duplicate: this
+		// endpoint is the single-number one, and the account's other numbers are
+		// added through /whatsapp/numbers.
 		session, startErr := client.StartSession(c.Request().Context(), existing)
 		if startErr != nil {
 			if gwErr, ok := openwa.AsGatewayError(startErr); ok && gwErr.Status == http.StatusNotFound {
 				// Stale id; fall through and make a new one.
-				h.db.Exec(`UPDATE wa_settings SET openwa_session_id = '' WHERE account_id = $1`, accountID)
+				h.db.Exec(`UPDATE wa_numbers SET openwa_session_id = '', linked_phone = '', session_status = ''
+					WHERE account_id = $1 AND openwa_session_id = $2`, accountID, existing)
+				h.mirrorDefaultNumber(accountID)
 			} else {
 				return response.Error(c, http.StatusBadGateway, "Could not start your WhatsApp session")
 			}
@@ -222,31 +228,9 @@ func (h *WhatsAppHandler) CreateMySession(c echo.Context) error {
 		}
 	}
 
-	// Name it after the account so it is identifiable on the gateway and in its
-	// logs, which is otherwise a wall of opaque UUIDs once there are many tenants.
-	var accountName string
-	h.db.Get(&accountName, `SELECT name FROM app_accounts WHERE id = $1`, accountID)
-
-	name := fmt.Sprintf("account-%d", accountID)
-	if slug := slugifyAccountName(accountName); slug != "" {
-		name = fmt.Sprintf("account-%d-%s", accountID, slug)
-	}
-
-	session, err := client.CreateSession(c.Request().Context(), name)
+	_, session, err := h.addNumber(c.Request().Context(), accountID, "")
 	if err != nil {
-		if gwErr, ok := openwa.AsGatewayError(err); ok && gwErr.ClientFault() {
-			return response.Error(c, http.StatusConflict, gwErr.Message)
-		}
-
-		return response.Error(c, http.StatusBadGateway, "Could not create a WhatsApp session")
-	}
-
-	h.rememberSession(accountID, session)
-
-	started, err := client.StartSession(c.Request().Context(), session.ID)
-	if err == nil {
-		h.rememberSession(accountID, started)
-		session = started
+		return numberCreationError(c, err)
 	}
 
 	return response.SuccessWithMessage(c, "Session created. Scan the QR code with the phone that owns the number.",
@@ -347,8 +331,11 @@ func (h *WhatsAppHandler) LogoutMySession(c echo.Context) error {
 		}
 	}
 
-	h.db.Exec(`UPDATE wa_settings SET linked_phone = '', session_status = 'disconnected', updated_at = NOW()
-		WHERE account_id = $1`, accountID)
+	// Clearing the phone first is what tells the unlink watcher this was
+	// deliberate, so it does not start a campaign hold.
+	h.db.Exec(`UPDATE wa_numbers SET linked_phone = '', session_status = 'disconnected', updated_at = NOW()
+		WHERE account_id = $1 AND openwa_session_id = $2`, accountID, sessionID)
+	h.mirrorDefaultNumber(accountID)
 
 	return response.SuccessWithMessage(c, "Number unlinked. Scan a QR code to link again.", nil)
 }
@@ -380,8 +367,11 @@ func (h *WhatsAppHandler) DeleteMySession(c echo.Context) error {
 
 	// Clear it locally either way: a session the gateway no longer has must not
 	// stay recorded here, or the account can never create a working one again.
-	h.db.Exec(`UPDATE wa_settings SET openwa_session_id = '', linked_phone = '', session_status = '',
-		updated_at = NOW() WHERE account_id = $1`, accountID)
+	h.db.Exec(`DELETE FROM wa_numbers WHERE account_id = $1 AND openwa_session_id = $2`, accountID, sessionID)
+	h.db.Exec(`UPDATE wa_numbers SET is_default = true, updated_at = NOW() WHERE id = (
+		SELECT id FROM wa_numbers WHERE account_id = $1 ORDER BY id LIMIT 1
+	) AND NOT EXISTS (SELECT 1 FROM wa_numbers WHERE account_id = $1 AND is_default)`, accountID)
+	h.mirrorDefaultNumber(accountID)
 
 	return response.SuccessWithMessage(c, "Session deleted", nil)
 }
@@ -430,21 +420,7 @@ func (h *WhatsAppHandler) TestMySession(c echo.Context) error {
 
 	result, err := client.SendText(c.Request().Context(), sessionID, req.Phone, req.Message)
 	if err != nil {
-		var paced *openwa.PacingLimitedError
-		if errors.As(err, &paced) {
-			return response.Error(c, http.StatusTooManyRequests,
-				"Sending is paced to protect your number: "+paced.Reason)
-		}
-
-		if gwErr, ok := openwa.AsGatewayError(err); ok && gwErr.ClientFault() {
-			return response.Error(c, http.StatusUnprocessableEntity, gwErr.Message)
-		}
-
-		if errors.Is(err, openwa.ErrNoConnectedSession) {
-			return response.Error(c, http.StatusConflict, "Your WhatsApp number is not connected")
-		}
-
-		return response.Error(c, http.StatusBadGateway, "The test message could not be sent")
+		return response.Error(c, testSendStatus(err), testSendMessage(err))
 	}
 
 	return response.SuccessWithMessage(c, "Test message sent", map[string]interface{}{

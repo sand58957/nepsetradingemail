@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -18,12 +18,16 @@ import CircularProgress from '@mui/material/CircularProgress'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 import Box from '@mui/material/Box'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
 
 // Service Imports
 import whatsappService from '@/services/whatsapp'
 
 // Type Imports
-import type { OpenWASession } from '@/types/whatsapp'
+import type { WANumber } from '@/types/whatsapp'
 
 type Severity = 'success' | 'error' | 'info' | 'warning'
 
@@ -47,19 +51,26 @@ const READY = 'ready'
 const describe = (status: string) =>
   STATUS_LABEL[status] ?? { label: status || 'No number linked', color: 'default' as const }
 
-const WASettings = () => {
-  // This page is about one thing: the number THIS account sends from. There is no
-  // account switcher and no session picker, because an account only ever has its
-  // own session and the server resolves it from the request — the client never
-  // names one.
-  const [session, setSession] = useState<OpenWASession | null>(null)
+/** What to call a number on screen. */
+const numberName = (n: WANumber, index: number) => n.label || n.linked_phone || `Number ${index + 1}`
 
-  // Set while campaigns wait out an unlink of this number; the server words it.
-  const [blockedMessage, setBlockedMessage] = useState('')
-  const [qr, setQr] = useState<string>('')
+type Confirm = { action: 'logout' | 'delete'; number: WANumber; name: string } | null
+
+const WASettings = () => {
+  // Everything here is about the numbers THIS account sends from. Each number is
+  // addressed by the account's own id for it; the server looks it up inside the
+  // account, so a number belonging to anyone else can't be reached from here.
+  const [numbers, setNumbers] = useState<WANumber[]>([])
+  const [max, setMax] = useState(3)
   const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const [testPhone, setTestPhone] = useState('')
+  const [busy, setBusy] = useState<number | 'add' | null>(null)
+  const [qrCodes, setQrCodes] = useState<Record<number, string>>({})
+  const [testPhones, setTestPhones] = useState<Record<number, string>>({})
+  const [renaming, setRenaming] = useState<{ id: number; label: string } | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addLabel, setAddLabel] = useState('')
+  const [confirm, setConfirm] = useState<Confirm>(null)
+
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: Severity }>({
     open: false,
     message: '',
@@ -73,12 +84,12 @@ const WASettings = () => {
 
   const load = useCallback(async () => {
     try {
-      const res = await whatsappService.mySession()
+      const res = await whatsappService.listNumbers()
 
-      setSession(res.data.linked ? res.data.session : null)
-      setBlockedMessage(res.data.campaigns_blocked_message || '')
+      setNumbers(res.data.numbers)
+      setMax(res.data.max)
     } catch (err) {
-      notify(errorText(err, 'Could not check your WhatsApp connection'), 'error')
+      notify(errorText(err, 'Could not check your WhatsApp numbers'), 'error')
     } finally {
       setLoading(false)
     }
@@ -88,78 +99,82 @@ const WASettings = () => {
     load()
   }, [load])
 
-  // While a session waits to be linked, both the code and the status change on
+  // While a number waits to be linked, both its code and its status change on
   // their own — the code rotates every few seconds and the status flips the
   // moment someone scans. Poll so nobody is looking at an expired code.
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const waitingIds = numbers
+    .filter(n => n.status === 'qr_ready')
+    .map(n => n.id)
+    .join(',')
 
   useEffect(() => {
-    const stop = () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-        pollRef.current = null
-      }
+    if (!waitingIds) {
+      setQrCodes({})
+
+      return
     }
 
-    if (session?.status !== 'qr_ready') {
-      setQr('')
-      stop()
-
-      return stop
-    }
-
+    const ids = waitingIds.split(',').map(Number)
     let cancelled = false
+    const poll: { timer?: ReturnType<typeof setInterval> } = {}
 
     // A miss or two is expected while the engine rotates the code. A persistent
     // one is not: silently retrying a request the gateway keeps refusing asked
     // 304 times in one hour and showed nothing. Give up and say why.
     let consecutiveFailures = 0
-    const maxConsecutiveFailures = 3
 
     const tick = async () => {
       try {
-        const [qrRes, sessionRes] = await Promise.all([whatsappService.myQR(), whatsappService.mySession()])
+        const [list, ...codes] = await Promise.all([
+          whatsappService.listNumbers(),
+          ...ids.map(id => whatsappService.numberQR(id).catch(() => null))
+        ])
 
         if (cancelled) return
 
         consecutiveFailures = 0
-        setQr(qrRes.data?.qrCode || '')
-        setBlockedMessage(sessionRes.data.campaigns_blocked_message || '')
 
-        const fresh = sessionRes.data.linked ? sessionRes.data.session : null
+        const next: Record<number, string> = {}
 
-        if (fresh && fresh.status !== 'qr_ready') {
-          setSession(fresh)
+        ids.forEach((id, i) => {
+          const code = codes[i]?.data?.qrCode
 
-          if (fresh.status === READY) {
-            notify(`Linked ${fresh.phone || 'your number'} successfully`, 'success')
+          if (code) next[id] = code
+        })
+
+        setQrCodes(next)
+
+        list.data.numbers.forEach(n => {
+          if (ids.includes(n.id) && n.status === READY) {
+            notify(`Linked ${n.linked_phone || n.label || 'the number'} successfully`)
           }
-        }
+        })
+
+        setNumbers(list.data.numbers)
       } catch (err) {
         if (cancelled) return
 
         consecutiveFailures += 1
 
-        if (consecutiveFailures >= maxConsecutiveFailures) {
-          stop()
-          setQr('')
-          notify(errorText(err, 'The QR code could not be fetched. Start the session and try again.'), 'error')
-          load()
+        if (consecutiveFailures >= 3) {
+          cancelled = true
+          clearInterval(poll.timer)
+          notify(errorText(err, 'The QR code could not be fetched. Start the number and try again.'), 'error')
         }
       }
     }
 
     tick()
-    pollRef.current = setInterval(tick, 4000)
+    poll.timer = setInterval(tick, 4000)
 
     return () => {
       cancelled = true
-      stop()
+      clearInterval(poll.timer)
     }
-  }, [session, load])
+  }, [waitingIds])
 
-  const run = async (fn: () => Promise<void>, done: string) => {
-    setBusy(true)
+  const run = async (key: number | 'add', fn: () => Promise<void>, done: string) => {
+    setBusy(key)
 
     try {
       await fn()
@@ -168,29 +183,59 @@ const WASettings = () => {
     } catch (err) {
       notify(errorText(err, 'That did not work'), 'error')
     } finally {
-      setBusy(false)
+      setBusy(null)
     }
   }
 
-  const handleConnect = () =>
-    run(async () => {
-      await whatsappService.createMySession()
-    }, 'Scan the QR code with the phone that owns your number')
-
-  const handleStart = () =>
-    run(async () => {
-      await whatsappService.startMySession()
-    }, 'Starting')
-
-  const handleLogout = () => run(() => whatsappService.logoutMySession(), 'Number unlinked')
-
-  const handleDelete = () => run(() => whatsappService.deleteMySession(), 'Session deleted')
-
-  const handleTest = () =>
+  const handleAdd = () =>
     run(
-      () => whatsappService.testMySession(testPhone.trim(), 'Test message from Nepal Fillings.'),
-      `Test message sent to ${testPhone.trim()}`
+      'add',
+      async () => {
+        await whatsappService.addNumber(addLabel.trim())
+        setAddOpen(false)
+        setAddLabel('')
+      },
+      'Number added. Scan its QR code with the phone that will send from it.'
     )
+
+  const handleRename = () => {
+    if (!renaming) return
+
+    const { id, label } = renaming
+
+    run(
+      id,
+      async () => {
+        await whatsappService.renameNumber(id, label)
+        setRenaming(null)
+      },
+      'Name saved'
+    )
+  }
+
+  const handleConfirm = () => {
+    if (!confirm) return
+
+    const { action, number, name } = confirm
+
+    setConfirm(null)
+
+    if (action === 'logout') {
+      run(number.id, () => whatsappService.logoutNumber(number.id), `${name} unlinked`)
+    } else {
+      run(number.id, () => whatsappService.deleteNumber(number.id), `${name} removed`)
+    }
+  }
+
+  const handleTest = (number: WANumber) => {
+    const phone = (testPhones[number.id] || '').trim()
+
+    run(
+      number.id,
+      () => whatsappService.testNumber(number.id, phone, 'Test message from Nepal Fillings.'),
+      `Test message sent to ${phone}`
+    )
+  }
 
   if (loading) {
     return (
@@ -200,7 +245,8 @@ const WASettings = () => {
     )
   }
 
-  const status = describe(session?.status || '')
+  const atLimit = numbers.length >= max
+  const connectedCount = numbers.filter(n => n.connected).length
 
   return (
     <Grid container spacing={6}>
@@ -208,139 +254,272 @@ const WASettings = () => {
         <Card>
           <CardContent className='flex flex-wrap items-center justify-between gap-4'>
             <div>
-              <Typography variant='h5'>Your WhatsApp number</Typography>
+              <Typography variant='h5'>Your WhatsApp numbers</Typography>
               <Typography color='text.secondary'>
-                Campaigns and messages from this account are sent from the number you link here.
+                Campaigns send from your default number unless you pick another when sending.
               </Typography>
             </div>
-            <div className='flex items-center gap-2'>
-              <Chip label={status.label} color={status.color} variant='tonal' />
-              {session?.phone && <Chip label={session.phone} variant='tonal' />}
+            <div className='flex flex-wrap items-center gap-3'>
+              <Chip
+                label={`${numbers.length} of ${max} added · ${connectedCount} connected`}
+                variant='tonal'
+                color={connectedCount > 0 ? 'success' : 'default'}
+              />
+              <Button
+                variant='contained'
+                startIcon={<i className='tabler-plus' />}
+                onClick={() => setAddOpen(true)}
+                disabled={atLimit || busy !== null}
+              >
+                Add number
+              </Button>
             </div>
           </CardContent>
+          {atLimit && (
+            <CardContent className='pbs-0'>
+              <Alert severity='info'>
+                This account has reached its limit of {max} numbers. Remove one to add another.
+              </Alert>
+            </CardContent>
+          )}
         </Card>
       </Grid>
 
-      {blockedMessage && (
+      {numbers.length === 0 && (
         <Grid size={{ xs: 12 }}>
-          <Alert severity='error'>
-            <AlertTitle>Campaigns are on hold for this number</AlertTitle>
-            {blockedMessage} In the meantime, use WhatsApp on the phone as normal and don&apos;t message people who
-            haven&apos;t asked to hear from you.
+          <Alert severity='info'>
+            This account has no WhatsApp number yet. Adding one takes about a minute and needs the phone in your hand.
           </Alert>
         </Grid>
       )}
 
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Card>
-          <CardHeader
-            title='Link a number'
-            subheader='Scan the code with the phone that will send your messages'
-          />
-          <CardContent className='flex flex-col gap-4'>
-            {!session && (
-              <>
-                <Alert severity='info'>
-                  This account has no WhatsApp number yet. Connecting one takes about a minute and needs the phone in
-                  your hand.
-                </Alert>
-                <Button variant='contained' onClick={handleConnect} disabled={busy}>
-                  Connect a WhatsApp number
-                </Button>
-              </>
-            )}
+      {numbers.map((number, index) => {
+        const status = describe(number.status)
+        const name = numberName(number, index)
+        const isBusy = busy === number.id
+        const qr = qrCodes[number.id]
 
-            {session?.status === 'qr_ready' &&
-              (qr ? (
-                <Box className='flex flex-col items-center gap-3'>
-                  {/* The gateway returns a ready-to-render data URI. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={qr}
-                    alt='WhatsApp linking QR code'
-                    width={260}
-                    height={260}
-                    style={{ background: '#fff', padding: 12, borderRadius: 12 }}
+        return (
+          <Grid key={number.id} size={{ xs: 12, md: 6 }}>
+            <Card className='bs-full'>
+              <CardHeader
+                title={
+                  renaming?.id === number.id ? (
+                    <div className='flex items-center gap-2'>
+                      <TextField
+                        size='small'
+                        autoFocus
+                        value={renaming.label}
+                        placeholder='e.g. Support, Sales'
+                        inputProps={{ maxLength: 40 }}
+                        onChange={e => setRenaming({ id: number.id, label: e.target.value })}
+                        onKeyDown={e => e.key === 'Enter' && handleRename()}
+                      />
+                      <Button size='small' onClick={handleRename} disabled={isBusy}>
+                        Save
+                      </Button>
+                      <Button size='small' color='secondary' onClick={() => setRenaming(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className='flex items-center gap-2'>
+                      <span>{name}</span>
+                      <Button
+                        size='small'
+                        variant='text'
+                        aria-label={`Rename ${name}`}
+                        onClick={() => setRenaming({ id: number.id, label: number.label })}
+                        sx={{ minWidth: 0, px: 1 }}
+                      >
+                        <i className='tabler-pencil text-base' />
+                      </Button>
+                    </div>
+                  )
+                }
+                subheader={number.linked_phone && number.label ? number.linked_phone : undefined}
+                action={
+                  <div className='flex flex-wrap gap-2 justify-end'>
+                    {number.is_default && <Chip label='Default' color='primary' size='small' variant='tonal' />}
+                    <Chip label={status.label} color={status.color} size='small' variant='tonal' />
+                  </div>
+                }
+              />
+              <CardContent className='flex flex-col gap-4'>
+                {number.campaigns_blocked_message && (
+                  <Alert severity='error'>
+                    <AlertTitle>Campaigns from this number are on hold</AlertTitle>
+                    {number.campaigns_blocked_message}
+                  </Alert>
+                )}
+
+                {number.status === 'qr_ready' &&
+                  (qr ? (
+                    <Box className='flex flex-col items-center gap-3'>
+                      {/* The gateway returns a ready-to-render data URI. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={qr}
+                        alt={`QR code to link ${name}`}
+                        width={240}
+                        height={240}
+                        style={{ background: '#fff', padding: 12, borderRadius: 12 }}
+                      />
+                      <Typography variant='body2' color='text.secondary' className='text-center'>
+                        On the phone: WhatsApp → Settings → Linked devices → Link a device.
+                        <br />
+                        The code refreshes automatically until it is scanned.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Box className='flex justify-center' sx={{ py: 6 }}>
+                      <CircularProgress />
+                    </Box>
+                  ))}
+
+                {number.status !== 'qr_ready' && !number.connected && (
+                  <Alert
+                    severity='warning'
+                    action={
+                      number.linked ? (
+                        <Button
+                          color='inherit'
+                          size='small'
+                          onClick={() => run(number.id, () => whatsappService.startNumber(number.id), 'Starting')}
+                          disabled={isBusy}
+                        >
+                          Start
+                        </Button>
+                      ) : undefined
+                    }
+                  >
+                    {number.linked
+                      ? `This number is ${status.label.toLowerCase()}. Start it to get a QR code.`
+                      : 'This number lost its connection to the gateway. Remove it and add it again.'}
+                    {number.last_error ? ` Last error: ${number.last_error}` : ''}
+                  </Alert>
+                )}
+
+                {number.connected && (
+                  <Alert severity='success'>
+                    Sending as {number.linked_phone || 'this number'}
+                    {number.is_default ? '. Used unless a campaign picks another number.' : '.'}
+                  </Alert>
+                )}
+
+                <div className='flex gap-2'>
+                  <TextField
+                    fullWidth
+                    size='small'
+                    label='Send a test message to'
+                    placeholder='+977 98XXXXXXXX'
+                    value={testPhones[number.id] || ''}
+                    onChange={e => setTestPhones({ ...testPhones, [number.id]: e.target.value })}
                   />
-                  <Typography variant='body2' color='text.secondary' className='text-center'>
-                    On the phone: WhatsApp → Settings → Linked devices → Link a device.
-                    <br />
-                    The code refreshes automatically until it is scanned.
-                  </Typography>
-                </Box>
-              ) : (
-                <Box className='flex justify-center' sx={{ py: 6 }}>
-                  <CircularProgress />
-                </Box>
-              ))}
+                  <Button
+                    variant='tonal'
+                    onClick={() => handleTest(number)}
+                    disabled={isBusy || !(testPhones[number.id] || '').trim() || !number.connected}
+                  >
+                    Test
+                  </Button>
+                </div>
 
-            {session && session.status !== 'qr_ready' && session.status !== READY && (
-              <>
-                <Alert severity='warning'>
-                  This connection is {status.label.toLowerCase()}. Start it to get a QR code.
-                  {session.lastError ? ` Last error: ${session.lastError}` : ''}
-                </Alert>
-                <Button variant='contained' onClick={handleStart} disabled={busy}>
-                  Start
-                </Button>
-              </>
-            )}
+                <Divider />
 
-            {session?.status === READY && (
-              <Alert severity='success'>
-                <AlertTitle>Linked</AlertTitle>
-                Sending as {session.phone || 'your linked number'}
-                {session.pushName ? ` (${session.pushName})` : ''}.
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      </Grid>
-
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Card>
-          <CardHeader title='Check and manage' subheader='Confirm delivery, or unlink the number' />
-          <CardContent className='flex flex-col gap-4'>
-            <TextField
-              fullWidth
-              label='Send a test message to'
-              placeholder='+977 98XXXXXXXX'
-              value={testPhone}
-              onChange={e => setTestPhone(e.target.value)}
-              helperText='Confirms your number can actually deliver, without touching a campaign'
-            />
-            <Button
-              variant='tonal'
-              onClick={handleTest}
-              disabled={busy || !testPhone.trim() || session?.status !== READY}
-            >
-              Send test message
-            </Button>
-
-            <Divider />
-
-            <div className='flex flex-wrap gap-3'>
-              <Button color='warning' variant='tonal' onClick={handleLogout} disabled={busy || !session}>
-                Unlink number
-              </Button>
-              <Button color='error' variant='tonal' onClick={handleDelete} disabled={busy || !session}>
-                Delete connection
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </Grid>
+                <div className='flex flex-wrap gap-3'>
+                  {!number.is_default && (
+                    <Button
+                      variant='tonal'
+                      onClick={() =>
+                        run(number.id, () => whatsappService.setDefaultNumber(number.id), `${name} is now the default`)
+                      }
+                      disabled={isBusy}
+                    >
+                      Make default
+                    </Button>
+                  )}
+                  <Button
+                    color='warning'
+                    variant='tonal'
+                    onClick={() => setConfirm({ action: 'logout', number, name })}
+                    disabled={isBusy || !number.linked_phone}
+                  >
+                    Unlink phone
+                  </Button>
+                  <Button
+                    color='error'
+                    variant='tonal'
+                    onClick={() => setConfirm({ action: 'delete', number, name })}
+                    disabled={isBusy}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </Grid>
+        )
+      })}
 
       <Grid size={{ xs: 12 }}>
         <Alert severity='warning'>
-          <AlertTitle>Use a number you can afford to lose</AlertTitle>
-          This sends through an unofficial WhatsApp client rather than Meta&apos;s Business API, so the linked account
-          can be restricted without warning — most often when messages go to people who never opted in or have never
-          chatted with the number. WhatsApp usually unlinks a number a few times before it bans it, so campaigns wait
-          24 hours after an unlink. Do not link a primary business line, and keep SMS or email available for anything
-          critical.
+          <AlertTitle>Use numbers you can afford to lose</AlertTitle>
+          This sends through an unofficial WhatsApp client rather than Meta&apos;s Business API, so a linked number can be
+          restricted without warning — most often when messages go to people who never opted in or have never chatted
+          with it. Each number has its own reputation: start a new number with a few messages a day to people who know
+          you, and don&apos;t send the same campaign to strangers from every number, or WhatsApp can unlink them all at
+          once. Campaigns from a number wait 24 hours after it is unlinked. Keep SMS or email for anything critical.
         </Alert>
       </Grid>
+
+      <Dialog open={addOpen} onClose={() => setAddOpen(false)} maxWidth='xs' fullWidth>
+        <DialogTitle>Add a WhatsApp number</DialogTitle>
+        <DialogContent>
+          <Typography className='mbe-4' color='text.secondary'>
+            Give it a name so you can tell your numbers apart when sending. You&apos;ll scan a QR code with the phone
+            next.
+          </Typography>
+          <TextField
+            fullWidth
+            autoFocus
+            label='Name (optional)'
+            placeholder='e.g. Support, Sales, Brand B'
+            value={addLabel}
+            inputProps={{ maxLength: 40 }}
+            onChange={e => setAddLabel(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddOpen(false)}>Cancel</Button>
+          <Button
+            variant='contained'
+            onClick={handleAdd}
+            disabled={busy === 'add'}
+            startIcon={busy === 'add' ? <CircularProgress size={18} /> : undefined}
+          >
+            {busy === 'add' ? 'Adding…' : 'Add and show QR code'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={confirm !== null} onClose={() => setConfirm(null)} maxWidth='xs' fullWidth>
+        <DialogTitle>{confirm?.action === 'delete' ? `Remove ${confirm?.name}?` : `Unlink ${confirm?.name}?`}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {confirm?.action === 'delete'
+              ? 'The number is removed from this account and its connection is deleted. Campaigns that used it will send from your default number. Messages it already sent stay in your reports.'
+              : 'The phone is unlinked from this number. To send from it again you will need to scan a new QR code with the phone.'}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirm(null)}>Cancel</Button>
+          <Button variant='contained' color={confirm?.action === 'delete' ? 'error' : 'warning'} onClick={handleConfirm}>
+            {confirm?.action === 'delete' ? 'Remove number' : 'Unlink phone'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}

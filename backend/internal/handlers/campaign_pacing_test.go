@@ -103,7 +103,7 @@ func TestTransientStopsParkRatherThanFail(t *testing.T) {
 		name   string
 		marker string
 	}{
-		{"the pre-flight session check", "not starting, session is"},
+		{"the pre-flight session check", "no number can send, parked at paused"},
 		{"the consecutive-failure abort", "sends failed in a row, stopping with"},
 	} {
 		at := strings.Index(body, site.marker)

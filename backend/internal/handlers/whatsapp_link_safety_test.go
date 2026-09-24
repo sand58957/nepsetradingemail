@@ -105,20 +105,20 @@ func TestCampaignsWaitADayAfterAnUnlink(t *testing.T) {
 	dayAndHourAgo := now.Add(-25 * time.Hour)
 
 	if _, blocked := campaignsBlockedUntil(nil, now); blocked {
-		t.Error("no settings row must not block campaigns")
+		t.Error("no number must not block campaigns")
 	}
 
-	if _, blocked := campaignsBlockedUntil(&WASettings{}, now); blocked {
+	if _, blocked := campaignsBlockedUntil(&WANumber{}, now); blocked {
 		t.Error("a number never unlinked must not block campaigns")
 	}
 
-	until, blocked := campaignsBlockedUntil(&WASettings{UnlinkedAt: &hourAgo}, now)
+	until, blocked := campaignsBlockedUntil(&WANumber{UnlinkedAt: &hourAgo}, now)
 	if !blocked || !until.Equal(hourAgo.Add(24*time.Hour)) {
 		t.Errorf("an hour after an unlink: blocked=%v until %s, want blocked until %s", blocked, until,
 			hourAgo.Add(24*time.Hour))
 	}
 
-	if _, blocked := campaignsBlockedUntil(&WASettings{UnlinkedAt: &dayAndHourAgo}, now); blocked {
+	if _, blocked := campaignsBlockedUntil(&WANumber{UnlinkedAt: &dayAndHourAgo}, now); blocked {
 		t.Error("25 hours after an unlink campaigns must be allowed again")
 	}
 
@@ -135,7 +135,7 @@ func TestCampaignsWaitADayAfterAnUnlink(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		settings := &WASettings{UnlinkedAt: &hourAgo, UnlinkedPhone: c.unlinked, LinkedPhone: c.now}
+		settings := &WANumber{UnlinkedAt: &hourAgo, UnlinkedPhone: c.unlinked, LinkedPhone: c.now}
 		if _, blocked := campaignsBlockedUntil(settings, now); blocked != c.wantBlocked {
 			t.Errorf("%s: blocked = %v, want %v", c.name, blocked, c.wantBlocked)
 		}
@@ -146,14 +146,14 @@ func TestUnlinkCooldownMessageNamesTheNumber(t *testing.T) {
 	at := time.Date(2026, 9, 17, 3, 26, 29, 0, time.UTC)
 	until := at.Add(unlinkCooldown)
 
-	msg := unlinkCooldownMessage(&WASettings{UnlinkedAt: &at, UnlinkedPhone: "9779805749767"}, until)
+	msg := unlinkCooldownMessage(&WANumber{UnlinkedAt: &at, UnlinkedPhone: "9779805749767"}, until)
 	for _, want := range []string{"9779805749767", "17 Sep at 9:11 AM Nepal time", "18 Sep at 9:11 AM Nepal time"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("message %q does not contain %q", msg, want)
 		}
 	}
 
-	if msg := unlinkCooldownMessage(&WASettings{UnlinkedAt: &at}, until); !strings.HasPrefix(msg, "This WhatsApp number was unlinked") {
+	if msg := unlinkCooldownMessage(&WANumber{UnlinkedAt: &at}, until); !strings.HasPrefix(msg, "This WhatsApp number was unlinked") {
 		t.Errorf("without a recorded number the message reads %q", msg)
 	}
 }

@@ -10,7 +10,8 @@ import type {
   WAOverviewStats,
   WAContactGroup,
   WAContactGroupWithCount,
-  OpenWASession
+  OpenWASession,
+  WANumber
 } from '@/types/whatsapp'
 
 export interface PaginationParams {
@@ -109,6 +110,52 @@ export const whatsappService = {
 
   testMySession: async (phone: string, message: string): Promise<void> => {
     await api.post('/whatsapp/session/test', { phone, message })
+  },
+
+  // ==================== Several numbers per account ====================
+  // `id` is the account's own number id, looked up inside the account on the
+  // server; it is never a gateway session id.
+
+  listNumbers: async (): Promise<{ data: { numbers: WANumber[]; max: number; remaining: number } }> => {
+    const response = await api.get('/whatsapp/numbers')
+
+    return response.data
+  },
+
+  addNumber: async (label: string): Promise<{ data: WANumber; message: string }> => {
+    const response = await api.post('/whatsapp/numbers', { label })
+
+    return response.data
+  },
+
+  numberQR: async (id: number): Promise<{ data: { qrCode: string; status: string } }> => {
+    const response = await api.get(`/whatsapp/numbers/${id}/qr`)
+
+    return response.data
+  },
+
+  startNumber: async (id: number): Promise<void> => {
+    await api.post(`/whatsapp/numbers/${id}/start`)
+  },
+
+  renameNumber: async (id: number, label: string): Promise<void> => {
+    await api.put(`/whatsapp/numbers/${id}`, { label })
+  },
+
+  setDefaultNumber: async (id: number): Promise<void> => {
+    await api.post(`/whatsapp/numbers/${id}/default`)
+  },
+
+  logoutNumber: async (id: number): Promise<void> => {
+    await api.post(`/whatsapp/numbers/${id}/logout`)
+  },
+
+  deleteNumber: async (id: number): Promise<void> => {
+    await api.delete(`/whatsapp/numbers/${id}`)
+  },
+
+  testNumber: async (id: number, phone: string, message: string): Promise<void> => {
+    await api.post(`/whatsapp/numbers/${id}/test`, { phone, message })
   },
 
   // ==================== Gateway sessions (super admin) ====================
@@ -344,7 +391,7 @@ export const whatsappService = {
   sendCampaign: async (
     id: number,
     batchSize?: number,
-    options?: { continuous?: boolean; intervalSeconds?: number }
+    options?: { continuous?: boolean; intervalSeconds?: number; waNumberId?: number | null; rotateNumbers?: boolean }
   ): Promise<{
     data: {
       status: string
@@ -360,7 +407,11 @@ export const whatsappService = {
     const response = await api.post(`/whatsapp/campaigns/${id}/send`, {
       batch_size: batchSize,
       continuous: options?.continuous ?? false,
-      interval_seconds: options?.intervalSeconds
+      interval_seconds: options?.intervalSeconds,
+      // 0 tells the server to use the default number; undefined leaves the
+      // campaign's stored choice alone.
+      wa_number_id: options?.waNumberId === null ? 0 : options?.waNumberId,
+      rotate_numbers: options?.rotateNumbers
     })
 
     return response.data
