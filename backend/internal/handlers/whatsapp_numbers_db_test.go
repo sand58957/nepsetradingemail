@@ -25,6 +25,8 @@ type multiGateway struct {
 	created int
 	// reply decides a send; nil answers every send with success.
 	reply func(session string, n int) (int, string)
+	// atCap makes starts fail the way OpenWA does at MAX_CONCURRENT_SESSIONS.
+	atCap bool
 }
 
 type gatewaySend struct {
@@ -81,6 +83,13 @@ func (g *multiGateway) server(t *testing.T) *httptest.Server {
 			delete(g.status, parts[0])
 			w.WriteHeader(http.StatusNoContent)
 		case len(parts) == 2 && parts[1] == "start":
+			if g.atCap {
+				http.Error(w, `{"message":"Maximum concurrent sessions reached (3)","statusCode":400}`,
+					http.StatusBadRequest)
+
+				return
+			}
+
 			g.status[parts[0]] = openwa.StatusQRReady
 			json.NewEncoder(w).Encode(map[string]string{"id": parts[0], "status": openwa.StatusQRReady})
 		case len(parts) == 2 && parts[1] == "qr":
@@ -457,5 +466,31 @@ func TestSetDefaultNumberMovesTheDefault(t *testing.T) {
 
 	if sid, _ := f.h.mySessionID(f.account); sid != "sess-b" {
 		t.Errorf("the single-number endpoints now act on %q, want the new default sess-b", sid)
+	}
+}
+
+// The gateway's limit on running numbers counts every account and is checked when
+// a number starts. Adding one past it must say so and leave nothing behind, not a
+// card that can never link.
+func TestAddingANumberPastTheGatewayLimitLeavesNothingBehind(t *testing.T) {
+	gw := newMultiGateway("sess-a")
+	gw.atCap = true
+	f := newNumbersFixture(t, gw.server(t), "sess-a")
+
+	code, body := serveAsManager(t, f.h.AddMyNumber, http.MethodPost, `{"label":"Sales"}`, f.account, "")
+
+	if msg, _ := body["message"].(string); code != http.StatusConflict || !strings.Contains(msg, "counting every account") {
+		t.Errorf("adding past the gateway limit: status %d, message %q; want 409 explaining the shared limit", code, msg)
+	}
+
+	var rows int
+	f.db.Get(&rows, `SELECT COUNT(*) FROM wa_numbers WHERE account_id = $1`, f.account)
+
+	if rows != 1 {
+		t.Errorf("%d numbers on the account, want only the original 1", rows)
+	}
+
+	if len(gw.status) != 1 {
+		t.Errorf("the gateway was left with %d sessions, want the refused one deleted", len(gw.status))
 	}
 }

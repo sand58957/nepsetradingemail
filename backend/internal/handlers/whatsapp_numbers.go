@@ -338,7 +338,20 @@ func (h *WhatsAppHandler) addNumber(ctx context.Context, accountID int, label st
 		return nil, nil, fmt.Errorf("could not record the new number")
 	}
 
-	if started, startErr := client.StartSession(ctx, session.ID); startErr == nil {
+	started, startErr := client.StartSession(ctx, session.ID)
+	if startErr != nil {
+		// The gateway refused to start it — most often its limit on how many
+		// numbers it runs at once, which counts every account on it and is checked
+		// on start, not on create. A number that cannot start is no use to anyone:
+		// remove it again rather than leave a card that can never link.
+		if gwErr, ok := openwa.AsGatewayError(startErr); ok && gwErr.ClientFault() {
+			client.DeleteSession(ctx, session.ID)
+			h.db.Exec(`DELETE FROM wa_numbers WHERE id = $1`, numberID)
+			h.mirrorDefaultNumber(accountID)
+
+			return nil, nil, startErr
+		}
+	} else {
 		session = started
 	}
 
@@ -388,7 +401,7 @@ func numberCreationError(c echo.Context, err error) error {
 	}
 
 	if gwErr, ok := openwa.AsGatewayError(err); ok && gwErr.ClientFault() {
-		return response.Error(c, http.StatusConflict, gwErr.Message)
+		return response.Error(c, http.StatusConflict, gatewayRefusal(gwErr))
 	}
 
 	if _, ok := openwa.AsGatewayError(err); ok {
@@ -396,6 +409,18 @@ func numberCreationError(c echo.Context, err error) error {
 	}
 
 	return response.InternalError(c, err.Error())
+}
+
+// gatewayRefusal words a refusal from the gateway for the operator. Its limit on
+// running numbers reads as "Maximum concurrent sessions reached (3)", which says
+// nothing about the limit being shared by every account on the server.
+func gatewayRefusal(gwErr *openwa.GatewayError) string {
+	if strings.Contains(gwErr.Message, "Maximum concurrent sessions") {
+		return "The WhatsApp server is already running as many numbers as it is set up for, counting every " +
+			"account on it. Remove a number you no longer use, or ask for the server's limit to be raised."
+	}
+
+	return gwErr.Message
 }
 
 // GetMyNumberQR returns the linking code for one of this account's numbers.
@@ -448,7 +473,7 @@ func (h *WhatsAppHandler) StartMyNumber(c echo.Context) error {
 	session, err := client.StartSession(c.Request().Context(), number.OpenWASessionID)
 	if err != nil {
 		if gwErr, ok := openwa.AsGatewayError(err); ok && gwErr.ClientFault() {
-			return response.Error(c, http.StatusConflict, gwErr.Message)
+			return response.Error(c, http.StatusConflict, gatewayRefusal(gwErr))
 		}
 
 		return response.Error(c, http.StatusBadGateway, "Could not start this number's session")
