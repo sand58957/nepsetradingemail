@@ -5,8 +5,19 @@
 # so this changes nothing in production.
 name: nepsetradingemail
 
+# Container logs are capped. Docker's default json-file driver keeps a container's
+# whole log for as long as the container exists; on this shared server logs helped
+# fill the disk in September 2026, and the database crashed when it did. Five files
+# of 20 MB is at most 100 MB per container, which still holds weeks of these logs.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   nginx:
+    logging: *default-logging
     image: nginx:alpine
     container_name: nepse_nginx
     restart: unless-stopped
@@ -37,6 +48,7 @@ services:
       - digital-nepal_default
 
   certbot:
+    logging: *default-logging
     image: certbot/certbot
     container_name: nepse_certbot
     volumes:
@@ -44,6 +56,7 @@ services:
       - ./certbot/conf:/etc/letsencrypt:rw
 
   frontend:
+    logging: *default-logging
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -76,6 +89,7 @@ services:
       - nepse
 
   backend:
+    logging: *default-logging
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -138,6 +152,7 @@ services:
       - nepse
 
   listmonk:
+    logging: *default-logging
     # Pinned: production was already on v6.0.0 via a silent `latest` pull.
     # Bump deliberately — major Listmonk versions change API response shapes.
     image: listmonk/listmonk:v6.0.0
@@ -170,6 +185,7 @@ services:
       - nepse
 
   db:
+    logging: *default-logging
     image: postgres:17-alpine
     container_name: nepse_db
     restart: unless-stopped
@@ -191,6 +207,7 @@ services:
       - nepse
 
   redis:
+    logging: *default-logging
     image: redis:7-alpine
     container_name: nepse_redis
     restart: unless-stopped
