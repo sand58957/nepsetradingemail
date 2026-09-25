@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -214,6 +216,10 @@ func (s *Server) RegisterRoutes() {
 	// mid-send when the process last stopped is picked up here; progress lives in
 	// wa_campaign_messages, so resuming never re-messages anyone.
 	go waHandler.ResumeInterruptedCampaigns()
+
+	// Campaigns paused at a number's daily allowance carry on by themselves once it
+	// renews (whatsapp_auto_resume.go).
+	go waHandler.StartAutoResume(context.Background(), time.Minute)
 
 	// WhatsApp Settings
 	wa := staff.Group("/whatsapp")

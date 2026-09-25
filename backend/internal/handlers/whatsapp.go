@@ -147,6 +147,11 @@ type WACampaign struct {
 	// (migration 033). Nil means the account's default number.
 	WANumberID    *int `json:"wa_number_id" db:"wa_number_id"`
 	RotateNumbers bool `json:"rotate_numbers" db:"rotate_numbers"`
+
+	// When a campaign paused by a number's allowance carries on by itself, and how
+	// much of its batch was left (migration 034, whatsapp_auto_resume.go).
+	ResumeAt    *time.Time `json:"resume_at" db:"resume_at"`
+	ResumeBatch int        `json:"-" db:"resume_batch"`
 }
 
 type WACampaignMessage struct {
@@ -1786,6 +1791,7 @@ func (h *WhatsAppHandler) SendCampaign(c echo.Context) error {
 			wa_number_id = $6,
 			rotate_numbers = $7,
 			pause_reason = '',
+			resume_at = NULL,
 			updated_at = NOW()
 		WHERE id = $3 AND status IN ('draft', 'paused', 'failed')
 	`, audienceTotal, now, campaign.ID, req.Continuous, intervalSeconds, campaign.WANumberID, campaign.RotateNumbers)
@@ -2235,8 +2241,20 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 				campaignID, paced.Reason, paced.RetryAfter, len(contacts)-(sentCount+failedCount))
 
 			flushCounters()
-			h.db.Exec(`UPDATE wa_campaigns SET status='paused', pause_reason=$2, updated_at=NOW() WHERE id=$1`,
-				campaignID, pauseReasonPaced(paced.Reason, paced.RetryAfter))
+
+			// Carry on by itself once the allowance renews (whatsapp_auto_resume.go).
+			// A batch run keeps to what was left of its phase — contact i was not
+			// sent — and a continuous one takes everyone remaining.
+			resumeAt := autoResumeAt(time.Now(), paced.RetryAfter)
+
+			left := 0
+			if !campaign.Continuous {
+				left = len(contacts) - i
+			}
+
+			h.db.Exec(`UPDATE wa_campaigns SET status='paused', pause_reason=$2, resume_at=$3, resume_batch=$4,
+				updated_at=NOW() WHERE id=$1`,
+				campaignID, pauseReasonPaced(paced.Reason, resumeAt), resumeAt, left)
 
 			return
 		}
@@ -2523,9 +2541,11 @@ func (h *WhatsAppHandler) PauseCampaign(c echo.Context) error {
 		return err
 	}
 
+	// Pausing stops a running campaign, and also a paused one that was set to carry
+	// on by itself: either way it then waits for a person.
 	result, err := h.db.Exec(`
-		UPDATE wa_campaigns SET status = 'paused', pause_reason = '', updated_at = NOW()
-		WHERE id = $1 AND account_id = $2 AND status = 'sending'
+		UPDATE wa_campaigns SET status = 'paused', pause_reason = '', resume_at = NULL, updated_at = NOW()
+		WHERE id = $1 AND account_id = $2 AND (status = 'sending' OR (status = 'paused' AND resume_at IS NOT NULL))
 	`, id, accountID)
 	if err != nil {
 		return response.InternalError(c, "Failed to pause campaign")

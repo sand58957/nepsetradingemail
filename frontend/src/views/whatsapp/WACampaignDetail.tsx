@@ -271,6 +271,21 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
     }
   }
 
+  // Stop a campaign paused at the allowance from carrying on by itself; it then
+  // waits for someone to press Continue.
+  const handleStopAutoResume = async () => {
+    try {
+      await whatsappService.pauseCampaign(Number(id))
+      setSnackbar({ open: true, message: "It won't carry on by itself. Press Continue Sending when you're ready.", severity: 'success' })
+
+      const updated = await whatsappService.getCampaign(Number(id))
+
+      setCampaign(updated.data.campaign)
+    } catch {
+      setSnackbar({ open: true, message: 'That did not work. Try again.', severity: 'error' })
+    }
+  }
+
   if (loading) {
     return (
       <div className='flex justify-center items-center py-16'>
@@ -390,10 +405,22 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
               {/* A campaign that stopped itself says why: the number being unlinked
                   and a sending limit call for very different next steps. */}
               {campaign.status === 'paused' && campaign.pause_reason && (
-                <Alert severity='warning' className='mbs-4'>
+                <Alert
+                  severity={campaign.resume_at ? 'info' : 'warning'}
+                  className='mbs-4'
+                  action={
+                    // A campaign set to carry on by itself can be told to wait for a
+                    // person instead; the server clears the scheduled time.
+                    campaign.resume_at ? (
+                      <Button color='inherit' size='small' onClick={handleStopAutoResume}>
+                        Don&apos;t carry on by itself
+                      </Button>
+                    ) : undefined
+                  }
+                >
                   <AlertTitle>
-                    Paused automatically ·{' '}
-                    {new Date(campaign.updated_at).toLocaleString('en-US', {
+                    {campaign.resume_at ? 'Carries on by itself · ' : 'Paused automatically · '}
+                    {new Date(campaign.resume_at || campaign.updated_at).toLocaleString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       hour: 'numeric',

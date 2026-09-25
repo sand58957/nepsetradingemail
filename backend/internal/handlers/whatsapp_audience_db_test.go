@@ -84,6 +84,7 @@ func waTestDB(t *testing.T) *sqlx.DB {
 		"031_whatsapp_link_safety.up.sql",
 		"032_whatsapp_unlinked_phone.up.sql",
 		"033_whatsapp_numbers.up.sql",
+		"034_campaign_auto_resume.up.sql",
 	} {
 		migration, err := os.ReadFile(filepath.Join("..", "database", "migrations", f))
 		if err != nil {

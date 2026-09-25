@@ -83,6 +83,8 @@ export interface WACampaign {
   wa_number_id: number | null
   /** Spread the run over every linked number, at the same overall pace. */
   rotate_numbers: boolean
+  /** When a campaign paused at a number's daily allowance carries on by itself. */
+  resume_at: string | null
 }
 
 /** One WhatsApp number an account can send from. */

@@ -175,18 +175,17 @@ const (
 	pauseReasonTemplate = "This campaign's template could not be read. Check the template, then press Send."
 )
 
-// pauseReasonPaced explains a stop by the gateway's daily sending allowance.
-func pauseReasonPaced(gatewayReason string, retryAfter time.Duration) string {
+// pauseReasonPaced explains a stop by the gateway's sending allowance, and when
+// the campaign carries on by itself (whatsapp_auto_resume.go).
+func pauseReasonPaced(gatewayReason string, resumeAt time.Time) string {
 	reason := "This number reached its sending allowance for now"
 	if gatewayReason != "" {
 		reason += " (" + gatewayReason + ")"
 	}
 
-	if retryAfter > 0 {
-		return reason + ". Sending can carry on in about " + humaniseDuration(retryAfter) + "."
-	}
-
-	return reason + "."
+	return reason + ". The allowance protects a newly linked number from being banned and grows each day. " +
+		"The campaign carries on by itself on " + nepalClock(resumeAt) +
+		". To send sooner, continue it from another linked number."
 }
 
 // How long to follow a session that dropped mid-send, and how often to look.

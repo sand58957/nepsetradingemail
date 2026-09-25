@@ -512,3 +512,122 @@ func TestImportAndAddContactRefuseMangledNumbers(t *testing.T) {
 		t.Errorf("adding a mangled number by hand: status %d, message %q; want 400 explaining it", code, msg)
 	}
 }
+
+// What paused "New life 2" on 25 September 2026: the new number reached its
+// allowance of 40 for the day. The campaign now records when to carry on and how
+// much of its batch was left, and starts again by itself then.
+func TestCampaignPausedByTheAllowanceCarriesOnByItself(t *testing.T) {
+	instantSends(t)
+
+	allowance := 2
+	gw := &fakeGateway{}
+	gw.status = func() string { return openwa.StatusReady }
+	gw.reply = func(n int, chatID string) (int, string) {
+		if n > allowance {
+			return http.StatusTooManyRequests, `{"code":"SEND_PACING_LIMITED","message":"Daily send allowance of 40 ` +
+				`reached for a session 1 day(s) old","retryAfterSeconds":62640}`
+		}
+
+		return http.StatusOK, fmt.Sprintf(`{"messageId":"m%d","chatId":%q}`, n, chatID)
+	}
+
+	f, campaignID, tmpl, _ := linkedFixture(t, gw.server(t))
+
+	// A batch of 4 out of 5 contacts: 2 go out, the 3rd is refused.
+	f.h.executeCampaignSend(campaignID, f.account, 4, tmpl)
+
+	var c WACampaign
+	f.db.Get(&c, `SELECT * FROM wa_campaigns WHERE id = $1`, campaignID)
+
+	if c.Status != "paused" || c.ResumeAt == nil || c.ResumeBatch != 2 {
+		t.Fatalf("after the allowance: status %q, resume_at %v, resume_batch %d; want paused, a time, and the 2 left "+
+			"of the batch", c.Status, c.ResumeAt, c.ResumeBatch)
+	}
+
+	if !strings.Contains(c.PauseReason, "carries on by itself") {
+		t.Errorf("pause reason %q does not say it carries on by itself", c.PauseReason)
+	}
+
+	if h := c.ResumeAt.In(nepalZone).Hour(); h < autoResumeFromHour || h >= autoResumeUntilHour {
+		t.Errorf("resumes at %s, in the night", c.ResumeAt.In(nepalZone))
+	}
+
+	// Not due yet: nothing starts.
+	f.h.resumeDueCampaigns()
+
+	if o := outcomeOf(t, f, campaignID); o.Status != "paused" || o.Submitted != 2 {
+		t.Fatalf("before its time the campaign became %+v", o)
+	}
+
+	// The allowance renews and the time comes.
+	gw.mu.Lock()
+	allowance = 100
+	gw.mu.Unlock()
+	f.db.MustExec(`UPDATE wa_campaigns SET resume_at = NOW() - INTERVAL '1 minute' WHERE id = $1`, campaignID)
+
+	f.h.resumeDueCampaigns()
+
+	deadline := time.Now().Add(10 * time.Second)
+	for outcomeOf(t, f, campaignID).Status == "sending" && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// The rest of the batch, 2 more, and then it waits as any finished phase does.
+	o := outcomeOf(t, f, campaignID)
+	if o.Status != "paused" || o.Submitted != 4 || o.PauseReason != "" {
+		t.Errorf("after carrying on the campaign is %+v, want the other 2 of its batch sent and paused with no reason", o)
+	}
+
+	f.db.Get(&c, `SELECT * FROM wa_campaigns WHERE id = $1`, campaignID)
+
+	if c.ResumeAt != nil {
+		t.Errorf("resume_at = %v after carrying on, want none", c.ResumeAt)
+	}
+}
+
+// A person's choice wins over the schedule: pausing it, or pressing Continue,
+// clears the time it would have carried on by itself.
+func TestAPersonOverridesTheScheduledRestart(t *testing.T) {
+	instantSends(t)
+
+	gw := &fakeGateway{}
+	gw.status = func() string { return openwa.StatusReady }
+	gw.reply = func(n int, chatID string) (int, string) {
+		return http.StatusOK, fmt.Sprintf(`{"messageId":"m%d","chatId":%q}`, n, chatID)
+	}
+
+	f, campaignID, _, _ := linkedFixture(t, gw.server(t))
+
+	scheduled := func() {
+		f.db.MustExec(`UPDATE wa_campaigns SET status = 'paused', resume_at = NOW() + INTERVAL '5 hours',
+			resume_batch = 2 WHERE id = $1`, campaignID)
+	}
+
+	resumeAt := func() *time.Time {
+		var at *time.Time
+		f.db.Get(&at, `SELECT resume_at FROM wa_campaigns WHERE id = $1`, campaignID)
+
+		return at
+	}
+
+	scheduled()
+
+	if code, body := waServe(t, f.h.PauseCampaign, http.MethodPost, "/", nil, "", f.account, fmt.Sprint(campaignID)); code != http.StatusOK {
+		t.Fatalf("pausing a campaign set to carry on: status %d, body %v", code, body)
+	}
+
+	if at := resumeAt(); at != nil {
+		t.Errorf("after pausing by hand it would still carry on at %v", at)
+	}
+
+	scheduled()
+
+	if code, body := waServe(t, f.h.SendCampaign, http.MethodPost, "/", strings.NewReader(`{"batch_size":1}`),
+		echo.MIMEApplicationJSON, f.account, fmt.Sprint(campaignID)); code != http.StatusOK {
+		t.Fatalf("continuing by hand: status %d, body %v", code, body)
+	}
+
+	if at := resumeAt(); at != nil {
+		t.Errorf("after continuing by hand it would carry on again at %v", at)
+	}
+}

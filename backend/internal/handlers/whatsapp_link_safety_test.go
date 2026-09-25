@@ -165,3 +165,39 @@ func TestNepalClock(t *testing.T) {
 		t.Errorf("nepalClock = %q, want %q", got, want)
 	}
 }
+
+// A campaign paused by the allowance carries on once it renews, but never in the
+// night: the gateway renews at midnight UTC, 5:45 in the morning in Nepal.
+func TestAutoResumeWaitsForTheAllowanceAndForDaytime(t *testing.T) {
+	at := func(h, m int) time.Time { return time.Date(2026, 9, 25, h, m, 0, 0, nepalZone) }
+
+	cases := []struct {
+		name       string
+		now        time.Time
+		retryAfter time.Duration
+		want       time.Time
+	}{
+		{"renews at 5:45 AM, carries on at 9", at(12, 23), 17*time.Hour + 22*time.Minute, time.Date(2026, 9, 26, 9, 0, 0, 0, nepalZone)},
+		{"a short wait in the day", at(14, 0), 30 * time.Minute, at(14, 32)},
+		{"a wait that ends in the evening moves to the next morning", at(19, 50), 30 * time.Minute, time.Date(2026, 9, 26, 9, 0, 0, 0, nepalZone)},
+		{"no retry time from the gateway: an hour", at(10, 0), 0, at(11, 0)},
+		{"early morning moves to 9 the same day", at(3, 0), time.Hour, at(9, 0)},
+	}
+
+	for _, c := range cases {
+		if got := autoResumeAt(c.now, c.retryAfter); !got.Equal(c.want) {
+			t.Errorf("%s: autoResumeAt = %s, want %s", c.name, got.In(nepalZone), c.want)
+		}
+	}
+}
+
+func TestPauseReasonPacedSaysWhenItCarriesOn(t *testing.T) {
+	resume := time.Date(2026, 9, 26, 9, 0, 0, 0, nepalZone)
+	msg := pauseReasonPaced("Daily send allowance of 40 reached", resume)
+
+	for _, want := range []string{"Daily send allowance of 40 reached", "carries on by itself on 26 Sep at 9:00 AM Nepal time"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("pause reason %q does not contain %q", msg, want)
+		}
+	}
+}
