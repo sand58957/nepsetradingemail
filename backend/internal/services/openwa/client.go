@@ -432,10 +432,28 @@ func ChatID(phone string) (string, error) {
 	}
 
 	if len(digits) < 10 || len(digits) > 15 {
-		return "", fmt.Errorf("openwa: %q is not a usable phone number", phone)
+		return "", &InvalidPhoneError{Phone: phone}
 	}
 
 	return digits + "@c.us", nil
+}
+
+// InvalidPhoneError reports a phone number that can't be turned into a WhatsApp
+// chat id. It is about that one number, never about the session, so a sender
+// should record the one message as failed and carry on.
+type InvalidPhoneError struct {
+	Phone string
+}
+
+func (e *InvalidPhoneError) Error() string {
+	return fmt.Sprintf("openwa: %q is not a usable phone number", e.Phone)
+}
+
+// IsInvalidPhone reports whether err is a phone number that can't be addressed.
+func IsInvalidPhone(err error) bool {
+	var invalid *InvalidPhoneError
+
+	return errors.As(err, &invalid)
 }
 
 // FirstConnectedSession returns a session that can currently send.

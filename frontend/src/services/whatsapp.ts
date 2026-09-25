@@ -235,7 +235,18 @@ export const whatsappService = {
    *  consent_confirmed=true or the file's opted_in column says yes for that row. */
   importContacts: async (
     formData: FormData
-  ): Promise<{ data: { imported: number; skipped: number; opted_in?: number; not_opted_in?: number } }> => {
+  ): Promise<{
+    data: {
+      imported: number
+      skipped: number
+      opted_in?: number
+      not_opted_in?: number
+      /** Rows refused because the phone number can't be messaged. */
+      invalid_phones?: number
+      /** Of those, how many a spreadsheet had turned into scientific notation. */
+      spreadsheet_phones?: number
+    }
+  }> => {
     const response = await api.post('/whatsapp/contacts/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })

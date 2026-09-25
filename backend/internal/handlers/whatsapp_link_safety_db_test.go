@@ -439,3 +439,76 @@ func TestADifferentNumberIsNotHeldForAnUnlink(t *testing.T) {
 		t.Errorf("the unlinked number linked again: status %d, message %q; want 409 naming the number", code, msg)
 	}
 }
+
+// What stopped three campaigns on 25 September 2026: a contact whose number a
+// spreadsheet had mangled ("8.21064E11") sat in the audience, and the run paused
+// there with "The WhatsApp connection dropped". The number is that contact's
+// problem: its message fails, the contact is marked, and everyone after it is
+// still messaged.
+func TestCampaignCarriesOnPastAnUnusablePhoneNumber(t *testing.T) {
+	instantSends(t)
+
+	gw := &fakeGateway{}
+	gw.status = func() string { return openwa.StatusReady }
+	gw.reply = func(n int, chatID string) (int, string) {
+		return http.StatusOK, fmt.Sprintf(`{"messageId":"m%d","chatId":%q}`, n, chatID)
+	}
+
+	f, campaignID, tmpl, _ := linkedFixture(t, gw.server(t))
+
+	bad := f.contact(t, f.account, "8.21064E11", true, `[]`)
+	f.contact(t, f.account, "9800000999", true, `[]`) // after the bad one
+
+	f.h.executeCampaignSend(campaignID, f.account, 50, tmpl)
+
+	if o := outcomeOf(t, f, campaignID); o.Status != "sent" || o.Submitted != 6 || o.Failed != 1 || o.PauseReason != "" {
+		t.Errorf("campaign ended as %+v, want sent to the 6 good numbers, 1 failed, no pause", o)
+	}
+
+	if got := gw.sendCount(); got != 6 {
+		t.Errorf("the gateway was asked to send %d messages, want 6: the unusable number never reaches it", got)
+	}
+
+	var reason string
+	f.db.Get(&reason, `SELECT error_reason FROM wa_campaign_messages WHERE campaign_id = $1 AND contact_id = $2`,
+		campaignID, bad)
+
+	if !strings.Contains(reason, "not a usable phone number") {
+		t.Errorf("the failed message says %q, want it to name the unusable number", reason)
+	}
+
+	var unreachable *time.Time
+	f.db.Get(&unreachable, `SELECT unreachable_at FROM wa_contacts WHERE id = $1`, bad)
+
+	if unreachable == nil {
+		t.Error("the contact with the unusable number is not marked, so every campaign would try it again")
+	}
+}
+
+// Numbers a spreadsheet mangled are refused at the door, with a count the import
+// screen can explain; a whole number written as a decimal is repaired.
+func TestImportAndAddContactRefuseMangledNumbers(t *testing.T) {
+	f := newWAFixture(t)
+
+	data := waImport(t, f, "phone,name\n9800000301,A\n8.21064E11,B\n9800000303.0,C\n12345,D\n", true)
+
+	for field, want := range map[string]float64{"imported": 2, "skipped": 2, "invalid_phones": 2, "spreadsheet_phones": 1} {
+		if got, _ := data[field].(float64); got != want {
+			t.Errorf("import %s = %v, want %v (response %v)", field, data[field], want, data)
+		}
+	}
+
+	var phones []string
+	f.db.Select(&phones, `SELECT phone FROM wa_contacts WHERE account_id = $1 ORDER BY phone`, f.account)
+
+	if fmt.Sprint(phones) != "[9800000301 9800000303]" {
+		t.Errorf("stored phones %v, want [9800000301 9800000303]", phones)
+	}
+
+	code, body := waServe(t, f.h.CreateContact, http.MethodPost, "/", strings.NewReader(`{"phone":"8.21064E11"}`),
+		echo.MIMEApplicationJSON, f.account, "")
+
+	if msg, _ := body["message"].(string); code != http.StatusBadRequest || !strings.Contains(msg, "scientific notation") {
+		t.Errorf("adding a mangled number by hand: status %d, message %q; want 400 explaining it", code, msg)
+	}
+}

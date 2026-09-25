@@ -482,8 +482,15 @@ func (h *WhatsAppHandler) CreateContact(c echo.Context) error {
 		return response.BadRequest(c, "Phone number is required")
 	}
 
-	// Clean phone: remove spaces, dashes, plus
-	phone := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(req.Phone, " ", ""), "-", ""), "+", "")
+	phone, phoneErr := cleanContactPhone(req.Phone)
+	if phoneErr != nil {
+		if errors.Is(phoneErr, errSpreadsheetPhone) {
+			return response.BadRequest(c, "That phone number looks like "+phoneErr.Error()+".")
+		}
+
+		return response.BadRequest(c, "That is not a usable phone number. Enter it with its country code, "+
+			"for example 9779801234567, or as a 10-digit Nepali mobile number.")
+	}
 
 	tags := req.Tags
 	if tags == nil {
@@ -722,6 +729,7 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 	}
 
 	skipped := 0
+	invalidPhones, spreadsheetPhones := 0, 0
 	now := time.Now()
 
 	// Collect first, write in batches.
@@ -757,11 +765,24 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 			continue
 		}
 
-		phone := strings.TrimSpace(record[phoneIdx])
-		phone = strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(phone, " ", ""), "-", ""), "+", "")
-
-		if phone == "" {
+		if strings.TrimSpace(record[phoneIdx]) == "" {
 			skipped++
+
+			continue
+		}
+
+		// A number that can't be messaged is not imported: it could only ever fail,
+		// and one damaged by a spreadsheet may still look long enough to reach a
+		// stranger (see whatsapp_phone.go). Counted separately so the operator is
+		// told how to fix the file, not just that rows were skipped.
+		phone, phoneErr := cleanContactPhone(record[phoneIdx])
+		if phoneErr != nil {
+			skipped++
+			invalidPhones++
+
+			if errors.Is(phoneErr, errSpreadsheetPhone) {
+				spreadsheetPhones++
+			}
 
 			continue
 		}
@@ -905,6 +926,10 @@ func (h *WhatsAppHandler) ImportContacts(c echo.Context) error {
 		// already opted out and stayed that way is counted as not opted in.
 		"opted_in":     optedIn,
 		"not_opted_in": imported - optedIn,
+		// Rows skipped because the phone number can't be messaged, and how many of
+		// those a spreadsheet had turned into scientific notation.
+		"invalid_phones":     invalidPhones,
+		"spreadsheet_phones": spreadsheetPhones,
 	})
 }
 

@@ -39,6 +39,8 @@ const WAContactImport = () => {
     skipped: number
     opted_in?: number
     not_opted_in?: number
+    invalid_phones?: number
+    spreadsheet_phones?: number
   } | null>(null)
 
   // Unticked by default: an import only opts people in when the uploader says
@@ -233,6 +235,23 @@ const WAContactImport = () => {
                     {importResult.opted_in !== undefined &&
                       ` ${importResult.opted_in} can receive campaigns; ${importResult.not_opted_in ?? 0} are not opted in, so campaigns will skip them.`}
                     {importResult.skipped > 0 && ` ${importResult.skipped} rows skipped.`}
+                  </Alert>
+                )}
+
+                {/* Numbers that can't be messaged were not imported. The spreadsheet case
+                    needs its own words: the digits are gone, and only a re-export fixes it. */}
+                {importResult && (importResult.invalid_phones ?? 0) > 0 && (
+                  <Alert severity='warning' className='mt-2'>
+                    {importResult.invalid_phones} {importResult.invalid_phones === 1 ? 'row was' : 'rows were'} not
+                    imported because the phone number can&apos;t be messaged.
+                    {(importResult.spreadsheet_phones ?? 0) > 0 && (
+                      <>
+                        {' '}
+                        {importResult.spreadsheet_phones} of them look like <strong>8.21064E+11</strong>: Excel turned
+                        the number into scientific notation and its last digits are lost. In Excel, format the phone
+                        column as Text, re-enter or paste the full numbers, save as CSV again, and import that file.
+                      </>
+                    )}
                   </Alert>
                 )}
 

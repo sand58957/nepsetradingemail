@@ -73,23 +73,37 @@ func averageSendGap(intervalSeconds int) time.Duration {
 // recipientRejected reports whether a failed send was about this one recipient,
 // so carrying on with the next contact makes sense.
 //
-// The gateway answers 400 for a recipient it cannot address and 422 for a request
-// it cannot use. Every other failure says nothing about the contact: a 409 (as
-// openwa.ErrNoConnectedSession) is the session not being connected, 401 and 403
-// are the API key, 404 is the session, 408 and 429 are timing, a 5xx is the
-// gateway or the WhatsApp Web page behind it failing, and an error with no status
-// is the gateway being unreachable.
+// A phone number that can't be addressed at all is refused before the gateway is
+// asked (openwa.InvalidPhoneError). The gateway answers 400 for a recipient it
+// cannot address and 422 for a request it cannot use. Every other failure says
+// nothing about the contact: a 409 (as openwa.ErrNoConnectedSession) is the
+// session not being connected, 401 and 403 are the API key, 404 is the session,
+// 408 and 429 are timing, a 5xx is the gateway or the WhatsApp Web page behind it
+// failing, and an error with no status is the gateway being unreachable.
+//
+// Missing the first case stopped three campaigns on 25 September 2026: a contact
+// whose number a spreadsheet had mangled was taken for a dropped connection, and
+// each run paused at that contact with "The WhatsApp connection dropped".
 func recipientRejected(err error) bool {
+	if openwa.IsInvalidPhone(err) {
+		return true
+	}
+
 	gwErr, ok := openwa.AsGatewayError(err)
 
 	return ok && (gwErr.Status == http.StatusBadRequest || gwErr.Status == http.StatusUnprocessableEntity)
 }
 
-// recipientUnreachable reports whether WhatsApp could not resolve the recipient's
-// number. The gateway cannot tell a number that is not on WhatsApp from one that
-// WhatsApp will not let a linked device start a first chat with, and neither can
-// be sent to.
+// recipientUnreachable reports whether the recipient's number can't be messaged:
+// it is not a usable phone number at all, or WhatsApp could not resolve it. The
+// gateway cannot tell a number that is not on WhatsApp from one that WhatsApp
+// will not let a linked device start a first chat with, and neither can be sent
+// to.
 func recipientUnreachable(err error) bool {
+	if openwa.IsInvalidPhone(err) {
+		return true
+	}
+
 	gwErr, ok := openwa.AsGatewayError(err)
 
 	return ok && gwErr.Status == http.StatusBadRequest &&

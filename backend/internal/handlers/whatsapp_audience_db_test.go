@@ -557,9 +557,9 @@ func TestImportOptsContactsInOnlyWithConsent(t *testing.T) {
 	f := newWAFixture(t)
 
 	t.Run("without confirmation contacts are stored but not opted in", func(t *testing.T) {
-		data := waImport(t, f, "phone,name\n977101,Asha\n977102,Bikash\n", false)
+		data := waImport(t, f, "phone,name\n9800000101,Asha\n9800000102,Bikash\n", false)
 
-		for _, phone := range []string{"977101", "977102"} {
+		for _, phone := range []string{"9800000101", "9800000102"} {
 			if row := f.consentOf(t, phone); row.OptedIn || row.HasOptInAt {
 				t.Errorf("%s = %+v, want not opted in and no opt-in time", phone, row)
 			}
@@ -571,10 +571,10 @@ func TestImportOptsContactsInOnlyWithConsent(t *testing.T) {
 	})
 
 	t.Run("confirming consent opts new contacts in", func(t *testing.T) {
-		data := waImport(t, f, "phone\n977103\n", true)
+		data := waImport(t, f, "phone\n9800000103\n", true)
 
-		if row := f.consentOf(t, "977103"); !row.OptedIn || !row.HasOptInAt {
-			t.Errorf("977103 = %+v, want opted in with an opt-in time", row)
+		if row := f.consentOf(t, "9800000103"); !row.OptedIn || !row.HasOptInAt {
+			t.Errorf("9800000103 = %+v, want opted in with an opt-in time", row)
 		}
 
 		if data["opted_in"] != float64(1) {
@@ -583,15 +583,15 @@ func TestImportOptsContactsInOnlyWithConsent(t *testing.T) {
 	})
 
 	t.Run("a consent column decides each row", func(t *testing.T) {
-		waImport(t, f, "phone,opted_in\n977104,yes\n977105,no\n977106,\n", false)
-		waImport(t, f, "phone,consent\n977107,no\n977108,\n", true)
+		waImport(t, f, "phone,opted_in\n9800000104,yes\n9800000105,no\n9800000106,\n", false)
+		waImport(t, f, "phone,consent\n9800000107,no\n9800000108,\n", true)
 
 		for phone, want := range map[string]bool{
-			"977104": true,  // says yes
-			"977105": false, // says no
-			"977106": false, // blank, and nothing confirmed
-			"977107": false, // says no, which beats the confirmation
-			"977108": true,  // blank, and the upload was confirmed
+			"9800000104": true,  // says yes
+			"9800000105": false, // says no
+			"9800000106": false, // blank, and nothing confirmed
+			"9800000107": false, // says no, which beats the confirmation
+			"9800000108": true,  // blank, and the upload was confirmed
 		} {
 			if row := f.consentOf(t, phone); row.OptedIn != want {
 				t.Errorf("%s opted_in = %v, want %v", phone, row.OptedIn, want)
@@ -600,44 +600,44 @@ func TestImportOptsContactsInOnlyWithConsent(t *testing.T) {
 	})
 
 	t.Run("confirming later opts in contacts that never had a decision", func(t *testing.T) {
-		waImport(t, f, "phone\n977101\n", true)
+		waImport(t, f, "phone\n9800000101\n", true)
 
-		if row := f.consentOf(t, "977101"); !row.OptedIn || !row.HasOptInAt {
-			t.Errorf("977101 = %+v, want opted in now that consent was confirmed", row)
+		if row := f.consentOf(t, "9800000101"); !row.OptedIn || !row.HasOptInAt {
+			t.Errorf("9800000101 = %+v, want opted in now that consent was confirmed", row)
 		}
 	})
 
 	t.Run("a row saying no withdraws consent", func(t *testing.T) {
-		waImport(t, f, "phone,opted_in\n977103,no\n", false)
+		waImport(t, f, "phone,opted_in\n9800000103,no\n", false)
 
-		if row := f.consentOf(t, "977103"); row.OptedIn {
-			t.Errorf("977103 = %+v, want opted out by the file", row)
+		if row := f.consentOf(t, "9800000103"); row.OptedIn {
+			t.Errorf("9800000103 = %+v, want opted out by the file", row)
 		}
 	})
 
 	t.Run("an import never re-subscribes someone who was opted in and then out", func(t *testing.T) {
-		// 977103 was opted in and has just been opted out.
-		waImport(t, f, "phone\n977103\n", true)
-		waImport(t, f, "phone,opted_in\n977103,yes\n", false)
+		// 9800000103 was opted in and has just been opted out.
+		waImport(t, f, "phone\n9800000103\n", true)
+		waImport(t, f, "phone,opted_in\n9800000103,yes\n", false)
 
-		if row := f.consentOf(t, "977103"); row.OptedIn {
-			t.Errorf("977103 = %+v, re-subscribed by an import", row)
+		if row := f.consentOf(t, "9800000103"); row.OptedIn {
+			t.Errorf("9800000103 = %+v, re-subscribed by an import", row)
 		}
 
 		f.db.MustExec(`INSERT INTO wa_contacts (account_id, phone, opted_in, opted_out_at)
-			VALUES ($1, '977109', false, NOW())`, f.account)
-		waImport(t, f, "phone\n977109\n", true)
+			VALUES ($1, '9800000109', false, NOW())`, f.account)
+		waImport(t, f, "phone\n9800000109\n", true)
 
-		if row := f.consentOf(t, "977109"); row.OptedIn {
-			t.Errorf("977109 = %+v, re-subscribed by an import despite an opt-out", row)
+		if row := f.consentOf(t, "9800000109"); row.OptedIn {
+			t.Errorf("9800000109 = %+v, re-subscribed by an import despite an opt-out", row)
 		}
 	})
 
 	t.Run("names are only filled in, never blanked", func(t *testing.T) {
-		waImport(t, f, "phone,name\n977101,\n", true)
+		waImport(t, f, "phone,name\n9800000101,\n", true)
 
 		var name string
-		f.db.Get(&name, `SELECT name FROM wa_contacts WHERE account_id = $1 AND phone = '977101'`, f.account)
+		f.db.Get(&name, `SELECT name FROM wa_contacts WHERE account_id = $1 AND phone = '9800000101'`, f.account)
 
 		if name != "Asha" {
 			t.Errorf("name = %q, want Asha kept", name)

@@ -1,6 +1,9 @@
 package openwa
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // Every one of these is the same handset. The forms with a leading 0 are how a
 // Nepali mobile is written locally and how it comes out of most address books
@@ -66,5 +69,31 @@ func TestRenderTemplateLeavesUnmatchedPlaceholders(t *testing.T) {
 
 	if got != want {
 		t.Errorf("RenderTemplate() = %q, want %q", got, want)
+	}
+}
+
+// A number that can't be addressed is reported as that number's problem, with a
+// type callers can recognise, so a campaign can fail the one message and carry on
+// instead of taking it for the session going down.
+func TestChatIDReportsAnUnusableNumberAsInvalidPhone(t *testing.T) {
+	for _, in := range []string{"8.21064E11", "12345", "", "98057"} {
+		_, err := ChatID(in)
+		if err == nil {
+			t.Errorf("ChatID(%q) accepted an unusable number", in)
+
+			continue
+		}
+
+		if !IsInvalidPhone(err) {
+			t.Errorf("ChatID(%q) = %v, which IsInvalidPhone does not recognise", in, err)
+		}
+
+		if want := "is not a usable phone number"; !strings.Contains(err.Error(), want) {
+			t.Errorf("ChatID(%q) error %q no longer says %q", in, err, want)
+		}
+	}
+
+	if IsInvalidPhone(ErrNoConnectedSession) {
+		t.Error("a dropped session was taken for an invalid phone number")
 	}
 }
