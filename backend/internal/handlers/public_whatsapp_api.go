@@ -45,6 +45,9 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 		Message      string          `json:"message"`       // for text messages
 		WebhookURL   *string         `json:"webhook_url"`
 		Reference    *string         `json:"reference"`
+		// Optional: which of the account's linked numbers sends this message.
+		// Without it the key's number is used, else the account's default.
+		From string `json:"from"`
 	}
 
 	if err := c.Bind(&req); err != nil {
@@ -91,6 +94,25 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 		return apiError(c, http.StatusForbidden, "CHANNEL_NOT_CONFIGURED", err.Error(), "")
 	}
 
+	// Which number sends (public_whatsapp_numbers.go). Checked before test mode and
+	// before any credit is reserved, so a wrong "from" costs nothing and a test key
+	// catches it too.
+	wa := NewWhatsAppHandler(h.db, h.cfg)
+
+	number, numErr := apiSendingNumber(wa, accountID, keyInfo.KeyID, req.From)
+	if errors.Is(numErr, errFromNotOnAccount) {
+		return apiError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", fromNotOnAccountMessage(wa, accountID), "from")
+	}
+
+	if numErr != nil {
+		return apiError(c, http.StatusInternalServerError, "PROVIDER_ERROR", "Failed to load WhatsApp settings", "")
+	}
+
+	sessionID, sourcePhone := "", ""
+	if number != nil {
+		sessionID, sourcePhone = number.OpenWASessionID, number.LinkedPhone
+	}
+
 	// Test mode
 	if keyInfo.IsTest {
 		return h.handleTestMode(c, accountID, keyInfo.KeyID, req.To, req.Type, req.Message, req.TemplateName, req.Reference)
@@ -103,17 +125,6 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 		balance := GetCreditBalance(h.db, accountID, "whatsapp")
 		return apiError(c, http.StatusPaymentRequired, "INSUFFICIENT_CREDITS",
 			fmt.Sprintf("WhatsApp credit balance too low. Need %.0f, have %.0f", creditCost, balance), "")
-	}
-
-	// Get WhatsApp settings
-	var settings struct {
-		SessionID   string `db:"openwa_session_id"`
-		AppName     string `db:"app_name"`
-		SourcePhone string `db:"linked_phone"`
-	}
-	if err := h.db.Get(&settings, "SELECT openwa_session_id, app_name, linked_phone FROM wa_settings WHERE account_id = $1", accountID); err != nil {
-		RefundCredit(h.db, accountID, "whatsapp", creditCost)
-		return apiError(c, http.StatusInternalServerError, "PROVIDER_ERROR", "Failed to load WhatsApp settings", "")
 	}
 
 	// Create message record
@@ -137,7 +148,7 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 	if err := h.db.QueryRow(`
 		INSERT INTO api_messages (account_id, api_key_id, channel, "to", "from", content_preview, status, credits_charged, webhook_url, reference)
 		VALUES ($1, $2, 'whatsapp', $3, $4, $5, 'sending', $6, $7, $8) RETURNING id
-	`, accountID, keyInfo.KeyID, req.To, settings.SourcePhone, truncate(contentPreview, 200), creditCost, webhookURL, req.Reference).Scan(&msgID); err != nil {
+	`, accountID, keyInfo.KeyID, req.To, sourcePhone, truncate(contentPreview, 200), creditCost, webhookURL, req.Reference).Scan(&msgID); err != nil {
 		RefundCredit(h.db, accountID, "whatsapp", creditCost)
 
 		return apiError(c, http.StatusInternalServerError, "PROVIDER_ERROR",
@@ -152,7 +163,7 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 	var result *openwa.SendResult
 	var sendErr error
 
-	if settings.SessionID == "" {
+	if sessionID == "" {
 		sendErr = openwa.ErrNoConnectedSession
 	} else {
 		text := req.Message
@@ -201,7 +212,7 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 			text = openwa.RenderTemplate(tmpl.HeaderText, tmpl.BodyText, tmpl.FooterText, params)
 		}
 
-		result, sendErr = client.SendText(c.Request().Context(), settings.SessionID, req.To, text)
+		result, sendErr = client.SendText(c.Request().Context(), sessionID, req.To, text)
 	}
 
 	// The send governor holding the number back is a rate limit, not a provider
@@ -227,8 +238,13 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 		h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_message = $2, updated_at = NOW() WHERE id = $1`,
 			msgID, sendErr.Error())
 
-		return apiError(c, http.StatusServiceUnavailable, "CHANNEL_UNAVAILABLE",
-			"No WhatsApp number is linked right now, so the message was not sent. No credit was charged.", "")
+		detail := "No WhatsApp number is linked right now, so the message was not sent. No credit was charged."
+		if sourcePhone != "" {
+			detail = fmt.Sprintf("The WhatsApp number %s is not connected right now, so the message was not sent. "+
+				"No credit was charged. Re-link it in WhatsApp settings, or send \"from\" another linked number.", sourcePhone)
+		}
+
+		return apiError(c, http.StatusServiceUnavailable, "CHANNEL_UNAVAILABLE", detail, "")
 	}
 
 	// A 4xx from the gateway is about this message — a number not on WhatsApp, a
@@ -266,6 +282,7 @@ func (h *PublicWhatsAppHandler) Send(c echo.Context) error {
 		"data": map[string]interface{}{
 			"message_id":        fmt.Sprintf("wa_msg_%d", msgID),
 			"to":                req.To,
+			"from":              sourcePhone,
 			"type":              req.Type,
 			"status":            "sent",
 			"credits_used":      creditCost,
@@ -292,6 +309,7 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 		TemplateName string          `json:"template_name"` // shared template
 		TemplateData json.RawMessage `json:"template_data"` // shared template data
 		Message      string          `json:"message"`       // shared message
+		From         string          `json:"from"`          // optional sending number, as for a single send
 	}
 
 	if err := c.Bind(&req); err != nil {
@@ -331,6 +349,23 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 
 	totalCost := float64(len(req.Recipients))
 
+	// Which number sends the whole batch, checked before any credit is reserved.
+	wa := NewWhatsAppHandler(h.db, h.cfg)
+
+	number, numErr := apiSendingNumber(wa, accountID, keyInfo.KeyID, req.From)
+	if errors.Is(numErr, errFromNotOnAccount) {
+		return apiError(c, http.StatusUnprocessableEntity, "VALIDATION_ERROR", fromNotOnAccountMessage(wa, accountID), "from")
+	}
+
+	if numErr != nil {
+		return apiError(c, http.StatusInternalServerError, "PROVIDER_ERROR", "Failed to load WhatsApp settings", "")
+	}
+
+	sessionID, sourcePhone := "", ""
+	if number != nil {
+		sessionID, sourcePhone = number.OpenWASessionID, number.LinkedPhone
+	}
+
 	if keyInfo.IsTest {
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"success": true,
@@ -353,13 +388,6 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 			fmt.Sprintf("Need %.0f WhatsApp credits, have %.0f", totalCost, balance), "")
 	}
 
-	// Get WhatsApp settings
-	var settings struct {
-		SessionID   string `db:"openwa_session_id"`
-		AppName     string `db:"app_name"`
-		SourcePhone string `db:"linked_phone"`
-	}
-	h.db.Get(&settings, "SELECT openwa_session_id, app_name, linked_phone FROM wa_settings WHERE account_id = $1", accountID)
 	client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
 
 	sent := 0
@@ -425,11 +453,11 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 		h.db.QueryRow(`
 			INSERT INTO api_messages (account_id, api_key_id, channel, "to", "from", content_preview, status, credits_charged)
 			VALUES ($1, $2, 'whatsapp', $3, $4, $5, 'sending', 1) RETURNING id
-		`, accountID, keyInfo.KeyID, r.To, settings.SourcePhone, truncate(contentPreview, 200)).Scan(&msgID)
+		`, accountID, keyInfo.KeyID, r.To, sourcePhone, truncate(contentPreview, 200)).Scan(&msgID)
 
 		var sendErr error
 
-		if settings.SessionID == "" {
+		if sessionID == "" {
 			sendErr = openwa.ErrNoConnectedSession
 		} else {
 			text := msg
@@ -457,7 +485,7 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 			}
 
 			if sendErr == nil {
-				_, sendErr = client.SendText(c.Request().Context(), settings.SessionID, r.To, text)
+				_, sendErr = client.SendText(c.Request().Context(), sessionID, r.To, text)
 			}
 		}
 
@@ -482,6 +510,7 @@ func (h *PublicWhatsAppHandler) SendBulk(c echo.Context) error {
 
 	data := map[string]interface{}{
 		"total":             len(req.Recipients),
+		"from":              sourcePhone,
 		"sent":              sent,
 		"failed":            failed,
 		"credits_used":      float64(sent),
@@ -610,33 +639,58 @@ func (h *PublicWhatsAppHandler) GetStatus(c echo.Context) error {
 	// account. Reporting configured alone told callers the channel was fine while
 	// every send came back 502, so ask the gateway and report what it says.
 	if configured {
-		var settings struct {
-			SessionID   string `db:"openwa_session_id"`
-			LinkedPhone string `db:"linked_phone"`
-		}
+		// Every linked number this key can send from ("from" in a send), with its
+		// live state, and which one it uses when a send names none. linked_phone,
+		// connected and session_status describe that one, as they always did.
+		wa := NewWhatsAppHandler(h.db, h.cfg)
+		client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
 
-		if err := h.db.Get(&settings,
-			"SELECT openwa_session_id, linked_phone FROM wa_settings WHERE account_id = $1",
-			keyInfo.AccountID); err == nil {
-			data["linked_phone"] = settings.LinkedPhone
+		sending, _ := apiSendingNumber(wa, keyInfo.AccountID, keyInfo.KeyID, "")
+		numbers, _ := wa.numbersOf(keyInfo.AccountID)
 
-			client := openwa.NewClient(h.cfg.OpenWABaseURL, h.cfg.OpenWAAPIKey)
+		list := make([]map[string]interface{}, 0, len(numbers))
 
-			session, err := client.GetSession(c.Request().Context(), settings.SessionID)
+		data["connected"] = false
+
+		for _, n := range numbers {
+			if n.OpenWASessionID == "" {
+				continue
+			}
+
+			entry := map[string]interface{}{
+				"phone":            n.LinkedPhone,
+				"is_default":       n.IsDefault,
+				"sends_by_default": sending != nil && sending.ID == n.ID,
+				"connected":        false,
+			}
+
+			session, err := client.GetSession(c.Request().Context(), n.OpenWASessionID)
 			switch {
 			case err != nil:
-				data["connected"] = false
-				data["session_status"] = "unreachable"
-				data["detail"] = "The WhatsApp gateway could not be reached, so sends will fail."
-			case session.Connected():
-				data["connected"] = true
-				data["session_status"] = session.Status
+				entry["status"] = "unreachable"
 			default:
-				data["connected"] = false
-				data["session_status"] = session.Status
-				data["detail"] = "The linked number is not ready to send. Re-link it in WhatsApp settings."
+				entry["status"] = session.Status
+				entry["connected"] = session.Connected()
 			}
+
+			if sending != nil && sending.ID == n.ID {
+				data["linked_phone"] = n.LinkedPhone
+				data["session_status"] = entry["status"]
+				data["connected"] = entry["connected"]
+
+				switch {
+				case err != nil:
+					data["detail"] = "The WhatsApp gateway could not be reached, so sends will fail."
+				case !session.Connected():
+					data["detail"] = "The number this key sends from is not ready. Re-link it in WhatsApp settings, " +
+						"or send \"from\" another connected number."
+				}
+			}
+
+			list = append(list, entry)
 		}
+
+		data["numbers"] = list
 	} else {
 		data["connected"] = false
 	}

@@ -36,6 +36,9 @@ type APIKey struct {
 	WebhookURL *string    `json:"webhook_url" db:"webhook_url"`
 	LastUsedAt *time.Time `json:"last_used_at" db:"last_used_at"`
 	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+	// The WhatsApp number a WhatsApp key sends from; nil means the account's
+	// default number (migration 036).
+	WANumberID *int `json:"wa_number_id" db:"wa_number_id"`
 }
 
 // ListKeys returns all API keys for the current account.
@@ -45,9 +48,9 @@ func (h *APIKeyHandler) ListKeys(c echo.Context) error {
 
 	var keys []APIKey
 	if channel != "" {
-		h.db.Select(&keys, "SELECT id, account_id, channel, key_prefix, name, is_test, is_active, rate_limit, webhook_url, last_used_at, created_at FROM api_keys WHERE account_id = $1 AND channel = $2 AND deleted_at IS NULL ORDER BY created_at DESC", accountID, channel)
+		h.db.Select(&keys, "SELECT id, account_id, channel, key_prefix, name, is_test, is_active, rate_limit, webhook_url, last_used_at, created_at, wa_number_id FROM api_keys WHERE account_id = $1 AND channel = $2 AND deleted_at IS NULL ORDER BY created_at DESC", accountID, channel)
 	} else {
-		h.db.Select(&keys, "SELECT id, account_id, channel, key_prefix, name, is_test, is_active, rate_limit, webhook_url, last_used_at, created_at FROM api_keys WHERE account_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC", accountID)
+		h.db.Select(&keys, "SELECT id, account_id, channel, key_prefix, name, is_test, is_active, rate_limit, webhook_url, last_used_at, created_at, wa_number_id FROM api_keys WHERE account_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC", accountID)
 	}
 
 	if keys == nil {
@@ -143,10 +146,37 @@ func (h *APIKeyHandler) UpdateKey(c echo.Context) error {
 		Name       *string `json:"name"`
 		RateLimit  *int    `json:"rate_limit"`
 		WebhookURL *string `json:"webhook_url"`
+		// Which WhatsApp number a WhatsApp key sends from; 0 means the default.
+		WANumberID *int `json:"wa_number_id"`
 	}
 
 	if err := c.Bind(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if req.WANumberID != nil {
+		// Only the account's own number, and only on a WhatsApp key.
+		var number *int
+		if *req.WANumberID > 0 {
+			var owned int
+			h.db.Get(&owned, `SELECT COUNT(*) FROM wa_numbers WHERE id = $1 AND account_id = $2`, *req.WANumberID, accountID)
+
+			if owned == 0 {
+				return response.BadRequest(c, "That WhatsApp number is not on this account")
+			}
+
+			number = req.WANumberID
+		}
+
+		result, err := h.db.Exec(`UPDATE api_keys SET wa_number_id = $3
+			WHERE id = $1 AND account_id = $2 AND channel = 'whatsapp' AND deleted_at IS NULL`, id, accountID, number)
+		if err != nil {
+			return response.InternalError(c, "Failed to update API key")
+		}
+
+		if rows, _ := result.RowsAffected(); rows == 0 {
+			return response.NotFound(c, "WhatsApp API key not found")
+		}
 	}
 
 	result, err := h.db.Exec(`

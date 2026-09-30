@@ -37,12 +37,18 @@ import Divider from '@mui/material/Divider'
 
 import { apiKeyService } from '@/services/apikeys'
 import { creditService } from '@/services/apicredits'
+import whatsappService from '@/services/whatsapp'
 import type { APIKey, CreditBalance, CreditTransaction } from '@/types/api'
+import type { WANumber } from '@/types/whatsapp'
 
 const APIKeyManager = () => {
   const [keys, setKeys] = useState<APIKey[]>([])
   const [credits, setCredits] = useState<CreditBalance[]>([])
   const [transactions, setTransactions] = useState<CreditTransaction[]>([])
+
+  // The account's linked WhatsApp numbers, for choosing which one a WhatsApp key
+  // sends from. Empty when WhatsApp isn't set up; the column then shows a dash.
+  const [waNumbers, setWaNumbers] = useState<WANumber[]>([])
   const [, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(0)
   const [channelFilter, setChannelFilter] = useState<string>('')
@@ -84,6 +90,11 @@ const APIKeyManager = () => {
       setKeys(keysRes.data)
       setCredits(creditsRes.data)
       setTransactions(txnRes.data || [])
+
+      whatsappService
+        .listNumbers()
+        .then(res => setWaNumbers(res.data.numbers.filter(n => n.linked)))
+        .catch(() => setWaNumbers([]))
     } catch (_err) {
       setSnackbar({ open: true, message: 'Failed to load API data', severity: 'error' })
     } finally {
@@ -111,6 +122,28 @@ const APIKeyManager = () => {
       setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to create key', severity: 'error' })
     }
   }
+
+  // Point a WhatsApp key at one of the account's numbers; 0 means the default.
+  const handleSendsFrom = async (key: APIKey, numberId: number) => {
+    try {
+      await apiKeyService.update(key.id, { wa_number_id: numberId })
+      loadData()
+
+      const chosen = waNumbers.find(n => n.id === numberId)
+
+      setSnackbar({
+        open: true,
+        message: chosen
+          ? `${key.name} now sends from ${chosen.linked_phone || chosen.label}`
+          : `${key.name} now sends from your default number`,
+        severity: 'success'
+      })
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to change the number', severity: 'error' })
+    }
+  }
+
+  const waNumberName = (n: WANumber) => (n.label ? `${n.label} (${n.linked_phone})` : n.linked_phone || `Number ${n.id}`)
 
   const handleToggle = async (id: number) => {
     try {
@@ -234,6 +267,7 @@ const APIKeyManager = () => {
                       <TableCell>Key Prefix</TableCell>
                       <TableCell>Type</TableCell>
                       <TableCell>Status</TableCell>
+                      <TableCell>Sends from</TableCell>
                       <TableCell>Last Used</TableCell>
                       <TableCell align='right'>Actions</TableCell>
                     </TableRow>
@@ -241,7 +275,7 @@ const APIKeyManager = () => {
                   <TableBody>
                     {keys.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} align='center' sx={{ py: 4 }}>
+                        <TableCell colSpan={8} align='center' sx={{ py: 4 }}>
                           <Typography color='text.secondary'>No API keys yet. Create one to get started.</Typography>
                         </TableCell>
                       </TableRow>
@@ -271,6 +305,34 @@ const APIKeyManager = () => {
                               color={key.is_active ? 'success' : 'default'}
                               size='small'
                             />
+                          </TableCell>
+                          <TableCell>
+                            {key.channel === 'whatsapp' && waNumbers.length > 0 ? (
+                              <Select
+                                size='small'
+                                value={key.wa_number_id ?? 0}
+                                onChange={e => handleSendsFrom(key, Number(e.target.value))}
+                                sx={{ minWidth: 200 }}
+                                inputProps={{ 'aria-label': `Number ${key.name} sends from` }}
+                              >
+                                <MenuItem value={0}>
+                                  Default number
+                                  {waNumbers.find(n => n.is_default)
+                                    ? ` (${waNumbers.find(n => n.is_default)?.linked_phone})`
+                                    : ''}
+                                </MenuItem>
+                                {waNumbers.map(n => (
+                                  <MenuItem key={n.id} value={n.id}>
+                                    {waNumberName(n)}
+                                    {n.connected ? '' : ' — not connected'}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            ) : (
+                              <Typography variant='body2' color='text.secondary'>
+                                —
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Typography variant='body2' color='text.secondary'>
@@ -602,13 +664,16 @@ curl -X POST https://nepalfillings.com/api/v1/sms/send/bulk \\
                 Send a text message
               </Typography>
               <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
-                {`curl -X POST https://nepalfillings.com/api/v1/whatsapp/send \\
+                {`# "from" is optional: any of your linked WhatsApp numbers. Leave it out to send
+# from the number the key is set to under "Sends from" (your default unless changed).
+curl -X POST https://nepalfillings.com/api/v1/whatsapp/send \\
   -H "Authorization: Bearer nf_whatsapp_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{
     "to": "9779812345678",
     "type": "text",
-    "message": "Your appointment is confirmed for 3 PM tomorrow."
+    "message": "Your appointment is confirmed for 3 PM tomorrow.",
+    "from": "9779801234567"
   }'
 
 # Response:
@@ -617,6 +682,7 @@ curl -X POST https://nepalfillings.com/api/v1/sms/send/bulk \\
   "data": {
     "message_id": "wa_msg_456",
     "to": "9779812345678",
+    "from": "9779801234567",
     "type": "text",
     "status": "sent",
     "credits_used": 1,

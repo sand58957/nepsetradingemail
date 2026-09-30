@@ -21,7 +21,7 @@ func apiKeysTestDB(t *testing.T) *sqlx.DB {
 
 	db := waTestDB(t)
 
-	for _, f := range []string{"014_public_api.up.sql", "035_api_key_soft_delete.up.sql"} {
+	for _, f := range []string{"014_public_api.up.sql", "035_api_key_soft_delete.up.sql", "036_api_key_whatsapp_number.up.sql"} {
 		migration, err := os.ReadFile(filepath.Join("..", "database", "migrations", f))
 		if err != nil {
 			t.Fatalf("reading migration %s: %v", f, err)

@@ -11,6 +11,8 @@ export interface APIKey {
   webhook_url: string | null
   last_used_at: string | null
   created_at: string
+  /** WhatsApp keys: the number this key sends from; null means the default number. */
+  wa_number_id: number | null
 }
 
 export interface APIKeyCreateRequest {
@@ -36,6 +38,8 @@ export interface APIKeyUpdateRequest {
   name?: string
   rate_limit?: number
   webhook_url?: string
+  /** WhatsApp keys: which number sends; 0 means the account's default number. */
+  wa_number_id?: number
 }
 
 // Credit types
