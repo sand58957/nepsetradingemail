@@ -122,14 +122,20 @@ const APIKeyManager = () => {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this API key? This cannot be undone.')) return
+    if (
+      !confirm(
+        'Delete this API key? Anything still using it stops working at once, and this cannot be undone. ' +
+          'Messages it already sent stay in your records.'
+      )
+    )
+      return
 
     try {
       await apiKeyService.delete(id)
       loadData()
       setSnackbar({ open: true, message: 'API key deleted', severity: 'success' })
-    } catch {
-      setSnackbar({ open: true, message: 'Failed to delete key', severity: 'error' })
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to delete key', severity: 'error' })
     }
   }
 

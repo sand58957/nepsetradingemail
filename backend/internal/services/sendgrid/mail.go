@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 )
 
 // MailRequest represents an email to send via SendGrid Mail Send API.
@@ -66,7 +67,11 @@ func (c *Client) SendMail(req MailRequest) (*MailResponse, error) {
 		log.Println("ERROR: SendGrid API key is empty")
 		return nil, fmt.Errorf("SendGrid API key is not configured")
 	}
-	log.Printf("SendGrid: sending email to=%s from=%s, API key prefix=%s...", req.To, req.From, c.apiKey[:20])
+	// No part of the key is logged, and the recipient is masked: this line used to
+	// write the first 20 characters of the key and every recipient's full address
+	// into the container log for each email sent. Slicing the key also panicked on
+	// a key shorter than 20 characters.
+	log.Printf("SendGrid: sending email to=%s from=%s", maskEmail(req.To), req.From)
 
 	respBody, statusCode, err := c.doRequest("POST", "/mail/send", body)
 	if err != nil {
@@ -74,7 +79,7 @@ func (c *Client) SendMail(req MailRequest) (*MailResponse, error) {
 	}
 
 	if statusCode >= 400 {
-		log.Printf("ERROR: SendGrid API returned %d: %s (key prefix: %s...)", statusCode, string(respBody), c.apiKey[:20])
+		log.Printf("ERROR: SendGrid API returned %d: %s", statusCode, string(respBody))
 		return nil, fmt.Errorf("SendGrid mail error (%d): %s", statusCode, string(respBody))
 	}
 
@@ -85,4 +90,15 @@ func (c *Client) SendMail(req MailRequest) (*MailResponse, error) {
 	return &MailResponse{
 		MessageID: fmt.Sprintf("sg_%d", statusCode),
 	}, nil
+}
+
+// maskEmail keeps enough of an address to tell sends apart in a log without
+// recording who they went to: "binay@gmail.com" becomes "b***@gmail.com".
+func maskEmail(addr string) string {
+	at := strings.LastIndex(addr, "@")
+	if at <= 0 {
+		return "***"
+	}
+
+	return addr[:1] + "***" + addr[at:]
 }

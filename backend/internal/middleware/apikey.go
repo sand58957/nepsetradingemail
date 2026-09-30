@@ -98,7 +98,7 @@ func APIKeyAuth(db *sqlx.DB, channel string) echo.MiddlewareFunc {
 
 			err := db.Get(&keyRecord, `
 				SELECT id, account_id, channel, key_hash, is_test, is_active, rate_limit, webhook_url
-				FROM api_keys WHERE key_prefix = $1 AND is_active = true
+				FROM api_keys WHERE key_prefix = $1 AND is_active = true AND deleted_at IS NULL
 			`, prefix)
 
 			if errors.Is(err, sql.ErrNoRows) {

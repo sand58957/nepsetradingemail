@@ -103,13 +103,15 @@ func apiKeyTestDB(t *testing.T) *sqlx.DB {
 
 	db.MustExec(`CREATE TABLE app_accounts (id SERIAL PRIMARY KEY)`)
 
-	migration, err := os.ReadFile(filepath.Join("..", "database", "migrations", "014_public_api.up.sql"))
-	if err != nil {
-		t.Fatalf("reading migration: %v", err)
-	}
+	for _, f := range []string{"014_public_api.up.sql", "035_api_key_soft_delete.up.sql"} {
+		migration, err := os.ReadFile(filepath.Join("..", "database", "migrations", f))
+		if err != nil {
+			t.Fatalf("reading migration %s: %v", f, err)
+		}
 
-	if _, err := db.Exec(string(migration)); err != nil {
-		t.Fatalf("applying migration 014: %v", err)
+		if _, err := db.Exec(string(migration)); err != nil {
+			t.Fatalf("applying migration %s: %v", f, err)
+		}
 	}
 
 	return db
@@ -141,5 +143,23 @@ func TestAPIKeyAuthTellsAMissingKeyFromAMissingDatabase(t *testing.T) {
 
 	if code, reached, retry := runAPIKeyAuth(t, db, "Bearer "+key); code != http.StatusServiceUnavailable || reached || retry == "" {
 		t.Errorf("account unreadable: status %d, handler reached %v, Retry-After %q; want 503", code, reached, retry)
+	}
+}
+
+// A deleted key never authenticates, even if something switched it back on.
+func TestAPIKeyAuthRefusesADeletedKey(t *testing.T) {
+	db := apiKeyTestDB(t)
+
+	const key = "nf_email_b9g4Ly0nRESTOFTHEKEY"
+
+	sum := sha256.Sum256([]byte(key))
+
+	var account int
+	db.Get(&account, `INSERT INTO app_accounts (api_enabled) VALUES (true) RETURNING id`)
+	db.MustExec(`INSERT INTO api_keys (account_id, channel, key_hash, key_prefix, is_active, deleted_at)
+		VALUES ($1, 'email', $2, $3, true, NOW())`, account, hex.EncodeToString(sum[:]), extractPrefix(key))
+
+	if code, reached, _ := runAPIKeyAuth(t, db, "Bearer "+key); code != http.StatusUnauthorized || reached {
+		t.Errorf("deleted key: status %d, handler reached %v; want 401", code, reached)
 	}
 }

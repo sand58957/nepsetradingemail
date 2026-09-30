@@ -45,9 +45,9 @@ func (h *APIKeyHandler) ListKeys(c echo.Context) error {
 
 	var keys []APIKey
 	if channel != "" {
-		h.db.Select(&keys, "SELECT id, account_id, channel, key_prefix, name, is_test, is_active, rate_limit, webhook_url, last_used_at, created_at FROM api_keys WHERE account_id = $1 AND channel = $2 ORDER BY created_at DESC", accountID, channel)
+		h.db.Select(&keys, "SELECT id, account_id, channel, key_prefix, name, is_test, is_active, rate_limit, webhook_url, last_used_at, created_at FROM api_keys WHERE account_id = $1 AND channel = $2 AND deleted_at IS NULL ORDER BY created_at DESC", accountID, channel)
 	} else {
-		h.db.Select(&keys, "SELECT id, account_id, channel, key_prefix, name, is_test, is_active, rate_limit, webhook_url, last_used_at, created_at FROM api_keys WHERE account_id = $1 ORDER BY created_at DESC", accountID)
+		h.db.Select(&keys, "SELECT id, account_id, channel, key_prefix, name, is_test, is_active, rate_limit, webhook_url, last_used_at, created_at FROM api_keys WHERE account_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC", accountID)
 	}
 
 	if keys == nil {
@@ -85,9 +85,9 @@ func (h *APIKeyHandler) CreateKey(c echo.Context) error {
 		req.RateLimit = 60
 	}
 
-	// Check key count limit (max 5 per channel)
+	// Check key count limit (max 5 per channel). Deleted keys don't count.
 	var count int
-	h.db.Get(&count, "SELECT COUNT(*) FROM api_keys WHERE account_id = $1 AND channel = $2", accountID, req.Channel)
+	h.db.Get(&count, "SELECT COUNT(*) FROM api_keys WHERE account_id = $1 AND channel = $2 AND deleted_at IS NULL", accountID, req.Channel)
 	if count >= 5 {
 		return response.BadRequest(c, fmt.Sprintf("Maximum 5 API keys per channel. You have %d for %s.", count, req.Channel))
 	}
@@ -154,7 +154,7 @@ func (h *APIKeyHandler) UpdateKey(c echo.Context) error {
 			name = COALESCE($3, name),
 			rate_limit = COALESCE($4, rate_limit),
 			webhook_url = COALESCE($5, webhook_url)
-		WHERE id = $1 AND account_id = $2
+		WHERE id = $1 AND account_id = $2 AND deleted_at IS NULL
 	`, id, accountID, req.Name, req.RateLimit, req.WebhookURL)
 
 	if err != nil {
@@ -176,7 +176,7 @@ func (h *APIKeyHandler) ToggleKey(c echo.Context) error {
 
 	result, err := h.db.Exec(`
 		UPDATE api_keys SET is_active = NOT is_active
-		WHERE id = $1 AND account_id = $2
+		WHERE id = $1 AND account_id = $2 AND deleted_at IS NULL
 	`, id, accountID)
 
 	if err != nil {
@@ -191,12 +191,20 @@ func (h *APIKeyHandler) ToggleKey(c echo.Context) error {
 	return response.SuccessWithMessage(c, "API key toggled", nil)
 }
 
-// DeleteKey permanently deletes an API key.
+// DeleteKey deletes an API key: it stops working at once, disappears from the
+// account, and no longer counts toward the per-channel limit.
+//
+// The row itself stays, marked deleted (migration 035). This used to DELETE it,
+// which failed with a 500 for every key that had ever sent a message, since
+// api_messages still refers to it; the key could not be removed at all.
 func (h *APIKeyHandler) DeleteKey(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 
-	result, err := h.db.Exec("DELETE FROM api_keys WHERE id = $1 AND account_id = $2", id, accountID)
+	result, err := h.db.Exec(`
+		UPDATE api_keys SET deleted_at = NOW(), is_active = false
+		WHERE id = $1 AND account_id = $2 AND deleted_at IS NULL
+	`, id, accountID)
 	if err != nil {
 		return response.InternalError(c, "Failed to delete API key")
 	}
