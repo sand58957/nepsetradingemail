@@ -108,7 +108,11 @@ const SystemSettingsView = () => {
       setEditing(false)
       setNewKey('')
       setTestResult(null)
-      setSnack({ open: true, message: 'SendGrid API key updated', severity: 'success' })
+      setSnack({
+        open: true,
+        message: 'SendGrid API key updated. Sending domains are being linked to this SendGrid account.',
+        severity: 'success'
+      })
     } catch (e: any) {
       setSnack({
         open: true,

@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -347,8 +348,12 @@ func (h *DomainHandler) Delete(c echo.Context) error {
 		return response.InternalError(c, "Failed to delete domain")
 	}
 
-	// Delete SendGrid domain auth
-	if sg := h.sgClient(); sg != nil && domainInfo.SendgridDomainID > 0 {
+	// Delete the SendGrid domain auth, unless another account's copy of this
+	// domain was linked to the same one when the SendGrid account changed.
+	var sharing int
+	_ = h.db.Get(&sharing, `SELECT COUNT(*) FROM app_domains WHERE sendgrid_domain_id = $1`, domainInfo.SendgridDomainID)
+
+	if sg := h.sgClient(); sg != nil && domainInfo.SendgridDomainID > 0 && sharing == 0 {
 		if err := sg.DeleteDomainAuth(domainInfo.SendgridDomainID); err != nil {
 			log.Printf("WARNING: Failed to delete SendGrid domain auth %d: %v", domainInfo.SendgridDomainID, err)
 		}
@@ -513,6 +518,12 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 		sg := h.sgClient()
 		if sg != nil && d.SendgridDomainID > 0 {
 			sgResult, err := sg.ValidateDomain(d.SendgridDomainID)
+			if errors.Is(err, sendgrid.ErrNotFound) {
+				var accountRow DnsRecordResult
+				sgResult, accountRow, err = validateInCurrentAccount(h.db, sg, d.ID, d.Domain)
+				results = append(results, accountRow)
+			}
+
 			if err != nil {
 				log.Printf("WARNING: SendGrid validate domain %d: %v", d.SendgridDomainID, err)
 				results = append(results, DnsRecordResult{
@@ -641,6 +652,13 @@ func (h *DomainHandler) StartAutoVerification(ctx context.Context, interval time
 
 	go func() {
 		time.Sleep(30 * time.Second)
+
+		// The key may have been changed to another SendGrid account while the
+		// server was down, or through the env file.
+		if sg := h.sgClient(); sg != nil {
+			relinkAllSendGridDomains(h.db, sg)
+		}
+
 		h.verifyAllPendingDomains()
 	}()
 
@@ -706,6 +724,10 @@ func (h *DomainHandler) verifyAllPendingDomains() {
 			sg := h.sgClient()
 			if sg != nil && d.SendgridDomainID > 0 {
 				sgResult, err := sg.ValidateDomain(d.SendgridDomainID)
+				if errors.Is(err, sendgrid.ErrNotFound) {
+					sgResult, _, err = validateInCurrentAccount(h.db, sg, d.ID, d.Domain)
+				}
+
 				if err != nil {
 					failedChecks = append(failedChecks, "SendGrid")
 				} else {

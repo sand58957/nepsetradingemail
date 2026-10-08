@@ -130,6 +130,14 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
 
       setVerificationResults(data.records)
 
+      // The SendGrid account was changed and the domain moved to the new one: its
+      // CNAME records may be new, so show the current ones.
+      if (data.records.some(r => r.record_type === 'SENDGRID_ACCOUNT')) {
+        const response = await domainService.getDnsRecords(domainRecord.id)
+
+        setDnsRecords(response.data.records)
+      }
+
       if (data.all_passed) {
         onVerificationComplete?.(domainRecord.id, 'verified')
       }
@@ -171,6 +179,8 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
   const allPassed = verificationResults
     ? verificationResults.filter(r => r.record_type !== 'TXT_DMARC').every(r => r.status === 'pass')
     : false
+
+  const accountChange = verificationResults?.find(r => r.record_type === 'SENDGRID_ACCOUNT')
 
   const DnsValueBox = ({ label, value, fieldId }: { label: string; value: string; fieldId: string }) => (
     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -432,6 +442,12 @@ const DomainVerificationDialog = ({ open, onClose, domainRecord, onVerificationC
         })}
 
         {/* Verification Results Summary */}
+        {accountChange && (
+          <Alert severity={accountChange.status === 'pass' ? 'info' : 'error'} sx={{ mb: 3 }}>
+            {accountChange.found}
+          </Alert>
+        )}
+
         {verificationResults && allPassed && (
           <Alert severity='success' sx={{ mb: 3 }}>
             <Typography fontWeight={600}>All DNS records verified successfully!</Typography>

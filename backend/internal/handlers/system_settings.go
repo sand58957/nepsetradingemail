@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/sandeep/nepsetradingemail/backend/internal/middleware"
+	"github.com/sandeep/nepsetradingemail/backend/internal/services/sendgrid"
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
 
@@ -142,6 +143,10 @@ func (h *SystemSettingsHandler) UpdateSendGrid(c echo.Context) error {
 	if err != nil {
 		return response.InternalError(c, "Failed to save SendGrid configuration")
 	}
+
+	// A key from a different SendGrid account can't see the sending domains set
+	// up under the old one; move them over.
+	go relinkAllSendGridDomains(h.db, sendgrid.NewClient(apiKey))
 
 	return response.Success(c, map[string]interface{}{
 		"masked_key": maskKey(apiKey),

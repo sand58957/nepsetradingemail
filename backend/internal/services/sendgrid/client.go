@@ -3,14 +3,41 @@ package sendgrid
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
-const baseURL = "https://api.sendgrid.com/v3"
+// apiBase is where requests go. Tests point it at a local server with
+// OverrideAPIBaseForTest.
+var apiBase = "https://api.sendgrid.com/v3"
+
+// OverrideAPIBaseForTest sends this package's requests to url until the returned
+// function is called. For tests only.
+func OverrideAPIBaseForTest(url string) (restore func()) {
+	saved := apiBase
+	apiBase = url
+
+	return func() { apiBase = saved }
+}
+
+// ErrNotFound says the SendGrid account behind the key has no such record. After
+// the key is changed to a different SendGrid account, every domain id stored
+// under the old account answers this way.
+var ErrNotFound = errors.New("sendgrid: not found in this SendGrid account")
+
+// notFound reports whether a SendGrid error response means the record isn't in
+// this account. SendGrid answers a 404, and for some calls a 4xx whose message
+// says "not found".
+func notFound(statusCode int, body []byte) bool {
+	return statusCode == http.StatusNotFound ||
+		(statusCode >= 400 && statusCode < 500 && strings.Contains(strings.ToLower(string(body)), "not found"))
+}
 
 // Client wraps the SendGrid API for domain authentication.
 type Client struct {
@@ -122,6 +149,10 @@ func (c *Client) GetDomainAuth(domainID int) (*DomainAuthResponse, error) {
 		return nil, fmt.Errorf("get domain auth: %w", err)
 	}
 
+	if notFound(statusCode, respBody) {
+		return nil, ErrNotFound
+	}
+
 	if statusCode >= 400 {
 		return nil, fmt.Errorf("SendGrid API error (status %d): %s", statusCode, string(respBody))
 	}
@@ -141,6 +172,10 @@ func (c *Client) ValidateDomain(domainID int) (*ValidationResult, error) {
 	respBody, statusCode, err := c.doRequest("POST", path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("validate domain: %w", err)
+	}
+
+	if notFound(statusCode, respBody) {
+		return nil, ErrNotFound
 	}
 
 	if statusCode >= 400 {
@@ -190,6 +225,38 @@ func (c *Client) ListDomainAuths() ([]DomainAuthResponse, error) {
 	return result, nil
 }
 
+// FindDomainAuth returns this account's authentication of domain, preferring one
+// that SendGrid has validated, or nil when the account has none.
+func (c *Client) FindDomainAuth(domain string) (*DomainAuthResponse, error) {
+	respBody, statusCode, err := c.doRequest("GET", "/whitelabel/domains?limit=200&domain="+url.QueryEscape(domain), nil)
+	if err != nil {
+		return nil, fmt.Errorf("find domain auth: %w", err)
+	}
+
+	if statusCode >= 400 {
+		return nil, fmt.Errorf("SendGrid API error (status %d): %s", statusCode, string(respBody))
+	}
+
+	var all []DomainAuthResponse
+	if err := json.Unmarshal(respBody, &all); err != nil {
+		return nil, fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	var found *DomainAuthResponse
+
+	for i := range all {
+		if !strings.EqualFold(all[i].Domain, domain) {
+			continue
+		}
+
+		if found == nil || (all[i].Valid && !found.Valid) {
+			found = &all[i]
+		}
+	}
+
+	return found, nil
+}
+
 // ---------- HTTP helper ----------
 
 func (c *Client) doRequest(method, path string, body []byte) ([]byte, int, error) {
@@ -198,7 +265,7 @@ func (c *Client) doRequest(method, path string, body []byte) ([]byte, int, error
 		reqBody = bytes.NewReader(body)
 	}
 
-	req, err := http.NewRequest(method, baseURL+path, reqBody)
+	req, err := http.NewRequest(method, apiBase+path, reqBody)
 	if err != nil {
 		return nil, 0, err
 	}
