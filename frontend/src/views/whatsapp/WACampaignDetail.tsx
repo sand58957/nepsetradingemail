@@ -784,8 +784,9 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
                   />
                   {spread && (
                     <Alert severity='warning' className='mbe-3'>
-                      Messages take turns across your numbers at the same pace as usual, so each number sends a share
-                      rather than the whole run. It does not send faster. If WhatsApp treats the campaign as spam it
+                      Each number sends 20 messages, then the next number takes over, and so on round all of them, at
+                      the same pace as usual, so each number sends a share rather than the whole run. It does not send
+                      faster. If WhatsApp treats the campaign as spam it
                       can unlink every number it came from, so only spread campaigns to people who expect to hear from
                       you.
                     </Alert>
