@@ -23,9 +23,9 @@ import (
 	"github.com/sandeep/nepsetradingemail/backend/internal/config"
 )
 
-// waTestDB builds the WhatsApp tables from the real migrations, in a schema of
-// their own inside the database WA_TEST_DSN points at, and drops that schema
-// when the test ends. Point it only at a disposable database, for example:
+// waTestDB builds the WhatsApp and SMS tables from the real migrations, in a
+// schema of their own inside the database WA_TEST_DSN points at, and drops that
+// schema when the test ends. Point it only at a disposable database, for example:
 //
 //	docker run -d --rm --name wa-test-pg -e POSTGRES_PASSWORD=test -p 127.0.0.1:55439:5432 postgres:17-alpine
 //	WA_TEST_DSN='postgres://postgres:test@127.0.0.1:55439/postgres?sslmode=disable' go test ./internal/handlers/

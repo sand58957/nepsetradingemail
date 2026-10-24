@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -1171,6 +1172,15 @@ func (h *SMSHandler) executeCampaignSend(campaignID, accountID int) {
 		return
 	}
 
+	// Contacts who opted out since the campaign was queued (e.g. while it was
+	// paused) aren't messaged.
+	h.db.Exec(`
+		UPDATE sms_campaign_messages scm
+		SET status = 'failed', error_reason = 'Opted out before sending', failed_at = NOW()
+		FROM sms_contacts sc
+		WHERE sc.id = scm.contact_id AND scm.campaign_id = $1 AND scm.status = 'queued' AND sc.opted_in = false
+	`, campaignID)
+
 	// Fetch queued messages with contact info
 	type QueuedMessage struct {
 		MessageID int    `db:"message_id"`
@@ -1182,7 +1192,7 @@ func (h *SMSHandler) executeCampaignSend(campaignID, accountID int) {
 		SELECT scm.id AS message_id, scm.contact_id, sc.phone
 		FROM sms_campaign_messages scm
 		JOIN sms_contacts sc ON sc.id = scm.contact_id
-		WHERE scm.campaign_id = $1 AND scm.status = 'queued'
+		WHERE scm.campaign_id = $1 AND scm.status = 'queued' AND sc.opted_in = true
 		ORDER BY scm.id ASC
 	`, campaignID); err != nil {
 		log.Printf("[sms] Campaign %d: failed to fetch queued messages: %v", campaignID, err)
@@ -1207,10 +1217,11 @@ func (h *SMSHandler) executeCampaignSend(campaignID, accountID int) {
 	for _, qm := range queuedMessages {
 		<-ticker.C
 
-		// Check if campaign was paused, cancelled or deleted
+		// Stop if the campaign was paused, cancelled or deleted. A failed read
+		// carries on, so a database hiccup can't leave it stuck as sending.
 		var status string
-		h.db.Get(&status, "SELECT status FROM sms_campaigns WHERE id = $1", campaignID)
-		if status != "sending" {
+		statusErr := h.db.Get(&status, "SELECT status FROM sms_campaigns WHERE id = $1", campaignID)
+		if statusErr == sql.ErrNoRows || (statusErr == nil && status != "sending") {
 			log.Printf("[sms] Campaign %d: stopped (status %q)", campaignID, status)
 			h.refreshCounts(campaignID)
 			return

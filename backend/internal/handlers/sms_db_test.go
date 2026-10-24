@@ -117,6 +117,13 @@ func (f *smsFixture) campaignRow(t *testing.T, id int) SMSCampaign {
 	return c
 }
 
+func (f *smsFixture) senderRunning(id int) bool {
+	f.h.mu.Lock()
+	defer f.h.mu.Unlock()
+
+	return f.h.running[id]
+}
+
 // settle waits for the campaign's sender to stop.
 func (f *smsFixture) settle(t *testing.T, id int) SMSCampaign {
 	t.Helper()
@@ -124,11 +131,7 @@ func (f *smsFixture) settle(t *testing.T, id int) SMSCampaign {
 	deadline := time.Now().Add(5 * time.Second)
 
 	for time.Now().Before(deadline) {
-		f.h.mu.Lock()
-		running := f.h.running[id]
-		f.h.mu.Unlock()
-
-		if c := f.campaignRow(t, id); c.Status != "sending" && !running {
+		if c := f.campaignRow(t, id); c.Status != "sending" && !f.senderRunning(id) {
 			return c
 		}
 
@@ -148,8 +151,8 @@ func (f *smsFixture) call(t *testing.T, handler echo.HandlerFunc, id int) int {
 	return code
 }
 
-// stallSecond holds the second send until the returned func is called, and
-// returns once that send has reached the fake.
+// stallSecond holds the second send at the fake until release is called;
+// waitHeld returns once that send has arrived.
 func (f *smsFixture) stallSecond(t *testing.T) (waitHeld func(), release func()) {
 	t.Helper()
 
@@ -357,5 +360,63 @@ func TestSMSResumeWhileStillSendingSendsOnce(t *testing.T) {
 
 	if c.Status != "sent" || c.SentCount != 3 {
 		t.Errorf("campaign %q sent=%d, want sent to 3", c.Status, c.SentCount)
+	}
+}
+
+// Deleting a campaign while it sends stops its sender; nobody else is messaged.
+func TestSMSDeletedCampaignStopsSending(t *testing.T) {
+	f := newSMSFixture(t)
+	for i := 1; i <= 3; i++ {
+		f.contact(t, f.account, fmt.Sprintf("980000000%d", i))
+	}
+
+	id := f.campaign(t)
+	waitHeld, release := f.stallSecond(t)
+
+	f.call(t, f.h.SendCampaign, id)
+	waitHeld()
+
+	if code := f.call(t, f.h.DeleteCampaign, id); code != http.StatusOK {
+		t.Fatalf("delete: %d", code)
+	}
+
+	release()
+
+	for deadline := time.Now().Add(5 * time.Second); f.senderRunning(id) && time.Now().Before(deadline); {
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	if got := strings.Join(f.aakash.sentTo(), ","); got != "9800000001,9800000002" {
+		t.Errorf("sent to %s, want nothing after the one in flight when it was deleted", got)
+	}
+}
+
+// A contact who opts out while the campaign is paused isn't messaged when it
+// resumes; their message is closed as failed.
+func TestSMSResumeSkipsContactsWhoOptedOut(t *testing.T) {
+	f := newSMSFixture(t)
+	f.contact(t, f.account, "9800000001")
+	gone := f.contact(t, f.account, "9800000002")
+	id := f.campaign(t)
+
+	f.db.MustExec(`UPDATE sms_campaigns SET status = 'paused', total_targets = 2 WHERE id = $1`, id)
+	f.db.MustExec(`INSERT INTO sms_campaign_messages (campaign_id, contact_id) SELECT $1, id FROM sms_contacts ORDER BY id`, id)
+	f.db.MustExec(`UPDATE sms_contacts SET opted_in = false WHERE id = $1`, gone)
+
+	if code := f.call(t, f.h.ResumeCampaign, id); code != http.StatusOK {
+		t.Fatalf("resume: %d", code)
+	}
+
+	c := f.settle(t, id)
+
+	if got := strings.Join(f.aakash.sentTo(), ","); got != "9800000001" {
+		t.Errorf("sent to %s, want only the contact still opted in", got)
+	}
+
+	var reason string
+	f.db.Get(&reason, `SELECT error_reason FROM sms_campaign_messages WHERE contact_id = $1 AND status = 'failed'`, gone)
+
+	if c.Status != "sent" || c.SentCount != 1 || c.FailedCount != 1 || reason != "Opted out before sending" {
+		t.Errorf("campaign %q sent=%d failed=%d, opted-out reason %q; want 1 sent and the opted-out one closed", c.Status, c.SentCount, c.FailedCount, reason)
 	}
 }
