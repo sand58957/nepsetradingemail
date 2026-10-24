@@ -15,11 +15,13 @@ import (
 	mw "github.com/sandeep/nepsetradingemail/backend/internal/middleware"
 )
 
-// apiKey makes a Phone SMS API key for the fixture's account.
+// apiKey makes a Phone SMS API key for the account, which gets 10 credits.
 func (f *phoneFixture) apiKey(t *testing.T, account int, isTest bool) *mw.APIKeyInfo {
 	t.Helper()
 
 	f.db.MustExec(`UPDATE app_accounts SET api_enabled = true WHERE id = $1`, account)
+	f.db.MustExec(`INSERT INTO api_credits (account_id, channel, balance) VALUES ($1, 'phone_sms', 10)
+		ON CONFLICT (account_id, channel) DO NOTHING`, account)
 	id := waInsertID(t, f.db, `INSERT INTO api_keys (account_id, channel, key_hash, key_prefix, name, is_test)
 		VALUES ($1, 'phone_sms', 'x', $2, 'key', $3) RETURNING id`,
 		account, fmt.Sprintf("nf_phonesms_k%d", time.Now().UnixNano()%1e8), isTest)
@@ -62,6 +64,19 @@ func (f *phoneFixture) api(t *testing.T, handler echo.HandlerFunc, method, targe
 	json.Unmarshal(rec.Body.Bytes(), &decoded)
 
 	return rec.Code, decoded
+}
+
+// credits returns the account's Phone SMS credit balance and reserved amount.
+func (f *phoneFixture) credits(t *testing.T, account int) (float64, float64) {
+	t.Helper()
+
+	var c struct {
+		Balance  float64 `db:"balance"`
+		Reserved float64 `db:"reserved"`
+	}
+	f.db.Get(&c, `SELECT balance, reserved FROM api_credits WHERE account_id = $1 AND channel = 'phone_sms'`, account)
+
+	return c.Balance, c.Reserved
 }
 
 // apiSettle waits for the account's API sender to finish.
@@ -115,8 +130,9 @@ func TestPhoneSMSAPISendGoesOutFromThePhone(t *testing.T) {
 	code, body := f.api(t, f.h.APISend, http.MethodPost, "/", fmt.Sprintf(`{"to":"+977 9800000001","message":%q,"reference":"order-7"}`, long), key, "")
 	data, _ := body["data"].(map[string]interface{})
 
-	if code != http.StatusOK || data["status"] != "queued" || data["to"] != "9800000001" || data["credits_used"] != float64(0) {
-		t.Fatalf("send: %d %v, want queued for 9800000001 with no credits", code, body)
+	if code != http.StatusOK || data["status"] != "queued" || data["to"] != "9800000001" ||
+		data["credits_used"] != float64(1) || data["credits_remaining"] != float64(9) {
+		t.Fatalf("send: %d %v, want queued for 9800000001 using 1 of 10 credits", code, body)
 	}
 
 	id := messageNumber(t, data["message_id"])
@@ -136,8 +152,16 @@ func TestPhoneSMSAPISendGoesOutFromThePhone(t *testing.T) {
 	}
 
 	row := f.apiRow(t, id)
-	if row["status"] != "submitted" || row["from"] != "SIM 1" || row["reference"] != "order-7" || row["sent_at"] == nil {
-		t.Errorf("after hand-off: %v, want submitted from SIM 1", row)
+	if row["status"] != "submitted" || row["from"] != "SIM 1" || row["reference"] != "order-7" || row["sent_at"] == nil ||
+		row["credits_charged"] != float64(1) {
+		t.Errorf("after hand-off: %v, want submitted from SIM 1 for 1 credit", row)
+	}
+
+	var deducted int
+	f.db.Get(&deducted, `SELECT COUNT(*) FROM api_credit_transactions WHERE channel = 'phone_sms' AND type = 'deduct' AND message_id = $1`, id)
+
+	if balance, reserved := f.credits(t, f.account); balance != 9 || reserved != 0 || deducted != 1 {
+		t.Errorf("credits after hand-off: balance %v reserved %v, %d deduct rows; want 9, 0 and one", balance, reserved, deducted)
 	}
 
 	var leftover int
@@ -228,10 +252,15 @@ func TestPhoneSMSAPITestKeySendsNothing(t *testing.T) {
 	if n := len(f.gw.sentTo()); n != 0 {
 		t.Errorf("a test key sent %d messages", n)
 	}
+
+	if balance, _ := f.credits(t, f.account); balance != 10 || data["credits_used"] != float64(0) {
+		t.Errorf("a test key used credits: balance %v, credits_used %v", balance, data["credits_used"])
+	}
 }
 
 // When the phone can't be reached every queued message fails at once, saying
-// why; a number SMSGate rejects fails on its own.
+// why; a number SMSGate rejects fails on its own. Every failed message's credit
+// comes back, including one the phone reports it couldn't send.
 func TestPhoneSMSAPIFailures(t *testing.T) {
 	f := newPhoneFixture(t)
 	key := f.apiKey(t, f.account, false)
@@ -252,6 +281,12 @@ func TestPhoneSMSAPIFailures(t *testing.T) {
 		t.Errorf("rejected number: %v / %v, want only the first failed", a["status"], b["status"])
 	}
 
+	if balance, reserved := f.credits(t, f.account); balance != 9 || reserved != 0 {
+		t.Errorf("after one rejected, one sent: balance %v reserved %v, want 9 and 0", balance, reserved)
+	}
+
+	sent := messageNumber(t, ids[1])
+
 	f.gw.mu.Lock()
 	f.gw.failFor = func(string) int { return http.StatusServiceUnavailable }
 	f.gw.mu.Unlock()
@@ -267,11 +302,62 @@ func TestPhoneSMSAPIFailures(t *testing.T) {
 		}
 	}
 
+	if balance, reserved := f.credits(t, f.account); balance != 9 || reserved != 0 {
+		t.Errorf("after the phone went down: balance %v reserved %v, want both refunded (9, 0)", balance, reserved)
+	}
+
+	// The phone takes a message but then can't send it: its credit comes back
+	// once, however often the report arrives.
+	failed := phoneEvent("sms:failed", "gw-1", map[string]interface{}{"reason": "No service"})
+	f.webhook(t, f.token, failed, nil)
+	f.webhook(t, f.token, failed, nil)
+
+	if row := f.apiRow(t, sent); row["status"] != "failed" || row["error_code"] != "SEND_FAILED" || row["error_message"] != "No service" {
+		t.Errorf("after sms:failed: %v, want failed as SEND_FAILED", row)
+	}
+
+	var refunds int
+	f.db.Get(&refunds, `SELECT COUNT(*) FROM api_credit_transactions WHERE type = 'refund' AND message_id = $1`, sent)
+
+	if balance, _ := f.credits(t, f.account); balance != 10 || refunds != 1 {
+		t.Errorf("after the phone couldn't send: balance %v with %d refunds, want 10 and one", balance, refunds)
+	}
+
 	var charged int
-	f.db.Get(&charged, `SELECT COUNT(*) FROM api_messages WHERE credits_charged <> 0`)
+	f.db.Get(&charged, `SELECT COUNT(*) FROM api_messages WHERE status = 'failed' AND credits_charged <> 0`)
 
 	if charged != 0 {
-		t.Errorf("%d messages report credits charged, want none", charged)
+		t.Errorf("%d failed messages report credits charged, want none", charged)
+	}
+}
+
+// A call needing more credits than the account has is refused whole, before
+// anything is queued or reserved.
+func TestPhoneSMSAPINeedsCredits(t *testing.T) {
+	f := newPhoneFixture(t)
+	key := f.apiKey(t, f.account, false)
+	f.db.MustExec(`UPDATE api_credits SET balance = 1 WHERE account_id = $1 AND channel = 'phone_sms'`, f.account)
+
+	code, body := f.api(t, f.h.APISendBulk, http.MethodPost, "/", `{"message":"Hi","recipients":[{"to":"9800000001"},{"to":"9800000002"}]}`, key, "")
+	errObj, _ := body["error"].(map[string]interface{})
+
+	if code != http.StatusPaymentRequired || errObj["code"] != "INSUFFICIENT_CREDITS" {
+		t.Fatalf("2 messages with 1 credit: %d %v, want 402 INSUFFICIENT_CREDITS", code, body)
+	}
+
+	if balance, reserved := f.credits(t, f.account); balance != 1 || reserved != 0 || f.h.queuedAPIMessages(f.account) != 0 {
+		t.Errorf("after the refusal: balance %v reserved %v, %d queued; want 1, 0 and none", balance, reserved, f.h.queuedAPIMessages(f.account))
+	}
+
+	if code, _ := f.api(t, f.h.APISend, http.MethodPost, "/", `{"to":"9800000001","message":"Hi"}`, key, ""); code != http.StatusOK {
+		t.Errorf("1 message with 1 credit: %d, want 200", code)
+	}
+
+	f.apiSettle(t, f.account)
+	_, body = f.api(t, f.h.APIBalance, http.MethodGet, "/", "", key, "")
+
+	if data, _ := body["data"].(map[string]interface{}); data["balance"] != float64(0) || data["credit_per_sms"] != float64(1) {
+		t.Errorf("balance %v, want 0 credits left at 1 per SMS", data)
 	}
 }
 
@@ -334,8 +420,8 @@ func TestPhoneSMSTurnsShareTheGap(t *testing.T) {
 	}
 }
 
-// A Phone SMS key is created like the others but starts nf_phonesms_ and gets no
-// credit row, and the API accepts it only for Phone SMS.
+// A Phone SMS key is created like the others, with a credit row, but starts
+// nf_phonesms_, and the API accepts it only for Phone SMS.
 func TestPhoneSMSAPIKeyAuthenticates(t *testing.T) {
 	f := newPhoneFixture(t)
 	keys := NewAPIKeyHandler(f.db)
@@ -350,10 +436,10 @@ func TestPhoneSMSAPIKeyAuthenticates(t *testing.T) {
 	}
 
 	var credits int
-	f.db.Get(&credits, `SELECT COUNT(*) FROM api_credits WHERE account_id = $1`, f.account)
+	f.db.Get(&credits, `SELECT COUNT(*) FROM api_credits WHERE account_id = $1 AND channel = 'phone_sms'`, f.account)
 
-	if credits != 0 {
-		t.Errorf("%d credit rows created, want none for Phone SMS", credits)
+	if credits != 1 {
+		t.Errorf("%d Phone SMS credit rows, want one created with the key", credits)
 	}
 
 	call := func(channel string) (int, *mw.APIKeyInfo) {
@@ -379,5 +465,30 @@ func TestPhoneSMSAPIKeyAuthenticates(t *testing.T) {
 
 	if code, _ := call("sms"); code != http.StatusForbidden {
 		t.Errorf("SMS API with a Phone SMS key: %d, want 403", code)
+	}
+}
+
+// An admin can give an account Phone SMS API credits, as for the other channels.
+func TestAdminGivesPhoneSMSCredits(t *testing.T) {
+	f := newPhoneFixture(t)
+	credits := NewCreditHandler(f.db)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"channel":"phone_sms","amount":50,"description":"Starter pack"}`))
+	req.Header.Set("Content-Type", echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("account_id")
+	c.SetParamValues(fmt.Sprint(f.account))
+
+	if err := credits.AdminAdjustCredits(c); err != nil {
+		e.HTTPErrorHandler(err, c)
+	}
+
+	var purchases int
+	f.db.Get(&purchases, `SELECT COUNT(*) FROM api_credit_transactions WHERE account_id = $1 AND channel = 'phone_sms' AND type = 'purchase' AND amount = 50`, f.account)
+
+	if balance, _ := f.credits(t, f.account); rec.Code != http.StatusOK || balance != 50 || purchases != 1 {
+		t.Errorf("giving 50 Phone SMS credits: %d %s, balance %v, %d purchase rows; want 200, 50 and one", rec.Code, rec.Body.String(), balance, purchases)
 	}
 }

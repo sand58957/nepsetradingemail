@@ -163,8 +163,9 @@ func (h *CreditHandler) AdminAdjustCredits(c echo.Context) error {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
-	if req.Channel != "sms" && req.Channel != "whatsapp" && req.Channel != "email" && req.Channel != "telegram" && req.Channel != "messenger" {
-		return response.BadRequest(c, "Channel must be one of: sms, whatsapp, email, telegram, messenger")
+	if req.Channel != "sms" && req.Channel != "whatsapp" && req.Channel != "email" && req.Channel != "telegram" &&
+		req.Channel != "messenger" && req.Channel != "phone_sms" {
+		return response.BadRequest(c, "Channel must be one of: sms, whatsapp, email, telegram, messenger, phone_sms")
 	}
 
 	if req.Amount == 0 {
@@ -386,6 +387,20 @@ func ConfirmCredit(db *sqlx.DB, accountID int, channel string, amount float64, m
 func RefundCredit(db *sqlx.DB, accountID int, channel string, amount float64) {
 	db.Exec(`UPDATE api_credits SET balance = balance + $3, reserved = reserved - $3, updated_at = NOW()
 		WHERE account_id = $1 AND channel = $2`, accountID, channel, amount)
+}
+
+// RefundConfirmedCredit gives back credits already confirmed for a message,
+// for a send that failed after its provider took it (e.g. a Phone SMS the phone
+// couldn't send).
+func RefundConfirmedCredit(db *sqlx.DB, accountID int, channel string, amount float64, messageID int) {
+	var balance float64
+	if err := db.QueryRow(`UPDATE api_credits SET balance = balance + $3, updated_at = NOW()
+		WHERE account_id = $1 AND channel = $2 RETURNING balance`, accountID, channel, amount).Scan(&balance); err != nil {
+		return
+	}
+
+	db.Exec(`INSERT INTO api_credit_transactions (account_id, channel, type, amount, balance_after, message_id, description)
+		VALUES ($1, $2, 'refund', $3, $4, $5, 'Send failed')`, accountID, channel, amount, balance, messageID)
 }
 
 // GetCreditBalance returns the current balance for a channel. Returns 0 if not found.

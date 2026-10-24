@@ -199,14 +199,14 @@ const APIKeyManager = () => {
       {/* Credit Balances */}
       <Grid size={{ xs: 12 }}>
         <Grid container spacing={4}>
-          {['sms', 'whatsapp', 'email', 'telegram', 'messenger'].map(ch => {
+          {['sms', 'whatsapp', 'email', 'telegram', 'messenger', 'phone_sms'].map(ch => {
             const credit = getCreditForChannel(ch)
 
             return (
               <Grid size={{ xs: 12, sm: 6, md: 2 }} key={ch}>
                 <Card>
                   <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                    <Chip label={ch.toUpperCase()} color={getChannelColor(ch)} size='small' sx={{ mb: 2 }} />
+                    <Chip label={channelLabel(ch)} color={getChannelColor(ch)} size='small' sx={{ mb: 2 }} />
                     <Typography variant='h4' fontWeight='bold'>
                       {credit ? credit.balance.toLocaleString() : '0'}
                     </Typography>
@@ -223,26 +223,6 @@ const APIKeyManager = () => {
               </Grid>
             )
           })}
-          {/* Phone SMS has no credits: it sends from the account's own SIM, up to the
-              daily limit in Phone SMS settings. */}
-          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                <Chip
-                  label={channelLabel('phone_sms')}
-                  color={getChannelColor('phone_sms')}
-                  size='small'
-                  sx={{ mb: 2 }}
-                />
-                <Typography variant='h4' fontWeight='bold'>
-                  Own SIM
-                </Typography>
-                <Typography variant='body2' color='text.secondary'>
-                  No credits needed
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
         </Grid>
       </Grid>
 
@@ -493,7 +473,7 @@ const APIKeyManager = () => {
                     {
                       method: 'GET',
                       path: '/balance',
-                      desc: "Today's allowance: daily limit, sent today and how many are left"
+                      desc: "Phone SMS credit balance, and today's daily allowance"
                     },
                     {
                       method: 'GET',
@@ -597,8 +577,7 @@ const APIKeyManager = () => {
                       <TableCell>
                         Live sends use this account&apos;s prepaid API credits for the key&apos;s channel:{' '}
                         <strong>1 credit per message</strong>, reserved when the message is submitted and returned if
-                        the submission fails. Credits are added by the Nepal Fillings team. Phone SMS uses{' '}
-                        <strong>no credits</strong>: it sends from your own SIM, up to your phone&apos;s daily limit.
+                        the submission fails. Credits are added by the Nepal Fillings team.
                       </TableCell>
                     </TableRow>
                     <TableRow>
@@ -704,12 +683,12 @@ curl -X POST https://nepalfillings.com/api/v1/sms/send/bulk \\
 
               <Alert severity='info' sx={{ mb: 3 }}>
                 Messages go out from <strong>your own Android phone and SIM</strong> through the SMSGate app. Connect
-                the phone under Phone SMS &gt; Settings first. There are <strong>no credits</strong>: each send counts
-                toward your phone&apos;s <strong>daily limit</strong> (shared with Phone SMS campaigns, reset at
-                midnight Nepal time), and a call that doesn&apos;t fit is refused with{' '}
-                <code>429 DAILY_LIMIT_REACHED</code>. Messages are queued and handed to the phone one at a time, your
-                send gap apart (30 seconds by default), so a burst of calls can&apos;t get the SIM blocked. Keys start
-                with <code>nf_phonesms_</code>.
+                the phone under Phone SMS &gt; Settings first. Each message uses <strong>1 Phone SMS credit</strong>,
+                returned if it fails, and counts toward your phone&apos;s <strong>daily limit</strong> (shared with
+                Phone SMS campaigns, reset at midnight Nepal time); a call that doesn&apos;t fit is refused with{' '}
+                <code>402 INSUFFICIENT_CREDITS</code> or <code>429 DAILY_LIMIT_REACHED</code>. Messages are queued and
+                handed to the phone one at a time, your send gap apart (30 seconds by default), so a burst of calls
+                can&apos;t get the SIM blocked. Keys start with <code>nf_phonesms_</code>.
               </Alert>
 
               <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
@@ -733,7 +712,8 @@ curl -X POST https://nepalfillings.com/api/v1/phone-sms/send \\
     "message_id": "phone_sms_msg_123",
     "to": "9812345678",
     "status": "queued",
-    "credits_used": 0,
+    "credits_used": 1,
+    "credits_remaining": 499,
     "remaining_today": 87
   }
 }`}
@@ -756,6 +736,7 @@ curl -X POST https://nepalfillings.com/api/v1/phone-sms/send \\
     "to": "9812345678",
     "from": "SIM 1",
     "status": "delivered",
+    "credits_charged": 1,
     "error_code": null,
     "error_message": null,
     "reference": "order-1042",

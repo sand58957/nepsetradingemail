@@ -116,15 +116,12 @@ func (h *APIKeyHandler) CreateKey(c echo.Context) error {
 		return response.InternalError(c, "Failed to create API key")
 	}
 
-	// Ensure credit row exists for this channel. Phone SMS sends from the
-	// account's own SIM and uses no credits.
-	if req.Channel != "phone_sms" {
-		h.db.Exec(`
-			INSERT INTO api_credits (account_id, channel, balance, reserved)
-			VALUES ($1, $2, 0, 0)
-			ON CONFLICT (account_id, channel) DO NOTHING
-		`, accountID, req.Channel)
-	}
+	// Ensure credit row exists for this channel
+	h.db.Exec(`
+		INSERT INTO api_credits (account_id, channel, balance, reserved)
+		VALUES ($1, $2, 0, 0)
+		ON CONFLICT (account_id, channel) DO NOTHING
+	`, accountID, req.Channel)
 
 	// Auto-enable API access on the account; otherwise the new key is silently
 	// rejected by APIKeyAuth middleware with a 403.

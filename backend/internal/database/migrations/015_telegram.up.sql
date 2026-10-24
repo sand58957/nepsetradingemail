@@ -130,7 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_tg_group_members_contact ON telegram_contact_grou
 -- in dropping Messenger support. Removing that last messenger API key would
 -- have let this apply and silently broken the channel.
 -- phone_sms is Phone SMS (own SIM), whose API sends through the account's own
--- phone and uses no credits.
+-- phone.
 ALTER TABLE api_keys DROP CONSTRAINT IF EXISTS api_keys_channel_check;
 ALTER TABLE api_keys ADD CONSTRAINT api_keys_channel_check CHECK (channel IN ('sms', 'whatsapp', 'email', 'telegram', 'messenger', 'phone_sms'));
 

@@ -19,11 +19,12 @@ import (
 	"github.com/sandeep/nepsetradingemail/backend/pkg/response"
 )
 
-// The public API for Phone SMS (own SIM), at /api/v1/phone-sms. Unlike the other
-// channels it uses no credits: messages go out on the account's own SIM, up to
-// the daily limit set in Phone SMS settings. A send is queued and handed to the
-// phone in turn, the same gap apart as campaign messages, so a burst of API calls
-// can't get the SIM blocked by the operator.
+// The public API for Phone SMS (own SIM), at /api/v1/phone-sms. Messages go out
+// on the account's own SIM, up to the daily limit set in Phone SMS settings, and
+// use 1 Phone SMS API credit each, like the other channels: reserved when queued,
+// confirmed when the phone takes the message, and returned if it fails. A send is
+// queued and handed to the phone in turn, the same gap apart as campaign
+// messages, so a burst of API calls can't get the SIM blocked by the operator.
 
 const phoneSMSAPIMessagePrefix = "phone_sms_msg_"
 
@@ -34,6 +35,7 @@ type phoneSMSAPIMessage struct {
 	To           string     `json:"to" db:"to"`
 	From         *string    `json:"from" db:"from"` // the SIM it went out on
 	Status       string     `json:"status" db:"status"`
+	Credits      float64    `json:"credits_charged" db:"credits_charged"`
 	ErrorCode    *string    `json:"error_code" db:"error_code"`
 	ErrorMessage *string    `json:"error_message" db:"error_message"`
 	Reference    *string    `json:"reference" db:"reference"`
@@ -98,15 +100,17 @@ func (h *PhoneSMSHandler) APISend(c echo.Context) error {
 	}
 
 	data := map[string]interface{}{
-		"message_id":      phoneSMSAPIMessagePrefix + strconv.Itoa(ids[0]),
-		"to":              to,
-		"status":          "queued",
-		"credits_used":    0,
-		"remaining_today": remaining,
+		"message_id":        phoneSMSAPIMessagePrefix + strconv.Itoa(ids[0]),
+		"to":                to,
+		"status":            "queued",
+		"credits_used":      1,
+		"credits_remaining": GetCreditBalance(h.db, keyInfo.AccountID, "phone_sms"),
+		"remaining_today":   remaining,
 	}
 
 	if keyInfo.IsTest {
 		data["status"] = "test"
+		data["credits_used"] = 0
 		data["test_mode"] = true
 	}
 
@@ -179,15 +183,17 @@ func (h *PhoneSMSHandler) APISendBulk(c echo.Context) error {
 	}
 
 	data := map[string]interface{}{
-		"total":           len(ids),
-		"queued":          len(ids),
-		"message_ids":     messageIDs,
-		"credits_used":    0,
-		"remaining_today": remaining,
+		"total":             len(ids),
+		"queued":            len(ids),
+		"message_ids":       messageIDs,
+		"credits_used":      len(ids),
+		"credits_remaining": GetCreditBalance(h.db, keyInfo.AccountID, "phone_sms"),
+		"remaining_today":   remaining,
 	}
 
 	if keyInfo.IsTest {
 		data["queued"] = 0
+		data["credits_used"] = 0
 		data["test_mode"] = true
 	}
 
@@ -202,10 +208,11 @@ type phoneSMSAPIFailure struct {
 
 var phoneSMSQueueFailed = &phoneSMSAPIFailure{http.StatusInternalServerError, "PROVIDER_ERROR", "Could not queue the message, so it was not sent."}
 
-// apiQueue records the messages and starts the account's sender. It refuses the
-// whole call when the phone's daily allowance can't take all of them. remaining
-// is what is left of today's allowance afterwards, nil when there is no limit.
-// A test key records the messages as "test" and sends nothing.
+// apiQueue reserves a credit for each message, records them and starts the
+// account's sender. It refuses the whole call when the phone's daily allowance
+// or the credit balance can't take all of them. remaining is what is left of
+// today's allowance afterwards, nil when there is no limit. A test key records
+// the messages as "test", sends nothing and uses no credits.
 func (h *PhoneSMSHandler) apiQueue(keyInfo *mw.APIKeyInfo, msgs []phoneSMSOutgoing) ([]int, *int, *phoneSMSAPIFailure) {
 	accountID := keyInfo.AccountID
 
@@ -230,9 +237,29 @@ func (h *PhoneSMSHandler) apiQueue(keyInfo *mw.APIKeyInfo, msgs []phoneSMSOutgoi
 		*remaining -= len(msgs)
 	}
 
+	perMessage := 0.0
+	if !keyInfo.IsTest {
+		perMessage = 1
+		total := perMessage * float64(len(msgs))
+
+		if _, err := ReserveCredit(h.db, accountID, "phone_sms", total); err != nil {
+			return nil, nil, &phoneSMSAPIFailure{http.StatusPaymentRequired, "INSUFFICIENT_CREDITS",
+				fmt.Sprintf("Phone SMS credit balance too low. Need %.0f, have %.0f", total, GetCreditBalance(h.db, accountID, "phone_sms"))}
+		}
+	}
+
+	// Nothing was queued: the reserved credits go back.
+	queueFailed := func() ([]int, *int, *phoneSMSAPIFailure) {
+		if perMessage > 0 {
+			RefundCredit(h.db, accountID, "phone_sms", perMessage*float64(len(msgs)))
+		}
+
+		return nil, nil, phoneSMSQueueFailed
+	}
+
 	tx, err := h.db.Beginx()
 	if err != nil {
-		return nil, nil, phoneSMSQueueFailed
+		return queueFailed()
 	}
 	defer tx.Rollback()
 
@@ -249,16 +276,16 @@ func (h *PhoneSMSHandler) apiQueue(keyInfo *mw.APIKeyInfo, msgs []phoneSMSOutgoi
 
 		if err := tx.QueryRow(`
 			INSERT INTO api_messages (account_id, api_key_id, channel, "to", content_preview, status, credits_charged, webhook_url, reference, metadata)
-			VALUES ($1, $2, 'phone_sms', $3, $4, $5, 0, $6, $7, $8::jsonb) RETURNING id
-		`, accountID, keyInfo.KeyID, m.To, truncate(m.Text, 200), status, keyInfo.WebhookURL, m.Reference, metadata).Scan(&ids[i]); err != nil {
+			VALUES ($1, $2, 'phone_sms', $3, $4, $5, $6, $7, $8, $9::jsonb) RETURNING id
+		`, accountID, keyInfo.KeyID, m.To, truncate(m.Text, 200), status, perMessage, keyInfo.WebhookURL, m.Reference, metadata).Scan(&ids[i]); err != nil {
 			log.Printf("[phone-sms] API: account %d: queueing a message: %v", accountID, err)
 
-			return nil, nil, phoneSMSQueueFailed
+			return queueFailed()
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, nil, phoneSMSQueueFailed
+		return queueFailed()
 	}
 
 	if !keyInfo.IsTest {
@@ -367,9 +394,10 @@ func (h *PhoneSMSHandler) sendQueuedAPIMessages(accountID int) bool {
 			ID       int             `db:"id"`
 			To       string          `db:"to"`
 			Metadata json.RawMessage `db:"metadata"`
+			Charged  float64         `db:"credits_charged"`
 		}
 
-		err := h.db.Get(&next, `SELECT id, "to", metadata FROM api_messages
+		err := h.db.Get(&next, `SELECT id, "to", metadata, credits_charged FROM api_messages
 			WHERE account_id = $1 AND channel = 'phone_sms' AND status = 'queued'
 			ORDER BY id LIMIT 1`, accountID)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -387,7 +415,7 @@ func (h *PhoneSMSHandler) sendQueuedAPIMessages(accountID int) bool {
 		json.Unmarshal(next.Metadata, &meta)
 
 		if meta.Text == "" {
-			h.failAPIMessage(next.ID, "VALIDATION_ERROR", "The message has no text")
+			h.failAPIMessage(accountID, next.ID, "VALIDATION_ERROR", "The message has no text")
 			continue
 		}
 
@@ -414,7 +442,7 @@ func (h *PhoneSMSHandler) sendQueuedAPIMessages(accountID int) bool {
 
 		if err != nil {
 			if smsgate.RecipientProblem(err) {
-				h.failAPIMessage(next.ID, "INVALID_RECIPIENT", err.Error())
+				h.failAPIMessage(accountID, next.ID, "INVALID_RECIPIENT", err.Error())
 				continue
 			}
 
@@ -429,28 +457,57 @@ func (h *PhoneSMSHandler) sendQueuedAPIMessages(accountID int) bool {
 		h.db.Exec(`UPDATE api_messages SET status = 'submitted', provider_message_id = $2, "from" = $3,
 			metadata = metadata - 'text', sent_at = NOW(), updated_at = NOW()
 			WHERE id = $1 AND status = 'queued'`, next.ID, state.ID, simLabel(settings.SimNumber))
+
+		// The phone has it: the reserved credit is spent.
+		if next.Charged > 0 {
+			ConfirmCredit(h.db, accountID, "phone_sms", next.Charged, next.ID)
+		}
 	}
 }
 
-func (h *PhoneSMSHandler) failAPIMessage(id int, code, reason string) {
-	h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_code = $2, error_message = $3,
-		metadata = metadata - 'text', updated_at = NOW() WHERE id = $1`, id, code, reason)
+// failAPIMessage closes a queued message as failed and returns its reserved credit.
+func (h *PhoneSMSHandler) failAPIMessage(accountID, id int, code, reason string) {
+	var charged float64
+
+	err := h.db.QueryRow(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_code = $3, error_message = $4,
+		metadata = metadata - 'text', updated_at = NOW()
+		FROM (SELECT id AS qid, credits_charged AS charged FROM api_messages WHERE id = $1 AND account_id = $2) q
+		WHERE api_messages.id = q.qid AND api_messages.status = 'queued'
+		RETURNING q.charged`, id, accountID, code, reason).Scan(&charged)
+	if err == nil && charged > 0 {
+		RefundCredit(h.db, accountID, "phone_sms", charged)
+	}
 }
 
+// failQueuedAPIMessages closes all the account's queued messages as failed and
+// returns their reserved credits.
 func (h *PhoneSMSHandler) failQueuedAPIMessages(accountID int, code, reason string) {
-	h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_code = $2, error_message = $3,
-		metadata = metadata - 'text', updated_at = NOW()
-		WHERE account_id = $1 AND channel = 'phone_sms' AND status = 'queued'`, accountID, code, reason)
+	var charged float64
+
+	err := h.db.Get(&charged, `
+		WITH failed AS (
+			UPDATE api_messages SET status = 'failed', credits_charged = 0, error_code = $2, error_message = $3,
+				metadata = metadata - 'text', updated_at = NOW()
+			FROM (SELECT id AS qid, credits_charged AS charged FROM api_messages
+			      WHERE account_id = $1 AND channel = 'phone_sms' AND status = 'queued') q
+			WHERE api_messages.id = q.qid AND api_messages.status = 'queued'
+			RETURNING q.charged
+		)
+		SELECT COALESCE(SUM(charged), 0) FROM failed`, accountID, code, reason)
+	if err == nil && charged > 0 {
+		RefundCredit(h.db, accountID, "phone_sms", charged)
+	}
 }
 
 // recordAPIStatus applies the phone's sent, delivered or failed report to an API
 // message of the account. Like campaign messages, a message never moves back.
 func (h *PhoneSMSHandler) recordAPIStatus(accountID int, event string, p smsgate.SmsPayload) {
 	var msg struct {
-		ID     int    `db:"id"`
-		Status string `db:"status"`
+		ID      int     `db:"id"`
+		Status  string  `db:"status"`
+		Charged float64 `db:"credits_charged"`
 	}
-	if err := h.db.Get(&msg, `SELECT id, status FROM api_messages
+	if err := h.db.Get(&msg, `SELECT id, status, credits_charged FROM api_messages
 		WHERE account_id = $1 AND channel = 'phone_sms' AND provider_message_id = $2
 		ORDER BY id DESC LIMIT 1`, accountID, p.MessageID); err != nil {
 		return // a test message, or one sent from the phone by hand
@@ -485,8 +542,17 @@ func (h *PhoneSMSHandler) recordAPIStatus(accountID int, event string, p smsgate
 			reason = "The phone could not send it"
 		}
 
-		h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_code = 'SEND_FAILED', error_message = $2,
-			updated_at = NOW() WHERE id = $1`, msg.ID, reason)
+		// The phone couldn't send it, so its credit comes back. Conditional, so a
+		// report delivered twice refunds once.
+		res, err := h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_code = 'SEND_FAILED', error_message = $2,
+			updated_at = NOW() WHERE id = $1 AND status NOT IN ('failed', 'delivered')`, msg.ID, reason)
+		if err != nil {
+			return
+		}
+
+		if n, _ := res.RowsAffected(); n == 1 && msg.Charged > 0 {
+			RefundConfirmedCredit(h.db, accountID, "phone_sms", msg.Charged, msg.ID)
+		}
 	}
 }
 
@@ -508,7 +574,7 @@ func (h *PhoneSMSHandler) APIGetMessage(c echo.Context) error {
 
 	var msg phoneSMSAPIMessage
 	if err := h.db.Get(&msg, `
-		SELECT id, "to", "from", status, error_code, error_message, reference, created_at, sent_at, delivered_at
+		SELECT id, "to", "from", status, credits_charged, error_code, error_message, reference, created_at, sent_at, delivered_at
 		FROM api_messages WHERE id = $1 AND account_id = $2 AND channel = 'phone_sms'`, id, keyInfo.AccountID); err != nil {
 		return apiError(c, http.StatusNotFound, "NOT_FOUND", "Message not found", "")
 	}
@@ -537,7 +603,7 @@ func (h *PhoneSMSHandler) APIListMessages(c echo.Context) error {
 
 	messages := []phoneSMSAPIMessage{}
 	h.db.Select(&messages, `
-		SELECT id, "to", "from", status, error_code, error_message, reference, created_at, sent_at, delivered_at
+		SELECT id, "to", "from", status, credits_charged, error_code, error_message, reference, created_at, sent_at, delivered_at
 		FROM api_messages WHERE account_id = $1 AND channel = 'phone_sms'
 		ORDER BY id DESC LIMIT $2 OFFSET $3`, keyInfo.AccountID, perPage, (page-1)*perPage)
 
@@ -548,7 +614,7 @@ func (h *PhoneSMSHandler) APIListMessages(c echo.Context) error {
 	return response.Paginated(c, messages, total, page, perPage)
 }
 
-// APIBalance reports the phone's daily allowance; this channel has no credits.
+// APIBalance reports the Phone SMS credit balance and the phone's daily allowance.
 func (h *PhoneSMSHandler) APIBalance(c echo.Context) error {
 	keyInfo := mw.GetAPIKeyInfo(c)
 	if keyInfo == nil {
@@ -558,7 +624,8 @@ func (h *PhoneSMSHandler) APIBalance(c echo.Context) error {
 	now := phoneSMSNow()
 	data := map[string]interface{}{
 		"channel":        "phone_sms",
-		"credit_per_sms": 0,
+		"balance":        GetCreditBalance(h.db, keyInfo.AccountID, "phone_sms"),
+		"credit_per_sms": 1,
 		"sent_today":     h.sentToday(keyInfo.AccountID, now),
 		"queued":         h.queuedAPIMessages(keyInfo.AccountID),
 		"resets_at":      phoneSMSDayStart(now).AddDate(0, 0, 1),

@@ -74,7 +74,7 @@ export interface AdminCreditEntry {
 }
 
 export interface AdminAdjustRequest {
-  channel: 'sms' | 'whatsapp' | 'email' | 'telegram' | 'messenger'
+  channel: 'sms' | 'whatsapp' | 'email' | 'telegram' | 'messenger' | 'phone_sms'
   amount: number
   description: string
 }

@@ -39,7 +39,10 @@ import { creditService } from '@/services/apicredits'
 import api from '@/services/api'
 import type { AdminCreditEntry, CreditTransaction } from '@/types/api'
 
-const CHANNELS = ['sms', 'whatsapp', 'email', 'telegram', 'messenger'] as const
+const CHANNELS = ['sms', 'whatsapp', 'email', 'telegram', 'messenger', 'phone_sms'] as const
+
+// phone_sms is Phone SMS (own SIM); the others read as they are.
+const channelLabel = (channel: string) => (channel === 'phone_sms' ? 'PHONE SMS' : channel.toUpperCase())
 
 const AdminCreditManager = () => {
   const [credits, setCredits] = useState<AdminCreditEntry[]>([])
@@ -123,7 +126,7 @@ const AdminCreditManager = () => {
 
       setSnackbar({
         open: true,
-        message: `${amount} ${giveChannel.toUpperCase()} credits added to ${selectedUser.name || selectedUser.email}. New balance: ${res.data.new_balance}`,
+        message: `${amount} ${channelLabel(giveChannel)} credits added to ${selectedUser.name || selectedUser.email}. New balance: ${res.data.new_balance}`,
         severity: 'success'
       })
       setGiveOpen(false)
@@ -230,6 +233,7 @@ const AdminCreditManager = () => {
     if (channel === 'sms') return 'primary'
     if (channel === 'whatsapp') return 'success'
     if (channel === 'telegram') return 'info'
+    if (channel === 'phone_sms') return 'info'
 
     return 'warning'
   }
@@ -303,7 +307,7 @@ const AdminCreditManager = () => {
                             >
                               <Box>
                                 <Chip
-                                  label={credit.channel.toUpperCase()}
+                                  label={channelLabel(credit.channel)}
                                   color={getChannelColor(credit.channel)}
                                   size='small'
                                 />
@@ -364,7 +368,7 @@ const AdminCreditManager = () => {
                           <TableCell>{new Date(txn.created_at).toLocaleString()}</TableCell>
                           <TableCell>{txn.account_id}</TableCell>
                           <TableCell>
-                            <Chip label={txn.channel.toUpperCase()} color={getChannelColor(txn.channel)} size='small' />
+                            <Chip label={channelLabel(txn.channel)} color={getChannelColor(txn.channel)} size='small' />
                           </TableCell>
                           <TableCell>
                             <Chip label={txn.type.replace('_', ' ')} size='small' variant='outlined' />
@@ -414,7 +418,7 @@ const AdminCreditManager = () => {
                           <TableCell>{msg.created_at ? new Date(msg.created_at).toLocaleString() : '-'}</TableCell>
                           <TableCell>{msg.account_name || msg.account_id}</TableCell>
                           <TableCell>
-                            <Chip label={(msg.channel || '').toUpperCase()} size='small' />
+                            <Chip label={channelLabel(msg.channel || '')} size='small' />
                           </TableCell>
                           <TableCell>{msg.to}</TableCell>
                           <TableCell>
@@ -447,7 +451,7 @@ const AdminCreditManager = () => {
                 <Select value={adjustChannel} label='Channel' onChange={e => setAdjustChannel(e.target.value as any)}>
                   {CHANNELS.map(ch => (
                     <MenuItem key={ch} value={ch}>
-                      {ch.toUpperCase()}
+                      {channelLabel(ch)}
                     </MenuItem>
                   ))}
                 </Select>
@@ -621,7 +625,7 @@ const AdminCreditManager = () => {
                 <Select value={giveChannel} label='Channel' onChange={e => setGiveChannel(e.target.value as any)}>
                   {CHANNELS.map(ch => (
                     <MenuItem key={ch} value={ch}>
-                      {ch.toUpperCase()}
+                      {channelLabel(ch)}
                     </MenuItem>
                   ))}
                 </Select>
@@ -667,7 +671,7 @@ const AdminCreditManager = () => {
               disabled={giving || !giveAmount || !giveDescription.trim()}
               startIcon={giving ? <CircularProgress size={18} /> : <i className='tabler-send' />}
             >
-              {giving ? 'Giving...' : `Give ${giveAmount || '0'} ${giveChannel.toUpperCase()} Credits`}
+              {giving ? 'Giving...' : `Give ${giveAmount || '0'} ${channelLabel(giveChannel)} Credits`}
             </Button>
           )}
         </DialogActions>
