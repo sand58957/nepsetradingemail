@@ -366,6 +366,67 @@ func (s *Server) RegisterRoutes() {
 	smsAnalytics.GET("/campaigns/:id", smsHandler.GetCampaignAnalytics)
 
 	// ==============================================================
+	// Phone SMS (own SIM) — a separate copy of SMS Marketing that sends
+	// through the account's own Android phone with SMSGate
+	// ==============================================================
+	phoneSMSHandler := handlers.NewPhoneSMSHandler(s.DB, s.Config.FrontendURL)
+
+	// Campaigns that were sending when the process stopped carry on, and ones
+	// held by the daily limit carry on the next morning.
+	go phoneSMSHandler.ResumeInterruptedCampaigns()
+	go phoneSMSHandler.StartAutoResume(context.Background(), time.Minute)
+
+	phoneSMS := staff.Group("/phone-sms")
+	phoneSMS.GET("/settings", phoneSMSHandler.GetSettings)
+	phoneSMS.PUT("/settings", phoneSMSHandler.UpdateSettings)
+	phoneSMS.POST("/settings/test", phoneSMSHandler.TestConnection)
+	phoneSMS.GET("/devices", phoneSMSHandler.ListDevices)
+	phoneSMS.GET("/inbox", phoneSMSHandler.ListInbox)
+
+	phoneSMSContacts := phoneSMS.Group("/contacts")
+	phoneSMSContacts.GET("", phoneSMSHandler.ListContacts)
+	phoneSMSContacts.POST("", phoneSMSHandler.CreateContact)
+	phoneSMSContacts.PUT("/:id", phoneSMSHandler.UpdateContact)
+	phoneSMSContacts.DELETE("/:id", phoneSMSHandler.DeleteContact)
+	phoneSMSContacts.POST("/import", phoneSMSHandler.ImportContacts)
+	phoneSMSContacts.GET("/export", phoneSMSHandler.ExportContacts)
+	phoneSMSContacts.GET("/tags", phoneSMSHandler.ListContactTags)
+	phoneSMSContacts.POST("/tags", phoneSMSHandler.CreateContactTag)
+	phoneSMSContacts.DELETE("/tags/:tag", phoneSMSHandler.DeleteContactTag)
+	phoneSMSContacts.GET("/stats", phoneSMSHandler.GetContactStats)
+
+	phoneSMSCampaigns := phoneSMS.Group("/campaigns")
+	phoneSMSCampaigns.GET("", phoneSMSHandler.ListCampaigns)
+	phoneSMSCampaigns.GET("/:id", phoneSMSHandler.GetCampaign)
+	phoneSMSCampaigns.POST("", phoneSMSHandler.CreateCampaign)
+	phoneSMSCampaigns.PUT("/:id", phoneSMSHandler.UpdateCampaign)
+	phoneSMSCampaigns.DELETE("/:id", phoneSMSHandler.DeleteCampaign)
+	phoneSMSCampaigns.POST("/:id/send", phoneSMSHandler.SendCampaign)
+	phoneSMSCampaigns.POST("/:id/test", phoneSMSHandler.TestCampaign)
+	phoneSMSCampaigns.POST("/:id/pause", phoneSMSHandler.PauseCampaign)
+	phoneSMSCampaigns.POST("/:id/resume", phoneSMSHandler.ResumeCampaign)
+	phoneSMSCampaigns.POST("/audience-count", phoneSMSHandler.GetAudienceCount)
+
+	phoneSMSGroups := phoneSMS.Group("/groups")
+	phoneSMSGroups.GET("", phoneSMSHandler.ListGroups)
+	phoneSMSGroups.GET("/:id", phoneSMSHandler.GetGroup)
+	phoneSMSGroups.POST("", phoneSMSHandler.CreateGroup)
+	phoneSMSGroups.PUT("/:id", phoneSMSHandler.UpdateGroup)
+	phoneSMSGroups.DELETE("/:id", phoneSMSHandler.DeleteGroup)
+	phoneSMSGroups.GET("/:id/members", phoneSMSHandler.ListGroupMembers)
+	phoneSMSGroups.POST("/:id/members", phoneSMSHandler.AddGroupMembers)
+	phoneSMSGroups.DELETE("/:id/members", phoneSMSHandler.RemoveGroupMembers)
+
+	phoneSMSAnalytics := phoneSMS.Group("/analytics")
+	phoneSMSAnalytics.GET("/overview", phoneSMSHandler.GetOverview)
+	phoneSMSAnalytics.GET("/campaigns/:id", phoneSMSHandler.GetCampaignAnalytics)
+
+	// The phone posts delivery reports and replies here. No login: the secret
+	// token in the address (and the signing key, when set) identifies the account.
+	phoneSMSWebhookLimiter := middleware.NewRateLimiter(300, 60)
+	api.POST("/public/phone-sms/webhook/:token", phoneSMSHandler.Webhook, phoneSMSWebhookLimiter.Middleware())
+
+	// ==============================================================
 	// Telegram Marketing — all authenticated users (account-scoped)
 	// ==============================================================
 	tgHandler := handlers.NewTelegramHandler(s.DB, s.Config)

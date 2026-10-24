@@ -46,6 +46,7 @@ type SectionVisibility = {
   email: boolean
   whatsapp: boolean
   sms: boolean
+  phoneSms: boolean
   telegram: boolean
   messenger: boolean
 }
@@ -56,6 +57,7 @@ const getDefaultVisibility = (): SectionVisibility => ({
   email: true,
   whatsapp: true,
   sms: true,
+  phoneSms: true,
   telegram: true,
   messenger: true
 })
@@ -270,6 +272,47 @@ const VerticalMenu = ({ scrollMenu, role }: Props) => {
           ) : (
             <MenuItem icon={<i className='tabler-eye' />} onClick={() => toggleSection('sms')}>
               Show SMS Marketing
+            </MenuItem>
+          )}
+        </MenuSection>
+
+        {/* Phone SMS (own SIM) Section — sends through the account's own phone with SMSGate */}
+        <MenuSection
+          label={
+            <span style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              Phone SMS (Own SIM)
+              <SectionToggle section='phoneSms' visible={visibility.phoneSms} />
+            </span>
+          }
+        >
+          {visibility.phoneSms ? (
+            <>
+              <MenuItem href={`/${locale}/phone-sms`} icon={<i className='tabler-device-mobile-message' />}>
+                Dashboard
+              </MenuItem>
+              <MenuItem href={`/${locale}/phone-sms/contacts`} icon={<i className='tabler-address-book' />}>
+                Contacts
+              </MenuItem>
+              <MenuItem href={`/${locale}/phone-sms/groups`} icon={<i className='tabler-users-group' />}>
+                Groups
+              </MenuItem>
+              <SubMenu label='Campaigns' icon={<i className='tabler-speakerphone' />}>
+                <MenuItem href={`/${locale}/phone-sms/campaigns`}>All Campaigns</MenuItem>
+                <MenuItem href={`/${locale}/phone-sms/campaigns/create`}>Create New</MenuItem>
+              </SubMenu>
+              <MenuItem href={`/${locale}/phone-sms/inbox`} icon={<i className='tabler-inbox' />}>
+                Inbox
+              </MenuItem>
+              <MenuItem href={`/${locale}/phone-sms/analytics`} icon={<i className='tabler-chart-dots-3' />}>
+                Analytics
+              </MenuItem>
+              <MenuItem href={`/${locale}/phone-sms/settings`} icon={<i className='tabler-settings' />}>
+                Settings
+              </MenuItem>
+            </>
+          ) : (
+            <MenuItem icon={<i className='tabler-eye' />} onClick={() => toggleSection('phoneSms')}>
+              Show Phone SMS
             </MenuItem>
           )}
         </MenuSection>
