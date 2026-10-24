@@ -2,7 +2,7 @@
 export interface APIKey {
   id: number
   account_id: number
-  channel: 'sms' | 'whatsapp' | 'email' | 'telegram' | 'messenger'
+  channel: 'sms' | 'whatsapp' | 'email' | 'telegram' | 'messenger' | 'phone_sms'
   key_prefix: string
   name: string
   is_test: boolean
@@ -16,7 +16,7 @@ export interface APIKey {
 }
 
 export interface APIKeyCreateRequest {
-  channel: 'sms' | 'whatsapp' | 'email' | 'telegram' | 'messenger'
+  channel: 'sms' | 'whatsapp' | 'email' | 'telegram' | 'messenger' | 'phone_sms'
   name: string
   is_test: boolean
   rate_limit?: number

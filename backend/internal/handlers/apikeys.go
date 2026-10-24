@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -76,8 +77,9 @@ func (h *APIKeyHandler) CreateKey(c echo.Context) error {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
-	if req.Channel != "sms" && req.Channel != "whatsapp" && req.Channel != "email" && req.Channel != "telegram" && req.Channel != "messenger" {
-		return response.BadRequest(c, "Channel must be one of: sms, whatsapp, email, telegram, messenger")
+	if req.Channel != "sms" && req.Channel != "whatsapp" && req.Channel != "email" && req.Channel != "telegram" &&
+		req.Channel != "messenger" && req.Channel != "phone_sms" {
+		return response.BadRequest(c, "Channel must be one of: sms, whatsapp, email, telegram, messenger, phone_sms")
 	}
 
 	if req.Name == "" {
@@ -114,12 +116,15 @@ func (h *APIKeyHandler) CreateKey(c echo.Context) error {
 		return response.InternalError(c, "Failed to create API key")
 	}
 
-	// Ensure credit row exists for this channel
-	h.db.Exec(`
-		INSERT INTO api_credits (account_id, channel, balance, reserved)
-		VALUES ($1, $2, 0, 0)
-		ON CONFLICT (account_id, channel) DO NOTHING
-	`, accountID, req.Channel)
+	// Ensure credit row exists for this channel. Phone SMS sends from the
+	// account's own SIM and uses no credits.
+	if req.Channel != "phone_sms" {
+		h.db.Exec(`
+			INSERT INTO api_credits (account_id, channel, balance, reserved)
+			VALUES ($1, $2, 0, 0)
+			ON CONFLICT (account_id, channel) DO NOTHING
+		`, accountID, req.Channel)
+	}
 
 	// Auto-enable API access on the account; otherwise the new key is silently
 	// rejected by APIKeyAuth middleware with a 403.
@@ -253,6 +258,11 @@ func generateAPIKey(channel string, isTest bool) (string, string, string) {
 	randomBytes := make([]byte, 32)
 	rand.Read(randomBytes)
 	randomPart := base64.RawURLEncoding.EncodeToString(randomBytes)
+
+	// The key names the channel in one segment, because the auth middleware
+	// splits on "_" to find where the random part starts: phone_sms keys are
+	// nf_phonesms_….
+	channel = strings.ReplaceAll(channel, "_", "")
 
 	// Build key: nf_<channel>_<random> or nf_test_<channel>_<random>
 	var rawKey string

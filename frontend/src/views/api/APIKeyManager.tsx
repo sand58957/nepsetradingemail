@@ -38,7 +38,7 @@ import Divider from '@mui/material/Divider'
 import { apiKeyService } from '@/services/apikeys'
 import { creditService } from '@/services/apicredits'
 import whatsappService from '@/services/whatsapp'
-import type { APIKey, CreditBalance, CreditTransaction } from '@/types/api'
+import type { APIKey, APIKeyCreateRequest, CreditBalance, CreditTransaction } from '@/types/api'
 import type { WANumber } from '@/types/whatsapp'
 
 const APIKeyManager = () => {
@@ -55,7 +55,7 @@ const APIKeyManager = () => {
 
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false)
-  const [createChannel, setCreateChannel] = useState<'sms' | 'whatsapp' | 'email' | 'telegram' | 'messenger'>('sms')
+  const [createChannel, setCreateChannel] = useState<APIKeyCreateRequest['channel']>('sms')
   const [createName, setCreateName] = useState('')
   const [createIsTest, setCreateIsTest] = useState(false)
   const [createWebhook, setCreateWebhook] = useState('')
@@ -183,9 +183,12 @@ const APIKeyManager = () => {
     if (channel === 'whatsapp') return 'success'
     if (channel === 'telegram') return 'info'
     if (channel === 'messenger') return 'secondary'
+    if (channel === 'phone_sms') return 'info'
 
     return 'warning'
   }
+
+  const channelLabel = (channel: string) => (channel === 'phone_sms' ? 'PHONE SMS' : channel.toUpperCase())
 
   const getCreditForChannel = (channel: string) => {
     return credits.find(c => c.channel === channel)
@@ -200,7 +203,7 @@ const APIKeyManager = () => {
             const credit = getCreditForChannel(ch)
 
             return (
-              <Grid size={{ xs: 12, sm: 6, md: 2.4 }} key={ch}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }} key={ch}>
                 <Card>
                   <CardContent sx={{ textAlign: 'center', py: 4 }}>
                     <Chip label={ch.toUpperCase()} color={getChannelColor(ch)} size='small' sx={{ mb: 2 }} />
@@ -220,6 +223,26 @@ const APIKeyManager = () => {
               </Grid>
             )
           })}
+          {/* Phone SMS has no credits: it sends from the account's own SIM, up to the
+              daily limit in Phone SMS settings. */}
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                <Chip
+                  label={channelLabel('phone_sms')}
+                  color={getChannelColor('phone_sms')}
+                  size='small'
+                  sx={{ mb: 2 }}
+                />
+                <Typography variant='h4' fontWeight='bold'>
+                  Own SIM
+                </Typography>
+                <Typography variant='body2' color='text.secondary'>
+                  No credits needed
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
       </Grid>
 
@@ -247,6 +270,7 @@ const APIKeyManager = () => {
                     <MenuItem value='email'>Email</MenuItem>
                     <MenuItem value='telegram'>Telegram</MenuItem>
                     <MenuItem value='messenger'>Messenger</MenuItem>
+                    <MenuItem value='phone_sms'>Phone SMS (Own SIM)</MenuItem>
                   </Select>
                 </FormControl>
                 <Button
@@ -284,7 +308,7 @@ const APIKeyManager = () => {
                         <TableRow key={key.id}>
                           <TableCell>{key.name}</TableCell>
                           <TableCell>
-                            <Chip label={key.channel.toUpperCase()} color={getChannelColor(key.channel)} size='small' />
+                            <Chip label={channelLabel(key.channel)} color={getChannelColor(key.channel)} size='small' />
                           </TableCell>
                           <TableCell>
                             <Typography variant='body2' fontFamily='monospace' fontSize={12}>
@@ -387,7 +411,7 @@ const APIKeyManager = () => {
                         <TableRow key={txn.id}>
                           <TableCell>{new Date(txn.created_at).toLocaleString()}</TableCell>
                           <TableCell>
-                            <Chip label={txn.channel.toUpperCase()} color={getChannelColor(txn.channel)} size='small' />
+                            <Chip label={channelLabel(txn.channel)} color={getChannelColor(txn.channel)} size='small' />
                           </TableCell>
                           <TableCell>
                             <Chip
@@ -452,6 +476,30 @@ const APIKeyManager = () => {
                     { method: 'GET', path: '/messages/:id', desc: 'Status of one message' },
                     { method: 'GET', path: '/balance', desc: 'SMS credit balance' },
                     { method: 'GET', path: '/status', desc: 'Whether the channel is configured' }
+                  ]
+                },
+                {
+                  title: 'Phone SMS (Own SIM)',
+                  base: '/api/v1/phone-sms',
+                  endpoints: [
+                    { method: 'POST', path: '/send', desc: 'Queue one SMS to go out from your own phone' },
+                    { method: 'POST', path: '/send/bulk', desc: 'Queue up to 100 SMS; they go out one at a time' },
+                    { method: 'GET', path: '/messages', desc: 'List messages you have sent, with status' },
+                    {
+                      method: 'GET',
+                      path: '/messages/:id',
+                      desc: 'Status of one message: queued, submitted, sent, delivered or failed'
+                    },
+                    {
+                      method: 'GET',
+                      path: '/balance',
+                      desc: "Today's allowance: daily limit, sent today and how many are left"
+                    },
+                    {
+                      method: 'GET',
+                      path: '/status',
+                      desc: 'Whether your phone is connected, and when SMSGate last saw it'
+                    }
                   ]
                 },
                 {
@@ -548,8 +596,9 @@ const APIKeyManager = () => {
                       <TableCell sx={{ fontWeight: 'bold', width: 180 }}>Credits</TableCell>
                       <TableCell>
                         Live sends use this account&apos;s prepaid API credits for the key&apos;s channel:{' '}
-                        <strong>1 credit per message</strong>, reserved when the message is submitted and returned if the
-                        submission fails. Credits are added by the Nepal Fillings team.
+                        <strong>1 credit per message</strong>, reserved when the message is submitted and returned if
+                        the submission fails. Credits are added by the Nepal Fillings team. Phone SMS uses{' '}
+                        <strong>no credits</strong>: it sends from your own SIM, up to your phone&apos;s daily limit.
                       </TableCell>
                     </TableRow>
                     <TableRow>
@@ -645,6 +694,82 @@ curl -X POST https://nepalfillings.com/api/v1/sms/send/bulk \\
               <Typography variant='body2' sx={{ mt: 2 }}>
                 Also: <code>GET /api/v1/sms/balance</code>, <code>GET /api/v1/sms/messages</code>,{' '}
                 <code>GET /api/v1/sms/messages/:id</code> and <code>GET /api/v1/sms/status</code>.
+              </Typography>
+
+              {/* ============== Phone SMS ============== */}
+              <Divider sx={{ my: 3 }} />
+              <Typography variant='h6' gutterBottom>
+                Phone SMS (Own SIM)
+              </Typography>
+
+              <Alert severity='info' sx={{ mb: 3 }}>
+                Messages go out from <strong>your own Android phone and SIM</strong> through the SMSGate app. Connect
+                the phone under Phone SMS &gt; Settings first. There are <strong>no credits</strong>: each send counts
+                toward your phone&apos;s <strong>daily limit</strong> (shared with Phone SMS campaigns, reset at
+                midnight Nepal time), and a call that doesn&apos;t fit is refused with{' '}
+                <code>429 DAILY_LIMIT_REACHED</code>. Messages are queued and handed to the phone one at a time, your
+                send gap apart (30 seconds by default), so a burst of calls can&apos;t get the SIM blocked. Keys start
+                with <code>nf_phonesms_</code>.
+              </Alert>
+
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom>
+                Send one SMS
+              </Typography>
+              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
+                {`# "to" can be 98XXXXXXXX or +977 98XXXXXXXX.
+curl -X POST https://nepalfillings.com/api/v1/phone-sms/send \\
+  -H "Authorization: Bearer nf_phonesms_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to": "9812345678",
+    "message": "Your order #1042 has shipped.",
+    "reference": "order-1042"
+  }'
+
+# Response: queued now, handed to your phone in its turn.
+{
+  "success": true,
+  "data": {
+    "message_id": "phone_sms_msg_123",
+    "to": "9812345678",
+    "status": "queued",
+    "credits_used": 0,
+    "remaining_today": 87
+  }
+}`}
+              </Box>
+
+              <Typography variant='subtitle1' fontWeight='bold' gutterBottom sx={{ mt: 2 }}>
+                Check a message
+              </Typography>
+              <Box component='pre' sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, overflow: 'auto', fontSize: 13 }}>
+                {`curl https://nepalfillings.com/api/v1/phone-sms/messages/phone_sms_msg_123 \\
+  -H "Authorization: Bearer nf_phonesms_your_key"
+
+# status: queued → submitted (your phone has it) → sent → delivered, or failed
+# with error_code DAILY_LIMIT_REACHED, INVALID_RECIPIENT, PHONE_UNREACHABLE or SEND_FAILED.
+{
+  "success": true,
+  "data": {
+    "id": 123,
+    "message_id": "phone_sms_msg_123",
+    "to": "9812345678",
+    "from": "SIM 1",
+    "status": "delivered",
+    "error_code": null,
+    "error_message": null,
+    "reference": "order-1042",
+    "created_at": "2026-10-24T09:15:02Z",
+    "sent_at": "2026-10-24T09:15:03Z",
+    "delivered_at": "2026-10-24T09:15:09Z"
+  }
+}`}
+              </Box>
+
+              <Typography variant='body2' sx={{ mt: 2 }}>
+                <code>POST /api/v1/phone-sms/send/bulk</code> takes the same body as SMS bulk (up to 100 recipients) and
+                returns the <code>message_ids</code>. Also: <code>GET /api/v1/phone-sms/balance</code>,{' '}
+                <code>GET /api/v1/phone-sms/messages</code> and <code>GET /api/v1/phone-sms/status</code>.
               </Typography>
 
               {/* ============== WhatsApp ============== */}
@@ -891,6 +1016,7 @@ curl -X POST https://nepalfillings.com/api/v1/messenger/send/bulk \\
                   <MenuItem value='email'>Email (SendGrid)</MenuItem>
                   <MenuItem value='telegram'>Telegram (Bot API)</MenuItem>
                   <MenuItem value='messenger'>Messenger (Facebook Page)</MenuItem>
+                  <MenuItem value='phone_sms'>Phone SMS (Own SIM)</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

@@ -474,15 +474,37 @@ func (h *PhoneSMSHandler) refreshCounts(campaignID int) {
 }
 
 // sentToday counts the account's messages handed to the phone since midnight
-// Nepal time.
+// Nepal time, from campaigns and the API together.
 func (h *PhoneSMSHandler) sentToday(accountID int, now time.Time) int {
 	var n int
 	h.db.Get(&n, `
-		SELECT COUNT(*) FROM phone_sms_campaign_messages m
-		JOIN phone_sms_campaigns c ON c.id = m.campaign_id
-		WHERE c.account_id = $1 AND m.submitted_at >= $2`, accountID, phoneSMSDayStart(now))
+		SELECT (SELECT COUNT(*) FROM phone_sms_campaign_messages m
+		        JOIN phone_sms_campaigns c ON c.id = m.campaign_id
+		        WHERE c.account_id = $1 AND m.submitted_at >= $2)
+		     + (SELECT COUNT(*) FROM api_messages
+		        WHERE account_id = $1 AND channel = 'phone_sms' AND provider_message_id <> '' AND sent_at >= $2)`,
+		accountID, phoneSMSDayStart(now))
 
 	return n
+}
+
+// takeTurn reserves the account's next slot on its phone and returns how long
+// to wait for it. Campaigns and the API share the slots, so together they never
+// hand the phone messages closer together than the account's gap.
+func (h *PhoneSMSHandler) takeTurn(accountID int, gap time.Duration) time.Duration {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	now := time.Now()
+
+	at := h.nextTurn[accountID]
+	if at.Before(now) {
+		at = now
+	}
+
+	h.nextTurn[accountID] = at.Add(gap)
+
+	return at.Sub(now)
 }
 
 // pause stops a campaign with a reason, optionally to carry on by itself at resumeAt.
@@ -556,8 +578,6 @@ func (h *PhoneSMSHandler) executeCampaignSend(campaignID, accountID int) {
 		sim = &settings.SimNumber
 	}
 
-	first := true
-
 	for {
 		if !h.stillSending(campaignID) {
 			return
@@ -596,11 +616,10 @@ func (h *PhoneSMSHandler) executeCampaignSend(campaignID, accountID int) {
 			return
 		}
 
-		if !first && !h.waitOrStop(campaignID, phoneSMSGap(settings.SendGapSeconds)) {
+		// Wait for the phone's next free slot, shared with API messages.
+		if !h.waitOrStop(campaignID, h.takeTurn(accountID, phoneSMSGap(settings.SendGapSeconds))) {
 			return
 		}
-
-		first = false
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		state, err := client.Send(ctx, smsgate.Message{
@@ -913,7 +932,7 @@ func (h *PhoneSMSHandler) StartAutoResume(ctx context.Context, interval time.Dur
 }
 
 // ResumeInterruptedCampaigns restarts the senders of campaigns that were
-// sending when the server stopped.
+// sending when the server stopped, and of API messages still queued.
 func (h *PhoneSMSHandler) ResumeInterruptedCampaigns() {
 	var running []struct {
 		ID        int `db:"id"`
@@ -925,6 +944,15 @@ func (h *PhoneSMSHandler) ResumeInterruptedCampaigns() {
 	for _, r := range running {
 		log.Printf("[phone-sms] Campaign %d: carrying on after a restart", r.ID)
 		go h.executeCampaignSend(r.ID, r.AccountID)
+	}
+
+	// API messages still waiting for their turn.
+	var accounts []int
+	h.db.Select(&accounts, `SELECT DISTINCT account_id FROM api_messages WHERE channel = 'phone_sms' AND status = 'queued'`)
+
+	for _, accountID := range accounts {
+		log.Printf("[phone-sms] Account %d: carrying on with queued API messages after a restart", accountID)
+		h.kickAPISender(accountID)
 	}
 }
 
@@ -1308,7 +1336,9 @@ func (h *PhoneSMSHandler) recordStatus(accountID int, event string, p smsgate.Sm
 		JOIN phone_sms_campaigns c ON c.id = m.campaign_id
 		WHERE c.account_id = $1 AND m.gateway_msg_id = $2
 		ORDER BY m.id DESC LIMIT 1`, accountID, p.MessageID); err != nil {
-		return // a test message, or one sent from the phone by hand
+		// An API message, or else a test message or one sent from the phone by hand.
+		h.recordAPIStatus(accountID, event, p)
+		return
 	}
 
 	at := phoneSMSNow()

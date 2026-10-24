@@ -27,6 +27,7 @@ var publicAPIHandlers = []string{
 	"public_whatsapp_api.go",
 	"public_sms_api.go",
 	"public_email_api.go",
+	"public_phone_sms_api.go",
 }
 
 func readHandlerSource(t *testing.T, name string) string {

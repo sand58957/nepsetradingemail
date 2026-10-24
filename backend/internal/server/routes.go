@@ -671,6 +671,22 @@ func (s *Server) RegisterRoutes() {
 	publicSMS.GET("/status", publicSMSHandler.GetStatus)
 
 	// ==============================================================
+	// Public API — Phone SMS (own SIM). Same handler as the Phone SMS
+	// screens, so API messages and campaigns share the phone's turns and
+	// daily limit.
+	// ==============================================================
+	publicPhoneSMSLimiter := middleware.NewRateLimiter(30, 60)
+	publicPhoneSMS := api.Group("/v1/phone-sms")
+	publicPhoneSMS.Use(publicPhoneSMSLimiter.Middleware())
+	publicPhoneSMS.Use(middleware.APIKeyAuth(s.DB, "phone_sms"))
+	publicPhoneSMS.POST("/send", phoneSMSHandler.APISend)
+	publicPhoneSMS.POST("/send/bulk", phoneSMSHandler.APISendBulk)
+	publicPhoneSMS.GET("/messages", phoneSMSHandler.APIListMessages)
+	publicPhoneSMS.GET("/messages/:id", phoneSMSHandler.APIGetMessage)
+	publicPhoneSMS.GET("/balance", phoneSMSHandler.APIBalance)
+	publicPhoneSMS.GET("/status", phoneSMSHandler.APIStatus)
+
+	// ==============================================================
 	// Public API — WhatsApp (API key auth, separate from JWT)
 	// ==============================================================
 	publicWAHandler := handlers.NewPublicWhatsAppHandler(s.DB, s.Config)

@@ -26,14 +26,22 @@ type PhoneSMSHandler struct {
 	// siteURL is where SMSGate posts webhooks back to, e.g. https://nepalfillings.com.
 	siteURL string
 
-	mu      sync.Mutex
-	running map[int]bool // campaigns with a sender running in this process
+	mu         sync.Mutex
+	running    map[int]bool      // campaigns with a sender running in this process
+	apiSending map[int]bool      // accounts with an API sender running
+	nextTurn   map[int]time.Time // when each account's phone may be handed its next message
 }
 
 // NewPhoneSMSHandler creates the Phone SMS handler. siteURL is the public site
 // address the phone's webhooks are sent to.
 func NewPhoneSMSHandler(db *sqlx.DB, siteURL string) *PhoneSMSHandler {
-	return &PhoneSMSHandler{db: db, siteURL: strings.TrimRight(siteURL, "/"), running: map[int]bool{}}
+	return &PhoneSMSHandler{
+		db:         db,
+		siteURL:    strings.TrimRight(siteURL, "/"),
+		running:    map[int]bool{},
+		apiSending: map[int]bool{},
+		nextTurn:   map[int]time.Time{},
+	}
 }
 
 // ============================================================

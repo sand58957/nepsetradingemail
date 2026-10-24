@@ -111,7 +111,8 @@ const phoneTestToken = "0123456789abcdef0123456789abcdef0123456789abcdef"
 func newPhoneFixture(t *testing.T) *phoneFixture {
 	t.Helper()
 
-	db := waTestDB(t)
+	// With the API tables too: the daily limit counts API messages.
+	db := apiKeysTestDB(t)
 
 	migration, err := os.ReadFile(filepath.Join("..", "database", "migrations", "037_phone_sms.up.sql"))
 	if err != nil {
