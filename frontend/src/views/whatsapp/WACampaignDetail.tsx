@@ -836,7 +836,7 @@ const WACampaignDetail = ({ id }: WACampaignDetailProps) => {
               label='Contacts in this phase'
               value={batchSize}
               onChange={e => setBatchSize(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
-              helperText={`Start around 25. Maximum 500 per phase. At one message every 30 to 60 seconds, ${batchSize} ${batchSize === 1 ? 'message takes' : 'messages take'} about ${Math.max(1, Math.round((batchSize * 45) / 60))} minutes.`}
+              helperText={`Start around 25. Maximum 500 per phase. At one message every 30 seconds, ${batchSize} ${batchSize === 1 ? 'message takes' : 'messages take'} about ${Math.max(1, Math.round((batchSize * 30) / 60))} minutes.`}
               inputProps={{ min: 1, max: 500 }}
             />
           )}
