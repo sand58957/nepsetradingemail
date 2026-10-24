@@ -301,7 +301,9 @@ func TestSpreadRunGivesTheNextNumberAFreshTurn(t *testing.T) {
 
 	gw := newMultiGateway("sess-a", "sess-b", "sess-c")
 	gw.reply = func(session string, n int) (int, string) {
-		if session == "sess-b" {
+		// b sends the third message, then is unlinked on the fourth, half way
+		// through its turn of two.
+		if session == "sess-b" && n == 4 {
 			gw.status["sess-b"] = openwa.StatusQRReady
 
 			return http.StatusConflict, `{"message":"Session is not connected"}`
@@ -315,9 +317,9 @@ func TestSpreadRunGivesTheNextNumberAFreshTurn(t *testing.T) {
 
 	f.h.executeCampaignSend(f.campaignID, f.account, 50, f.tmpl)
 
-	// b fails on the third contact; c sends that contact and the next, then a's
-	// turn comes round again.
-	if got, want := sessionsUsed(gw.sent()), []string{"sess-a", "sess-a", "sess-b", "sess-c", "sess-c", "sess-a"}; fmt.Sprint(got) != fmt.Sprint(want) {
+	// c takes over for a whole turn of two (the fourth and fifth contacts), not
+	// just the one message b had left, which would hand the fifth back to a.
+	if got, want := sessionsUsed(gw.sent()), []string{"sess-a", "sess-a", "sess-b", "sess-b", "sess-c", "sess-c"}; fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("sends went to %v, want %v", got, want)
 	}
 
