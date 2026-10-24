@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	mrand "math/rand/v2"
 	"net/http"
 	"strings"
 	"time"
@@ -38,36 +37,25 @@ const unlinkCooldown = 24 * time.Hour
 // WhatsApp could not resolve. Not for ever: the number may join WhatsApp later.
 const unreachableSkipSQL = "30 days"
 
-// A batch run has no interval of its own, so it waits between these.
-const (
-	batchGapMin = 30 * time.Second
-	batchGapMax = 60 * time.Second
-)
+// batchGap is the wait between messages of a batch run, which has no interval of
+// its own. The owner set it to 30 seconds on 24 October 2026.
+const batchGap = 30 * time.Second
 
-// sendGap returns how long to wait before the next campaign message. It is a
-// variable so tests can send without waiting.
-//
-// The wait is random on purpose: a message exactly every few seconds is itself a
-// mark of automation. A batch run waits 30 to 60 seconds. A continuous run waits
-// its chosen interval plus up to half as long again, so the chosen interval is
-// still the shortest gap.
+// sendGap returns how long to wait before the next campaign message: 30 seconds
+// for a batch run, the chosen interval (never under 30 seconds, see
+// resolveSendInterval) for a continuous one. It is a variable so tests can send
+// without waiting.
 var sendGap = func(intervalSeconds int) time.Duration {
 	if intervalSeconds <= 0 {
-		return batchGapMin + time.Duration(mrand.Int64N(int64(batchGapMax-batchGapMin)))
+		return batchGap
 	}
 
-	base := time.Duration(intervalSeconds) * time.Second
-
-	return base + time.Duration(mrand.Int64N(int64(base/2)+1))
+	return time.Duration(intervalSeconds) * time.Second
 }
 
 // averageSendGap is what sendGap waits on average, for time estimates.
 func averageSendGap(intervalSeconds int) time.Duration {
-	if intervalSeconds <= 0 {
-		return (batchGapMin + batchGapMax) / 2
-	}
-
-	return time.Duration(intervalSeconds) * time.Second * 5 / 4
+	return sendGap(intervalSeconds)
 }
 
 // recipientRejected reports whether a failed send was about this one recipient,

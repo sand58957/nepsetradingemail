@@ -10,43 +10,27 @@ import (
 	"github.com/sandeep/nepsetradingemail/backend/internal/services/openwa"
 )
 
-// The gap is the main brake on a linked number, so it must never come out shorter
-// than promised, and it must actually vary: a steady beat is what it replaces.
-func TestSendGapIsUnevenAndNeverShorterThanTheMinimum(t *testing.T) {
+// The gap is the main brake on a linked number: a batch run waits 30 seconds, a
+// continuous run exactly its chosen interval.
+func TestSendGapIsThirtySecondsOrTheChosenInterval(t *testing.T) {
 	cases := []struct {
 		interval int
-		min, max time.Duration
+		want     time.Duration
 	}{
-		{0, batchGapMin, batchGapMax - 1},
-		{30, 30 * time.Second, 45 * time.Second},
-		{maxIntervalSeconds, time.Hour, 90 * time.Minute},
+		{0, 30 * time.Second},
+		{30, 30 * time.Second},
+		{90, 90 * time.Second},
+		{maxIntervalSeconds, time.Hour},
 	}
 
 	for _, c := range cases {
-		seen := map[time.Duration]bool{}
-
-		for i := 0; i < 2000; i++ {
-			gap := sendGap(c.interval)
-			if gap < c.min || gap > c.max {
-				t.Fatalf("sendGap(%d) = %s, want between %s and %s", c.interval, gap, c.min, c.max)
-			}
-
-			seen[gap] = true
+		if got := sendGap(c.interval); got != c.want {
+			t.Errorf("sendGap(%d) = %s, want %s", c.interval, got, c.want)
 		}
 
-		if len(seen) < 100 {
-			t.Errorf("sendGap(%d) gave only %d different gaps in 2000 tries; it should vary", c.interval, len(seen))
+		if got := averageSendGap(c.interval); got != c.want {
+			t.Errorf("averageSendGap(%d) = %s, want %s", c.interval, got, c.want)
 		}
-	}
-}
-
-func TestAverageSendGapMatchesTheRange(t *testing.T) {
-	if got := averageSendGap(0); got != 45*time.Second {
-		t.Errorf("averageSendGap(0) = %s, want 45s", got)
-	}
-
-	if got := averageSendGap(40); got != 50*time.Second {
-		t.Errorf("averageSendGap(40) = %s, want 50s", got)
 	}
 }
 
