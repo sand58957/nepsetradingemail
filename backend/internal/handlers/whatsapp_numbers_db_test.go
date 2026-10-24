@@ -203,10 +203,22 @@ func sessionsUsed(sends []gatewaySend) []string {
 	return out
 }
 
-// A spread run takes turns across the linked numbers, and records which number
-// sent each message.
+// smallTurns makes spread runs switch number after every two messages, so a
+// five-contact campaign uses more than one number.
+func smallTurns(t *testing.T) {
+	t.Helper()
+
+	saved := rotateEvery
+	rotateEvery = 2
+
+	t.Cleanup(func() { rotateEvery = saved })
+}
+
+// A spread run sends a turn of messages from one number, then the next, and
+// comes round again, recording which number sent each message.
 func TestSpreadRunTakesTurnsAcrossNumbers(t *testing.T) {
 	instantSends(t)
+	smallTurns(t)
 
 	gw := newMultiGateway("sess-a", "sess-b")
 	f := newNumbersFixture(t, gw.server(t), "sess-a", "sess-b")
@@ -214,8 +226,8 @@ func TestSpreadRunTakesTurnsAcrossNumbers(t *testing.T) {
 
 	f.h.executeCampaignSend(f.campaignID, f.account, 50, f.tmpl)
 
-	if got, want := sessionsUsed(gw.sent()), []string{"sess-a", "sess-b", "sess-a", "sess-b", "sess-a"}; fmt.Sprint(got) != fmt.Sprint(want) {
-		t.Errorf("messages went out from %v, want them to take turns: %v", got, want)
+	if got, want := sessionsUsed(gw.sent()), []string{"sess-a", "sess-a", "sess-b", "sess-b", "sess-a"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("messages went out from %v, want turns of two: %v", got, want)
 	}
 
 	var perNumber []int
@@ -236,6 +248,7 @@ func TestSpreadRunTakesTurnsAcrossNumbers(t *testing.T) {
 // unlinked number starts its own hold.
 func TestSpreadRunCarriesOnWhenOneNumberIsUnlinked(t *testing.T) {
 	instantSends(t)
+	smallTurns(t)
 
 	gw := newMultiGateway("sess-a", "sess-b")
 	gw.reply = func(session string, n int) (int, string) {
@@ -277,6 +290,39 @@ func TestSpreadRunCarriesOnWhenOneNumberIsUnlinked(t *testing.T) {
 
 	if stillA.UnlinkedAt != nil {
 		t.Error("the number that stayed linked was put on hold")
+	}
+}
+
+// When a number drops out in the middle of its turn, the next number takes over
+// with a whole turn of its own rather than the rest of the dropped one's.
+func TestSpreadRunGivesTheNextNumberAFreshTurn(t *testing.T) {
+	instantSends(t)
+	smallTurns(t)
+
+	gw := newMultiGateway("sess-a", "sess-b", "sess-c")
+	gw.reply = func(session string, n int) (int, string) {
+		if session == "sess-b" {
+			gw.status["sess-b"] = openwa.StatusQRReady
+
+			return http.StatusConflict, `{"message":"Session is not connected"}`
+		}
+
+		return http.StatusOK, fmt.Sprintf(`{"messageId":"m%d"}`, n)
+	}
+
+	f := newNumbersFixture(t, gw.server(t), "sess-a", "sess-b", "sess-c")
+	f.db.MustExec(`UPDATE wa_campaigns SET rotate_numbers = true WHERE id = $1`, f.campaignID)
+
+	f.h.executeCampaignSend(f.campaignID, f.account, 50, f.tmpl)
+
+	// b fails on the third contact; c sends that contact and the next, then a's
+	// turn comes round again.
+	if got, want := sessionsUsed(gw.sent()), []string{"sess-a", "sess-a", "sess-b", "sess-c", "sess-c", "sess-a"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("sends went to %v, want %v", got, want)
+	}
+
+	if o := outcomeOf(t, f.waFixture, f.campaignID); o.Status != "sent" || o.Submitted != 5 || o.Failed != 0 {
+		t.Errorf("campaign ended as %+v, want all 5 sent, nobody failed", o)
 	}
 }
 

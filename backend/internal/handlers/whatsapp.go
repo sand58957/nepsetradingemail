@@ -2023,9 +2023,11 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 		return
 	}
 
-	// Which sender goes next. Messages take turns across the numbers, one gap
-	// apart as always, so spreading shares out the run rather than speeding it up.
-	next := 0
+	// Which sender goes next. A spread run sends rotateEvery messages from one
+	// number, then moves on to the next, one gap apart as always, so spreading
+	// shares out the run rather than speeding it up. turn picks the number and
+	// sentThisTurn counts what it has sent in its current turn.
+	turn, sentThisTurn := 0, 0
 
 	// Work out the gap between messages (sendGap). A continuous run spaces them by
 	// its interval, clamped again here because this value comes from the database,
@@ -2051,7 +2053,9 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 		map[bool]string{true: " (continuous, runs to completion)", false: " (single phase)"}[campaign.Continuous])
 
 	// dropSender takes a number out of this run. It reports whether any are left.
+	// The number that takes over starts a fresh turn.
 	dropSender := func(id int) bool {
+		sentThisTurn = 0
 		kept := senders[:0]
 
 		for _, n := range senders {
@@ -2161,9 +2165,14 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 			return
 		}
 
-		// The number this message goes out from, taking turns when there are several.
-		sender := senders[next%len(senders)]
-		next++
+		// The number this message goes out from: the same one until it has sent
+		// rotateEvery messages, then the next.
+		if sentThisTurn >= rotateEvery {
+			turn++
+			sentThisTurn = 0
+		}
+
+		sender := senders[turn%len(senders)]
 
 		// Insert message record, noting which number sends it.
 		var msgID int
@@ -2212,6 +2221,12 @@ func (h *WhatsAppHandler) executeCampaignSend(campaignID, accountID, batchSize i
 		body := openwa.RenderTemplate(tmpl.HeaderText, tmpl.BodyText, tmpl.FooterText, params)
 
 		result, err := client.SendText(sendCtx, sender.OpenWASessionID, contact.Phone, body)
+
+		// A message the number handed to WhatsApp counts toward its turn, even one
+		// WhatsApp refused for this recipient.
+		if err == nil || recipientRejected(err) {
+			sentThisTurn++
+		}
 
 		// The gateway's send governor refusing is not this contact failing. It is
 		// the linked number having reached its allowance for the day, or its much

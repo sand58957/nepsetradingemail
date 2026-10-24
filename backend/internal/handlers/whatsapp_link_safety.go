@@ -37,6 +37,12 @@ const unlinkCooldown = 24 * time.Hour
 // WhatsApp could not resolve. Not for ever: the number may join WhatsApp later.
 const unreachableSkipSQL = "30 days"
 
+// rotateEvery is how many messages a spread run sends from one number before
+// moving on to the next, coming round to the first again after the last. The
+// owner set it to 20 on 24 October 2026. It is a variable so tests can use a
+// small turn.
+var rotateEvery = 20
+
 // batchGap is the wait between messages of a batch run, which has no interval of
 // its own. The owner set it to 30 seconds on 24 October 2026.
 const batchGap = 30 * time.Second

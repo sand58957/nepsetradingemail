@@ -35,7 +35,7 @@ import (
 // gateway's own MAX_CONCURRENT_SESSIONS, which counts every tenant's sessions
 // together. When the gateway refuses, its message is passed through rather than
 // reported as a fault of ours.
-const maxNumbersPerAccount = 5
+const maxNumbersPerAccount = 3
 
 // WANumber is one WhatsApp number an account can send from.
 type WANumber struct {
