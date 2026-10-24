@@ -25,11 +25,14 @@ import (
 // SMSHandler manages all SMS marketing endpoints.
 type SMSHandler struct {
 	db *sqlx.DB
+
+	mu      sync.Mutex
+	running map[int]bool // campaigns with a sender running in this process
 }
 
 // NewSMSHandler creates a new SMS handler.
 func NewSMSHandler(db *sqlx.DB) *SMSHandler {
-	return &SMSHandler{db: db}
+	return &SMSHandler{db: db, running: map[int]bool{}}
 }
 
 // ============================================================
@@ -1066,23 +1069,39 @@ func (h *SMSHandler) SendCampaign(c echo.Context) error {
 		return response.BadRequest(c, "No opted-in contacts to send to")
 	}
 
+	tx, err := h.db.Beginx()
+	if err != nil {
+		return response.InternalError(c, "Failed to start campaign")
+	}
+	defer tx.Rollback()
+
+	// Claim the campaign: of two Sends racing, only one finds it still a draft.
+	res, err := tx.Exec(`
+		UPDATE sms_campaigns SET status = 'sending', total_targets = $1, started_at = NOW(), updated_at = NOW()
+		WHERE id = $2 AND status IN ('draft', 'scheduled')
+	`, len(contacts), campaign.ID)
+	if err != nil {
+		return response.InternalError(c, "Failed to start campaign")
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return response.BadRequest(c, "Campaign is already sending")
+	}
+
 	// Create campaign_messages rows for each contact
 	for _, contact := range contacts {
-		_, insertErr := h.db.Exec(`
+		_, insertErr := tx.Exec(`
 			INSERT INTO sms_campaign_messages (campaign_id, contact_id, status)
 			VALUES ($1, $2, 'queued')
 		`, campaign.ID, contact.ID)
 		if insertErr != nil {
 			log.Printf("[sms] Campaign %s: failed to create message record for contact %d: %v", id, contact.ID, insertErr)
+			return response.InternalError(c, "Failed to queue messages")
 		}
 	}
 
-	// Update campaign status
-	now := time.Now()
-	h.db.Exec(`
-		UPDATE sms_campaigns SET status = 'sending', total_targets = $1, started_at = $2, updated_at = NOW()
-		WHERE id = $3
-	`, len(contacts), now, campaign.ID)
+	if err := tx.Commit(); err != nil {
+		return response.InternalError(c, "Failed to start campaign")
+	}
 
 	// Launch sending in background goroutine
 	go h.executeCampaignSend(campaign.ID, accountID)
@@ -1093,8 +1112,50 @@ func (h *SMSHandler) SendCampaign(c echo.Context) error {
 	})
 }
 
+// claim marks a campaign's sender as running in this process; false means one
+// already is, so a Resume while it is still sending can't double the messages.
+func (h *SMSHandler) claim(campaignID int) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if h.running[campaignID] {
+		return false
+	}
+	h.running[campaignID] = true
+	return true
+}
+
+func (h *SMSHandler) release(campaignID int) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	delete(h.running, campaignID)
+}
+
+// refreshCounts recomputes a campaign's counters from its messages, so a
+// resumed send adds to what earlier runs sent instead of overwriting it.
+func (h *SMSHandler) refreshCounts(campaignID int) {
+	h.db.Exec(`
+		UPDATE sms_campaigns c SET
+			sent_count = m.sent, failed_count = m.failed, credits_used = m.credits, updated_at = NOW()
+		FROM (
+			SELECT COUNT(*) FILTER (WHERE status IN ('submitted', 'delivered')) AS sent,
+			       COUNT(*) FILTER (WHERE status = 'failed') AS failed,
+			       COALESCE(SUM(credits), 0) AS credits
+			FROM sms_campaign_messages WHERE campaign_id = $1
+		) m
+		WHERE c.id = $1
+	`, campaignID)
+}
+
 // executeCampaignSend runs in background and sends SMS messages to all queued contacts.
+// Only one runs per campaign at a time.
 func (h *SMSHandler) executeCampaignSend(campaignID, accountID int) {
+	if !h.claim(campaignID) {
+		return
+	}
+	defer h.release(campaignID)
+
 	client, settings, err := h.getClient(accountID)
 	if err != nil {
 		log.Printf("[sms] Campaign %d: failed to get client: %v", campaignID, err)
@@ -1146,11 +1207,12 @@ func (h *SMSHandler) executeCampaignSend(campaignID, accountID int) {
 	for _, qm := range queuedMessages {
 		<-ticker.C
 
-		// Check if campaign was paused/cancelled
+		// Check if campaign was paused, cancelled or deleted
 		var status string
 		h.db.Get(&status, "SELECT status FROM sms_campaigns WHERE id = $1", campaignID)
-		if status == "paused" || status == "cancelled" {
-			log.Printf("[sms] Campaign %d: %s by user", campaignID, status)
+		if status != "sending" {
+			log.Printf("[sms] Campaign %d: stopped (status %q)", campaignID, status)
+			h.refreshCounts(campaignID)
 			return
 		}
 
@@ -1192,27 +1254,18 @@ func (h *SMSHandler) executeCampaignSend(campaignID, accountID int) {
 
 		// Update campaign counters periodically (every 50 messages)
 		if (sentCount+failedCount)%50 == 0 {
-			mu.Lock()
-			h.db.Exec(`
-				UPDATE sms_campaigns SET sent_count = $1, failed_count = $2, credits_used = $3, updated_at = NOW() WHERE id = $4
-			`, sentCount, failedCount, creditsUsed, campaignID)
-			mu.Unlock()
+			h.refreshCounts(campaignID)
 		}
 	}
 
 	// Final update
+	h.refreshCounts(campaignID)
 	h.db.Exec(`
-		UPDATE sms_campaigns SET
-			status = 'sent',
-			sent_count = $1,
-			failed_count = $2,
-			credits_used = $3,
-			completed_at = NOW(),
-			updated_at = NOW()
-		WHERE id = $4
-	`, sentCount, failedCount, creditsUsed, campaignID)
+		UPDATE sms_campaigns SET status = 'sent', completed_at = NOW(), updated_at = NOW()
+		WHERE id = $1 AND status = 'sending'
+	`, campaignID)
 
-	log.Printf("[sms] Campaign %d: completed. Sent: %d, Failed: %d, Credits: %d", campaignID, sentCount, failedCount, creditsUsed)
+	log.Printf("[sms] Campaign %d: completed. Sent: %d, Failed: %d, Credits: %d (this run)", campaignID, sentCount, failedCount, creditsUsed)
 }
 
 // TestCampaign sends a single test SMS using the campaign's message text.
@@ -1487,12 +1540,17 @@ func (h *SMSHandler) GetCreditBalance(c echo.Context) error {
 	})
 }
 
-// ResumeCampaign resumes a paused campaign.
+// ResumeCampaign resumes a paused campaign and restarts its sender for the
+// messages still queued.
 func (h *SMSHandler) ResumeCampaign(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 	id, err := validateParamID(c, "id")
 	if err != nil {
 		return err
+	}
+
+	if _, _, err := h.getClient(accountID); err != nil {
+		return response.BadRequest(c, err.Error())
 	}
 
 	result, err := h.db.Exec(`
@@ -1506,6 +1564,11 @@ func (h *SMSHandler) ResumeCampaign(c echo.Context) error {
 	if rows == 0 {
 		return response.BadRequest(c, "Campaign is not currently paused")
 	}
+
+	// If the old sender hasn't noticed the pause yet it simply carries on, and
+	// this one finds it still running and stops.
+	campaignID, _ := strconv.Atoi(id)
+	go h.executeCampaignSend(campaignID, accountID)
 
 	return response.SuccessWithMessage(c, "Campaign resumed", nil)
 }
@@ -1748,29 +1811,35 @@ func (h *SMSHandler) ListGroupMembers(c echo.Context) error {
 	var total int
 	var members []SMSContact
 
+	// Only the account's own contacts are listed, even if a membership row
+	// points at another account's contact.
 	if query != "" {
 		search := "%" + query + "%"
 		h.db.Get(&total, `
 			SELECT COUNT(*) FROM sms_contact_group_members gm
 			JOIN sms_contacts sc ON sc.id = gm.contact_id
-			WHERE gm.group_id = $1 AND (sc.phone ILIKE $2 OR sc.name ILIKE $2 OR sc.email ILIKE $2)
-		`, id, search)
+			WHERE gm.group_id = $1 AND sc.account_id = $2 AND (sc.phone ILIKE $3 OR sc.name ILIKE $3 OR sc.email ILIKE $3)
+		`, id, accountID, search)
 		h.db.Select(&members, `
 			SELECT sc.* FROM sms_contact_group_members gm
 			JOIN sms_contacts sc ON sc.id = gm.contact_id
-			WHERE gm.group_id = $1 AND (sc.phone ILIKE $2 OR sc.name ILIKE $2 OR sc.email ILIKE $2)
+			WHERE gm.group_id = $1 AND sc.account_id = $2 AND (sc.phone ILIKE $3 OR sc.name ILIKE $3 OR sc.email ILIKE $3)
+			ORDER BY sc.name ASC, sc.phone ASC
+			LIMIT $4 OFFSET $5
+		`, id, accountID, search, perPage, offset)
+	} else {
+		h.db.Get(&total, `
+			SELECT COUNT(*) FROM sms_contact_group_members gm
+			JOIN sms_contacts sc ON sc.id = gm.contact_id
+			WHERE gm.group_id = $1 AND sc.account_id = $2
+		`, id, accountID)
+		h.db.Select(&members, `
+			SELECT sc.* FROM sms_contact_group_members gm
+			JOIN sms_contacts sc ON sc.id = gm.contact_id
+			WHERE gm.group_id = $1 AND sc.account_id = $2
 			ORDER BY sc.name ASC, sc.phone ASC
 			LIMIT $3 OFFSET $4
-		`, id, search, perPage, offset)
-	} else {
-		h.db.Get(&total, "SELECT COUNT(*) FROM sms_contact_group_members WHERE group_id = $1", id)
-		h.db.Select(&members, `
-			SELECT sc.* FROM sms_contact_group_members gm
-			JOIN sms_contacts sc ON sc.id = gm.contact_id
-			WHERE gm.group_id = $1
-			ORDER BY sc.name ASC, sc.phone ASC
-			LIMIT $2 OFFSET $3
-		`, id, perPage, offset)
+		`, id, accountID, perPage, offset)
 	}
 
 	if members == nil {
@@ -1785,7 +1854,8 @@ func (h *SMSHandler) ListGroupMembers(c echo.Context) error {
 	})
 }
 
-// AddGroupMembers adds contacts to a group.
+// AddGroupMembers adds the account's own contacts to a group; a contact id
+// from another account is ignored.
 func (h *SMSHandler) AddGroupMembers(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 	id, err := validateParamID(c, "id")
@@ -1808,12 +1878,14 @@ func (h *SMSHandler) AddGroupMembers(c echo.Context) error {
 
 	added := 0
 	for _, cid := range req.ContactIDs {
-		_, insertErr := h.db.Exec(`
+		result, insertErr := h.db.Exec(`
 			INSERT INTO sms_contact_group_members (group_id, contact_id)
-			VALUES ($1, $2) ON CONFLICT DO NOTHING
-		`, id, cid)
+			SELECT $1, id FROM sms_contacts WHERE id = $2 AND account_id = $3
+			ON CONFLICT DO NOTHING
+		`, id, cid, accountID)
 		if insertErr == nil {
-			added++
+			rows, _ := result.RowsAffected()
+			added += int(rows)
 		}
 	}
 

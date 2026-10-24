@@ -843,8 +843,7 @@ func (h *PhoneSMSHandler) PauseCampaign(c echo.Context) error {
 	return response.SuccessWithMessage(c, "Campaign paused", nil)
 }
 
-// ResumeCampaign carries on a paused campaign. Unlike SMS Marketing's, it
-// actually restarts the sender.
+// ResumeCampaign carries on a paused campaign by restarting its sender.
 func (h *PhoneSMSHandler) ResumeCampaign(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 	id, err := validateParamID(c, "id")
@@ -1099,8 +1098,8 @@ func (h *PhoneSMSHandler) GetOverview(c echo.Context) error {
 // Groups
 // ============================================================
 
-// AddGroupMembers adds the account's own contacts to one of its groups. Unlike
-// SMS Marketing's, a contact id from another account is ignored.
+// AddGroupMembers adds the account's own contacts to one of its groups; a
+// contact id from another account is ignored.
 func (h *PhoneSMSHandler) AddGroupMembers(c echo.Context) error {
 	accountID := mw.GetAccountID(c)
 	id, err := validateParamID(c, "id")

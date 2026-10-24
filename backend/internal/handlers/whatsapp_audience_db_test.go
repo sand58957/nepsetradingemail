@@ -73,11 +73,11 @@ func waTestDB(t *testing.T) *sqlx.DB {
 
 	// Tables the WhatsApp migrations reference but do not create.
 	db.MustExec(`CREATE TABLE app_accounts (id SERIAL PRIMARY KEY);
-		CREATE TABLE app_users (id SERIAL PRIMARY KEY);
-		CREATE TABLE sms_contacts (id SERIAL PRIMARY KEY)`)
+		CREATE TABLE app_users (id SERIAL PRIMARY KEY)`)
 
 	for _, f := range []string{
 		"010_whatsapp.up.sql",
+		"012_sms.up.sql",
 		"013_contact_groups.up.sql",
 		"029_openwa.up.sql",
 		"030_campaign_continuous_send.up.sql",
