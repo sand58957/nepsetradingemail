@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -87,7 +88,7 @@ func newSMSFixture(t *testing.T) *smsFixture {
 	t.Cleanup(func() { http.DefaultTransport = saved })
 
 	account := waInsertID(t, db, `INSERT INTO app_accounts DEFAULT VALUES RETURNING id`)
-	db.MustExec(`INSERT INTO sms_settings (account_id, auth_token, send_rate) VALUES ($1, 'test-token', 1000)`, account)
+	db.MustExec(`INSERT INTO sms_settings (account_id, auth_token, send_rate) VALUES ($1, 'test-token', 50)`, account)
 
 	return &smsFixture{db: db, h: NewSMSHandler(db), aakash: aakash, account: account}
 }
@@ -418,5 +419,131 @@ func TestSMSResumeSkipsContactsWhoOptedOut(t *testing.T) {
 
 	if c.Status != "sent" || c.SentCount != 1 || c.FailedCount != 1 || reason != "Opted out before sending" {
 		t.Errorf("campaign %q sent=%d failed=%d, opted-out reason %q; want 1 sent and the opted-out one closed", c.Status, c.SentCount, c.FailedCount, reason)
+	}
+}
+
+// A send rate far beyond the settings page's limit is capped when saved, and a
+// huge one saved before the cap doesn't crash the sender.
+func TestSMSSendRateIsCapped(t *testing.T) {
+	f := newSMSFixture(t)
+
+	body := `{"auth_token":"test-token","sender_id":"NF","send_rate":2000000000}`
+	if code, _ := waServe(t, f.h.UpdateSettings, http.MethodPut, "/", strings.NewReader(body), echo.MIMEApplicationJSON, f.account, ""); code != http.StatusOK {
+		t.Fatalf("save settings: %d", code)
+	}
+
+	var saved int
+	f.db.Get(&saved, `SELECT send_rate FROM sms_settings WHERE account_id = $1`, f.account)
+
+	if saved != smsMaxSendRate {
+		t.Errorf("saved send rate %d, want it capped at %d", saved, smsMaxSendRate)
+	}
+
+	// Without the cap the ticker's interval is zero and the panic kills the
+	// whole test binary.
+	f.db.MustExec(`UPDATE sms_settings SET send_rate = 2000000000 WHERE account_id = $1`, f.account)
+	f.contact(t, f.account, "9800000001")
+	id := f.campaign(t)
+
+	if code := f.call(t, f.h.SendCampaign, id); code != http.StatusOK {
+		t.Fatalf("send: %d", code)
+	}
+
+	if c := f.settle(t, id); c.Status != "sent" || c.SentCount != 1 {
+		t.Errorf("campaign %q sent=%d, want sent to 1", c.Status, c.SentCount)
+	}
+}
+
+// After a restart, campaigns left sending carry on with the messages still
+// queued; paused ones stay paused.
+func TestSMSRestartPicksUpSendingCampaigns(t *testing.T) {
+	f := newSMSFixture(t)
+	first := f.contact(t, f.account, "9800000001")
+	f.contact(t, f.account, "9800000002")
+	f.contact(t, f.account, "9800000003")
+
+	sending := f.campaign(t)
+	paused := f.campaign(t)
+
+	f.db.MustExec(`UPDATE sms_campaigns SET status = 'sending', total_targets = 3 WHERE id = $1`, sending)
+	f.db.MustExec(`UPDATE sms_campaigns SET status = 'paused' WHERE id = $1`, paused)
+	f.db.MustExec(`INSERT INTO sms_campaign_messages (campaign_id, contact_id) SELECT $1, id FROM sms_contacts ORDER BY id`, sending)
+	f.db.MustExec(`INSERT INTO sms_campaign_messages (campaign_id, contact_id) SELECT $1, id FROM sms_contacts ORDER BY id`, paused)
+	f.db.MustExec(`UPDATE sms_campaign_messages SET status = 'submitted', credits = 1 WHERE campaign_id = $1 AND contact_id = $2`, sending, first)
+
+	f.h.ResumeInterruptedCampaigns()
+	c := f.settle(t, sending)
+
+	if got := strings.Join(f.aakash.sentTo(), ","); got != "9800000002,9800000003" {
+		t.Errorf("sent to %s, want only the two still queued", got)
+	}
+
+	if c.Status != "sent" || c.SentCount != 3 || c.CreditsUsed != 3 {
+		t.Errorf("campaign %q sent=%d credits=%d, want sent with 3 and 3", c.Status, c.SentCount, c.CreditsUsed)
+	}
+
+	if p := f.campaignRow(t, paused); p.Status != "paused" {
+		t.Errorf("paused campaign is now %q, want it left paused", p.Status)
+	}
+}
+
+// On shutdown the sender finishes the message it is handing to Aakash, records
+// it and stops, leaving the campaign sending; after the restart it carries on
+// and nobody gets two messages.
+func TestSMSShutdownStopsBetweenMessagesAndRestartCarriesOn(t *testing.T) {
+	f := newSMSFixture(t)
+	for i := 1; i <= 3; i++ {
+		f.contact(t, f.account, fmt.Sprintf("980000000%d", i))
+	}
+
+	id := f.campaign(t)
+	waitHeld, release := f.stallSecond(t)
+
+	f.call(t, f.h.SendCampaign, id)
+	waitHeld()
+
+	done := make(chan struct{})
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		f.h.Shutdown(ctx)
+		close(done)
+	}()
+
+	for !f.h.isStopping() {
+		time.Sleep(time.Millisecond)
+	}
+
+	release()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Shutdown didn't return")
+	}
+
+	if f.senderRunning(id) {
+		t.Fatal("sender still running after Shutdown")
+	}
+
+	var statuses []string
+	f.db.Select(&statuses, `SELECT status FROM sms_campaign_messages WHERE campaign_id = $1 ORDER BY id`, id)
+
+	if got := strings.Join(statuses, ","); got != "submitted,submitted,queued" || f.campaignRow(t, id).Status != "sending" {
+		t.Fatalf("after shutdown: messages %s, campaign %q; want the in-flight one recorded and the campaign left sending",
+			got, f.campaignRow(t, id).Status)
+	}
+
+	// The restarted process.
+	f.h = NewSMSHandler(f.db)
+	f.h.ResumeInterruptedCampaigns()
+	c := f.settle(t, id)
+
+	if got := strings.Join(f.aakash.sentTo(), ","); got != "9800000001,9800000002,9800000003" {
+		t.Errorf("sent to %s, want each contact once", got)
+	}
+
+	if c.Status != "sent" || c.SentCount != 3 {
+		t.Errorf("campaign %q sent=%d, want sent to 3", c.Status, c.SentCount)
 	}
 }

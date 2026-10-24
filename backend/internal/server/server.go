@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+
 	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -18,6 +20,21 @@ type Server struct {
 	Cache  *cache.RedisCache
 	LM     *listmonk.Client
 	Config *config.Config
+
+	// onShutdown runs after the HTTP server stops, so background senders can
+	// finish the message they are on.
+	onShutdown []func(context.Context)
+}
+
+// Shutdown stops taking requests, then runs the shutdown hooks.
+func (s *Server) Shutdown(ctx context.Context) error {
+	err := s.Echo.Shutdown(ctx)
+
+	for _, stop := range s.onShutdown {
+		stop(ctx)
+	}
+
+	return err
 }
 
 func New(cfg *config.Config, db *sqlx.DB, redisCache *cache.RedisCache, lm *listmonk.Client) *Server {

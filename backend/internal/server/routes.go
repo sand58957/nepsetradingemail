@@ -314,6 +314,12 @@ func (s *Server) RegisterRoutes() {
 	// ==============================================================
 	smsHandler := handlers.NewSMSHandler(s.DB)
 
+	// Campaigns that were sending when the process stopped carry on. On the way
+	// down, senders finish the message they are on and stop, so nobody is
+	// messaged twice.
+	go smsHandler.ResumeInterruptedCampaigns()
+	s.onShutdown = append(s.onShutdown, smsHandler.Shutdown)
+
 	// SMS Settings
 	sms := staff.Group("/sms")
 	sms.GET("/settings", smsHandler.GetSettings)

@@ -27,9 +27,14 @@ import (
 type SMSHandler struct {
 	db *sqlx.DB
 
-	mu      sync.Mutex
-	running map[int]bool // campaigns with a sender running in this process
+	mu       sync.Mutex
+	running  map[int]bool // campaigns with a sender running in this process
+	stopping bool         // the process is shutting down; senders stop between messages
 }
+
+// smsMaxSendRate matches the limit on the settings page. Far beyond it the
+// sender's ticker interval rounds to zero, which panics and takes the server down.
+const smsMaxSendRate = 50
 
 // NewSMSHandler creates a new SMS handler.
 func NewSMSHandler(db *sqlx.DB) *SMSHandler {
@@ -162,6 +167,9 @@ func (h *SMSHandler) UpdateSettings(c echo.Context) error {
 
 	if req.SendRate <= 0 {
 		req.SendRate = 10
+	}
+	if req.SendRate > smsMaxSendRate {
+		req.SendRate = smsMaxSendRate
 	}
 
 	// If the token contains asterisks, it's the masked version from GetSettings — don't overwrite
@@ -1114,12 +1122,13 @@ func (h *SMSHandler) SendCampaign(c echo.Context) error {
 }
 
 // claim marks a campaign's sender as running in this process; false means one
-// already is, so a Resume while it is still sending can't double the messages.
+// already is, so a Resume while it is still sending can't double the messages,
+// or that the process is shutting down.
 func (h *SMSHandler) claim(campaignID int) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	if h.running[campaignID] {
+	if h.running[campaignID] || h.stopping {
 		return false
 	}
 	h.running[campaignID] = true
@@ -1131,6 +1140,57 @@ func (h *SMSHandler) release(campaignID int) {
 	defer h.mu.Unlock()
 
 	delete(h.running, campaignID)
+}
+
+func (h *SMSHandler) isStopping() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	return h.stopping
+}
+
+// Shutdown stops the senders between messages and waits until they have, or
+// ctx ends. A message being handed to Aakash is finished and recorded first, so
+// ResumeInterruptedCampaigns doesn't send it again after the restart.
+func (h *SMSHandler) Shutdown(ctx context.Context) {
+	h.mu.Lock()
+	h.stopping = true
+	h.mu.Unlock()
+
+	for {
+		h.mu.Lock()
+		n := len(h.running)
+		h.mu.Unlock()
+
+		if n == 0 {
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			log.Printf("[sms] Shutdown: %d sender(s) still mid-send", n)
+			return
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+}
+
+// ResumeInterruptedCampaigns restarts the senders of campaigns that were
+// sending when the process last stopped. Call it once at startup.
+func (h *SMSHandler) ResumeInterruptedCampaigns() {
+	var interrupted []struct {
+		ID        int `db:"id"`
+		AccountID int `db:"account_id"`
+	}
+	if err := h.db.Select(&interrupted, `SELECT id, account_id FROM sms_campaigns WHERE status = 'sending' ORDER BY id`); err != nil {
+		log.Printf("[sms] Could not look for interrupted campaigns: %v", err)
+		return
+	}
+
+	for _, c := range interrupted {
+		log.Printf("[sms] Campaign %d: carrying on after a restart", c.ID)
+		go h.executeCampaignSend(c.ID, c.AccountID)
+	}
 }
 
 // refreshCounts recomputes a campaign's counters from its messages, so a
@@ -1204,6 +1264,9 @@ func (h *SMSHandler) executeCampaignSend(campaignID, accountID int) {
 	if sendRate <= 0 {
 		sendRate = 10
 	}
+	if sendRate > smsMaxSendRate {
+		sendRate = smsMaxSendRate
+	}
 
 	// Rate limiter: send N messages per second
 	ticker := time.NewTicker(time.Second / time.Duration(sendRate))
@@ -1216,6 +1279,13 @@ func (h *SMSHandler) executeCampaignSend(campaignID, accountID int) {
 
 	for _, qm := range queuedMessages {
 		<-ticker.C
+
+		// On shutdown, stop here and leave the campaign sending for the restart.
+		if h.isStopping() {
+			log.Printf("[sms] Campaign %d: stopping for shutdown, carries on after the restart", campaignID)
+			h.refreshCounts(campaignID)
+			return
+		}
 
 		// Stop if the campaign was paused, cancelled or deleted. A failed read
 		// carries on, so a database hiccup can't leave it stuck as sending.
