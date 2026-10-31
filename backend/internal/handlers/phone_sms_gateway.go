@@ -1322,6 +1322,13 @@ func (h *PhoneSMSHandler) recordReply(accountID int, deviceID string, p smsgate.
 // recordStatus applies a sent, delivered or failed report to the campaign
 // message it belongs to, within the account the webhook token belongs to.
 func (h *PhoneSMSHandler) recordStatus(accountID int, event string, p smsgate.SmsPayload) {
+	h.applyStatus(accountID, event, p, "SEND_FAILED")
+}
+
+// applyStatus is recordStatus with the error code an API message gets when it
+// fails: SEND_FAILED for the phone's own report, EXPIRED when the phone never
+// took it in time.
+func (h *PhoneSMSHandler) applyStatus(accountID int, event string, p smsgate.SmsPayload, failCode string) {
 	if p.MessageID == "" {
 		return
 	}
@@ -1337,7 +1344,7 @@ func (h *PhoneSMSHandler) recordStatus(accountID int, event string, p smsgate.Sm
 		WHERE c.account_id = $1 AND m.gateway_msg_id = $2
 		ORDER BY m.id DESC LIMIT 1`, accountID, p.MessageID); err != nil {
 		// An API message, or else a test message or one sent from the phone by hand.
-		h.recordAPIStatus(accountID, event, p)
+		h.recordAPIStatus(accountID, event, p, failCode)
 		return
 	}
 

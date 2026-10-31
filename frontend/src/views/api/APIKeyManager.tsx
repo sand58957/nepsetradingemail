@@ -727,7 +727,8 @@ curl -X POST https://nepalfillings.com/api/v1/phone-sms/send \\
   -H "Authorization: Bearer nf_phonesms_your_key"
 
 # status: queued → submitted (your phone has it) → sent → delivered, or failed
-# with error_code DAILY_LIMIT_REACHED, INVALID_RECIPIENT, PHONE_UNREACHABLE or SEND_FAILED.
+# with error_code DAILY_LIMIT_REACHED, INVALID_RECIPIENT, PHONE_UNREACHABLE, SEND_FAILED,
+# or EXPIRED (your phone was offline and didn't send it within 24 hours). Failed messages are refunded.
 {
   "success": true,
   "data": {

@@ -382,6 +382,10 @@ func (s *Server) RegisterRoutes() {
 	go phoneSMSHandler.ResumeInterruptedCampaigns()
 	go phoneSMSHandler.StartAutoResume(context.Background(), time.Minute)
 
+	// The phone's own reports can go missing, so messages without one are
+	// checked with SMSGate, and ones the phone never sent in time are closed.
+	go phoneSMSHandler.StartReconcile(context.Background(), 10*time.Minute)
+
 	phoneSMS := staff.Group("/phone-sms")
 	phoneSMS.GET("/settings", phoneSMSHandler.GetSettings)
 	phoneSMS.PUT("/settings", phoneSMSHandler.UpdateSettings)

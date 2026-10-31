@@ -30,6 +30,12 @@ type fakeSMSGate struct {
 	// failFor decides a send's HTTP status from the recipient; 0 is success.
 	failFor func(phone string) int
 	hooks   []smsgate.Webhook
+	// states answers GET /messages/{id}; an id not in it is 404. stateCalls
+	// counts those requests.
+	states     map[string]smsgate.MessageState
+	stateCalls int
+	// lastSeen is when the phone last checked in; zero means 24 Oct 05:00 UTC.
+	lastSeen time.Time
 }
 
 func (g *fakeSMSGate) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +65,23 @@ func (g *fakeSMSGate) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		g.sends = append(g.sends, body)
 		fmt.Fprintf(w, `{"id":"gw-%d","deviceId":"dev1","state":"Pending"}`, len(g.sends))
 	case r.Method == http.MethodGet && r.URL.Path == "/devices":
-		w.Write([]byte(`[{"id":"dev1","name":"Pixel","lastSeen":"2026-10-24T05:00:00Z","simCards":[{"slotIndex":0,"simNumber":1,"carrierName":"Ncell"}]}]`))
+		seen := g.lastSeen
+		if seen.IsZero() {
+			seen = time.Date(2026, 10, 24, 5, 0, 0, 0, time.UTC)
+		}
+
+		fmt.Fprintf(w, `[{"id":"dev1","name":"Pixel","lastSeen":%q,"simCards":[{"slotIndex":0,"simNumber":1,"carrierName":"Ncell"}]}]`,
+			seen.UTC().Format(time.RFC3339))
+	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/messages/"):
+		g.stateCalls++
+
+		st, ok := g.states[strings.TrimPrefix(r.URL.Path, "/messages/")]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+
+		json.NewEncoder(w).Encode(st)
 	case r.Method == http.MethodGet && r.URL.Path == "/webhooks":
 		json.NewEncoder(w).Encode(g.hooks)
 	case r.Method == http.MethodPost && r.URL.Path == "/webhooks":

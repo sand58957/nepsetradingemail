@@ -501,7 +501,7 @@ func (h *PhoneSMSHandler) failQueuedAPIMessages(accountID int, code, reason stri
 
 // recordAPIStatus applies the phone's sent, delivered or failed report to an API
 // message of the account. Like campaign messages, a message never moves back.
-func (h *PhoneSMSHandler) recordAPIStatus(accountID int, event string, p smsgate.SmsPayload) {
+func (h *PhoneSMSHandler) recordAPIStatus(accountID int, event string, p smsgate.SmsPayload, failCode string) {
 	var msg struct {
 		ID      int     `db:"id"`
 		Status  string  `db:"status"`
@@ -544,8 +544,8 @@ func (h *PhoneSMSHandler) recordAPIStatus(accountID int, event string, p smsgate
 
 		// The phone couldn't send it, so its credit comes back. Conditional, so a
 		// report delivered twice refunds once.
-		res, err := h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_code = 'SEND_FAILED', error_message = $2,
-			updated_at = NOW() WHERE id = $1 AND status NOT IN ('failed', 'delivered')`, msg.ID, reason)
+		res, err := h.db.Exec(`UPDATE api_messages SET status = 'failed', credits_charged = 0, error_code = $3, error_message = $2,
+			updated_at = NOW() WHERE id = $1 AND status NOT IN ('failed', 'delivered')`, msg.ID, reason, failCode)
 		if err != nil {
 			return
 		}
@@ -668,13 +668,32 @@ func (h *PhoneSMSHandler) APIStatus(c echo.Context) error {
 			data["phone_reachable"] = false
 			data["error"] = gatewayErrorMessage(derr)
 		} else {
+			// A registered phone isn't necessarily online: it is reachable only if
+			// SMSGate heard from it within the last hour.
+			now := phoneSMSNow()
 			phones := make([]map[string]interface{}, 0, len(devices))
+
+			var lastSeen time.Time
 			for _, d := range devices {
-				phones = append(phones, map[string]interface{}{"id": d.ID, "name": d.Name, "last_seen": d.LastSeen})
+				phones = append(phones, map[string]interface{}{
+					"id": d.ID, "name": d.Name, "last_seen": d.LastSeen, "online": phoneSMSOnline(d.LastSeen, now),
+				})
+
+				if d.LastSeen.After(lastSeen) {
+					lastSeen = d.LastSeen
+				}
 			}
 
-			data["phone_reachable"] = len(devices) > 0
 			data["phones"] = phones
+			data["phone_reachable"] = phoneSMSOnline(lastSeen, now)
+
+			if !lastSeen.IsZero() {
+				data["phone_last_seen"] = lastSeen
+			}
+
+			if !phoneSMSOnline(lastSeen, now) {
+				data["warning"] = phoneSMSOfflineWarning(lastSeen)
+			}
 		}
 	}
 
